@@ -104,3 +104,16 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# direnv local configuration
+/.envrc
+
+# Codex stuff
+/.codex
+AGENTS.md
+
+# AI agent local workspace
+/.agent
+
+# JetBrains Rider IDE
+/.idea
