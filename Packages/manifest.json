@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "artem-sukhliak.unity.ai-agent-connector": "git@github.com-Artein:Artein/UnityAIAgentConnector.git?path=unity/Packages/artem-sukhliak.unity.ai-agent-connector",
     "com.unity.ai.navigation": "2.0.13",
     "com.unity.collab-proxy": "2.12.4",
     "com.unity.ide.rider": "3.0.40",

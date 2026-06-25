@@ -1,5 +1,15 @@
 {
   "dependencies": {
+    "artem-sukhliak.unity.ai-agent-connector": {
+      "version": "git@github.com-Artein:Artein/UnityAIAgentConnector.git?path=unity/Packages/artem-sukhliak.unity.ai-agent-connector",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.test-framework": "1.6.0"
+      },
+      "hash": "19ed0030580bfd722947e17241395324218162d6"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.13",
       "depth": 0,
@@ -81,6 +91,13 @@
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",
       "depth": 3,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.2",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

@@ -117,3 +117,6 @@ AGENTS.md
 
 # JetBrains Rider IDE
 /.idea
+
+# Unity AI Agent Connector package
+/.unity-ai-agent-connector
