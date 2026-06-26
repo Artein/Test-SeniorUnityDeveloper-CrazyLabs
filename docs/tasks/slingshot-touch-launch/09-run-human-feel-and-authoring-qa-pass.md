@@ -29,7 +29,7 @@ The output of this slice is accepted tuning values and any follow-up implementat
 - [x] Pull Hint communicates the interaction without obstructing gameplay.
 - [x] Touch Indicator appears at the interpreted pull point and remains readable.
 - [x] Band Shape is visually understandable in idle and Active Pull states.
-- [ ] Slingshot gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
+- [x] Slingshot gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
 - [x] Accepted config values are saved in scene/config assets.
 - [x] Any tuning or design concerns outside the first-slice scope are recorded as follow-up issues, not hidden in this issue.
 
