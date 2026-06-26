@@ -20,18 +20,18 @@ The output of this slice is accepted tuning values and any follow-up implementat
 
 ## Acceptance criteria
 
-- [ ] Designer/player can reliably start Pulls by touching near the visually thin Band.
-- [ ] Touch target radius feels finger-sized without causing surprising captures far from the Band.
-- [ ] Backward Pull distance produces readable power scaling from weak to strong launches.
-- [ ] Weak Pulls cancel naturally and do not accidentally launch.
+- [x] Designer/player can reliably start Pulls by touching near the visually thin Band.
+- [x] Touch target radius feels finger-sized without causing surprising captures far from the Band.
+- [x] Backward Pull distance produces readable power scaling from weak to strong launches.
+- [x] Weak Pulls cancel naturally and do not accidentally launch.
 - [x] Forward Pull movement does not create launch energy.
 - [x] Lateral Pull Offset rotates launch direction predictably without changing launch power.
 - [ ] Pull Hint communicates the interaction without obstructing gameplay.
-- [ ] Touch Indicator appears at the interpreted pull point and remains readable.
-- [ ] Band Shape is visually understandable in idle and Active Pull states.
+- [x] Touch Indicator appears at the interpreted pull point and remains readable.
+- [x] Band Shape is visually understandable in idle and Active Pull states.
 - [ ] Slingshot gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
-- [ ] Accepted config values are saved in scene/config assets.
-- [ ] Any tuning or design concerns outside the first-slice scope are recorded as follow-up issues, not hidden in this issue.
+- [x] Accepted config values are saved in scene/config assets.
+- [x] Any tuning or design concerns outside the first-slice scope are recorded as follow-up issues, not hidden in this issue.
 
 ## Verification
 
