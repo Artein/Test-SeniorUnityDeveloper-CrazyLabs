@@ -256,7 +256,7 @@ namespace Game.Gameplay.Slingshot
             var steering = 0f;
 
             if (_config.MaximumLateralPull > 0.000001f)
-                steering = Mathf.Clamp(pullOffset / _config.MaximumLateralPull, -1f, 1f);
+                steering = Mathf.Clamp(-pullOffset / _config.MaximumLateralPull, -1f, 1f);
 
             return (Quaternion.AngleAxis(steering * _config.MaximumLaunchAngleDegrees, _geometry.LaunchFrameUp) * _geometry.LaunchFrameForward)
                 .normalized;

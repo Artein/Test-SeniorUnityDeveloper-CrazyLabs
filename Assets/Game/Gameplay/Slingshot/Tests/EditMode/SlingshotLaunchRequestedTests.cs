@@ -87,7 +87,7 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(request.LaunchSpeed, Is.EqualTo(Mathf.Lerp(4f, 12f, request.NormalizedPower)).Within(0.0001f));
         Assert.That(request.LaunchUpDirection, Is.EqualTo(Vector3.up));
         Assert.That(request.LaunchUpSpeed, Is.EqualTo(1.5f));
-        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(14f, Vector3.up) * Vector3.forward);
+        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-14f, Vector3.up) * Vector3.forward);
     }
 
     [Test]
@@ -170,7 +170,7 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
-    public void PointerReleased_LateralOffsetSign_RotatesLaunchDirectionWithoutChangingPower()
+    public void PointerReleased_LateralOffsetSign_LaunchesOppositePullOffsetWithoutChangingPower()
     {
         var positiveRequest = ReleaseAndCaptureRequest(new Vector3(0.75f, 0f, -1.25f), new Vector2(80f, 15f));
         ResetRuntimeFakes();
@@ -178,8 +178,8 @@ public sealed class SlingshotLaunchRequestedTests
 
         Assert.That(positiveRequest.NormalizedPower, Is.EqualTo(negativeRequest.NormalizedPower).Within(0.0001f));
         Assert.That(positiveRequest.LaunchSpeed, Is.EqualTo(negativeRequest.LaunchSpeed).Within(0.0001f));
-        Assert.That(positiveRequest.LaunchDirection.x, Is.GreaterThan(0f));
-        Assert.That(negativeRequest.LaunchDirection.x, Is.LessThan(0f));
+        Assert.That(positiveRequest.LaunchDirection.x, Is.LessThan(0f));
+        Assert.That(negativeRequest.LaunchDirection.x, Is.GreaterThan(0f));
     }
 
     [Test]
@@ -195,7 +195,7 @@ public sealed class SlingshotLaunchRequestedTests
 
         var request = _launchRequests[0];
         Assert.That(request.PullOffset, Is.EqualTo(1.25f));
-        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(35f, Vector3.up) * Vector3.forward);
+        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-35f, Vector3.up) * Vector3.forward);
     }
 
     [Test]

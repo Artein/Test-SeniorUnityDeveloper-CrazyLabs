@@ -234,8 +234,8 @@ public sealed class GameplaySceneCompositionSmokeTests
             yield return LaunchAndCaptureVelocity(mouse, 0.75f, 1.25f, velocity => rightPullVelocity = velocity);
             yield return LaunchAndCaptureVelocity(mouse, -0.75f, 1.25f, velocity => leftPullVelocity = velocity);
 
-            Assert.That(rightPullVelocity.x, Is.GreaterThan(0.5f));
-            Assert.That(leftPullVelocity.x, Is.LessThan(-0.5f));
+            Assert.That(rightPullVelocity.x, Is.LessThan(-0.5f));
+            Assert.That(leftPullVelocity.x, Is.GreaterThan(0.5f));
             Assert.That(rightPullVelocity.magnitude, Is.EqualTo(leftPullVelocity.magnitude).Within(0.2f));
         }
         finally
