@@ -1,0 +1,209 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+namespace Game.Gameplay.Slingshot
+{
+    public interface ISlingshotView
+    {
+        SlingshotGeometrySnapshot CreateGeometrySnapshot();
+        void ShowInactiveIdle(SlingshotBandShape bandShape);
+        void ShowCaptureIdle(SlingshotBandShape bandShape);
+        void ShowActivePull(SlingshotPullVisual pullVisual);
+    }
+
+    public sealed partial class SlingshotView : MonoBehaviour, ISlingshotView
+    {
+        [SerializeField] private Transform _leftAnchor;
+        [SerializeField] private Transform _rightAnchor;
+        [SerializeField] private Transform _restPoint;
+        [SerializeField] private Transform _launchFrame;
+        [SerializeField] private LineRenderer _bandLineRenderer;
+        [SerializeField] private GameObject _pullHintObject;
+        [SerializeField] private GameObject _touchIndicatorObject;
+        [SerializeField] private SlingshotConfig _gizmoConfig;
+        [SerializeField] private bool _drawGizmos = true;
+        [SerializeField, Min(0.05f)] private float _gizmoFrameAxisLength = 0.75f;
+        [SerializeField, Min(0.01f)] private float _gizmoTouchTargetWorldRadius = 0.25f;
+
+        public SlingshotGeometrySnapshot CreateGeometrySnapshot()
+        {
+            ThrowIfInvalidReferences();
+            return CreateGeometrySnapshotFromTransforms();
+        }
+
+        public void ShowInactiveIdle(SlingshotBandShape bandShape)
+        {
+            ThrowIfInvalidReferences();
+            ApplyBandShape(bandShape);
+            SetVisualObjects(false, false);
+        }
+
+        public void ShowCaptureIdle(SlingshotBandShape bandShape)
+        {
+            ThrowIfInvalidReferences();
+            ApplyBandShape(bandShape);
+            SetVisualObjects(true, false);
+        }
+
+        public void ShowActivePull(SlingshotPullVisual pullVisual)
+        {
+            ThrowIfInvalidReferences();
+            ApplyBandShape(pullVisual.BandShape);
+            SetTouchIndicatorScreenPosition(pullVisual.TouchIndicatorScreenPosition);
+            SetVisualObjects(false, true);
+        }
+
+        private void OnValidate()
+        {
+            foreach (var error in GetReferenceValidationErrors())
+            {
+                Debug.LogWarning(error, this);
+            }
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!_drawGizmos || !HasGeometryReferences())
+                return;
+
+            var geometry = CreateGeometrySnapshotFromTransforms();
+            DrawBandGizmos(geometry);
+            DrawLaunchFrameGizmos(geometry);
+            DrawPullLimitGizmos(geometry);
+            DrawTouchTargetGizmos(geometry);
+        }
+
+        private void ApplyBandShape(SlingshotBandShape bandShape)
+        {
+            _bandLineRenderer.positionCount = 3;
+            _bandLineRenderer.SetPosition(0, bandShape.LeftAnchorPosition);
+            _bandLineRenderer.SetPosition(1, bandShape.MiddlePosition);
+            _bandLineRenderer.SetPosition(2, bandShape.RightAnchorPosition);
+        }
+
+        private void SetVisualObjects(bool pullHintActive, bool touchIndicatorActive)
+        {
+            _pullHintObject.SetActive(pullHintActive);
+            _touchIndicatorObject.SetActive(touchIndicatorActive);
+        }
+
+        private void SetTouchIndicatorScreenPosition(Vector2 screenPosition)
+        {
+            var indicatorTransform = _touchIndicatorObject.transform;
+            var currentPosition = indicatorTransform.position;
+            indicatorTransform.position = new Vector3(screenPosition.x, screenPosition.y, currentPosition.z);
+        }
+
+        private SlingshotGeometrySnapshot CreateGeometrySnapshotFromTransforms()
+        {
+            return new SlingshotGeometrySnapshot(
+                _leftAnchor.position,
+                _rightAnchor.position,
+                _restPoint.position,
+                _launchFrame.right,
+                _launchFrame.forward,
+                _launchFrame.up);
+        }
+
+        private void ThrowIfInvalidReferences()
+        {
+            var errors = GetReferenceValidationErrors().ToList();
+
+            if (errors.Count > 0)
+                throw new InvalidOperationException(string.Join(" ", errors));
+        }
+
+        private IEnumerable<string> GetReferenceValidationErrors()
+        {
+            if (_leftAnchor == null)
+                yield return "SlingshotView requires a Left Anchor reference.";
+
+            if (_rightAnchor == null)
+                yield return "SlingshotView requires a Right Anchor reference.";
+
+            if (_restPoint == null)
+                yield return "SlingshotView requires a Rest Point reference.";
+
+            if (_launchFrame == null)
+                yield return "SlingshotView requires a Launch Frame reference.";
+
+            if (_bandLineRenderer == null)
+                yield return "SlingshotView requires a Band Line Renderer reference.";
+
+            if (_pullHintObject == null)
+                yield return "SlingshotView requires a Pull Hint object reference.";
+
+            if (_touchIndicatorObject == null)
+                yield return "SlingshotView requires a Touch Indicator object reference.";
+        }
+
+        private bool HasGeometryReferences()
+        {
+            return _leftAnchor != null
+                   && _rightAnchor != null
+                   && _restPoint != null
+                   && _launchFrame != null;
+        }
+
+        // TODO - AI Note: Extract into SlingshotView.Gizmos partial class
+        private void DrawBandGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            Gizmos.color = new Color(0.95f, 0.8f, 0.35f, 1f);
+            Gizmos.DrawLine(geometry.LeftAnchorPosition, geometry.RestPoint);
+            Gizmos.DrawLine(geometry.RestPoint, geometry.RightAnchorPosition);
+            Gizmos.DrawWireSphere(geometry.LeftAnchorPosition, 0.08f);
+            Gizmos.DrawWireSphere(geometry.RightAnchorPosition, 0.08f);
+            Gizmos.DrawWireSphere(geometry.RestPoint, 0.08f);
+        }
+
+        private void DrawLaunchFrameGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            Gizmos.color = new Color(0.9f, 0.15f, 0.15f, 1f);
+
+            Gizmos.DrawLine(
+                geometry.RestPoint,
+                geometry.RestPoint + (geometry.LaunchFrameRight * _gizmoFrameAxisLength));
+
+            Gizmos.color = new Color(0.1f, 0.4f, 0.95f, 1f);
+
+            Gizmos.DrawLine(
+                geometry.RestPoint,
+                geometry.RestPoint + (geometry.LaunchFrameForward * _gizmoFrameAxisLength));
+
+            Gizmos.color = new Color(0.1f, 0.8f, 0.2f, 1f);
+
+            Gizmos.DrawLine(
+                geometry.RestPoint,
+                geometry.RestPoint + (geometry.LaunchFrameUp * _gizmoFrameAxisLength));
+        }
+
+        private void DrawPullLimitGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            if (_gizmoConfig == null)
+                return;
+
+            var rightLimit = geometry.LaunchFrameRight * _gizmoConfig.MaximumLateralPull;
+            var backwardLimit = geometry.LaunchFrameForward * _gizmoConfig.MaximumPullDistance;
+            var frontLeft = geometry.RestPoint - rightLimit;
+            var frontRight = geometry.RestPoint + rightLimit;
+            var backLeft = frontLeft - backwardLimit;
+            var backRight = frontRight - backwardLimit;
+
+            Gizmos.color = new Color(0.3f, 0.75f, 1f, 0.9f);
+            Gizmos.DrawLine(frontLeft, frontRight);
+            Gizmos.DrawLine(frontRight, backRight);
+            Gizmos.DrawLine(backRight, backLeft);
+            Gizmos.DrawLine(backLeft, frontLeft);
+        }
+
+        private void DrawTouchTargetGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            Gizmos.color = new Color(1f, 1f, 1f, 0.85f);
+            Gizmos.DrawWireSphere(geometry.LeftAnchorPosition, _gizmoTouchTargetWorldRadius);
+            Gizmos.DrawWireSphere(geometry.RestPoint, _gizmoTouchTargetWorldRadius);
+            Gizmos.DrawWireSphere(geometry.RightAnchorPosition, _gizmoTouchTargetWorldRadius);
+        }
+    }
+}

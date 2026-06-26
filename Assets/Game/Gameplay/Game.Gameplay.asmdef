@@ -1,0 +1,19 @@
+{
+  "name": "Game.Gameplay",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay.GameplayState",
+    "Game.Gameplay.Slingshot",
+    "Game.Input.UnityInput",
+    "VContainer"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

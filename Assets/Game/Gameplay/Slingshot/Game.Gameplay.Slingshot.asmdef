@@ -1,0 +1,21 @@
+{
+  "name": "Game.Gameplay.Slingshot",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay.GameplayState",
+    "Game.Input.UnityInput",
+    "Game.Utils.Invocation",
+    "Game.Utils.Mathematics",
+    "Unity.Mathematics",
+    "VContainer"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
