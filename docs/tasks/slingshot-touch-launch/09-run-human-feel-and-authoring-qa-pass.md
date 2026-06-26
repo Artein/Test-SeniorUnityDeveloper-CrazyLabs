@@ -26,7 +26,7 @@ The output of this slice is accepted tuning values and any follow-up implementat
 - [x] Weak Pulls cancel naturally and do not accidentally launch.
 - [x] Forward Pull movement does not create launch energy.
 - [x] Lateral Pull Offset rotates launch direction predictably without changing launch power.
-- [ ] Pull Hint communicates the interaction without obstructing gameplay.
+- [x] Pull Hint communicates the interaction without obstructing gameplay.
 - [x] Touch Indicator appears at the interpreted pull point and remains readable.
 - [x] Band Shape is visually understandable in idle and Active Pull states.
 - [ ] Slingshot gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
