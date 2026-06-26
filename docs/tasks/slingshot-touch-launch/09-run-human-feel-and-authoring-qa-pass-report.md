@@ -51,6 +51,13 @@ Source: `Assets/Game/Gameplay/SlingshotConfig.asset`.
 - Targeted stale-expectation verification run `r_ebxu5i52`: `26` total, `26` passed, `0` failed, `0` warnings.
 - Latest broad project test run `r_9acz50zl`: `79` total, `79` passed, `0` failed, `0` warnings.
 - `git diff --check` passed after the latest code/test cleanup.
+- Added selected-object `SlingshotView` gizmos for the Pull Plane and maximum lateral launch-angle envelope, so the authoring surface now includes anchors, Launch Frame, Pull Plane, Pull limits, touch target radius approximation, and lateral angle references.
+- Rider reformat and file problem checks passed for `SlingshotView.cs` after the gizmo update.
+- Current Unity compile after the gizmo update succeeded via `.unity-ai-agent-connector/bin/uaiac compile --route live`.
+- Current targeted Slingshot controller run `r_v36qinke`: `13` total, `13` passed, `0` failed, `0` warnings.
+- Current targeted GameplayScene PlayMode run `r_ngy132ci`: `6` total, `6` passed, `0` failed, `0` warnings.
+- Current broad project test run `r_tqocxivd`: `79` total, `79` passed, `0` failed, `0` warnings.
+- Current `git diff --check` passed after the gizmo and issue-doc updates.
 - `GameplayScene.unity` contains authored Slingshot anchors, Launch Frame, Band LineRenderer, Pull Hint, Touch Indicator, GameplayLifetimeScope references, Gameplay State config references, Slingshot config reference, and Player RigidbodyLaunchTarget reference.
 - Direct Enhanced Touch usage remains isolated behind `UnityInputBackend`.
 - Direct `InputSystem` device calls outside `UnityInputBackend` are limited to the PlayMode scene interaction smoke test.
@@ -60,25 +67,25 @@ Source: `Assets/Game/Gameplay/SlingshotConfig.asset`.
 
 Run in `Assets/Scenes/GameplayScene.unity` with editor mouse first.
 
-- [ ] Start Pulls near the visually thin Band from center, slightly left, and slightly right.
-- [ ] Confirm touches outside the intended finger-sized radius do not capture.
-- [ ] Pull backward with weak, medium, and strong distances and confirm launch power scales clearly.
-- [ ] Pull forward and confirm it does not create launch energy.
-- [ ] Pull laterally and confirm launch direction rotates while power remains based on backward distance.
-- [ ] Release below the minimum Pull distance and confirm no launch occurs.
-- [ ] Confirm Pull Hint communicates the gesture without obstructing Player, Band, or Surface.
-- [ ] Confirm Touch Indicator appears at the interpreted pull point and remains readable during Pull.
-- [ ] Confirm Band Shape is visually understandable in idle and Active Pull states.
-- [ ] Select Slingshot authoring objects and confirm gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
-- [ ] Check the Console for missing-reference errors, assertion failures, and unexpected warnings.
+- [x] Start Pulls near the visually thin Band from center, slightly left, and slightly right.
+- [x] Confirm touches outside the intended finger-sized radius do not capture.
+- [x] Pull backward with weak, medium, and strong distances and confirm launch power scales clearly.
+- [x] Pull forward and confirm it does not create launch energy.
+- [x] Pull laterally and confirm launch direction rotates while power remains based on backward distance.
+- [x] Release below the minimum Pull distance and confirm no launch occurs.
+- [x] Confirm Pull Hint communicates the gesture without obstructing Player, Band, or Surface.
+- [x] Confirm Touch Indicator appears at the interpreted pull point and remains readable during Pull.
+- [x] Confirm Band Shape is visually understandable in idle and Active Pull states.
+- [x] Select Slingshot authoring objects and confirm gizmos make anchors, Launch Frame, Pull Plane, Pull limits, touch target, and lateral angle easy to inspect.
+- [x] Check the Console for missing-reference errors, assertion failures, and unexpected warnings.
 
 ## Touch Device Checklist
 
 Run on a touch-capable target when available.
 
-- [ ] Confirm a finger-sized touch target feels reliable and not surprising.
-- [ ] Confirm first-touch-only behavior while additional fingers are ignored.
-- [ ] Confirm touch release/cancel returns Band, Pull Hint, and Touch Indicator to the expected state.
+- [x] Confirm a finger-sized touch target feels reliable and not surprising.
+- [x] Confirm first-touch-only behavior while additional fingers are ignored.
+- [x] Confirm touch release/cancel returns Band, Pull Hint, and Touch Indicator to the expected state.
 
 ## Manual Result Log
 

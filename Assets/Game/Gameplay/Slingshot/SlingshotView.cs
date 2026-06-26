@@ -71,7 +71,9 @@ namespace Game.Gameplay.Slingshot
             var geometry = CreateGeometrySnapshotFromTransforms();
             DrawBandGizmos(geometry);
             DrawLaunchFrameGizmos(geometry);
+            DrawPullPlaneGizmos(geometry);
             DrawPullLimitGizmos(geometry);
+            DrawLaunchAngleGizmos(geometry);
             DrawTouchTargetGizmos(geometry);
         }
 
@@ -179,6 +181,24 @@ namespace Game.Gameplay.Slingshot
                 geometry.RestPoint + (geometry.LaunchFrameUp * _gizmoFrameAxisLength));
         }
 
+        private void DrawPullPlaneGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            var rightExtent = geometry.LaunchFrameRight * _gizmoFrameAxisLength;
+            var forwardExtent = geometry.LaunchFrameForward * _gizmoFrameAxisLength;
+            var frontLeft = geometry.RestPoint + forwardExtent - rightExtent;
+            var frontRight = geometry.RestPoint + forwardExtent + rightExtent;
+            var backLeft = geometry.RestPoint - forwardExtent - rightExtent;
+            var backRight = geometry.RestPoint - forwardExtent + rightExtent;
+
+            Gizmos.color = new Color(0.25f, 0.95f, 0.95f, 0.5f);
+            Gizmos.DrawLine(frontLeft, frontRight);
+            Gizmos.DrawLine(frontRight, backRight);
+            Gizmos.DrawLine(backRight, backLeft);
+            Gizmos.DrawLine(backLeft, frontLeft);
+            Gizmos.DrawLine(geometry.RestPoint - rightExtent, geometry.RestPoint + rightExtent);
+            Gizmos.DrawLine(geometry.RestPoint - forwardExtent, geometry.RestPoint + forwardExtent);
+        }
+
         private void DrawPullLimitGizmos(SlingshotGeometrySnapshot geometry)
         {
             if (_gizmoConfig == null)
@@ -196,6 +216,41 @@ namespace Game.Gameplay.Slingshot
             Gizmos.DrawLine(frontRight, backRight);
             Gizmos.DrawLine(backRight, backLeft);
             Gizmos.DrawLine(backLeft, frontLeft);
+        }
+
+        private void DrawLaunchAngleGizmos(SlingshotGeometrySnapshot geometry)
+        {
+            if (_gizmoConfig == null)
+                return;
+
+            var leftDirection = Quaternion.AngleAxis(-_gizmoConfig.MaximumLaunchAngleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
+            var rightDirection = Quaternion.AngleAxis(_gizmoConfig.MaximumLaunchAngleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
+
+            Gizmos.color = new Color(1f, 0.45f, 0.05f, 0.95f);
+            Gizmos.DrawLine(geometry.RestPoint, geometry.RestPoint + (leftDirection * _gizmoFrameAxisLength));
+            Gizmos.DrawLine(geometry.RestPoint, geometry.RestPoint + (rightDirection * _gizmoFrameAxisLength));
+            DrawLaunchAngleArc(geometry);
+        }
+
+        private void DrawLaunchAngleArc(SlingshotGeometrySnapshot geometry)
+        {
+            var segmentCount = 12;
+            var previousPoint = GetLaunchAngleArcPoint(geometry, -_gizmoConfig.MaximumLaunchAngleDegrees);
+
+            for (var segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex += 1)
+            {
+                var normalizedSegment = (float)segmentIndex / segmentCount;
+                var angle = Mathf.Lerp(-_gizmoConfig.MaximumLaunchAngleDegrees, _gizmoConfig.MaximumLaunchAngleDegrees, normalizedSegment);
+                var currentPoint = GetLaunchAngleArcPoint(geometry, angle);
+                Gizmos.DrawLine(previousPoint, currentPoint);
+                previousPoint = currentPoint;
+            }
+        }
+
+        private Vector3 GetLaunchAngleArcPoint(SlingshotGeometrySnapshot geometry, float angleDegrees)
+        {
+            var direction = Quaternion.AngleAxis(angleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
+            return geometry.RestPoint + (direction * _gizmoFrameAxisLength);
         }
 
         private void DrawTouchTargetGizmos(SlingshotGeometrySnapshot geometry)
