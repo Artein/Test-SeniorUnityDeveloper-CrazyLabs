@@ -3,12 +3,14 @@ using System.Collections;
 using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
+using Game.Input.UnityInput;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneCompositionSmokeTests
@@ -29,19 +31,32 @@ public sealed class GameplaySceneCompositionSmokeTests
         var canvas = FindSingleInScene<Canvas>(activeScene, "Gameplay UI Canvas");
         var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
         var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+        var targetCollider = GetSingleTargetCollider(launchTarget);
         var geometry = slingshotView.CreateGeometrySnapshot();
         var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
+
+        var contactShape = ((ISlingshotBandContactProvider)launchTarget).CreateBandContactShape(new SlingshotBandContactQuery(
+            geometry.LeftAnchorPosition,
+            geometry.RightAnchorPosition,
+            geometry.RestPoint,
+            geometry.LaunchFrameRight,
+            geometry.LaunchFrameForward,
+            geometry.LaunchFrameUp,
+            0.05f,
+            6));
 
         Assert.That(activeScene.buildIndex, Is.EqualTo(_gameplaySceneBuildIndex));
         Assert.That(lifetimeScope, Is.Not.Null);
         Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
         Assert.That(bandLineRenderer, Is.Not.Null);
         Assert.That(bandLineRenderer.sharedMaterial, Is.Not.Null);
-        Assert.That(bandLineRenderer.positionCount, Is.EqualTo(3));
+        Assert.That(bandLineRenderer.positionCount, Is.GreaterThanOrEqualTo(3));
         Assert.That(geometry.LeftAnchorPosition.x, Is.LessThan(geometry.RightAnchorPosition.x));
         Assert.That(Vector3.Dot(geometry.LaunchFrameForward, Vector3.forward), Is.GreaterThan(0.99f));
         Assert.That(playerRigidbody, Is.Not.Null);
+        Assert.That(targetCollider, Is.Not.Null);
+        Assert.That(contactShape.WrapPoints, Is.Not.Empty);
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(pullHint.activeInHierarchy, Is.True);
@@ -60,6 +75,7 @@ public sealed class GameplaySceneCompositionSmokeTests
             var activeScene = SceneManager.GetActiveScene();
             yield return WaitUntilPlayerIsHeld(activeScene);
 
+            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
@@ -67,6 +83,7 @@ public sealed class GameplaySceneCompositionSmokeTests
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var targetCollider = GetSingleTargetCollider(launchTarget);
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
 
@@ -75,18 +92,23 @@ public sealed class GameplaySceneCompositionSmokeTests
                                     - (geometry.LaunchFrameForward * 1.25f);
             var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
 
-            QueueMouse(mouse, pressScreenPosition, true);
-            yield return null;
+            var pointerPressedCount = 0;
+            var unityInput = lifetimeScope.Container.Resolve<IUnityInput>();
+            unityInput.PointerPressed += _ => pointerPressedCount += 1;
 
-            QueueMouse(mouse, releaseScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, pressScreenPosition, true);
+
+            Assert.That(pointerPressedCount, Is.EqualTo(1));
+
+            yield return SendMouse(mouse, releaseScreenPosition, true);
 
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.True);
-            Assert.That(bandLineRenderer.GetPosition(1).x, Is.EqualTo(pullWorldPosition.x).Within(0.05f));
-            Assert.That(bandLineRenderer.GetPosition(1).z, Is.EqualTo(pullWorldPosition.z).Within(0.05f));
+            Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
+            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(pullWorldPosition.x).Within(0.05f));
+            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(pullWorldPosition.z).Within(0.05f));
 
-            QueueMouse(mouse, releaseScreenPosition, false);
+            yield return SendMouse(mouse, releaseScreenPosition, false);
             yield return WaitUntilPlayerLaunches(playerRigidbody);
 
             Assert.That(playerRigidbody.isKinematic, Is.False);
@@ -115,21 +137,20 @@ public sealed class GameplaySceneCompositionSmokeTests
             var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var targetCollider = GetSingleTargetCollider(launchTarget);
             var geometry = slingshotView.CreateGeometrySnapshot();
             var outsideBandScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint) + new Vector2(0f, 220f);
             var validPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 1.25f);
             var validPullScreenPosition = GetScreenPosition(inputCamera, validPullWorldPosition);
 
-            QueueMouse(mouse, outsideBandScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, outsideBandScreenPosition, true);
 
-            QueueMouse(mouse, validPullScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, validPullScreenPosition, true);
 
             Assert.That(pullHint.activeSelf, Is.True);
             Assert.That(touchIndicator.activeSelf, Is.False);
 
-            QueueMouse(mouse, validPullScreenPosition, false);
+            yield return SendMouse(mouse, validPullScreenPosition, false);
             yield return WaitFrames(10);
 
             AssertPlayerIsHeld(playerRigidbody);
@@ -156,23 +177,24 @@ public sealed class GameplaySceneCompositionSmokeTests
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var targetCollider = GetSingleTargetCollider(launchTarget);
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
             var weakPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 0.1f);
             var weakPullScreenPosition = GetScreenPosition(inputCamera, weakPullWorldPosition);
 
-            QueueMouse(mouse, pressScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, pressScreenPosition, true);
 
-            QueueMouse(mouse, weakPullScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, weakPullScreenPosition, true);
 
             Assert.That(touchIndicator.activeSelf, Is.True);
 
-            QueueMouse(mouse, weakPullScreenPosition, false);
+            yield return SendMouse(mouse, weakPullScreenPosition, false);
             yield return WaitFrames(10);
 
             AssertPlayerIsHeld(playerRigidbody);
+            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
+            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
             Assert.That(touchIndicator.activeSelf, Is.False);
         }
         finally
@@ -197,21 +219,21 @@ public sealed class GameplaySceneCompositionSmokeTests
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
             var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var targetCollider = GetSingleTargetCollider(launchTarget);
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
             var forwardPullWorldPosition = geometry.RestPoint + (geometry.LaunchFrameForward * 1f);
             var forwardPullScreenPosition = GetScreenPosition(inputCamera, forwardPullWorldPosition);
 
-            QueueMouse(mouse, pressScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, pressScreenPosition, true);
 
-            QueueMouse(mouse, forwardPullScreenPosition, true);
-            yield return null;
+            yield return SendMouse(mouse, forwardPullScreenPosition, true);
 
-            Assert.That(bandLineRenderer.GetPosition(1).x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
-            Assert.That(bandLineRenderer.GetPosition(1).z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
+            Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
+            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
+            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
 
-            QueueMouse(mouse, forwardPullScreenPosition, false);
+            yield return SendMouse(mouse, forwardPullScreenPosition, false);
             yield return WaitFrames(10);
 
             AssertPlayerIsHeld(playerRigidbody);
@@ -308,6 +330,14 @@ public sealed class GameplaySceneCompositionSmokeTests
         return null;
     }
 
+    private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
+    {
+        var colliders = launchTarget.GetComponentsInChildren<Collider>(true);
+
+        Assert.That(colliders, Has.Length.EqualTo(1));
+        return colliders[0];
+    }
+
     private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)
     {
         var screenPosition = camera.WorldToScreenPoint(worldPosition);
@@ -316,14 +346,24 @@ public sealed class GameplaySceneCompositionSmokeTests
         return new Vector2(screenPosition.x, screenPosition.y);
     }
 
+    private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
+    {
+        QueueMouse(mouse, screenPosition, isPressed);
+        yield return null;
+        yield return null;
+    }
+
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
     {
+        mouse.MakeCurrent();
+
         var mouseState = new MouseState
         {
             position = screenPosition
         }.WithButton(MouseButton.Left, isPressed);
 
         InputSystem.QueueStateEvent(mouse, mouseState);
+        InputSystem.Update();
     }
 
     private IEnumerator LaunchAndCaptureVelocity(Mouse mouse, float pullOffset, float pullDistance, Action<Vector3> captureVelocity)
@@ -344,13 +384,11 @@ public sealed class GameplaySceneCompositionSmokeTests
                                 - (geometry.LaunchFrameForward * pullDistance);
         var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
 
-        QueueMouse(mouse, pressScreenPosition, true);
-        yield return null;
+        yield return SendMouse(mouse, pressScreenPosition, true);
 
-        QueueMouse(mouse, releaseScreenPosition, true);
-        yield return null;
+        yield return SendMouse(mouse, releaseScreenPosition, true);
 
-        QueueMouse(mouse, releaseScreenPosition, false);
+        yield return SendMouse(mouse, releaseScreenPosition, false);
         yield return WaitUntilPlayerLaunches(playerRigidbody);
 
         captureVelocity.Invoke(playerRigidbody.linearVelocity);

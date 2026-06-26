@@ -9,6 +9,7 @@ public sealed class RigidbodyLaunchTargetTests
 {
     private GameObject _gameObject;
     private Rigidbody _rigidbody;
+    private SphereCollider _collider;
     private RigidbodyLaunchTarget _target;
 
     [SetUp]
@@ -17,8 +18,9 @@ public sealed class RigidbodyLaunchTargetTests
         _gameObject = new GameObject("Rigidbody Launch Target Test");
         _rigidbody = _gameObject.AddComponent<Rigidbody>();
         _rigidbody.useGravity = false;
+        _collider = _gameObject.AddComponent<SphereCollider>();
         _target = _gameObject.AddComponent<RigidbodyLaunchTarget>();
-        _target.SetRigidbodyForTests(_rigidbody);
+        _target.SetReferencesForTests(_rigidbody, _collider);
     }
 
     [TearDown]

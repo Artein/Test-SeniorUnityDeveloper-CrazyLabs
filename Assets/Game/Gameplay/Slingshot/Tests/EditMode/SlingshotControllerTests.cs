@@ -18,6 +18,10 @@ public sealed class SlingshotControllerTests
     private FakeGameplayStateService _stateService;
     private FakeSlingshotView _view;
     private FakeSlingshotInputProjector _projector;
+    private FakeHeldLaunchTarget _heldLaunchTarget;
+    private FakeSlingshotBandContactProvider _bandContactProvider;
+    private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+    private FakeTime _clock;
 
     [SetUp]
     public void OnSetUp()
@@ -36,12 +40,20 @@ public sealed class SlingshotControllerTests
             MinimumLaunchSpeed = 4f,
             MaximumLaunchSpeed = 12f,
             LaunchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f),
-            LaunchUpSpeed = 1.5f
+            LaunchUpSpeed = 1.5f,
+            BandContactPadding = 0.05f,
+            BandWrapSampleCount = 6,
+            BandRecoilDuration = 0.2f,
+            BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
         };
         _input = new FakeUnityInput(_observations);
         _stateService = new FakeGameplayStateService(_runningStateId);
         _view = new FakeSlingshotView(_observations);
         _projector = new FakeSlingshotInputProjector();
+        _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
+        _bandContactProvider = new FakeSlingshotBandContactProvider(_observations);
+        _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
+        _clock = new FakeTime { DeltaTime = 0.1f };
         ConfigureRestBandScreenProjection();
     }
 
@@ -58,9 +70,10 @@ public sealed class SlingshotControllerTests
         _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
-        Assert.That(_view.LastBandShape.MiddlePosition, Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
+        AssertBandShapeEquals(_view.LastBandShape, _view.Geometry.LeftAnchorPosition, _view.Geometry.RestPoint, _view.Geometry.RightAnchorPosition);
     }
 
     [Test]
@@ -71,7 +84,7 @@ public sealed class SlingshotControllerTests
 
         _stateService.ChangeTo(_preLaunchStateId);
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
 
@@ -85,7 +98,7 @@ public sealed class SlingshotControllerTests
 
         _stateService.ChangeTo(_runningStateId);
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-inactive-idle", "input-disable" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-inactive-idle", "input-disable" }));
         Assert.That(_input.ActiveHandleCount, Is.Zero);
     }
 
@@ -126,8 +139,9 @@ public sealed class SlingshotControllerTests
 
         StartActivePull(1);
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-active-pull" }));
-        Assert.That(_view.LastActivePullVisual.BandShape.MiddlePosition, Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "view-active-pull" }));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_bandContactProvider.Queries[^1].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
         Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(50f, 0f)));
     }
 
@@ -142,8 +156,8 @@ public sealed class SlingshotControllerTests
 
         _input.Press(1, new Vector2(50f, 40f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-active-pull" }));
-        Assert.That(_view.LastActivePullVisual.BandShape.MiddlePosition, Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "view-active-pull" }));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
         Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(50f, 40f)));
     }
 
@@ -162,7 +176,7 @@ public sealed class SlingshotControllerTests
         _input.Move(2, new Vector2(60f, 30f));
         _input.Move(1, new Vector2(70f, 30f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-active-pull" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "view-active-pull" }));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(0.5f));
     }
 
@@ -177,7 +191,7 @@ public sealed class SlingshotControllerTests
 
         _input.Move(1, new Vector2(65f, 35f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -194,7 +208,8 @@ public sealed class SlingshotControllerTests
 
         Assert.That(_view.LastActivePullVisual.PullDistance, Is.Zero);
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.Zero);
-        Assert.That(_view.LastActivePullVisual.BandShape.MiddlePosition, Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_bandContactProvider.Queries[^1].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
         Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(50f, 0f)));
     }
 
@@ -215,7 +230,16 @@ public sealed class SlingshotControllerTests
         Assert.That(_view.LastActivePullVisual.PullDistance, Is.EqualTo(2f));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(1.25f));
         Assert.That(_view.LastActivePullVisual.NormalizedPull, Is.EqualTo(1f));
-        Assert.That(_view.LastActivePullVisual.BandShape.MiddlePosition, Is.EqualTo(clampedProjectedPoint));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(clampedProjectedPoint));
+        Assert.That(_bandContactProvider.Queries[^1].PullPoint, Is.EqualTo(clampedProjectedPoint));
+
+        AssertBandShapeEquals(
+            _view.LastActivePullVisual.BandShape,
+            _view.Geometry.LeftAnchorPosition,
+            _bandContactProvider.Shape.LeftContactPoint,
+            _bandContactProvider.Shape.WrapPoints[0],
+            _bandContactProvider.Shape.RightContactPoint,
+            _view.Geometry.RightAnchorPosition);
         Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(80f, 15f)));
     }
 
@@ -229,7 +253,7 @@ public sealed class SlingshotControllerTests
 
         _input.Release(1, new Vector2(60f, 20f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -242,12 +266,13 @@ public sealed class SlingshotControllerTests
 
         _input.Cancel(1, new Vector2(60f, 20f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     private SlingshotController CreateInitializedController()
     {
-        var controller = new SlingshotController(_input, _stateService, _view, _projector, _config, _preLaunchStateId);
+        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandContactProvider,
+            _launchAppliedNotifier, _clock, _config, _preLaunchStateId);
         ((IInitializable)controller).Initialize();
         return controller;
     }
@@ -271,5 +296,15 @@ public sealed class SlingshotControllerTests
         var stateId = ScriptableObject.CreateInstance<GameplayStateId>();
         stateId.name = name;
         return stateId;
+    }
+
+    private void AssertBandShapeEquals(SlingshotBandShape shape, params Vector3[] expectedPoints)
+    {
+        Assert.That(shape.Points.Count, Is.EqualTo(expectedPoints.Length));
+
+        for (var i = 0; i < expectedPoints.Length; i += 1)
+        {
+            Assert.That(shape.Points[i], Is.EqualTo(expectedPoints[i]));
+        }
     }
 }

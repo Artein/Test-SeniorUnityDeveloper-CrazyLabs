@@ -10,6 +10,7 @@ namespace Game.Gameplay.Slingshot
         SlingshotGeometrySnapshot CreateGeometrySnapshot();
         void ShowInactiveIdle(SlingshotBandShape bandShape);
         void ShowCaptureIdle(SlingshotBandShape bandShape);
+        void ShowLoadedRelease(SlingshotBandShape bandShape);
         void ShowActivePull(SlingshotPullVisual pullVisual);
     }
 
@@ -47,6 +48,13 @@ namespace Game.Gameplay.Slingshot
             SetVisualObjects(true, false);
         }
 
+        public void ShowLoadedRelease(SlingshotBandShape bandShape)
+        {
+            ThrowIfInvalidReferences();
+            ApplyBandShape(bandShape);
+            SetVisualObjects(false, false);
+        }
+
         public void ShowActivePull(SlingshotPullVisual pullVisual)
         {
             ThrowIfInvalidReferences();
@@ -79,10 +87,13 @@ namespace Game.Gameplay.Slingshot
 
         private void ApplyBandShape(SlingshotBandShape bandShape)
         {
-            _bandLineRenderer.positionCount = 3;
-            _bandLineRenderer.SetPosition(0, bandShape.LeftAnchorPosition);
-            _bandLineRenderer.SetPosition(1, bandShape.MiddlePosition);
-            _bandLineRenderer.SetPosition(2, bandShape.RightAnchorPosition);
+            var points = bandShape.Points;
+            _bandLineRenderer.positionCount = points.Count;
+
+            for (var i = 0; i < points.Count; i += 1)
+            {
+                _bandLineRenderer.SetPosition(i, points[i]);
+            }
         }
 
         private void SetVisualObjects(bool pullHintActive, bool touchIndicatorActive)

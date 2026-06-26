@@ -2,6 +2,7 @@
   "name": "Game.Gameplay.Slingshot.Tests.EditMode",
   "rootNamespace": "",
   "references": [
+    "Game.Foundation",
     "Game.Gameplay.GameplayState",
     "Game.Gameplay.Slingshot",
     "Game.Input.UnityInput",

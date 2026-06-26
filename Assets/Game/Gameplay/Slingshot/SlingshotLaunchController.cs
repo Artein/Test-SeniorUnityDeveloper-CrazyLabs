@@ -1,5 +1,6 @@
 using System;
 using Game.Gameplay.GameplayState;
+using Game.Utils.Invocation;
 using Game.Utils.Mathematics;
 using Unity.Mathematics;
 using UnityEngine;
@@ -12,18 +13,31 @@ namespace Game.Gameplay.Slingshot
         void Launch(SlingshotLaunchRequest request);
     }
 
-    public sealed class SlingshotLaunchController : IInitializable, IDisposable, ISlingshotLauncher
+    public interface ISlingshotLaunchAppliedNotifier
+    {
+        event Action<SlingshotLaunchRequest> LaunchApplied;
+    }
+
+    public sealed class SlingshotLaunchController : IInitializable, IDisposable, ISlingshotLauncher, ISlingshotLaunchAppliedNotifier
     {
         private readonly ILaunchTarget _launchTarget;
+        private readonly IHeldLaunchTarget _heldLaunchTarget;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly GameplayStateId _preLaunchStateId;
 
         private bool _isInitialized;
         private bool _isDisposed;
 
-        public SlingshotLaunchController(ILaunchTarget launchTarget, IGameplayStateService gameplayStateService, GameplayStateId preLaunchStateId)
+        public event Action<SlingshotLaunchRequest> LaunchApplied;
+
+        public SlingshotLaunchController(
+            ILaunchTarget launchTarget,
+            IHeldLaunchTarget heldLaunchTarget,
+            IGameplayStateService gameplayStateService,
+            GameplayStateId preLaunchStateId)
         {
             _launchTarget = launchTarget ?? throw new ArgumentNullException(nameof(launchTarget));
+            _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
         }
@@ -73,7 +87,9 @@ namespace Game.Gameplay.Slingshot
                 return;
             }
 
+            _heldLaunchTarget.SetHeldPosition(request.FinalPullPoint);
             _launchTarget.Launch(finalVelocity);
+            LaunchApplied?.InvokeSafely(request);
         }
 
         private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
@@ -86,6 +102,7 @@ namespace Game.Gameplay.Slingshot
         {
             return request.LaunchDirection.IsFinite()
                    && request.LaunchDirection.IsApproximatelyUnit()
+                   && request.FinalPullPoint.IsFinite()
                    && request.LaunchUpDirection.IsFinite()
                    && request.LaunchUpDirection.IsApproximatelyUnit()
                    && math.isfinite(request.LaunchSpeed)

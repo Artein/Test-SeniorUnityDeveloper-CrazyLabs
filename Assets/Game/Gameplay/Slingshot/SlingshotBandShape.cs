@@ -1,18 +1,40 @@
+using System;
+using System.Collections.Generic;
+using Game.Utils.Mathematics;
 using UnityEngine;
 
 namespace Game.Gameplay.Slingshot
 {
     public readonly struct SlingshotBandShape
     {
-        public Vector3 LeftAnchorPosition { get; }
-        public Vector3 MiddlePosition { get; }
-        public Vector3 RightAnchorPosition { get; }
+        private readonly Vector3[] _points;
 
-        public SlingshotBandShape(Vector3 leftAnchorPosition, Vector3 middlePosition, Vector3 rightAnchorPosition)
+        public IReadOnlyList<Vector3> Points => _points ?? Array.Empty<Vector3>();
+
+        public SlingshotBandShape(params Vector3[] points)
+            : this((IReadOnlyList<Vector3>)points)
         {
-            LeftAnchorPosition = leftAnchorPosition;
-            MiddlePosition = middlePosition;
-            RightAnchorPosition = rightAnchorPosition;
+        }
+
+        public SlingshotBandShape(IReadOnlyList<Vector3> points)
+        {
+            if (points is null)
+                throw new ArgumentNullException(nameof(points));
+
+            if (points.Count < 2)
+                throw new ArgumentException("Slingshot Band Shape requires at least two points.", nameof(points));
+
+            _points = new Vector3[points.Count];
+
+            for (var i = 0; i < points.Count; i += 1)
+            {
+                var point = points[i];
+
+                if (!point.IsFinite())
+                    throw new ArgumentException("Slingshot Band Shape points must be finite.", nameof(points));
+
+                _points[i] = point;
+            }
         }
     }
 }

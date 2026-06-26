@@ -1,9 +1,10 @@
 using System;
 using Game.Utils.Invocation;
 using JetBrains.Annotations;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
-using VContainer.Unity;
+using UnityEngine.InputSystem.LowLevel;
 using InputTouchPhase = UnityEngine.InputSystem.TouchPhase;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
@@ -13,7 +14,7 @@ namespace Game.Input.UnityInput
     {
         void Enable();
         void Disable();
-        
+
         event Action<UnityInputBackendPointerInput> PointerInputReceived;
     }
 
@@ -38,7 +39,7 @@ namespace Game.Input.UnityInput
     }
 
     [UsedImplicitly]
-    internal sealed class UnityInputBackend : IUnityInputBackend, ITickable
+    internal sealed class UnityInputBackend : IUnityInputBackend
     {
         private bool _isEnabled;
         private bool _isDisposed;
@@ -64,6 +65,7 @@ namespace Game.Input.UnityInput
             _isEnabled = true;
 
 #if UNITY_EDITOR
+            InputSystem.onEvent += HandleInputSystemEvent;
             _wasEditorMousePressed = IsEditorMousePressed();
 #endif
         }
@@ -80,6 +82,7 @@ namespace Game.Input.UnityInput
             _isEnabled = false;
 
 #if UNITY_EDITOR
+            InputSystem.onEvent -= HandleInputSystemEvent;
             _wasEditorMousePressed = false;
 #endif
         }
@@ -93,32 +96,48 @@ namespace Game.Input.UnityInput
             _isDisposed = true;
         }
 
-        void ITickable.Tick()
+        private void HandleInputSystemEvent(InputEventPtr inputEventPtr, InputDevice inputDevice)
         {
 #if UNITY_EDITOR
             if (!_isEnabled || _isDisposed)
                 return;
 
-            var mouse = Mouse.current;
-            if (mouse is null)
-            {
-                _wasEditorMousePressed = false;
+            if (inputDevice is not Mouse mouse)
                 return;
-            }
 
-            var isPressed = mouse.leftButton.isPressed;
-            var screenPosition = mouse.position.ReadValue();
+            if (!inputEventPtr.IsA<StateEvent>() && !inputEventPtr.IsA<DeltaStateEvent>())
+                return;
 
-            if (mouse.leftButton.wasPressedThisFrame || (!_wasEditorMousePressed && isPressed))
+            var hasButtonValue = mouse.leftButton.ReadValueFromEvent(inputEventPtr, out var buttonValue);
+            var hasScreenPosition = mouse.position.ReadValueFromEvent(inputEventPtr, out var screenPosition);
+
+            if (!hasButtonValue && !hasScreenPosition)
+                return;
+
+            var isPressed = hasButtonValue
+                ? mouse.leftButton.IsValueConsideredPressed(buttonValue)
+                : _wasEditorMousePressed;
+
+            if (!hasScreenPosition)
+                screenPosition = mouse.position.ReadValue();
+
+            RaiseEditorMousePhase(isPressed, screenPosition);
+#endif
+        }
+
+#if UNITY_EDITOR
+        private void RaiseEditorMousePhase(bool isPressed, Vector2 screenPosition)
+        {
+            if (!_wasEditorMousePressed && isPressed)
                 Raise(PointerInputPhase.Pressed, new PointerInput(-1, screenPosition));
-            else if (mouse.leftButton.wasReleasedThisFrame || (_wasEditorMousePressed && !isPressed))
+            else if (_wasEditorMousePressed && !isPressed)
                 Raise(PointerInputPhase.Released, new PointerInput(-1, screenPosition));
             else if (isPressed)
                 Raise(PointerInputPhase.Moved, new PointerInput(-1, screenPosition));
 
             _wasEditorMousePressed = isPressed;
-#endif
         }
+#endif
 
         private void HandleFingerDown(Finger finger)
         {
@@ -133,6 +152,7 @@ namespace Game.Input.UnityInput
         private void HandleFingerUp(Finger finger)
         {
             var touch = GetCurrentOrLastTouch(finger);
+
             var phase = touch is { valid: true, phase: InputTouchPhase.Canceled }
                 ? PointerInputPhase.Canceled
                 : PointerInputPhase.Released;

@@ -217,6 +217,7 @@ public sealed class GameplayFlowControllerTests
             0.75f,
             1.5f,
             0.25f,
+            new Vector3(0.25f, 0f, -1.5f),
             Vector3.forward,
             9f,
             Vector3.up,

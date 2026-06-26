@@ -1345,6 +1345,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Game.Gameplay.Slingshot::Game.Gameplay.Slingshot.RigidbodyLaunchTarget
   _rigidbody: {fileID: 1918570525}
+  _bandContactCollider: {fileID: 200501558}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

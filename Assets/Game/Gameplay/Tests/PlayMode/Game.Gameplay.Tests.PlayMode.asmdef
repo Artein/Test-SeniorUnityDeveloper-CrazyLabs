@@ -4,6 +4,7 @@
   "references": [
     "Game.Gameplay",
     "Game.Gameplay.Slingshot",
+    "Game.Input.UnityInput",
     "Unity.InputSystem",
     "VContainer"
   ],

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Input.UnityInput;
 using Game.Utils.Invocation;
@@ -18,6 +19,10 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public float MaximumLaunchSpeed { get; set; }
         public AnimationCurve LaunchSpeedCurve { get; set; }
         public float LaunchUpSpeed { get; set; }
+        public float BandContactPadding { get; set; }
+        public int BandWrapSampleCount { get; set; }
+        public float BandRecoilDuration { get; set; }
+        public AnimationCurve BandRecoilCurve { get; set; }
     }
 
     internal sealed class FakeUnityInput : IUnityInput
@@ -95,7 +100,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
     {
         public GameplayStateId CurrentStateId { get; set; }
         public int TryTransitionCallCount { get; private set; }
-        
+
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
@@ -164,6 +169,12 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
             _observations.Add("view-capture-idle");
         }
 
+        public void ShowLoadedRelease(SlingshotBandShape bandShape)
+        {
+            LastBandShape = bandShape;
+            _observations.Add("view-loaded-release");
+        }
+
         public void ShowActivePull(SlingshotPullVisual pullVisual)
         {
             LastActivePullVisual = pullVisual;
@@ -171,6 +182,63 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
             ActivePullVisuals.Add(pullVisual);
             _observations.Add("view-active-pull");
         }
+    }
+
+    internal sealed class FakeHeldLaunchTarget : IHeldLaunchTarget
+    {
+        private readonly List<string> _observations;
+
+        public List<Vector3> HeldPositions { get; } = new();
+
+        public FakeHeldLaunchTarget(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public void SetHeldPosition(Vector3 heldPosition)
+        {
+            HeldPositions.Add(heldPosition);
+            _observations.Add("target-position");
+        }
+    }
+
+    internal sealed class FakeSlingshotBandContactProvider : ISlingshotBandContactProvider
+    {
+        private readonly List<string> _observations;
+
+        public List<SlingshotBandContactQuery> Queries { get; } = new();
+
+        public SlingshotBandContactShape Shape { get; set; } = new(
+            new Vector3(-0.6f, 0f, -0.4f),
+            new[] { new Vector3(0f, 0f, -0.7f) },
+            new Vector3(0.6f, 0f, -0.4f));
+
+        public FakeSlingshotBandContactProvider(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public SlingshotBandContactShape CreateBandContactShape(SlingshotBandContactQuery query)
+        {
+            Queries.Add(query);
+            _observations.Add("band-contact");
+            return Shape;
+        }
+    }
+
+    internal sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
+    {
+        public event Action<SlingshotLaunchRequest> LaunchApplied;
+
+        public void Apply(SlingshotLaunchRequest request)
+        {
+            LaunchApplied?.InvokeSafely(request);
+        }
+    }
+
+    internal sealed class FakeTime : ITime
+    {
+        public float DeltaTime { get; set; }
     }
 
     internal sealed class FakeSlingshotInputProjector : ISlingshotInputProjector

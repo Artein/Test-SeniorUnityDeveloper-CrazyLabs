@@ -76,6 +76,8 @@ public sealed class GameplayLifetimeScopeTests
         var slingshotLauncher = container.Resolve<ISlingshotLauncher>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
+        var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
+        var bandContactProvider = container.Resolve<ISlingshotBandContactProvider>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
@@ -83,6 +85,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(slingshotLauncher, Is.Not.Null);
         Assert.That(initializables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(bandContactProvider, Is.SameAs(fixture.LaunchTarget));
     }
 
     private ValidScopeFixture CreateValidScopeFixture()
@@ -127,8 +131,9 @@ public sealed class GameplayLifetimeScopeTests
     private RigidbodyLaunchTarget CreateLaunchTarget()
     {
         var rigidbody = CreateGameObject("Player").AddComponent<Rigidbody>();
+        var collider = rigidbody.gameObject.AddComponent<SphereCollider>();
         var launchTarget = rigidbody.gameObject.AddComponent<RigidbodyLaunchTarget>();
-        launchTarget.SetRigidbodyForTests(rigidbody);
+        launchTarget.SetReferencesForTests(rigidbody, collider);
 
         return launchTarget;
     }

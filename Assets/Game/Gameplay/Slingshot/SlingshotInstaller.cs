@@ -1,4 +1,5 @@
 using System;
+using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using UnityEngine;
 using VContainer;
@@ -29,14 +30,15 @@ namespace Game.Gameplay.Slingshot
             builder.RegisterInstance(_config).As<ISlingshotConfig>();
             builder.RegisterInstance(_view).As<ISlingshotView>();
 
-            builder.Register<SlingshotInputProjector>(Lifetime.Singleton)
-                .WithParameter(_camera)
-                .As<ISlingshotInputProjector>();
+            builder.Register<ISlingshotInputProjector, SlingshotInputProjector>(Lifetime.Singleton)
+                .WithParameter(_camera);
 
-            builder.RegisterEntryPoint<SlingshotController>()
-                .WithParameter(_preLaunchStateId);
+            builder.Register<ITime, UnityTime>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<SlingshotLaunchController>()
+                .WithParameter(_preLaunchStateId);
+
+            builder.RegisterEntryPoint<SlingshotController>()
                 .WithParameter(_preLaunchStateId);
         }
     }

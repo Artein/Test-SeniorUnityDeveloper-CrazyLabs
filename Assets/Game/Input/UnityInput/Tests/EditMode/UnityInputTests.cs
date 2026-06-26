@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using Game.Input.UnityInput;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
@@ -156,6 +158,46 @@ public sealed class UnityInputTests
 
         Assert.That(pointerInput.PointerId, Is.EqualTo(42));
         Assert.That(pointerInput.ScreenPosition, Is.EqualTo(new Vector2(123f, 456f)));
+    }
+
+    [Test]
+    public void InputSystemUpdate_EditorMousePressed_WhenEnabled_ForwardsPointerPressed()
+    {
+        var backend = new UnityInputBackend();
+        using var unityInput = new UnityInput(backend);
+        using var handle = ((IEnhancedTouchSupportApi)unityInput).Enable();
+        var mouse = InputSystem.AddDevice<Mouse>("Unity Input Backend Test Mouse");
+        var receivedCount = 0;
+        var receivedPointerInput = default(PointerInput);
+
+        unityInput.PointerPressed += pointerInput =>
+        {
+            receivedCount += 1;
+            receivedPointerInput = pointerInput;
+        };
+
+        try
+        {
+            mouse.MakeCurrent();
+
+            var screenPosition = new Vector2(123f, 456f);
+
+            var mouseState = new MouseState
+            {
+                position = screenPosition
+            }.WithButton(MouseButton.Left, true);
+
+            InputSystem.QueueStateEvent(mouse, mouseState);
+            InputSystem.Update();
+
+            Assert.That(receivedCount, Is.EqualTo(1));
+            Assert.That(receivedPointerInput.PointerId, Is.EqualTo(-1));
+            Assert.That(receivedPointerInput.ScreenPosition, Is.EqualTo(screenPosition));
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
     }
 
     [Test]

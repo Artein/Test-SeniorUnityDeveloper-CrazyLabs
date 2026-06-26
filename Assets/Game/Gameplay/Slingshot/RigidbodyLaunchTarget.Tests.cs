@@ -10,6 +10,12 @@ namespace Game.Gameplay.Slingshot
         {
             _rigidbody = body;
         }
+
+        internal void SetReferencesForTests(Rigidbody body, Collider bandContactCollider)
+        {
+            _rigidbody = body;
+            _bandContactCollider = bandContactCollider;
+        }
     }
 }
 

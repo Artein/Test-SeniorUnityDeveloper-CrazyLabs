@@ -3,6 +3,7 @@
   "rootNamespace": "",
   "references": [
     "Game.Input.UnityInput",
+    "Unity.InputSystem",
     "VContainer"
   ],
   "optionalUnityReferences": [

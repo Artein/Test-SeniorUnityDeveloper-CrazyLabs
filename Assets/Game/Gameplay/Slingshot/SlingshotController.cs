@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Input.UnityInput;
 using Game.Utils.Invocation;
@@ -13,21 +15,29 @@ namespace Game.Gameplay.Slingshot
         event Action<SlingshotLaunchRequest> LaunchRequested;
     }
 
-    public sealed class SlingshotController : IInitializable, IDisposable, ISlingshotLaunchNotifier
+    public sealed class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotLaunchNotifier
     {
         private readonly IUnityInput _unityInput;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotView _view;
         private readonly ISlingshotInputProjector _inputProjector;
+        private readonly IHeldLaunchTarget _heldLaunchTarget;
+        private readonly ISlingshotBandContactProvider _bandContactProvider;
+        private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+        private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
         private readonly GameplayStateId _preLaunchStateId;
 
         private IDisposable _inputEnableHandle;
         private SlingshotGeometrySnapshot _geometry;
+        private SlingshotLaunchRequest _pendingLaunchRequest;
+        private float _releaseRecoilElapsed;
         private bool _isInitialized;
         private bool _isDisposed;
         private bool _isCaptureEnabled;
         private bool _hasActivePointer;
+        private bool _isLaunchHandoffPending;
+        private bool _isReleaseRecoilActive;
         private int _activePointerId;
 
         public event Action<SlingshotLaunchRequest> LaunchRequested;
@@ -37,6 +47,10 @@ namespace Game.Gameplay.Slingshot
             IGameplayStateService gameplayStateService,
             ISlingshotView view,
             ISlingshotInputProjector inputProjector,
+            IHeldLaunchTarget heldLaunchTarget,
+            ISlingshotBandContactProvider bandContactProvider,
+            ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
+            ITime clock,
             ISlingshotConfig config,
             GameplayStateId preLaunchStateId)
         {
@@ -44,6 +58,10 @@ namespace Game.Gameplay.Slingshot
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _inputProjector = inputProjector ?? throw new ArgumentNullException(nameof(inputProjector));
+            _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
+            _bandContactProvider = bandContactProvider ?? throw new ArgumentNullException(nameof(bandContactProvider));
+            _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
 
@@ -64,6 +82,7 @@ namespace Game.Gameplay.Slingshot
             _unityInput.PointerReleased += HandlePointerReleased;
             _unityInput.PointerCanceled += HandlePointerCanceled;
             _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
+            _launchAppliedNotifier.LaunchApplied += HandleLaunchApplied;
             _isInitialized = true;
 
             if (_gameplayStateService.IsCurrent(_preLaunchStateId))
@@ -73,6 +92,14 @@ namespace Game.Gameplay.Slingshot
             }
 
             _view.ShowInactiveIdle(CreateRestBandShape());
+        }
+
+        void ITickable.Tick()
+        {
+            if (!_isReleaseRecoilActive || _isDisposed)
+                return;
+
+            TickReleaseRecoil();
         }
 
         void IDisposable.Dispose()
@@ -87,9 +114,12 @@ namespace Game.Gameplay.Slingshot
             _unityInput.PointerReleased -= HandlePointerReleased;
             _unityInput.PointerCanceled -= HandlePointerCanceled;
             _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
+            _launchAppliedNotifier.LaunchApplied -= HandleLaunchApplied;
 
             _hasActivePointer = false;
             _isCaptureEnabled = false;
+            _isLaunchHandoffPending = false;
+            _isReleaseRecoilActive = false;
             DisposeInputHandle();
         }
 
@@ -122,8 +152,11 @@ namespace Game.Gameplay.Slingshot
                 return;
 
             _hasActivePointer = false;
+            _isLaunchHandoffPending = false;
+            _isReleaseRecoilActive = false;
             _inputEnableHandle = _unityInput.Enable();
             _isCaptureEnabled = true;
+            SetHeldTargetToRest();
             _view.ShowCaptureIdle(CreateRestBandShape());
         }
 
@@ -137,6 +170,10 @@ namespace Game.Gameplay.Slingshot
 
             try
             {
+                if (_isLaunchHandoffPending || _isReleaseRecoilActive)
+                    return;
+
+                SetHeldTargetToRest();
                 _view.ShowInactiveIdle(CreateRestBandShape());
             }
             finally
@@ -158,8 +195,14 @@ namespace Game.Gameplay.Slingshot
 
         private void HandlePointerPressed(PointerInput pointerInput)
         {
-            if (!_isCaptureEnabled || _hasActivePointer || !IsInsideBandTouchTarget(pointerInput.ScreenPosition))
+            if (!_isCaptureEnabled
+                || _isLaunchHandoffPending
+                || _isReleaseRecoilActive
+                || _hasActivePointer
+                || !IsInsideBandTouchTarget(pointerInput.ScreenPosition))
+            {
                 return;
+            }
 
             if (!TryCreatePullVisual(pointerInput.ScreenPosition, out var pullVisual))
                 return;
@@ -194,11 +237,18 @@ namespace Game.Gameplay.Slingshot
                 return;
             }
 
-            var hasLaunchRequest = TryCreateLaunchRequest(pullVisual, out var launchRequest);
-            CancelActivePullToCaptureIdle();
+            if (!TryCreateLaunchRequest(pullVisual, out var launchRequest))
+            {
+                CancelActivePullToCaptureIdle();
+                return;
+            }
 
-            if (hasLaunchRequest)
-                LaunchRequested?.InvokeSafely(launchRequest);
+            _hasActivePointer = false;
+            _isLaunchHandoffPending = true;
+            _isReleaseRecoilActive = false;
+            _pendingLaunchRequest = launchRequest;
+            _view.ShowLoadedRelease(pullVisual.BandShape);
+            LaunchRequested?.InvokeSafely(launchRequest);
         }
 
         private void HandlePointerCanceled(PointerInput pointerInput)
@@ -209,6 +259,33 @@ namespace Game.Gameplay.Slingshot
             CancelActivePullToCaptureIdle();
         }
 
+        private void HandleLaunchApplied(SlingshotLaunchRequest launchRequest)
+        {
+            if (!_isLaunchHandoffPending)
+                return;
+
+            _pendingLaunchRequest = launchRequest;
+            _isLaunchHandoffPending = false;
+            _isReleaseRecoilActive = true;
+            _releaseRecoilElapsed = 0f;
+        }
+
+        private void TickReleaseRecoil()
+        {
+            _releaseRecoilElapsed += Mathf.Max(0f, _clock.DeltaTime);
+            var normalizedTime = Mathf.Clamp01(_releaseRecoilElapsed / _config.BandRecoilDuration);
+
+            if (normalizedTime >= 1f)
+            {
+                _isReleaseRecoilActive = false;
+                _view.ShowInactiveIdle(CreateRestBandShape());
+                return;
+            }
+
+            var progress = Mathf.Clamp01(_config.BandRecoilCurve.Evaluate(normalizedTime));
+            _view.ShowLoadedRelease(CreateReleaseRecoilBandShape(progress));
+        }
+
         private bool IsActivePointer(PointerInput pointerInput)
         {
             return _isCaptureEnabled && _hasActivePointer && pointerInput.PointerId == _activePointerId;
@@ -217,9 +294,14 @@ namespace Game.Gameplay.Slingshot
         private void CancelActivePullToCaptureIdle()
         {
             _hasActivePointer = false;
+            _isLaunchHandoffPending = false;
+            _isReleaseRecoilActive = false;
 
-            if (_isCaptureEnabled)
-                _view.ShowCaptureIdle(CreateRestBandShape());
+            if (!_isCaptureEnabled)
+                return;
+
+            SetHeldTargetToRest();
+            _view.ShowCaptureIdle(CreateRestBandShape());
         }
 
         private bool TryCreateLaunchRequest(SlingshotPullVisual pullVisual, out SlingshotLaunchRequest launchRequest)
@@ -234,9 +316,17 @@ namespace Game.Gameplay.Slingshot
             var launchSpeedCurveValue = Mathf.Clamp01(_config.LaunchSpeedCurve.Evaluate(normalizedPower));
             var launchSpeed = Mathf.Lerp(_config.MinimumLaunchSpeed, _config.MaximumLaunchSpeed, launchSpeedCurveValue);
             var launchDirection = GetLaunchDirection(pullVisual.PullOffset);
+            var finalPullPoint = GetPullPoint(pullVisual.PullDistance, pullVisual.PullOffset);
 
-            launchRequest = new SlingshotLaunchRequest(normalizedPower, pullVisual.PullDistance, pullVisual.PullOffset, launchDirection,
-                launchSpeed, _geometry.LaunchFrameUp, _config.LaunchUpSpeed);
+            launchRequest = new SlingshotLaunchRequest(
+                normalizedPower,
+                pullVisual.PullDistance,
+                pullVisual.PullOffset,
+                finalPullPoint,
+                launchDirection,
+                launchSpeed,
+                _geometry.LaunchFrameUp,
+                _config.LaunchUpSpeed);
 
             return true;
         }
@@ -282,9 +372,7 @@ namespace Game.Gameplay.Slingshot
                 -_config.MaximumLateralPull,
                 _config.MaximumLateralPull);
 
-            var clampedPullPoint = _geometry.RestPoint
-                                   + (_geometry.LaunchFrameRight * pullOffset)
-                                   - (_geometry.LaunchFrameForward * pullDistance);
+            var clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
 
             if (!_inputProjector.TryProjectWorldToScreen(clampedPullPoint, out var touchIndicatorScreenPosition))
             {
@@ -292,10 +380,19 @@ namespace Game.Gameplay.Slingshot
                 return false;
             }
 
+            _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
+
             var normalizedPull = Mathf.Clamp01(pullDistance / _config.MaximumPullDistance);
-            var shape = new SlingshotBandShape(_geometry.LeftAnchorPosition, clampedPullPoint, _geometry.RightAnchorPosition);
+            var shape = CreateLoadedBandShape(clampedPullPoint);
             pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull);
             return true;
+        }
+
+        private Vector3 GetPullPoint(float pullDistance, float pullOffset)
+        {
+            return _geometry.RestPoint
+                   + (_geometry.LaunchFrameRight * pullOffset)
+                   - (_geometry.LaunchFrameForward * pullDistance);
         }
 
         private bool IsInsideBandTouchTarget(Vector2 screenPosition)
@@ -326,9 +423,74 @@ namespace Game.Gameplay.Slingshot
             return Vector2.Distance(point, closestPoint);
         }
 
+        private SlingshotBandShape CreateLoadedBandShape(Vector3 pullPoint)
+        {
+            var contactShape = _bandContactProvider.CreateBandContactShape(new SlingshotBandContactQuery(
+                _geometry.LeftAnchorPosition,
+                _geometry.RightAnchorPosition,
+                pullPoint,
+                _geometry.LaunchFrameRight,
+                _geometry.LaunchFrameForward,
+                _geometry.LaunchFrameUp,
+                _config.BandContactPadding,
+                _config.BandWrapSampleCount));
+
+            var points = new List<Vector3>(contactShape.WrapPoints.Count + 4)
+            {
+                _geometry.LeftAnchorPosition,
+                contactShape.LeftContactPoint
+            };
+
+            for (var pointIndex = 0; pointIndex < contactShape.WrapPoints.Count; pointIndex += 1)
+            {
+                points.Add(contactShape.WrapPoints[pointIndex]);
+            }
+
+            points.Add(contactShape.RightContactPoint);
+            points.Add(_geometry.RightAnchorPosition);
+
+            return new SlingshotBandShape(points);
+        }
+
+        private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
+        {
+            var liveShape = CreateLoadedBandShape(_pendingLaunchRequest.FinalPullPoint);
+            var restShape = CreateRestBandShape(liveShape.Points.Count);
+            var points = new Vector3[liveShape.Points.Count];
+
+            for (var pointIndex = 0; pointIndex < points.Length; pointIndex += 1)
+            {
+                points[pointIndex] = Vector3.Lerp(liveShape.Points[pointIndex], restShape.Points[pointIndex], progress);
+            }
+
+            return new SlingshotBandShape(points);
+        }
+
         private SlingshotBandShape CreateRestBandShape()
         {
             return new SlingshotBandShape(_geometry.LeftAnchorPosition, _geometry.RestPoint, _geometry.RightAnchorPosition);
+        }
+
+        private SlingshotBandShape CreateRestBandShape(int pointCount)
+        {
+            if (pointCount <= 3)
+                return CreateRestBandShape();
+
+            var points = new Vector3[pointCount];
+            points[0] = _geometry.LeftAnchorPosition;
+            points[pointCount - 1] = _geometry.RightAnchorPosition;
+
+            for (var pointIndex = 1; pointIndex < pointCount - 1; pointIndex += 1)
+            {
+                points[pointIndex] = _geometry.RestPoint;
+            }
+
+            return new SlingshotBandShape(points);
+        }
+
+        private void SetHeldTargetToRest()
+        {
+            _heldLaunchTarget.SetHeldPosition(_geometry.RestPoint);
         }
     }
 }

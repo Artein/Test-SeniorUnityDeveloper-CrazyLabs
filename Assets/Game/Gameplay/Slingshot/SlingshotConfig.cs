@@ -13,6 +13,10 @@ namespace Game.Gameplay.Slingshot
         float MaximumLaunchSpeed { get; }
         AnimationCurve LaunchSpeedCurve { get; }
         float LaunchUpSpeed { get; }
+        float BandContactPadding { get; }
+        int BandWrapSampleCount { get; }
+        float BandRecoilDuration { get; }
+        AnimationCurve BandRecoilCurve { get; }
     }
 
     [CreateAssetMenu(
@@ -29,6 +33,10 @@ namespace Game.Gameplay.Slingshot
         [SerializeField, Min(0f)] private float _maximumLaunchSpeed = 12f;
         [SerializeField] private AnimationCurve _launchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [SerializeField, Min(0f)] private float _launchUpSpeed = 1.5f;
+        [SerializeField, Min(0f)] private float _bandContactPadding = 0.05f;
+        [SerializeField, Range(2, 24)] private int _bandWrapSampleCount = 12;
+        [SerializeField, Min(0.01f)] private float _bandRecoilDuration = 0.18f;
+        [SerializeField] private AnimationCurve _bandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
         public float TouchTargetRadiusPixels => _touchTargetRadiusPixels;
         public float MinimumPullDistance => _minimumPullDistance;
@@ -39,6 +47,10 @@ namespace Game.Gameplay.Slingshot
         public float MaximumLaunchSpeed => _maximumLaunchSpeed;
         public AnimationCurve LaunchSpeedCurve => _launchSpeedCurve;
         public float LaunchUpSpeed => _launchUpSpeed;
+        public float BandContactPadding => _bandContactPadding;
+        public int BandWrapSampleCount => _bandWrapSampleCount;
+        public float BandRecoilDuration => _bandRecoilDuration;
+        public AnimationCurve BandRecoilCurve => _bandRecoilCurve;
 
         private void OnValidate()
         {

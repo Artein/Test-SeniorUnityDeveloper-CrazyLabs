@@ -24,6 +24,10 @@ public sealed class SlingshotLaunchRequestedTests
     private FakeGameplayStateService _stateService;
     private FakeSlingshotView _view;
     private FakeSlingshotInputProjector _projector;
+    private FakeHeldLaunchTarget _heldLaunchTarget;
+    private FakeSlingshotBandContactProvider _bandContactProvider;
+    private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+    private FakeTime _clock;
 
     [SetUp]
     public void OnSetUp()
@@ -57,17 +61,25 @@ public sealed class SlingshotLaunchRequestedTests
             MinimumLaunchSpeed = 4f,
             MaximumLaunchSpeed = 12f,
             LaunchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f),
-            LaunchUpSpeed = 1.5f
+            LaunchUpSpeed = 1.5f,
+            BandContactPadding = 0.05f,
+            BandWrapSampleCount = 6,
+            BandRecoilDuration = 0.2f,
+            BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
         };
         _input = new FakeUnityInput(_observations);
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _view = new FakeSlingshotView(_observations);
         _projector = new FakeSlingshotInputProjector();
+        _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
+        _bandContactProvider = new FakeSlingshotBandContactProvider(_observations);
+        _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
+        _clock = new FakeTime { DeltaTime = 0.1f };
         ConfigureRestBandScreenProjection();
     }
 
     [Test]
-    public void PointerReleased_ValidPull_RaisesOneLaunchRequestWithPayloadAndRestoresIdle()
+    public void PointerReleased_ValidPull_RaisesOneLaunchRequestWithPayloadAndKeepsLoadedBandUntilLaunchApplied()
     {
         using var controller = CreateInitializedController();
         SubscribeToLaunchRequests(controller);
@@ -79,15 +91,52 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Has.Count.EqualTo(1));
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle", "launch-requested" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "view-loaded-release", "launch-requested" }));
         var request = _launchRequests[0];
         Assert.That(request.PullDistance, Is.EqualTo(1.25f));
         Assert.That(request.PullOffset, Is.EqualTo(0.5f));
+        Assert.That(request.FinalPullPoint, Is.EqualTo(new Vector3(0.5f, 0f, -1.25f)));
         Assert.That(request.NormalizedPower, Is.EqualTo(Mathf.InverseLerp(0.25f, 2f, 1.25f)).Within(0.0001f));
         Assert.That(request.LaunchSpeed, Is.EqualTo(Mathf.Lerp(4f, 12f, request.NormalizedPower)).Within(0.0001f));
         Assert.That(request.LaunchUpDirection, Is.EqualTo(Vector3.up));
         Assert.That(request.LaunchUpSpeed, Is.EqualTo(1.5f));
         AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-14f, Vector3.up) * Vector3.forward);
+    }
+
+    [Test]
+    public void LaunchApplied_AfterValidRelease_StartsRecoilAndDetachesAtRest()
+    {
+        using var controller = CreateInitializedController();
+        SubscribeToLaunchRequests(controller);
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
+        _input.Release(1, releaseScreenPosition);
+        _observations.Clear();
+
+        _launchAppliedNotifier.Apply(_launchRequests[0]);
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "band-contact", "view-loaded-release" }));
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "view-inactive-idle" }));
+    }
+
+    [Test]
+    public void LaunchApplied_WithoutPendingValidRelease_DoesNotStartRecoil()
+    {
+        using var controller = CreateInitializedController();
+
+        var request = new SlingshotLaunchRequest(1f, 1f, 0f, new Vector3(0f, 0f, -1f), Vector3.forward, 4f, Vector3.up, 1f);
+        _observations.Clear();
+
+        _launchAppliedNotifier.Apply(request);
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.Empty);
     }
 
     [Test]
@@ -103,7 +152,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -119,7 +168,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -133,7 +182,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Cancel(1, new Vector2(60f, 30f));
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -149,7 +198,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -224,7 +273,9 @@ public sealed class SlingshotLaunchRequestedTests
         var camera = cameraObject.AddComponent<Camera>();
         builder.RegisterInstance(_input).As<IUnityInput>();
         builder.RegisterInstance(_stateService).As<IGameplayStateService>();
-        builder.RegisterInstance(new TestLaunchTarget()).As<ILaunchTarget>();
+        var launchTarget = new TestLaunchTarget();
+        builder.RegisterInstance(launchTarget).As<ILaunchTarget, IHeldLaunchTarget>();
+        builder.RegisterInstance(new TestBandContactProvider()).As<ISlingshotBandContactProvider>();
         var installer = new SlingshotInstaller(_config, _preLaunchStateId, _view, camera);
 
         installer.Install(builder);
@@ -255,7 +306,8 @@ public sealed class SlingshotLaunchRequestedTests
 
     private SlingshotController CreateInitializedController()
     {
-        var controller = new SlingshotController(_input, _stateService, _view, _projector, _config, _preLaunchStateId);
+        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandContactProvider,
+            _launchAppliedNotifier, _clock, _config, _preLaunchStateId);
         ((IInitializable)controller).Initialize();
         return controller;
     }
@@ -324,7 +376,7 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(actual.magnitude, Is.EqualTo(1f).Within(0.0001f));
     }
 
-    private sealed class TestLaunchTarget : ILaunchTarget
+    private sealed class TestLaunchTarget : ILaunchTarget, IHeldLaunchTarget
     {
         public void Hold()
         {
@@ -332,6 +384,21 @@ public sealed class SlingshotLaunchRequestedTests
 
         public void Launch(Vector3 velocity)
         {
+        }
+
+        public void SetHeldPosition(Vector3 heldPosition)
+        {
+        }
+    }
+
+    private sealed class TestBandContactProvider : ISlingshotBandContactProvider
+    {
+        public SlingshotBandContactShape CreateBandContactShape(SlingshotBandContactQuery query)
+        {
+            return new SlingshotBandContactShape(
+                query.LeftAnchorPosition,
+                new[] { query.PullPoint },
+                query.RightAnchorPosition);
         }
     }
 }

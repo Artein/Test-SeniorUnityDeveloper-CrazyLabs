@@ -18,12 +18,18 @@ Add a touch-driven Slingshot launch feature for the Gameplay Scene.
 
 During Pre-Launch, Unity Input enables Enhanced Touch and emits source-agnostic Pointer Input events. The Slingshot accepts the first pointer press
 inside the Band Touch Target, captures that pointer as the only Active Pull, projects pointer movement onto the Slingshot-owned Pull Plane, clamps
-forward motion, clamps lateral motion, updates Band Shape and Touch Indicator visuals, and raises `LaunchRequested` only when the Pull Release is
-valid.
+forward motion, clamps lateral motion, moves the held Launch Target to the interpreted Pull Point, updates Band Shape and Touch Indicator visuals,
+and raises `LaunchRequested` only when the Pull Release is valid. The Pull Point is the held target and launch position; Band Shape uses separate
+Band Contact Points and a Band Wrap so the visible Band follows the Launch Target collider instead of passing through the Launch Target mesh.
 
 Gameplay Flow listens to the Slingshot launch request. If the authored Gameplay State transition to Running succeeds, it applies launch physics
-through a Slingshot launcher. The Launch Target is held during Pre-Launch, released on Launch, velocities are reset, and the final launch velocity is
-applied with mass-agnostic velocity change.
+through a Slingshot launcher. The Launch Target is held during Pre-Launch, follows the Active Pull while captured, returns to rest on cancel or weak
+release, and launches from the pulled position on valid release. The accepted launch path must not reset the held Launch Target to the Rest Point
+while leaving Pre-Launch. At the launch boundary, the Slingshot launcher re-applies the launch request's final Pull Point before applying velocity,
+so launch does not depend on mutable scene state from a prior controller update. Band reset/recoil starts only after the shot is applied. At that
+point the Band enters Band Release Recoil: it follows the moving Launch Target collider contact points while returning from the loaded Band Shape
+to the rest/idle/default shape, then detaches and stops following the Launch Target. Velocities are reset and the final launch velocity is applied
+with mass-agnostic velocity change.
 
 The first slice should ship a complete usable mechanic: touch/mouse-in-editor input, Band visuals, Pull Hint, Touch Indicator, Gameplay State
 gating, launch physics, scene composition, configuration assets, gizmos, and tests for the core behavior. Designer-facing launch sequencing, haptics,
@@ -46,12 +52,12 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - No custom Editor assembly in the first slice.
   - Slingshot authoring gizmos use `OnDrawGizmosSelected` on the shallow Slingshot view.
 - Scenes, prefabs, ScriptableObjects, package manifests, or ProjectSettings:
-  - Gameplay Scene gets narrow required wiring: Slingshot anchors, Band `LineRenderer`, Canvas UI Pull Hint and Touch Indicator, Gameplay LifetimeScope,
+  - Gameplay Scene gets narrow required wiring: Slingshot anchors, a Band LineRenderer, Canvas UI Pull Hint and Touch Indicator, Gameplay LifetimeScope,
     and Rigidbody Launch Target adapter.
   - Gameplay State Id assets: Pre-Launch, Running, Run Ended.
   - Gameplay State Transition assets: Pre-Launch to Running, Running to Run Ended, Run Ended to Pre-Launch.
   - Gameplay State config ScriptableObject with initial state and allowed transitions.
-  - Slingshot config ScriptableObject with Pull, launch, touch-target, speed-curve, lateral, and lift tuning.
+  - Slingshot config ScriptableObject with Pull, launch, touch-target, speed-curve, lateral, lift, and Band visual quality tuning.
   - Package manifest adds VContainer by direct UPM Git URL pinned to a release tag.
   - Existing Unity Input System remains enabled; the existing input actions asset is not the primary Slingshot input path.
 - RPC/helper commands, hooks, or shell wrappers:
@@ -74,7 +80,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 8. As a player, I want lateral Pull Offset to rotate the launch direction, so that off-center Pulls have predictable aiming value.
 9. As a player, I want launch speed to depend on backward Pull distance, not side Pull, so that aiming does not unexpectedly change power.
 10. As a player, I want the Band Shape to follow my Pull, so that the Slingshot gives clear visual feedback.
-11. As a player, I want a Touch Indicator during an Active Pull, so that I can see the interpreted pull point.
+11. As a player, I want a Touch Indicator during an Active Pull, so that I can see the interpreted Pull Point.
 12. As a player, I want a Pull Hint while the Slingshot is idle, so that I understand the gesture before first use.
 13. As a player, I want Slingshot input disabled after Launch, so that the Run cannot be relaunched accidentally.
 14. As a player, I want only the first captured touch to control the Slingshot, so that additional fingers do not break the interaction.
@@ -87,7 +93,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 21. As a designer, I want Slingshot gizmos, so that anchors, Pull Plane, Launch Frame axes, Pull limits, and touch target behavior can be inspected in the editor.
 22. As a designer, I want the Pull Hint and Touch Indicator to be scene-authored UI objects, so that their visuals can be replaced without code changes.
 23. As a designer, I want Band Shape to be visual-only in the first slice, so that gameplay tuning remains deterministic while visuals can improve later.
-24. As a designer, I want the Player to remain at the scene-authored rest position before launch, so that first-slice setup is simple and explicit.
+24. As a player, I want the Player to move with the pulled Band during Active Pull, so that the Slingshot feels like it is loading the target directly.
 25. As a developer, I want Slingshot rules in a plain C# controller, so that Pull interpretation and Launch request creation can be EditMode tested.
 26. As a developer, I want MonoBehaviours to stay shallow, so that Unity callbacks and serialized references do not accumulate gameplay decisions.
 27. As a developer, I want the Slingshot view to expose command-style methods, so that presentation can be driven by controller state.
@@ -112,7 +118,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 46. As a developer, I want launch application failures to surface after a successful transition, so that broken composition is not silently hidden.
 47. As a developer, I want launch request payloads to contain pure data only, so that launch coordination is testable and not tied to Unity object lifetimes.
 48. As a developer, I want launch request direction and up direction normalized by contract, so that launch application remains simple.
-49. As a developer, I want launch target mechanics hidden behind `ILaunchTarget`, so that Rigidbody specifics do not leak into Slingshot intent.
+49. As a developer, I want launch application hidden behind `ILaunchTarget` and held positioning hidden behind a separate narrow interface, so that Rigidbody specifics do not leak into Slingshot intent.
 50. As a developer, I want Rigidbody launch to use velocity change, so that launch tuning is independent from Rigidbody mass.
 51. As a developer, I want the Launch Target held during Pre-Launch, so that stale physics motion does not influence launch.
 52. As a developer, I want hold and launch to clear linear and angular velocity, so that each Run begins deterministically.
@@ -124,12 +130,17 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 58. As a tester, I want a PlayMode composition smoke test if practical, so that scene wiring failures are caught without overtesting engine behavior.
 59. As a maintainer, I want the first slice to avoid haptics, audio, launch sequencing, and rope physics, so that the core launch mechanic ships without speculative complexity.
 60. As a maintainer, I want ADRs and glossary vocabulary reflected in the implementation, so that future work continues using stable project language.
+61. As a player, I want the Band to appear to meet the Launch Target instead of passing through it, so that the loaded Slingshot reads as physical.
+62. As a player, I want the Band to appear aligned with the Launch Target collider shape, so that the loaded Slingshot reads like it is wrapping the
+    target rather than cutting through or floating off it.
+63. As a player, I want the Band Wrap to use enough visual points to look elastic and polished, so that the loaded Slingshot feels responsive rather
+    than angular.
 
 ## Implementation Decisions
 
-- Use the project glossary terms: Slingshot, Band, Band Touch Target, Band Shape, Pull Hint, Touch Indicator, Pull, Pull Release, Active Pull, Pull
-  Offset, Launch Frame, Pull Plane, Launch, Launch Target, Gameplay State, Gameplay State Id, Gameplay State Transition, Gameplay Flow, Unity Input,
-  and Pointer Input.
+- Use the project glossary terms: Slingshot, Band, Band Touch Target, Band Shape, Band Wrap, Pull Hint, Touch Indicator, Pull, Pull Release, Active
+  Pull, Pull Offset, Pull Point, Band Contact Point, Rest Point, Launch Frame, Pull Plane, Launch, Launch Target, Gameplay State, Gameplay State Id,
+  Gameplay State Transition, Gameplay Flow, Unity Input, and Pointer Input.
 - Keep gameplay rules in plain C# controllers and services. MonoBehaviours are shallow Unity adapters for serialized data, Unity callbacks,
   scene references, visuals, gizmos, and component calls.
 - Use VContainer for dependency injection. Controllers and services may participate in VContainer lifecycle; MonoBehaviours should not receive
@@ -142,8 +153,11 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   `LaunchRequested`.
 - Use a typed `SlingshotLaunchRequestedHandler` delegate for `LaunchRequested`, carrying a single launch request payload.
 - The launch request payload is pure data and may use Unity value types, but must not hold Unity object/lifecycle references.
-- The launch request includes horizontal direction, launch speed, up direction, launch up speed, normalized power, Pull distance, and Pull Offset.
+- The launch request includes horizontal direction, launch speed, up direction, launch up speed, normalized power, Pull distance, Pull Offset, and
+  final clamped `PullPointWorldPosition`.
 - Keep both normalized power and Pull distance because they serve different future consumers: presentation scaling and debugging/tuning.
+- Keep final `PullPointWorldPosition` because launch application, launch presentation, debugging, and tests should not infer release position from
+  mutable scene state.
 - Use `PullOffset` as signed lateral world-unit displacement on the Pull Plane. Positive is to the Slingshot right.
 - Use `PullDistance` as effective backward world-unit displacement after forward movement is clamped to zero.
 - Lateral steering is configured through max lateral pull and max launch angle. Pull Offset normalizes to `[-1, 1]` and rotates Launch Frame forward.
@@ -158,8 +172,16 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   transitions.
 - On initialization, the Slingshot controller checks whether Gameplay State already is Pre-Launch and enables capture immediately if needed.
 - Each Pre-Launch re-entry creates a fresh Unity Input enable handle, resets capture state, and shows the Pull Hint.
-- Leaving Pre-Launch cancels any Active Pull, restores idle Band Shape, hides the Touch Indicator, disables capture, and disposes the input enable
-  handle.
+- Leaving Pre-Launch without an accepted launch cancels any Active Pull, restores idle Band Shape, hides the Touch Indicator, disables capture, and
+  disposes the input enable handle.
+- The accepted launch path clears Pull ownership and input capture without returning the held Launch Target to the Rest Point. The Launch Target
+  stays at the valid final Pull Point until launch application.
+- The accepted launch path keeps the final loaded Band Shape through the synchronous launch handoff. It must not show the idle/rest Band Shape before
+  the launch request has been accepted and applied.
+- After the launch request is accepted and applied, the Band enters Band Release Recoil. Recoil starts from the final loaded Band Shape and keeps
+  querying contact/wrap against the moving Launch Target collider while the Band returns toward Rest Shape.
+- Band Release Recoil ends when the Band reaches the rest/idle/default shape. At that point the Band detaches and must not keep following the
+  Launch Target.
 - Slingshot capture enable and disable paths are idempotent.
 - The Slingshot controller acquires the Unity Input enable handle before enabling the view, and resets/disables the view before disposing the handle.
 - The Slingshot controller does not catch exceptions from input enablement, view commands, or its pointer handlers. These are configuration or logic
@@ -168,10 +190,13 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Active Pull starts only while capture is enabled, no Active Pull exists, and the pointer press is within the Band Touch Target.
 - Band Touch Target hit testing is screen-space distance from pointer to the projected visible rest Band polyline, with a configured pixel radius
   large enough for finger input.
-- First-slice Band Touch Target geometry checks the two visible rest segments: left anchor to rest point, and rest point to right anchor. Richer
+- First-slice Band Touch Target geometry checks the two visible rest segments: left anchor to Rest Point, and Rest Point to right anchor. Richer
   curved or sagging segment hit testing is deferred.
 - After capture, pointer movement is interpreted anywhere on the Pull Plane; the touch does not need to remain near the Band.
 - Use a Slingshot-owned Pull Plane defined by Launch Frame right/forward axes, with Launch Frame up as plane normal.
+- Slingshot authoring validation requires left anchor, right anchor, and Rest Point to be coplanar with the authored Pull Plane/Band Plane within a
+  small tolerance. Invalid planar authoring fails fast instead of being silently projected into place.
+- Coplanarity tolerance is a small implementation-owned validation constant, not a `SlingshotConfig` field or designer-tuned inspector value.
 - Use camera projection math through an input projector abstraction to map screen positions to the Pull Plane and world points to screen positions.
   Do not use physics raycasts, Surface colliders, or input layers for Pull mapping.
 - If screen-to-Pull-Plane projection fails during an Active Pull, cancel the Pull and return to idle.
@@ -180,17 +205,84 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Backward distance and lateral offset are clamped independently before updating visuals and before creating a launch request.
 - Weak, forward-only, canceled, or invalidly projected Pulls do not raise `LaunchRequested`.
 - The Band Shape is visual-only in the first slice. It does not decide launch power.
-- First-slice Band visual uses a `LineRenderer` with three points: left anchor, pull/rest point, and right anchor.
-- Additional Band sag/curve visuals can be added later without changing launch math.
+- During Active Pull, the held Launch Target follows the clamped Pull Point.
+- During Active Pull, first-slice held target updates are position-only and preserve the Launch Target rotation. Future target-facing, lean, spin, or
+  orientation changes should be added through an explicit rotation/orientation contract or presentation layer, not hidden inside position updates.
+- During an Active Pull update, `SlingshotController` computes the clamped Pull Point, calls
+  `IHeldLaunchTargetPositioner.SetHeldPosition(pullPoint)`, then requests Band Contact Points and Band Wrap data from
+  `ILaunchTargetBandContactProvider`.
+- `SetHeldPosition` is an immediate held-target positioning contract: after it returns, the assigned Collider pose is expected to be current enough
+  for same-frame Band contact calculation.
+- The Pull Point remains the gameplay held/launch position and must not be treated as a Band renderer point when it would place the Band inside the
+  Launch Target mesh.
+- Band Shape uses Band Contact Points derived from the held Launch Target's single assigned `Collider` so the visible Band meets the target instead of
+  passing through it.
+- First-slice Band Contact and Band Wrap generation supports one explicitly assigned Unity `Collider` of any Collider type, not only the current
+  Gameplay Scene `CapsuleCollider`. Compound or multi-collider target shape support is deferred.
+- First-slice Band Contact Points are computed as closest padded points from each Band anchor to the assigned Launch Target Collider using generic
+  Collider surface queries. This is intentionally not a full rope-physics or tangent solve.
+- First-slice rendered Band Contact Points and Band Wrap samples are projected onto the Slingshot Pull Plane/Band height after Collider contact,
+  wrap, and padding calculations. The assigned Collider provides horizontal contact shape; arbitrary vertical closest-point coordinates from tall
+  Colliders are not preserved in the rendered Band Shape.
+- Generic any-Collider Band Wrap is a best-effort visual approximation. It does not promise exact silhouette, tangent, or mesh-topology wrapping for
+  arbitrary collider shapes.
+- Generic Band Wrap sample origins are generated on an arc in the Pull Plane around the Pull Point, then projected to the assigned Collider with
+  generic surface queries and padded outward.
+- When contact directions are asymmetric, the Band Wrap arc uses the backward/pulled side of the Launch Target: the side most aligned with
+  `-LaunchFrameForward` in the Pull Plane. It does not choose the shortest arc if that would move the visible wrap to the front or side of the target.
+- Generic Collider contact and wrap padding offsets from the `Collider.ClosestPoint` result back toward the query origin, using
+  `normalize(queryOrigin - closestPoint) * padding` when that direction is valid. For Band Contact Points, the query origin is the relevant Band
+  anchor. For Band Wrap samples, the query origin is the Pull Plane arc sample origin.
+- If `queryOrigin - closestPoint` is near zero, generic Collider padding falls back in order: projected direction from Collider bounds center to the
+  closest point in the Pull Plane, then `-LaunchFrameForward`, then no padding if no valid direction exists.
+- Do not generate the first-slice Band Wrap by linearly interpolating between Band Contact Points, because that describes a chord through the target
+  before projection and weakens the visual feeling that the Band wraps around the held target.
+- Arc-based Band Wrap sampling remains presentation-only and uses `BandWrapSegmentCount`. It does not affect Pull Point, Pull Offset, launch power, or
+  launch direction.
+- Band contact calculation aligns the visual contact data to the assigned Collider shape instead of using arbitrary scene-authored offsets.
+  Shape-specific precision can be improved inside the Launch Target Band contact provider/adapter without changing SlingshotController or
+  SlingshotView.
+- First-slice Band Shape is an ordered visual path: left anchor, left Band leg, left Band Contact Point, collider-aligned Band Wrap, right Band
+  Contact Point, right Band leg, right anchor.
+- First-slice Band Shape does not draw a straight visible segment between Band Contact Points through the Launch Target. The Band Wrap follows the
+  padded target collider shape between the Band Contact Points.
+- Band Shape data may contain multiple visual sample points so the Band Wrap can read as smooth, elastic, and polished without changing launch math.
+- First-slice Band Shape is represented to the view as one ordered world-space polyline, not separate renderer pieces for left leg, Band Wrap, and
+  right leg.
+- The ordered Band Shape polyline starts at the left anchor, includes Band Contact Points and Band Wrap samples in order, and ends at the right
+  anchor.
+- Band Wrap visual quality is designer-tuned through `SlingshotConfig`, using a clamped `BandWrapSegmentCount` value such as `[Range(2, 24)]` with
+  a sensible default around `12`.
+- Band Contact Points may include a small designer-authored non-negative padding value so the Band visually sits just outside the target mesh.
+- The Slingshot geometry Rest Point is the source of truth for the unloaded Pull Point and held Launch Target reset position.
+- Canceling, weak release, or invalid projection returns the held Launch Target to the Rest Point.
+- Valid release keeps the Launch Target at the final pulled point until launch is applied, so launch starts from the loaded Slingshot position.
+- After launch application/shoot, the Band enters Band Release Recoil while the Launch Target leaves the Slingshot. This reset/recoil is a post-shot
+  visual behavior, not pre-launch cleanup.
+- During Band Release Recoil, the Band continues computing Band Contact Points and Band Wrap from the moving Launch Target collider so the shot
+  reads as the Band pushing the target forward.
+- Band Release Recoil stops following the Launch Target when the Band reaches the rest/idle/default shape.
+- Rest Band Shape may use the Rest Point only when no visible target contact is required. If the held Launch Target is visible at the Rest Point, the
+  same Band Contact Point rule applies so the Band does not pass through the mesh while idle.
+- Additional Band sag, secondary motion, or richer rope visuals can be added later without changing launch math.
 - Pull Hint is a scene-authored UI object controlled by the Slingshot view.
 - Touch Indicator is a scene-authored UI object controlled by the Slingshot view during Active Pull.
-- Pull Hint and Touch Indicator live under a Canvas; the Band remains a world `LineRenderer`.
-- Slingshot view exposes command-style methods for pull visuals, idle visuals, and capture availability. It does not move the Player during Pull.
+- Pull Hint and Touch Indicator live under a Canvas; the Band remains world-rendered.
+- Slingshot view exposes command-style methods for pull visuals, idle visuals, and capture availability. It does not own Launch Target movement.
+- Slingshot view receives an already computed Band Shape. It does not query Launch Target colliders or decide Band Contact Points or Band Wrap
+  geometry.
+- Slingshot view renders the first-slice Band Shape with one LineRenderer by applying every ordered polyline point.
 - Slingshot view exposes a read-only geometry snapshot method. It fails fast when required serialized references are missing.
+- Slingshot view or geometry snapshot validation fails fast when left anchor, right anchor, or Rest Point is authored off the Pull Plane/Band Plane
+  beyond tolerance. First-slice geometry does not silently repair non-planar authoring by projection.
+- The Pull Plane/Band Plane coplanarity tolerance is private/internal to geometry validation and covered by tests; designers do not tune it through
+  scene or config assets.
 - Slingshot geometry is captured once at controller construction/initialization and treated as static during a run.
 - Slingshot config is a ScriptableObject with touch target radius, min/max Pull distance, max lateral pull, max launch angle, min/max launch speed,
-  launch speed curve, and launch up speed.
+  launch speed curve, launch up speed, and Band visual sample tuning.
 - Slingshot config uses inspector attributes for simple scalar limits and `OnValidate` for cross-field or structural validation.
+- Slingshot config exposes Band visual sample tuning through `ISlingshotConfig` so controllers and pure tests do not depend on ScriptableObject
+  instances.
 - The launch speed curve maps normalized Pull power to a clamped `0..1` factor, then interpolates between min and max launch speed.
 - Missing or empty launch speed curves must not be silently replaced at runtime. Sensible asset defaults are allowed, but broken serialized tuning
   must be reported or fail during validation/construction.
@@ -236,16 +328,47 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Slingshot launch controller subscribes to Gameplay State and holds the Launch Target when entering Pre-Launch. It also holds immediately on
   initialization if the game already starts in Pre-Launch.
 - Slingshot launch controller does not authorize flow transitions. It assumes Gameplay Flow already accepted the transition before calling launch.
-- Slingshot launch controller validates launch request direction, speeds, and final velocity only at launch boundary. Invalid requests warn and skip.
+- Slingshot launch controller validates launch request direction, speeds, Pull Point, and final velocity only at launch boundary. Invalid requests warn
+  and skip.
+- Slingshot launch controller sets the held Launch Target to the request's final `PullPointWorldPosition` immediately before calling launch, so
+  launch starts from the same pulled position described by the request payload.
 - Final velocity is horizontal direction multiplied by launch speed plus up direction multiplied by launch up speed.
 - Slingshot launcher returns void. Defensive invalid-request skips warn instead of returning a result.
 - `ILaunchTarget` exposes `Hold()` and `Launch(velocity)`.
+- Held Launch Target positioning is exposed through a separate narrow interface, such as `IHeldLaunchTargetPositioner.SetHeldPosition(Vector3 position)`.
+- Launch Target Band contact is exposed through a separate narrow interface, such as `ILaunchTargetBandContactProvider`, so Slingshot can compute
+  presentation contact points without leaking Rigidbody or Collider details into the controller.
+- `ILaunchTargetBandContactProvider` is backed by an explicitly assigned Launch Target Collider in the Unity adapter, not by a separate
+  designer-authored proxy shape in the first slice.
+- `ILaunchTargetBandContactProvider` accepts exactly one explicitly assigned Unity `Collider` of any Collider type and uses generic Collider surface
+  queries for first-slice contact and wrap data.
+- `ILaunchTargetBandContactProvider` does not auto-discover child Colliders or choose among multiple Colliders in the first slice. Multi-collider
+  Launch Target shapes require a later compound-shape decision.
+- `ILaunchTargetBandContactProvider` calculates contacts from the assigned Collider's current Transform after `SetHeldPosition`. It does not accept a
+  virtual Pull Point, target pose, or predicted transform in the first slice.
+- `ILaunchTargetBandContactProvider` may use `Collider.ClosestPoint(Vector3)` as the generic first-slice surface query. Exact collider-specific
+  silhouette support is deferred.
+- The Launch Target Band contact adapter validates the assigned Collider and contact padding through `OnValidate`, and fails fast before use if
+  required references are missing.
+- Slingshot pull interpretation depends on held positioning, while Slingshot launch application depends on both `ILaunchTarget` and held positioning.
+- Held positioning is valid only after the Launch Target has been held; calling `SetHeldPosition` before `Hold()` fails fast instead of implicitly
+  holding or silently no-oping.
+- Held positioning preserves the Launch Target's rotation in the first slice. The code should keep a TODO at the Launch Target boundary for future
+  explicit rotation/orientation support if game feel later needs the target to face the launch direction.
+- SlingshotController does not position the held Launch Target during initialization or Pre-Launch state entry; it positions only from pointer
+  lifecycle handling after input capture begins, avoiding dependency on VContainer initializer order or Gameplay State subscriber order.
 - Rigidbody Launch Target is a shallow MonoBehaviour adapter over an explicitly assigned Rigidbody.
 - Rigidbody Launch Target uses `OnValidate` for missing reference authoring validation and production assertions before dereference.
 - Rigidbody Launch Target hold preserves previous kinematic state and constraints, sets kinematic true, and clears linear/angular velocity.
+- Rigidbody Launch Target can be positioned while held so Active Pull can load the Player into the Slingshot.
+- Rigidbody Launch Target held positioning uses immediate Rigidbody/Transform pose assignment while held, not `Rigidbody.MovePosition`, because Band
+  contact calculation needs the assigned Collider pose to be observable in the same frame.
+- Do not call Unity physics transform synchronization unconditionally after every held target move in the hot path.
+- Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` correctness. If that test proves explicit Unity physics transform
+  synchronization is required, add the narrow sync in the Rigidbody Launch Target or contact-calculation path and document why there.
 - Rigidbody Launch Target launch restores saved state if held, clears linear/angular velocity again, and applies velocity change.
 - Launch Target launch behaves deterministically even if hold was never called.
-- First slice does not reset Player position to a rest point; scene-authored Player position is the initial rest position.
+- First slice does not add a retry/reset placement controller beyond returning canceled or weak Active Pulls to the Slingshot Rest Point.
 - Use existing Unity logging for warnings and exception logging. Structured logging is deferred by ADR.
 
 ## Testing Decisions
@@ -273,6 +396,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Invalid transition returns false and warns.
   - Changing subscriber exception is logged and isolated while the transition still completes.
   - Config validator reports nulls, self-transitions, and duplicate transitions with stable typed errors.
+- Slingshot config EditMode tests:
+  - Validator reports invalid Band Wrap segment counts outside the supported range.
 - Slingshot EditMode tests:
   - Initialization while already Pre-Launch enables capture and input.
   - Entering and leaving Pre-Launch acquire/dispose input handles and update view state in the expected order.
@@ -284,17 +409,64 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Forward displacement clamps to zero.
   - Backward and lateral clamping produce expected view state.
   - Weak, forward-only, and canceled Pulls produce no launch request.
-  - Valid Pull Release raises a launch request with expected normalized power, Pull distance, Pull Offset, direction, speed, and lift.
-  - Touch Indicator screen position follows the projected clamped pull point, not the raw finger.
+  - Active Pull moves the held Launch Target to the clamped Pull Point.
+  - Active Pull held target positioning preserves the Launch Target rotation.
+  - Active Pull creates Band Shape from target Band Contact Points and Band Wrap, not from the Pull Point as a renderer middle point.
+  - Active Pull Band Shape contains visible Band legs, a collider-aligned Band Wrap, and no straight segment through the Launch Target.
+  - Active Pull requests Band Contact Points through the target contact provider and does not query Collider data directly.
+  - Active Pull positions the held Launch Target before requesting Band Contact Points and Band Wrap data.
+  - Active Pull Band Contact Points are derived as left-anchor and right-anchor closest padded points against the assigned target Collider.
+  - Geometry validation rejects left anchor, right anchor, or Rest Point authoring that is off the Pull Plane/Band Plane beyond tolerance.
+  - Geometry validation does not silently project misaligned anchors or Rest Point to make invalid authoring pass.
+  - Geometry validation uses an implementation-owned coplanarity tolerance and does not read tolerance from `SlingshotConfig` or scene-authored
+    values.
+  - Active Pull Band Shape contains enough ordered visual sample points to represent the configured Band Wrap quality.
+  - Active Pull Band Shape respects the configured `BandWrapSegmentCount` while staying within the validated clamp range.
+  - Changing `BandWrapSegmentCount` changes visual sample density but does not change launch request power, direction, Pull Offset, or Pull Point.
+  - Active Pull Band Shape is one ordered polyline that starts at the left anchor and ends at the right anchor.
+  - Forward-only Pull keeps the held Launch Target at the Rest Point.
+  - Canceled, invalidly projected, and weak Pull releases return the held Launch Target to the Rest Point.
+  - Valid Pull Release keeps the held Launch Target at the final pulled point before launch application.
+  - Valid Pull Release keeps the loaded Band Shape through launch request notification instead of resetting visuals before launch handoff.
+  - Accepted launch starts Band Release Recoil after launch application.
+  - During Band Release Recoil, the Band continues requesting Band Contact Points and Band Wrap from the moving Launch Target collider.
+  - Band Release Recoil detaches from the Launch Target when the Band reaches the rest/idle/default shape.
+  - Initialization and Pre-Launch state entry do not call held target positioning.
+  - Valid Pull Release raises a launch request with expected normalized power, Pull distance, Pull Offset, Pull Point world position, direction,
+    speed, and lift.
+  - Touch Indicator screen position follows the projected clamped Pull Point, not the raw finger.
 - Slingshot tests should use local fakes for Unity Input, Gameplay State, Slingshot view, input projector, and launcher dependencies.
 - Slingshot launch EditMode tests:
   - Target is held on initial Pre-Launch and every Pre-Launch re-entry.
+  - Valid launch request positions the held Launch Target at the request's final Pull Point before launching.
   - Valid launch request computes final velocity and calls target launch.
-  - Invalid request or invalid final velocity warns and skips target launch.
+  - Invalid request, invalid Pull Point, or invalid final velocity warns and skips held target positioning and target launch.
   - Launcher does not duplicate Gameplay Flow authorization.
 - Rigidbody Launch Target tests:
   - Use PlayMode only if Unity Rigidbody behavior requires engine lifecycle.
   - Verify hold preserves/restores kinematic state and constraints and clears velocities.
+  - Verify held positioning moves the kinematic Rigidbody deterministically.
+  - Verify held positioning preserves Rigidbody rotation.
+  - Verify held positioning uses immediate pose assignment rather than `Rigidbody.MovePosition`.
+  - Verify held positioning fails fast if called before hold.
+  - Verify held positioning updates the assigned Collider pose before same-frame Band Contact Point and Band Wrap calculation.
+  - Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` correctness before introducing explicit physics transform
+    synchronization.
+  - Verify Band Contact Point calculation uses the assigned target Collider and contact padding.
+  - Verify Band Contact Point and Band Wrap calculation use the single explicitly assigned Collider and do not auto-select from child Colliders.
+  - Verify Band Contact Point calculation returns collider-aligned contacts for the assigned target Collider shape.
+  - Verify Band Contact Points and Band Wrap samples are projected onto the Slingshot Pull Plane/Band height instead of preserving arbitrary Collider
+    vertical closest-point coordinates.
+  - Verify generic Collider padding offsets valid `ClosestPoint` results back toward the query origin: anchor for Band Contact Points, arc sample
+    origin for Band Wrap samples.
+  - Verify degenerate generic Collider padding falls back to Pull Plane bounds-center direction, then `-LaunchFrameForward`, then no padding.
+  - Verify Band Wrap calculation returns padded collider-aligned sample points between the left and right Band Contact Points.
+  - Verify Band Wrap generation samples from a Pull Plane arc around the Pull Point before Collider projection, not from a linear chord between Band
+    Contact Points.
+  - Verify asymmetric contact directions choose the backward/pulled Band Wrap arc side instead of the shortest arc when those differ.
+  - Verify Band Contact Point and Band Wrap calculation work through the base Collider contract with representative Collider types, not just
+    `CapsuleCollider`.
+  - Verify generic Band Wrap behavior is stable and padded, without asserting exact arbitrary-collider silhouettes.
   - Verify launch clears stale velocities and applies velocity change.
 - Gameplay Flow EditMode tests:
   - Valid launch request transitions to Running before calling launcher.
@@ -304,6 +476,9 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Scene/composition verification:
   - Add one PlayMode smoke test if practical to load or exercise the Gameplay Scene composition.
   - Verify missing serialized references fail fast through validation or runtime assertions.
+  - Verify the Band LineRenderer receives the full ordered Band Shape polyline instead of collapsing the Band Shape to three points.
+  - Verify accepted launch shows Band Release Recoil after the shot is applied, following the Launch Target contact points until the Band reaches
+    rest/idle/default shape.
   - Use manual Unity smoke testing for touch feel, gizmo usefulness, UI positioning, and actual device comfort.
 - Do not hardcode asset paths in tests if test assets are required; use the project's typed test asset provider convention if/when such assets are
   introduced.
@@ -332,10 +507,12 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 ## Out of Scope
 
 - Real rope physics, joints, cloth, spline simulation, Burst-optimized rope logic, or physically simulated Band tension.
+- Non-planar Slingshot Band geometry or 3D anchor/Rest Point layouts.
+- Compound or multi-collider Launch Target Band contact/wrap solving.
 - Multi-touch gameplay support beyond ignoring non-captured touches.
 - Haptics, audio, particles, camera transition, Timeline/Feel launch presentation, or a full Launch Sequence.
 - Delaying physics launch until a presentation sequence finishes.
-- Player rest-position reset or retry placement controller.
+- Retry placement controller beyond returning canceled or weak Active Pulls to the current Slingshot Rest Point.
 - Run end detection, crash detection, lost momentum detection, or level completion rules.
 - Save/load representation of Gameplay State.
 - Remote issue creation or tracker publishing.
