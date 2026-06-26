@@ -9,6 +9,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
+using VContainer.Internal;
 using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
@@ -216,7 +217,7 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
-    public void Install_ContainerBuilt_ResolvesLaunchNotifierAsControllerInstance()
+    public void Install_ContainerBuilt_ResolvesSlingshotContracts()
     {
         var builder = new ContainerBuilder();
         var cameraObject = new GameObject("Slingshot Test Camera");
@@ -229,11 +230,14 @@ public sealed class SlingshotLaunchRequestedTests
         installer.Install(builder);
 
         using var container = builder.Build();
-        var controller = container.Resolve<SlingshotController>();
         var notifier = container.Resolve<ISlingshotLaunchNotifier>();
+        var launcher = container.Resolve<ISlingshotLauncher>();
+        var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         UnityEngine.Object.DestroyImmediate(cameraObject);
 
-        Assert.That(notifier, Is.SameAs(controller));
+        Assert.That(notifier, Is.Not.Null);
+        Assert.That(launcher, Is.Not.Null);
+        Assert.That(initializables.Count, Is.EqualTo(2));
     }
 
     private SlingshotLaunchRequest ReleaseAndCaptureRequest(Vector3 rawPullPoint, Vector2 touchIndicatorScreenPosition)

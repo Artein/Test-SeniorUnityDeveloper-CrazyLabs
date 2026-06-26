@@ -132,6 +132,22 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void PointerPressed_AtRestPointAwayFromAnchorChord_StartsActivePull()
+    {
+        _stateService.CurrentStateId = _preLaunchStateId;
+        using var controller = CreateInitializedController();
+        _projector.SetWorldToScreen(_view.Geometry.RestPoint, new Vector2(50f, 40f));
+        _projector.SetScreenToWorld(new Vector2(50f, 40f), _view.Geometry.RestPoint);
+        _observations.Clear();
+
+        _input.Press(1, new Vector2(50f, 40f));
+
+        Assert.That(_observations, Is.EqualTo(new[] { "view-active-pull" }));
+        Assert.That(_view.LastActivePullVisual.BandShape.MiddlePosition, Is.EqualTo(_view.Geometry.RestPoint));
+        Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(50f, 40f)));
+    }
+
+    [Test]
     public void PointerEvents_SecondPointerWhileActive_Ignored()
     {
         _stateService.CurrentStateId = _preLaunchStateId;

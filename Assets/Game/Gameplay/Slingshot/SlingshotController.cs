@@ -301,12 +301,15 @@ namespace Game.Gameplay.Slingshot
         private bool IsInsideBandTouchTarget(Vector2 screenPosition)
         {
             if (!_inputProjector.TryProjectWorldToScreen(_geometry.LeftAnchorPosition, out var leftAnchorScreenPosition)
+                || !_inputProjector.TryProjectWorldToScreen(_geometry.RestPoint, out var restPointScreenPosition)
                 || !_inputProjector.TryProjectWorldToScreen(_geometry.RightAnchorPosition, out var rightAnchorScreenPosition))
             {
                 return false;
             }
 
-            var distanceToBand = GetDistanceToSegment(screenPosition, leftAnchorScreenPosition, rightAnchorScreenPosition);
+            var distanceToLeftBand = GetDistanceToSegment(screenPosition, leftAnchorScreenPosition, restPointScreenPosition);
+            var distanceToRightBand = GetDistanceToSegment(screenPosition, restPointScreenPosition, rightAnchorScreenPosition);
+            var distanceToBand = Mathf.Min(distanceToLeftBand, distanceToRightBand);
             return distanceToBand <= _config.TouchTargetRadiusPixels;
         }
 

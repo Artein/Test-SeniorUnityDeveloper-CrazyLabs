@@ -7,6 +7,8 @@ using Game.Input.UnityInput;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer;
+using VContainer.Internal;
+using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplayLifetimeScopeTests
@@ -72,14 +74,14 @@ public sealed class GameplayLifetimeScopeTests
         var gameplayStateService = container.Resolve<IGameplayStateService>();
         var slingshotNotifier = container.Resolve<ISlingshotLaunchNotifier>();
         var slingshotLauncher = container.Resolve<ISlingshotLauncher>();
-        var gameplayFlowController = container.Resolve<GameplayFlowController>();
+        var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(gameplayFlowController, Is.Not.Null);
+        Assert.That(initializables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
     }
 

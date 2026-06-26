@@ -94,7 +94,7 @@ public sealed class GameplayStateServiceTests : GameplayStateTestFixture
     }
 
     [Test]
-    public void TryTransitionTo_ChangingSubscriberThrows_PropagatesAndBlocksMutation()
+    public void TryTransitionTo_ChangingSubscriberThrows_LogsAndCompletesTransition()
     {
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
@@ -102,10 +102,11 @@ public sealed class GameplayStateServiceTests : GameplayStateTestFixture
         var service = CreateService(config);
 
         service.GameplayStateChanging += (_, _) => throw new InvalidOperationException("Changing failed");
+        LogAssert.Expect(LogType.Exception, new Regex("Changing failed"));
 
-        Assert.That(
-            () => service.TryTransitionTo(running),
-            Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Changing failed"));
-        Assert.That(service.CurrentStateId, Is.SameAs(preLaunch));
+        var result = service.TryTransitionTo(running);
+
+        Assert.That(result, Is.True);
+        Assert.That(service.CurrentStateId, Is.SameAs(running));
     }
 }

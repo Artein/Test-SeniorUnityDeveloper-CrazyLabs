@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
+using VContainer.Internal;
 using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
@@ -164,7 +165,7 @@ public sealed class GameplayFlowControllerTests
     }
 
     [Test]
-    public void Install_ContainerBuilt_ResolvesGameplayFlowController()
+    public void Install_ContainerBuilt_RegistersGameplayFlowEntryPoint()
     {
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
@@ -177,9 +178,9 @@ public sealed class GameplayFlowControllerTests
         installer.Install(builder);
 
         using var container = builder.Build();
-        var controller = container.Resolve<GameplayFlowController>();
+        var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
 
-        Assert.That(controller, Is.Not.Null);
+        Assert.That(initializables.Count, Is.EqualTo(1));
     }
 
     private GameplayFlowController CreateInitializedController(
