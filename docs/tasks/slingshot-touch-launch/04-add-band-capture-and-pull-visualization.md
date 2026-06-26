@@ -20,20 +20,20 @@ This slice should stop before raising a real launch request. It should make the 
 
 ## Acceptance criteria
 
-- [ ] Slingshot has its own runtime assembly and EditMode test assembly.
-- [ ] Slingshot config covers touch target radius, Pull thresholds/limits, lateral limits, speed curve fields, and launch lift fields needed by later slices.
-- [ ] Slingshot view is a shallow MonoBehaviour adapter with explicit serialized references, `OnValidate`, geometry snapshot creation, view command methods, and selected-object gizmos.
-- [ ] Band Shape uses a three-point visual path from left anchor to pull/rest point to right anchor.
-- [ ] Pull Hint and Touch Indicator are controlled as scene-authored UI objects.
-- [ ] Controller subscribes to Unity Input and Gameplay State once for lifetime and enables capture only while the current state is Pre-Launch.
-- [ ] Entering Pre-Launch acquires an input enable handle before enabling capture visuals.
-- [ ] Leaving Pre-Launch cancels any Active Pull, returns visuals to idle, disables capture, then disposes the input handle.
-- [ ] A pointer press starts Active Pull only when capture is enabled and the press is within the generous screen-space Band Touch Target.
-- [ ] Only the first captured pointer controls the Active Pull; other pointers are ignored.
-- [ ] Pointer movement is projected to the Slingshot Pull Plane without physics raycasts.
-- [ ] Projection failure during Active Pull cancels the Pull and restores idle visuals.
-- [ ] Forward displacement clamps to zero; backward distance and lateral offset clamp independently.
-- [ ] Touch Indicator follows the projected clamped pull point, not raw finger position.
+- [x] Slingshot has its own runtime assembly and EditMode test assembly.
+- [x] Slingshot config covers touch target radius, Pull thresholds/limits, lateral limits, speed curve fields, and launch lift fields needed by later slices.
+- [x] Slingshot view is a shallow MonoBehaviour adapter with explicit serialized references, `OnValidate`, geometry snapshot creation, view command methods, and selected-object gizmos.
+- [x] Band Shape uses a three-point visual path from left anchor to pull/rest point to right anchor.
+- [x] Pull Hint and Touch Indicator are controlled as scene-authored UI objects.
+- [x] Controller subscribes to Unity Input and Gameplay State once for lifetime and enables capture only while the current state is Pre-Launch.
+- [x] Entering Pre-Launch acquires an input enable handle before enabling capture visuals.
+- [x] Leaving Pre-Launch cancels any Active Pull, returns visuals to idle, disables capture, then disposes the input handle.
+- [x] A pointer press starts Active Pull only when capture is enabled and the press is within the generous screen-space Band Touch Target.
+- [x] Only the first captured pointer controls the Active Pull; other pointers are ignored.
+- [x] Pointer movement is projected to the Slingshot Pull Plane without physics raycasts.
+- [x] Projection failure during Active Pull cancels the Pull and restores idle visuals.
+- [x] Forward displacement clamps to zero; backward distance and lateral offset clamp independently.
+- [x] Touch Indicator follows the projected clamped pull point, not raw finger position.
 
 ## Verification
 

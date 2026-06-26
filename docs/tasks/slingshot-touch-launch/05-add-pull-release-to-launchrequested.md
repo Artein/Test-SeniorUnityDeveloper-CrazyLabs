@@ -20,17 +20,17 @@ Weak, forward-only, canceled, or invalidly projected Pulls should return the vie
 
 ## Acceptance criteria
 
-- [ ] Slingshot exposes an `ISlingshotLaunchNotifier` interface with the required `LaunchRequested` event.
-- [ ] The event uses a typed launch-request handler delegate and a pure launch request payload.
-- [ ] Valid Pull Release raises exactly one launch request for the captured pointer.
-- [ ] Weak Pulls below the configured minimum do not raise a request.
-- [ ] Forward-only Pulls do not raise a request.
-- [ ] Canceled Pulls and projection-failed Pulls do not raise a request.
-- [ ] Normalized power comes from effective backward Pull distance clamped between min and max Pull distance.
-- [ ] Launch speed maps normalized power through the configured curve, then into the configured min/max speed range.
-- [ ] Pull Offset is signed lateral world displacement and rotates Launch Frame forward by the configured max launch angle.
-- [ ] Launch up speed and up direction are included without being coupled to forward speed.
-- [ ] The Band Shape and Touch Indicator return to idle after release regardless of whether a launch request was raised.
+- [x] Slingshot exposes an `ISlingshotLaunchNotifier` interface with the required `LaunchRequested` event.
+- [x] The event uses a typed launch-request handler delegate and a pure launch request payload.
+- [x] Valid Pull Release raises exactly one launch request for the captured pointer.
+- [x] Weak Pulls below the configured minimum do not raise a request.
+- [x] Forward-only Pulls do not raise a request.
+- [x] Canceled Pulls and projection-failed Pulls do not raise a request.
+- [x] Normalized power comes from effective backward Pull distance clamped between min and max Pull distance.
+- [x] Launch speed maps normalized power through the configured curve, then into the configured min/max speed range.
+- [x] Pull Offset is signed lateral world displacement and rotates Launch Frame forward by the configured max launch angle.
+- [x] Launch up speed and up direction are included without being coupled to forward speed.
+- [x] The Band Shape and Touch Indicator return to idle after release regardless of whether a launch request was raised.
 
 ## Verification
 

@@ -33,7 +33,7 @@
   - Leave Pre-Launch: cancel Active Pull, restore inactive idle, disable capture, then dispose the input handle.
   - Only the first captured pointer controls Active Pull; all other pointer ids are ignored.
   - `ISlingshotInputProjector` handles screen-to-Pull-Plane and world-to-screen projection without physics raycasts or layers.
-  - Band Touch Target uses screen-space distance from pointer to the projected straight rest Band segment.
+  - Band Touch Target uses screen-space distance from pointer to the projected visible rest Band polyline through the rest point.
   - Pull math uses Launch Frame axes: backward distance is `max(0, -dot(delta, forward))`; lateral offset is `dot(delta, right)`.
   - Backward distance and lateral offset clamp independently; clamped pull point is `rest + right * lateral - forward * backward`.
   - Projection failure during Active Pull cancels Pull and restores capture idle.
@@ -51,7 +51,7 @@
   - Leaving Pre-Launch cancels Active Pull and restores idle before disposing input handle.
   - Disposal unsubscribes from input and state events and disposes any active handle.
 - Cover capture behavior:
-  - Press inside generous screen-space Band Touch Target starts Active Pull.
+  - Press inside generous screen-space Band Touch Target, including near either visible rest Band segment, starts Active Pull.
   - Press outside target is ignored.
   - First pointer wins; other pointers cannot move/release/cancel the Active Pull.
 - Cover Pull behavior:

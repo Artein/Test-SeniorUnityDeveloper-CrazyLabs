@@ -20,17 +20,17 @@ This slice should also create the initial Pre-Launch, Running, and Run Ended sta
 
 ## Acceptance criteria
 
-- [ ] Gameplay State has its own runtime assembly and EditMode test assembly.
-- [ ] State ids are ScriptableObject assets compared by reference identity.
-- [ ] Transition assets declare one allowed from/to state pair.
-- [ ] A config asset provides initial state and allowed transitions, with `OnValidate` diagnostics.
-- [ ] A pure validator reports nulls, self-transitions, and duplicate transitions with stable typed errors.
-- [ ] The service exposes current state, `IsCurrent`, `TryTransitionTo`, `GameplayStateChanging`, and `GameplayStateChanged`.
-- [ ] Valid transitions raise changing, mutate model, then raise changed.
-- [ ] Same-state transitions return false with no events and no warning.
-- [ ] Invalid transitions return false and warn with existing Unity logging.
-- [ ] Changing subscriber exceptions propagate and prevent mutation.
-- [ ] A VContainer installer registers config, model, service, and public service interface.
+- [x] Gameplay State has its own runtime assembly and EditMode test assembly.
+- [x] State ids are ScriptableObject assets compared by reference identity.
+- [x] Transition assets declare one allowed from/to state pair.
+- [x] A config asset provides initial state and allowed transitions, with `OnValidate` diagnostics.
+- [x] A pure validator reports nulls, self-transitions, and duplicate transitions with stable typed errors.
+- [x] The service exposes current state, `IsCurrent`, `TryTransitionTo`, `GameplayStateChanging`, and `GameplayStateChanged`.
+- [x] Valid transitions raise changing, mutate model, then raise changed.
+- [x] Same-state transitions return false with no events and no warning.
+- [x] Invalid transitions return false and warn with existing Unity logging.
+- [x] Changing subscriber exceptions are logged and isolated so transition mutation can complete.
+- [x] A VContainer installer registers config, model, service, and public service interface.
 
 ## Verification
 

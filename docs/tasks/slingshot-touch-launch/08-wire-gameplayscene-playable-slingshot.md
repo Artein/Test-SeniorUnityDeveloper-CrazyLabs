@@ -20,18 +20,18 @@ The completed slice should be playable in the Editor using mouse simulation and 
 
 ## Acceptance criteria
 
-- [ ] Gameplay Scene contains explicit Slingshot left/right/rest anchor references and Launch Frame.
-- [ ] Band visual is assigned and renders through the Slingshot view.
-- [ ] Pull Hint and Touch Indicator are scene-authored UI objects under a Canvas and controlled by the Slingshot view.
-- [ ] Gameplay State assets/config and Slingshot config are assigned through explicit serialized references.
-- [ ] Gameplay `LifetimeScope` registers UnityInput, Gameplay State, Slingshot controller, Slingshot launcher, Gameplay Flow, scene view interfaces, and launch target adapter.
-- [ ] Existing Player Rigidbody is assigned to the Rigidbody Launch Target adapter.
-- [ ] Missing required scene references fail fast through validation/assertions instead of null-reference drift.
-- [ ] Starting in Pre-Launch shows the Pull Hint and holds the Player.
-- [ ] Pulling from the Band updates the Band Shape and Touch Indicator.
-- [ ] Releasing a valid Pull transitions to Running and launches the Player forward.
-- [ ] After launch, Slingshot capture is disabled and accidental re-pulls do not relaunch.
-- [ ] A PlayMode composition smoke test is added if practical and deterministic.
+- [x] Gameplay Scene contains explicit Slingshot left/right/rest anchor references and Launch Frame.
+- [x] Band visual is assigned and renders through the Slingshot view.
+- [x] Pull Hint and Touch Indicator are scene-authored UI objects under a Canvas and controlled by the Slingshot view.
+- [x] Gameplay State assets/config and Slingshot config are assigned through explicit serialized references.
+- [x] Gameplay `LifetimeScope` registers UnityInput, Gameplay State, Slingshot controller, Slingshot launcher, Gameplay Flow, scene view interfaces, and launch target adapter.
+- [x] Existing Player Rigidbody is assigned to the Rigidbody Launch Target adapter.
+- [x] Missing required scene references fail fast through validation/assertions instead of null-reference drift.
+- [x] Starting in Pre-Launch shows the Pull Hint and holds the Player.
+- [x] Pulling from the Band updates the Band Shape and Touch Indicator.
+- [x] Releasing a valid Pull transitions to Running and launches the Player forward.
+- [x] After launch, Slingshot capture is disabled and accidental re-pulls do not relaunch.
+- [x] A PlayMode composition smoke test is added if practical and deterministic.
 
 ## Verification
 

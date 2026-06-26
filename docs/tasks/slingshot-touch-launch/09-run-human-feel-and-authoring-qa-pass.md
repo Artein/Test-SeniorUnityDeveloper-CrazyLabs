@@ -24,8 +24,8 @@ The output of this slice is accepted tuning values and any follow-up implementat
 - [ ] Touch target radius feels finger-sized without causing surprising captures far from the Band.
 - [ ] Backward Pull distance produces readable power scaling from weak to strong launches.
 - [ ] Weak Pulls cancel naturally and do not accidentally launch.
-- [ ] Forward Pull movement does not create launch energy.
-- [ ] Lateral Pull Offset rotates launch direction predictably without changing launch power.
+- [x] Forward Pull movement does not create launch energy.
+- [x] Lateral Pull Offset rotates launch direction predictably without changing launch power.
 - [ ] Pull Hint communicates the interaction without obstructing gameplay.
 - [ ] Touch Indicator appears at the interpreted pull point and remains readable.
 - [ ] Band Shape is visually understandable in idle and Active Pull states.

@@ -40,7 +40,7 @@
   - Canceled Pulls never raise launch requests.
   - Non-captured pointer releases are ignored.
   - Repeated release events after Active Pull is cleared do nothing.
-  - Slingshot does not swallow subscriber exceptions; broken launch consumers should remain visible.
+  - Slingshot invokes launch subscribers individually, logs subscriber exceptions, and continues notifying remaining subscribers.
 
 ## Test Plan
 
@@ -62,7 +62,7 @@
   - Lateral Pull Offset clamps at the configured max launch angle.
   - Launch up direction and launch up speed are included independently from forward speed.
 - Cover installer registration:
-  - Resolving `ISlingshotLaunchNotifier` returns the same controller instance that owns the release logic.
+  - Resolving Slingshot public contracts and entrypoints proves the controller instance owns launch notification and lifecycle responsibilities.
 - Verification order for implementation: Rider reformat/problems, Unity compile via Unity AI Agent Connector, then targeted Slingshot EditMode tests.
 - Manual smoke: with a temporary local subscriber, pull/release in Editor and confirm request values are plausible in logs or debugger.
 

@@ -20,13 +20,13 @@ This slice should establish the transition-before-launch behavior that prevents 
 
 ## Acceptance criteria
 
-- [ ] Gameplay Flow controller subscribes to `LaunchRequested` and unsubscribes on disposal.
-- [ ] Controller is configured with the Running state id and asks Gameplay State service to transition there.
-- [ ] Launch application happens only after `TryTransitionTo(Running)` returns true.
-- [ ] Failed transitions skip launcher invocation without duplicating Gameplay State invalid-transition warnings.
-- [ ] Launcher exceptions after successful transition propagate and do not trigger rollback.
-- [ ] Dispose unsubscribes without mutating Gameplay State or canceling Slingshot state.
-- [ ] Dependencies are registered through the gameplay composition spine without injecting MonoBehaviours.
+- [x] Gameplay Flow controller subscribes to `LaunchRequested` and unsubscribes on disposal.
+- [x] Controller is configured with the Running state id and asks Gameplay State service to transition there.
+- [x] Launch application happens only after `TryTransitionTo(Running)` returns true.
+- [x] Failed transitions skip launcher invocation without duplicating Gameplay State invalid-transition warnings.
+- [x] Launcher exceptions after successful transition propagate and do not trigger rollback.
+- [x] Dispose unsubscribes without mutating Gameplay State or canceling Slingshot state.
+- [x] Dependencies are registered through the gameplay composition spine without injecting MonoBehaviours.
 
 ## Verification
 

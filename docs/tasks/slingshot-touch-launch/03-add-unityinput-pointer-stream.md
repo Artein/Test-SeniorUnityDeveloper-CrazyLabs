@@ -20,17 +20,17 @@ This slice should include a production backend over Unity Input System Enhanced 
 
 ## Acceptance criteria
 
-- [ ] Unity Input has its own runtime assembly and EditMode test assembly.
-- [ ] `IUnityInput` composes the Enhanced Touch support API and Pointer Input event API.
-- [ ] `Enable()` returns an idempotent disposable handle; first live handle enables/subscribes and last disposed handle unsubscribes/disables.
-- [ ] Calling `Enable()` after service disposal throws.
-- [ ] Disposing outstanding handles after service disposal is a no-op.
-- [ ] Pointer payload is immutable and contains pointer id plus raw screen position.
-- [ ] Pointer events cover pressed, moved, released, and canceled phases.
-- [ ] Enhanced Touch finger index maps to pointer id; editor mouse uses the reserved pointer id.
-- [ ] No events are forwarded after the last enable handle is disposed.
-- [ ] Subscriber exceptions are isolated per subscriber, logged with existing Unity logging, and do not prevent remaining subscribers from receiving the event.
-- [ ] Player builds do not include runtime mouse gameplay input for this mechanic.
+- [x] Unity Input has its own runtime assembly and EditMode test assembly.
+- [x] `IUnityInput` composes the Enhanced Touch support API and Pointer Input event API.
+- [x] `Enable()` returns an idempotent disposable handle; first live handle enables/subscribes and last disposed handle unsubscribes/disables.
+- [x] Calling `Enable()` after service disposal throws.
+- [x] Disposing outstanding handles after service disposal is a no-op.
+- [x] Pointer payload is immutable and contains pointer id plus raw screen position.
+- [x] Pointer events cover pressed, moved, released, and canceled phases.
+- [x] Enhanced Touch finger index maps to pointer id; editor mouse uses the reserved pointer id.
+- [x] No events are forwarded after the last enable handle is disposed.
+- [x] Subscriber exceptions are isolated per subscriber, logged with existing Unity logging, and do not prevent remaining subscribers from receiving the event.
+- [x] Player builds do not include runtime mouse gameplay input for this mechanic.
 
 ## Verification
 

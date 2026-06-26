@@ -166,10 +166,10 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   failures and should surface.
 - The Slingshot accepts only the first captured pointer as the Active Pull. All other pointer events are ignored while a Pull is active.
 - Active Pull starts only while capture is enabled, no Active Pull exists, and the pointer press is within the Band Touch Target.
-- Band Touch Target hit testing is screen-space distance from pointer to the projected rest Band segment, with a configured pixel radius large enough
-  for finger input.
-- First-slice Band Touch Target geometry uses the straight projected segment between left and right anchors. Curved or sagging segment hit testing is
-  deferred.
+- Band Touch Target hit testing is screen-space distance from pointer to the projected visible rest Band polyline, with a configured pixel radius
+  large enough for finger input.
+- First-slice Band Touch Target geometry checks the two visible rest segments: left anchor to rest point, and rest point to right anchor. Richer
+  curved or sagging segment hit testing is deferred.
 - After capture, pointer movement is interpreted anywhere on the Pull Plane; the touch does not need to remain near the Band.
 - Use a Slingshot-owned Pull Plane defined by Launch Frame right/forward axes, with Launch Frame up as plane normal.
 - Use camera projection math through an input projector abstraction to map screen positions to the Pull Plane and world points to screen positions.
@@ -222,8 +222,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - `TryTransitionTo` returns `true` for an actual transition and `false` for same-state or invalid transitions.
 - Same-state transitions are no-op and do not warn.
 - Invalid transitions warn with existing Unity logging and return false.
-- Gameplay State `Changing` event is raised before model mutation, mutation happens only if the event completes, and `Changed` is raised after
-  mutation. Subscriber exceptions propagate.
+- Gameplay State `Changing` event is raised before model mutation. Subscriber exceptions are logged and isolated so mutation can complete, then
+  `Changed` is raised after mutation.
 - Initial Gameplay State assets are Pre-Launch, Running, and Run Ended.
 - Initial Gameplay State Transition assets are Pre-Launch to Running, Running to Run Ended, and Run Ended to Pre-Launch.
 - Run Ended represents any finished run outcome for now.
@@ -271,14 +271,14 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Valid transitions mutate state and raise changing/changed in order.
   - Same-state transition returns false with no events and no warning.
   - Invalid transition returns false and warns.
-  - Changing subscriber exception prevents mutation and propagates.
+  - Changing subscriber exception is logged and isolated while the transition still completes.
   - Config validator reports nulls, self-transitions, and duplicate transitions with stable typed errors.
 - Slingshot EditMode tests:
   - Initialization while already Pre-Launch enables capture and input.
   - Entering and leaving Pre-Launch acquire/dispose input handles and update view state in the expected order.
   - Leaving Pre-Launch cancels Active Pull and returns visuals to idle before input handle disposal.
   - Disposal unsubscribes from input and state events.
-  - Screen-space Band Touch Target accepts nearby presses and rejects distant presses.
+  - Screen-space Band Touch Target accepts nearby presses against the visible rest Band polyline and rejects distant presses.
   - Active Pull captures only the first pointer and ignores others.
   - Pull projection failure cancels the Pull.
   - Forward displacement clamps to zero.

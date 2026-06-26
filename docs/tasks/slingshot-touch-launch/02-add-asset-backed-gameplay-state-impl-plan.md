@@ -33,7 +33,7 @@
   - Valid transition raises `GameplayStateChanging`, mutates model, then raises `GameplayStateChanged`.
   - Same-state transition returns `false`, emits no events, and logs no warning.
   - Invalid transition, including null target, returns `false`, keeps current state, and logs a Unity warning.
-  - `GameplayStateChanging` exceptions propagate and prevent mutation/changed event.
+  - `GameplayStateChanging` exceptions are logged and isolated so mutation and the changed event can still complete.
 - Add VContainer feature installer:
   - `GameplayStateInstaller : IInstaller`, constructed with `IGameplayStateConfig`.
   - Registers config, validator, model, service, and `IGameplayStateService`.
@@ -60,7 +60,7 @@
   - valid transition emits changing before mutation and changed after mutation.
   - same-state transition is a silent no-op.
   - invalid transition logs warning and preserves current state.
-  - changing subscriber exception propagates and blocks mutation.
+  - changing subscriber exception is logged and isolated while the transition still completes.
 - EditMode test for installer:
   - build a VContainer container with transient test config and resolve `IGameplayStateService`.
 - Use transient ScriptableObject test instances and explicit `#if UNITY_INCLUDE_TESTS` partial test hooks; no reflection and no hardcoded asset paths in tests.

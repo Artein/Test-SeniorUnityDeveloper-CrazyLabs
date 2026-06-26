@@ -20,12 +20,12 @@ This slice should not add gameplay rules yet. Its value is a compile-clean, test
 
 ## Acceptance criteria
 
-- [ ] VContainer is added as a pinned package dependency and the package lock is updated.
-- [ ] Root gameplay runtime and EditMode test assemblies exist and compile.
-- [ ] A scene-level gameplay `LifetimeScope` scaffold exists for explicit serialized references and composition-only registration.
-- [ ] The scope validates missing required references through authoring/runtime validation without dynamic scene searches.
-- [ ] MonoBehaviour views/adapters are not injected and do not receive VContainer lifecycle responsibilities.
-- [ ] The implementation reflects ADR vocabulary around VContainer composition and shallow MonoBehaviours.
+- [x] VContainer is added as a pinned package dependency and the package lock is updated.
+- [x] Root gameplay runtime and EditMode test assemblies exist and compile.
+- [x] A scene-level gameplay `LifetimeScope` scaffold exists for explicit serialized references and composition-only registration.
+- [x] The scope validates missing required references through authoring/runtime validation without dynamic scene searches.
+- [x] MonoBehaviour views/adapters are not injected and do not receive VContainer lifecycle responsibilities.
+- [x] The implementation reflects ADR vocabulary around VContainer composition and shallow MonoBehaviours.
 
 ## Verification
 
