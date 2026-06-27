@@ -1,3 +1,22 @@
 # .worktreeinclude
 
 ## https://developers.openai.com/codex/app/worktrees#copy-ignored-local-files-into-managed-worktrees
+
+# BEGIN Unity AI Agent Connector Codex Worktree Initialization
+# This block is managed by the Unity AI Agent Connector package for Codex Worktree Initialization.
+# Required connector inputs.
+.codex/config.toml
+.codex/rules/**
+.unity-ai-agent-connector/config.local.json
+# Optional user-selected inputs.
+.idea/**
+.agent/SCRATCHPAD.md
+.agent/UNITY_COMPOSITION_DI.md
+.agent/WORKFLOW_ARTIFACTS_TEMPLATE.md
+UserSettings/**
+.envrc
+AGENTS.md
+Test-SeniorUnityDeveloper-CrazyLabs.sln.DotSettings.user
+Library/**
+# Generated skills, hooks, and command runtime are regenerated per worktree instead of copied.
+# END Unity AI Agent Connector Codex Worktree Initialization
