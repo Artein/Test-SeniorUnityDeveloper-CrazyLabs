@@ -19,6 +19,9 @@ namespace Game.Gameplay.Slingshot
 
     public sealed partial class RigidbodyLaunchTarget : MonoBehaviour, ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource
     {
+        private const RigidbodyConstraints PostLaunchStabilizationConstraints =
+            RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Collider _bandContactCollider;
 
@@ -45,13 +48,16 @@ namespace Game.Gameplay.Slingshot
         {
             UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
 
+            var launchBaseConstraints = _rigidbody.constraints;
+
             if (_isHeld)
             {
                 _rigidbody.isKinematic = _previousIsKinematic;
-                _rigidbody.constraints = _previousConstraints;
+                launchBaseConstraints = _previousConstraints;
                 _isHeld = false;
             }
 
+            _rigidbody.constraints = launchBaseConstraints | PostLaunchStabilizationConstraints;
             ClearVelocity();
             _rigidbody.AddForce(velocity, ForceMode.VelocityChange);
         }

@@ -7,6 +7,9 @@ using UnityEngine.TestTools;
 // ReSharper disable once CheckNamespace
 public sealed class RigidbodyLaunchTargetTests
 {
+    private const RigidbodyConstraints PostLaunchStabilizationConstraints =
+        RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
     private GameObject _gameObject;
     private Rigidbody _rigidbody;
     private SphereCollider _collider;
@@ -46,7 +49,7 @@ public sealed class RigidbodyLaunchTargetTests
     }
 
     [UnityTest]
-    public IEnumerator Launch_AfterHold_RestoresSavedStateAndAppliesVelocityChange()
+    public IEnumerator Launch_AfterHold_PreservesSavedConstraintsAddsStabilizationAndAppliesVelocityChange()
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX;
@@ -56,13 +59,14 @@ public sealed class RigidbodyLaunchTargetTests
         yield return new WaitForFixedUpdate();
 
         Assert.That(_rigidbody.isKinematic, Is.False);
-        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX));
+        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ));
+        AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(1f, 2f, 3f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
     }
 
     [UnityTest]
-    public IEnumerator Launch_WithoutHold_ClearsStaleVelocityAndAppliesVelocityChange()
+    public IEnumerator Launch_WithoutHold_PreservesCurrentConstraintsAddsStabilizationAndAppliesVelocityChange()
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotationY;
@@ -73,7 +77,9 @@ public sealed class RigidbodyLaunchTargetTests
         yield return new WaitForFixedUpdate();
 
         Assert.That(_rigidbody.isKinematic, Is.False);
-        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationY));
+
+        Assert.That(_rigidbody.constraints,
+            Is.EqualTo(RigidbodyConstraints.FreezeRotationY | PostLaunchStabilizationConstraints));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 1f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
     }
@@ -92,6 +98,12 @@ public sealed class RigidbodyLaunchTargetTests
         yield return new WaitForFixedUpdate();
 
         Assert.That(_rigidbody.isKinematic, Is.False);
-        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionX));
+        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionX | PostLaunchStabilizationConstraints));
+        AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
+    }
+
+    private void AssertConstraintIsNotSet(RigidbodyConstraints constraint)
+    {
+        Assert.That(_rigidbody.constraints & constraint, Is.EqualTo(RigidbodyConstraints.None));
     }
 }
