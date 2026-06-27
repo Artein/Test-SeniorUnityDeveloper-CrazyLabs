@@ -195,6 +195,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   curved or sagging segment hit testing is deferred.
 - After capture, pointer movement is interpreted anywhere on the Pull Plane; the touch does not need to remain near the Band.
 - Use a Slingshot-owned Pull Plane defined by Launch Frame right/forward axes, with Launch Frame up as plane normal.
+- The Launch Frame is a strict orthonormal frame at feature boundaries. Invalid or skewed axes fail fast instead of silently distorting Pull math,
+  launch steering, gizmos, or Band Shape solving.
 - Slingshot authoring validation requires left anchor, right anchor, and Rest Point to be coplanar with the authored Pull Plane/Band Plane within a
   small tolerance. Invalid planar authoring fails fast instead of being silently projected into place.
 - Coplanarity tolerance is a small implementation-owned validation constant, not a `SlingshotConfig` field or designer-tuned inspector value.
@@ -339,8 +341,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   Point, target pose, or predicted transform in the first slice.
 - `ISlingshotBandShapeProvider` is the controller-facing visual geometry boundary. It combines the silhouette source, immutable config, reusable
   scratch buffers, and the pure Pull Plane taut solver, then writes a complete ordered Band Shape to caller-owned output.
-- Runtime geometry failures return false from the provider and solver on the hot path. Invalid queries, too-small output buffers, missing required
-  references, and invalid config are setup/programmer errors that fail fast before use.
+- Runtime geometry failures return false from the provider and solver on the hot path. Invalid queries, including non-orthonormal Launch Frame data,
+  too-small output buffers, missing required references, and invalid config are setup/programmer errors that fail fast before use.
 - The Launch Target silhouette adapter validates the assigned Collider through `OnValidate`, and fails fast before use if required references are
   missing.
 - Slingshot pull interpretation depends on held positioning, while Slingshot launch application depends on both `ILaunchTarget` and held positioning.

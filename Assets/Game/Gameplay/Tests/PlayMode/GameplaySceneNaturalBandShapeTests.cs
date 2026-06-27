@@ -15,6 +15,24 @@ public sealed class GameplaySceneNaturalBandShapeTests
     private readonly int _gameplaySceneBuildIndex = 0;
 
     [UnityTest]
+    public IEnumerator given_GameplayScene_when_LoadedIntoPrelaunch_then_CaptureIdleBandShapeStaysOutsideTargetCollider()
+    {
+        yield return LoadGameplayScene();
+        var activeScene = SceneManager.GetActiveScene();
+        yield return WaitUntilPlayerIsHeld(activeScene);
+
+        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
+        var targetCollider = GetSingleTargetCollider(launchTarget);
+
+        var captureIdleBandPositions = ReadWorldLinePositions(bandLineRenderer);
+
+        Assert.That(captureIdleBandPositions, Has.Length.GreaterThan(3));
+        AssertBandSamplesStayOutsideCollider(captureIdleBandPositions, targetCollider, "Capture Idle");
+    }
+
+    [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsLeftAndRight_then_BandShapeWrapsPulledSideAndStaysOutsideTargetCollider()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Natural Band Mouse");
@@ -43,6 +61,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         var targetCollider = GetSingleTargetCollider(launchTarget);
         var geometry = slingshotView.CreateGeometrySnapshot();
         var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
+
         var pullWorldPosition = geometry.RestPoint
                                 + (geometry.LaunchFrameRight * pullOffset)
                                 - (geometry.LaunchFrameForward * 1.25f);
@@ -166,6 +185,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
     private void AssertPulledSideWrap(Vector3[] bandPositions, Vector3 pullWorldPosition, Vector3 launchFrameRight, float pullOffset)
     {
         var pullSign = Mathf.Sign(pullOffset);
+
         var strongestPulledSidePoint = bandPositions
             .Skip(1)
             .Take(bandPositions.Length - 2)

@@ -71,10 +71,10 @@ public sealed class SlingshotControllerTests
         _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "band-shape", "view-capture-idle" }));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
         Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
-        AssertRestBandShape(_view.LastBandShape);
+        AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
     }
 
     [Test]
@@ -85,7 +85,7 @@ public sealed class SlingshotControllerTests
 
         _stateService.ChangeTo(_preLaunchStateId);
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "band-shape", "view-capture-idle" }));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
 
@@ -192,7 +192,7 @@ public sealed class SlingshotControllerTests
 
         _input.Move(1, new Vector2(65f, 35f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -298,7 +298,7 @@ public sealed class SlingshotControllerTests
 
         _input.Release(1, new Vector2(60f, 20f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -311,7 +311,7 @@ public sealed class SlingshotControllerTests
 
         _input.Cancel(1, new Vector2(60f, 20f));
 
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
     }
 
     private SlingshotController CreateInitializedController()
@@ -351,13 +351,5 @@ public sealed class SlingshotControllerTests
         {
             Assert.That(shape.Points[i], Is.EqualTo(expectedPoints[i]));
         }
-    }
-
-    private void AssertRestBandShape(SlingshotBandShape shape)
-    {
-        Assert.That(shape.Points.Count, Is.EqualTo(_bandShapeProvider.BandShapePointCount));
-        Assert.That(shape.Points[0], Is.EqualTo(_view.Geometry.LeftAnchorPosition));
-        Assert.That(shape.Points[(shape.Points.Count - 1) / 2], Is.EqualTo(_view.Geometry.RestPoint));
-        Assert.That(shape.Points[^1], Is.EqualTo(_view.Geometry.RightAnchorPosition));
     }
 }

@@ -80,6 +80,26 @@ public sealed class SlingshotBandShapeProviderTests
             Throws.TypeOf<ArgumentException>());
     }
 
+    [Test]
+    public void TryCreateBandShape_SkewedLaunchFrame_ThrowsArgumentException()
+    {
+        var provider = new SlingshotBandShapeProvider(new FakeLaunchTargetSilhouetteSource(CreateSquareSamples()), CreateValidConfig());
+        var output = new Vector3[provider.BandShapePointCount];
+
+        var query = new SlingshotBandShapeQuery(
+            new Vector3(-3f, 0f, 0f),
+            new Vector3(3f, 0f, 0f),
+            Vector3.zero,
+            new Vector3(0f, 0f, -1f),
+            Vector3.right,
+            CreateSkewedUnitForward(),
+            Vector3.up);
+
+        Assert.That(
+            () => provider.TryCreateBandShape(query, output, out _),
+            Throws.TypeOf<ArgumentException>());
+    }
+
     private FakeSlingshotConfig CreateValidConfig()
     {
         return new FakeSlingshotConfig
@@ -122,6 +142,11 @@ public sealed class SlingshotBandShapeProviderTests
             new Vector3(1f, 0f, -2f),
             new Vector3(-1f, 0f, -2f)
         };
+    }
+
+    private Vector3 CreateSkewedUnitForward()
+    {
+        return new Vector3(0.0002f, 0f, Mathf.Sqrt(1f - (0.0002f * 0.0002f)));
     }
 
     private void AssertVector3(Vector3 actual, Vector3 expected)

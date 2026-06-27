@@ -134,8 +134,10 @@ public sealed class GameplayLifetimeScopeTests
     {
         var rigidbody = CreateGameObject("Player").AddComponent<Rigidbody>();
         var collider = rigidbody.gameObject.AddComponent<SphereCollider>();
+        var bandCenter = CreateGameObject("Band Center").transform;
+        bandCenter.SetParent(rigidbody.transform, false);
         var launchTarget = rigidbody.gameObject.AddComponent<RigidbodyLaunchTarget>();
-        launchTarget.SetReferencesForTests(rigidbody, collider);
+        launchTarget.SetReferencesForTests(rigidbody, collider, bandCenter);
 
         return launchTarget;
     }

@@ -153,7 +153,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -169,7 +169,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -183,7 +183,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Cancel(1, new Vector2(60f, 30f));
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -199,7 +199,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -212,11 +212,12 @@ public sealed class SlingshotLaunchRequestedTests
         var releaseScreenPosition = new Vector2(75f, 80f);
         ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
         _bandShapeProvider.ShouldFail = true;
+        _bandShapeProvider.ShouldFailActivePullOnly = true;
 
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
     }
 
     [Test]
@@ -417,10 +418,10 @@ public sealed class SlingshotLaunchRequestedTests
             if (outputSamples.Length < 4)
                 throw new ArgumentException("Output buffer is too small.", nameof(outputSamples));
 
-            outputSamples[0] = new Vector3(-1f, 0f, 0f);
-            outputSamples[1] = new Vector3(1f, 0f, 0f);
-            outputSamples[2] = new Vector3(1f, 0f, -2f);
-            outputSamples[3] = new Vector3(-1f, 0f, -2f);
+            outputSamples[0] = new Vector3(-0.5f, 0f, 0f);
+            outputSamples[1] = new Vector3(0.5f, 0f, 0f);
+            outputSamples[2] = new Vector3(0.5f, 0f, -1f);
+            outputSamples[3] = new Vector3(-0.5f, 0f, -1f);
             sampleCount = 4;
             return true;
         }

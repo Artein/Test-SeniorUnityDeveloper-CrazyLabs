@@ -99,7 +99,7 @@ namespace Game.Gameplay.Slingshot
                 return;
             }
 
-            _view.ShowInactiveIdle(CreateRestBandShape());
+            _view.ShowInactiveIdle(CreateDetachedRestBandShape());
         }
 
         void ITickable.Tick()
@@ -167,7 +167,7 @@ namespace Game.Gameplay.Slingshot
             _inputEnableHandle = _unityInput.Enable();
             _isCaptureEnabled = true;
             SetHeldTargetToRest();
-            _view.ShowCaptureIdle(CreateRestBandShape());
+            _view.ShowCaptureIdle(CreateHeldRestBandShape());
         }
 
         private void DisableCapture()
@@ -184,7 +184,7 @@ namespace Game.Gameplay.Slingshot
                     return;
 
                 SetHeldTargetToRest();
-                _view.ShowInactiveIdle(CreateRestBandShape());
+                _view.ShowInactiveIdle(CreateDetachedRestBandShape());
             }
             finally
             {
@@ -294,7 +294,7 @@ namespace Game.Gameplay.Slingshot
             if (normalizedTime >= 1f)
             {
                 _isReleaseRecoilActive = false;
-                _view.ShowInactiveIdle(CreateRestBandShape());
+                _view.ShowInactiveIdle(CreateDetachedRestBandShape());
                 return;
             }
 
@@ -319,7 +319,7 @@ namespace Game.Gameplay.Slingshot
                 return;
 
             SetHeldTargetToRest();
-            _view.ShowCaptureIdle(CreateRestBandShape());
+            _view.ShowCaptureIdle(CreateHeldRestBandShape());
         }
 
         private bool TryCreateLaunchRequest(SlingshotPullVisual pullVisual, out SlingshotLaunchRequest launchRequest)

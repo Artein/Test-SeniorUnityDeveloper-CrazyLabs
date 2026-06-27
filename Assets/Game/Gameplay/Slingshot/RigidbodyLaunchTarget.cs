@@ -14,6 +14,7 @@ namespace Game.Gameplay.Slingshot
 
     public interface IHeldLaunchTarget
     {
+        // Aligns the authored Band Center marker to the requested held position.
         void SetHeldPosition(Vector3 heldPosition);
     }
 
@@ -21,14 +22,16 @@ namespace Game.Gameplay.Slingshot
     {
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Collider _bandContactCollider;
+        [SerializeField] private Transform _bandCenter;
 
+        private readonly LaunchFrameValidator _launchFrameValidator = new LaunchFrameValidator();
         private bool _isHeld;
         private bool _previousIsKinematic;
         private RigidbodyConstraints _previousConstraints;
 
         void ILaunchTarget.Hold()
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
             if (!_isHeld)
             {
@@ -43,7 +46,7 @@ namespace Game.Gameplay.Slingshot
 
         void ILaunchTarget.Launch(Vector3 velocity)
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
             if (_isHeld)
             {
@@ -67,8 +70,7 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Held position must be finite.", nameof(heldPosition));
 
             // TODO - AI Note: If held visuals need facing, lean, or spin, add an explicit orientation contract instead of rotating here.
-            var colliderCenter = _bandContactCollider.bounds.center;
-            var positionDelta = heldPosition - colliderCenter;
+            var positionDelta = heldPosition - _bandCenter.position;
             var targetPosition = _rigidbody.transform.position + positionDelta;
 
             _rigidbody.transform.position = targetPosition;
@@ -110,6 +112,9 @@ namespace Game.Gameplay.Slingshot
 
             if (_bandContactCollider == null)
                 Debug.LogWarning("RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.", this);
+
+            if (_bandCenter == null)
+                Debug.LogWarning("RigidbodyLaunchTarget requires a Band Center reference.", this);
         }
 
         private void ClearVelocity()
@@ -120,10 +125,19 @@ namespace Game.Gameplay.Slingshot
 
         private void ThrowIfInvalidReferences()
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
-            UnityEngine.Assertions.Assert.IsNotNull(_bandContactCollider,
-                "RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.");
+            if (_bandContactCollider == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.");
+
+            if (_bandCenter == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Band Center reference.");
+        }
+
+        private void ThrowIfMissingRigidbody()
+        {
+            if (_rigidbody == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Rigidbody reference.");
         }
 
         private void ThrowIfInvalidQuery(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples)
@@ -132,12 +146,10 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentNullException(nameof(outputSamples));
 
             if (!query.PlaneOrigin.IsFinite()
-                || !query.LaunchFrameRight.IsFinite()
-                || !query.LaunchFrameForward.IsFinite()
-                || !query.LaunchFrameUp.IsFinite()
-                || !query.LaunchFrameRight.IsApproximatelyUnit()
-                || !query.LaunchFrameForward.IsApproximatelyUnit()
-                || !query.LaunchFrameUp.IsApproximatelyUnit()
+                || !_launchFrameValidator.IsValid(
+                    query.LaunchFrameRight,
+                    query.LaunchFrameForward,
+                    query.LaunchFrameUp)
                 || query.SampleCount < 3)
             {
                 throw new ArgumentException("Invalid Launch Target silhouette query.", nameof(query));

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Game.Gameplay.Slingshot
@@ -58,10 +59,34 @@ namespace Game.Gameplay.Slingshot
             return new SlingshotBandShape(_recoilBandShapeBuffer, true);
         }
 
-        private SlingshotBandShape CreateRestBandShape()
+        private SlingshotBandShape CreateDetachedRestBandShape()
         {
             FillRestBandShapeBuffer();
             return new SlingshotBandShape(_restBandShapeBuffer, true);
+        }
+
+        private SlingshotBandShape CreateHeldRestBandShape()
+        {
+            if (!TryUpdateRestBandShape())
+                throw new InvalidOperationException("Unable to create held Slingshot Rest Band Shape.");
+
+            return new SlingshotBandShape(_restBandShapeBuffer, true);
+        }
+
+        private bool TryUpdateRestBandShape()
+        {
+            var solved = _bandShapeProvider.TryCreateBandShape(new SlingshotBandShapeQuery(
+                    _geometry.LeftAnchorPosition,
+                    _geometry.RightAnchorPosition,
+                    _geometry.RestPoint,
+                    _geometry.RestPoint,
+                    _geometry.LaunchFrameRight,
+                    _geometry.LaunchFrameForward,
+                    _geometry.LaunchFrameUp),
+                _restBandShapeBuffer,
+                out var pointCount);
+
+            return solved && pointCount == _restBandShapeBuffer.Length;
         }
 
         private void FillRestBandShapeBuffer()

@@ -211,6 +211,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
 
         public List<SlingshotBandShapeQuery> Queries { get; } = new();
         public bool ShouldFail { get; set; }
+        public bool ShouldFailActivePullOnly { get; set; }
 
         public Vector3[] ShapePoints { get; set; } =
         {
@@ -235,7 +236,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
             Queries.Add(query);
             _observations.Add("band-shape");
 
-            if (ShouldFail)
+            if (ShouldFail && (!ShouldFailActivePullOnly || query.PullPoint != query.RestPoint))
             {
                 pointCount = 0;
                 return false;
