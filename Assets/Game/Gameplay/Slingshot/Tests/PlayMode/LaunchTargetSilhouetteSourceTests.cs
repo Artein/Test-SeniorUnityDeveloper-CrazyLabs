@@ -82,7 +82,7 @@ public sealed class LaunchTargetSilhouetteSourceTests
     {
         var originalRotation = Quaternion.Euler(0f, 35f, 0f);
         _rigidbody.rotation = originalRotation;
-        var originalColliderOffset = _collider.bounds.center - _bandCenter.position;
+        var expectedColliderOffset = originalRotation * (_colliderObject.transform.localPosition - _bandCenterObject.transform.localPosition);
         var pullPoint = new Vector3(0.5f, 1.05f, -1.5f);
         ((ILaunchTarget)_target).Hold();
 
@@ -94,9 +94,9 @@ public sealed class LaunchTargetSilhouetteSourceTests
         Assert.That(_bandCenter.position.y, Is.EqualTo(pullPoint.y).Within(0.001f));
         Assert.That(_bandCenter.position.z, Is.EqualTo(pullPoint.z).Within(0.001f));
         var colliderOffset = _collider.bounds.center - _bandCenter.position;
-        Assert.That(colliderOffset.x, Is.EqualTo(originalColliderOffset.x).Within(0.001f));
-        Assert.That(colliderOffset.y, Is.EqualTo(originalColliderOffset.y).Within(0.001f));
-        Assert.That(colliderOffset.z, Is.EqualTo(originalColliderOffset.z).Within(0.001f));
+        Assert.That(colliderOffset.x, Is.EqualTo(expectedColliderOffset.x).Within(0.001f));
+        Assert.That(colliderOffset.y, Is.EqualTo(expectedColliderOffset.y).Within(0.001f));
+        Assert.That(colliderOffset.z, Is.EqualTo(expectedColliderOffset.z).Within(0.001f));
     }
 
     [Test]

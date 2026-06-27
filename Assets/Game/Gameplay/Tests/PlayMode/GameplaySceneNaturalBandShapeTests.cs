@@ -135,12 +135,19 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertShallowLateralBandShape(mouse, 0.75f, 0.02f);
-            yield return AssertShallowLateralBandShape(mouse, -0.75f, 0.02f);
-            yield return AssertShallowLateralBandShape(mouse, 0.75f, 0.15f);
-            yield return AssertShallowLateralBandShape(mouse, -0.75f, 0.15f);
-            yield return AssertShallowLateralBandShape(mouse, 0.75f, 0.35f);
-            yield return AssertShallowLateralBandShape(mouse, -0.75f, 0.35f);
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertShallowLateralBandShape(context, mouse, 0.75f, 0.02f);
+            yield return AssertShallowLateralBandShape(context, mouse, -0.75f, 0.02f);
+            yield return AssertShallowLateralBandShape(context, mouse, 0.75f, 0.15f);
+            yield return AssertShallowLateralBandShape(context, mouse, -0.75f, 0.15f);
+            yield return AssertShallowLateralBandShape(context, mouse, 0.75f, 0.35f);
+            yield return AssertShallowLateralBandShape(context, mouse, -0.75f, 0.35f);
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -155,8 +162,13 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertPulledBandShape(mouse, 0.75f);
-            yield return AssertPulledBandShape(mouse, -0.75f);
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertPulledBandShape(context, mouse, 0.75f, false);
+            yield return AssertPulledBandShape(context, mouse, -0.75f, true);
         }
         finally
         {
@@ -171,8 +183,15 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertTargetColliderClampsInsideAnchorSpan(mouse, 1f);
-            yield return AssertTargetColliderClampsInsideAnchorSpan(mouse, -1f);
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertTargetColliderClampsInsideAnchorSpan(context, mouse, 1f);
+            yield return AssertTargetColliderClampsInsideAnchorSpan(context, mouse, -1f);
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -187,10 +206,17 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertRenderedAnchorSpan(mouse, 0.85f, 0.35f, "Right Shallow Side Pull");
-            yield return AssertRenderedAnchorSpan(mouse, -0.85f, 0.35f, "Left Shallow Side Pull");
-            yield return AssertRenderedAnchorSpan(mouse, 0.85f, 1.25f, "Right Deep Side Pull");
-            yield return AssertRenderedAnchorSpan(mouse, -0.85f, 1.25f, "Left Deep Side Pull");
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertRenderedAnchorSpan(context, mouse, 0.85f, 0.35f, "Right Shallow Side Pull");
+            yield return AssertRenderedAnchorSpan(context, mouse, -0.85f, 0.35f, "Left Shallow Side Pull");
+            yield return AssertRenderedAnchorSpan(context, mouse, 0.85f, 1.25f, "Right Deep Side Pull");
+            yield return AssertRenderedAnchorSpan(context, mouse, -0.85f, 1.25f, "Left Deep Side Pull");
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -205,10 +231,17 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertPulledWrapAlignsWithBandCenter(mouse, 0.75f, 1.25f, "Right Deep Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(mouse, -0.75f, 1.25f, "Left Deep Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(mouse, 0.75f, 2.25f, "Right Long Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(mouse, -0.75f, 2.25f, "Left Long Pull");
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, 0.75f, 1.25f, "Right Deep Pull");
+            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, -0.75f, 1.25f, "Left Deep Pull");
+            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, 0.75f, 2.25f, "Right Long Pull");
+            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, -0.75f, 2.25f, "Left Long Pull");
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -223,10 +256,17 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertAnchorSideSpanDoesNotBacktrack(mouse, 0.75f, 0.35f, "Right Shallow Pull");
-            yield return AssertAnchorSideSpanDoesNotBacktrack(mouse, -0.75f, 0.35f, "Left Shallow Pull");
-            yield return AssertAnchorSideSpanDoesNotBacktrack(mouse, 0.75f, 1.25f, "Right Deep Pull");
-            yield return AssertAnchorSideSpanDoesNotBacktrack(mouse, -0.75f, 1.25f, "Left Deep Pull");
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertAnchorSideSpanDoesNotBacktrack(context, mouse, 0.75f, 0.35f, "Right Shallow Pull");
+            yield return AssertAnchorSideSpanDoesNotBacktrack(context, mouse, -0.75f, 0.35f, "Left Shallow Pull");
+            yield return AssertAnchorSideSpanDoesNotBacktrack(context, mouse, 0.75f, 1.25f, "Right Deep Pull");
+            yield return AssertAnchorSideSpanDoesNotBacktrack(context, mouse, -0.75f, 1.25f, "Left Deep Pull");
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -241,8 +281,15 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
         try
         {
-            yield return AssertBandPathDoesNotBacktrackAcrossTarget(mouse, 0.75f, 0.5f, "Right First Taut Pull");
-            yield return AssertBandPathDoesNotBacktrackAcrossTarget(mouse, -0.75f, 0.5f, "Left First Taut Pull");
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertBandPathDoesNotBacktrackAcrossTarget(context, mouse, 0.75f, 0.5f, "Right First Taut Pull");
+            yield return AssertBandPathDoesNotBacktrackAcrossTarget(context, mouse, -0.75f, 0.5f, "Left First Taut Pull");
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
         {
@@ -250,104 +297,78 @@ public sealed class GameplaySceneNaturalBandShapeTests
         }
     }
 
-    private IEnumerator AssertBandPathDoesNotBacktrackAcrossTarget(Mouse mouse, float pullOffset, float pullDepth, string phase)
+    private IEnumerator AssertBandPathDoesNotBacktrackAcrossTarget(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float pullOffset,
+        float pullDepth,
+        string phase)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var targetCollider = GetSingleTargetCollider(launchTarget);
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDepth);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * pullDepth);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
-        AssertBandShapeDoesNotMatchRawTwoSpan(activeBandPositions, geometry, phase);
-        AssertBandPathOffsetsAreMonotonic(activeBandPositions, bandLineRenderer, geometry, phase);
-        AssertBandPathHasNoSharpFolds(activeBandPositions, geometry, phase);
-        AssertBandSamplesStayOutsideCollider(activeBandPositions, bandLineRenderer, targetCollider, phase);
-
-        yield return SendMouse(mouse, pullScreenPosition, false);
+        AssertBandShapeDoesNotMatchRawTwoSpan(activeBandPositions, context.Geometry, phase);
+        AssertBandPathOffsetsAreMonotonic(activeBandPositions, context.BandLineRenderer, context.Geometry, phase);
+        AssertBandPathHasNoSharpFolds(activeBandPositions, context.Geometry, phase);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, phase);
     }
 
-    private IEnumerator AssertAnchorSideSpanDoesNotBacktrack(Mouse mouse, float pullOffset, float pullDepth, string phase)
+    private IEnumerator AssertAnchorSideSpanDoesNotBacktrack(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float pullOffset,
+        float pullDepth,
+        string phase)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDepth);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * pullDepth);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
         AssertAnchorSideHalfStaysOnPulledSide(
             activeBandPositions,
-            bandLineRenderer,
-            bandCenter.transform.position,
-            geometry,
+            context.BandLineRenderer,
+            context.BandCenter.transform.position,
+            context.Geometry,
             pullOffset,
             phase);
-
-        yield return SendMouse(mouse, pullScreenPosition, false);
     }
 
-    private IEnumerator AssertPulledWrapAlignsWithBandCenter(Mouse mouse, float pullOffset, float pullDepth, string phase)
+    private IEnumerator AssertPulledWrapAlignsWithBandCenter(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float pullOffset,
+        float pullDepth,
+        string phase)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDepth);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * pullDepth);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions.Length % 2, Is.EqualTo(1), $"{phase} Band Shape should have an explicit middle wrap point.");
 
-        var actualBandCenterOffset = Vector3.Dot(bandCenter.transform.position - geometry.RestPoint, geometry.LaunchFrameRight);
-        var actualBandCenterDepth = Vector3.Dot(bandCenter.transform.position - geometry.RestPoint, -geometry.LaunchFrameForward);
+        var actualBandCenterOffset = Vector3.Dot(context.BandCenter.transform.position - context.Geometry.RestPoint,
+            context.Geometry.LaunchFrameRight);
+
+        var actualBandCenterDepth = Vector3.Dot(context.BandCenter.transform.position - context.Geometry.RestPoint,
+            -context.Geometry.LaunchFrameForward);
         var middleWrapPoint = activeBandPositions[(activeBandPositions.Length - 1) / 2];
-        var middleWrapOffset = Vector3.Dot(middleWrapPoint - geometry.RestPoint, geometry.LaunchFrameRight);
-        var middleWrapDepth = Vector3.Dot(middleWrapPoint - geometry.RestPoint, -geometry.LaunchFrameForward);
-        var renderedTolerance = GetMaximumRenderedBandRadius(bandLineRenderer) + 0.04f;
+        var middleWrapOffset = Vector3.Dot(middleWrapPoint - context.Geometry.RestPoint, context.Geometry.LaunchFrameRight);
+        var middleWrapDepth = Vector3.Dot(middleWrapPoint - context.Geometry.RestPoint, -context.Geometry.LaunchFrameForward);
+        var renderedTolerance = GetMaximumRenderedBandRadius(context.BandLineRenderer) + 0.04f;
 
         Assert.That(
             Mathf.Abs(middleWrapOffset - actualBandCenterOffset),
@@ -358,169 +379,146 @@ public sealed class GameplaySceneNaturalBandShapeTests
             Mathf.Abs(middleWrapDepth - actualBandCenterDepth),
             Is.LessThanOrEqualTo(0.15f),
             $"{phase} pulled Band wrap should stay near the authored Band Center depth.");
-
-        yield return SendMouse(mouse, pullScreenPosition, false);
     }
 
-    private IEnumerator AssertShallowLateralBandShape(Mouse mouse, float pullOffset, float pullDepth)
+    private IEnumerator AssertShallowLateralBandShape(GameplaySceneContext context, Mouse mouse, float pullOffset, float pullDepth)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDepth);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * pullDepth);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
         var visualCenterPoint = activeBandPositions[(activeBandPositions.Length - 1) / 2];
 
         AssertSimpleBandVisualCenterMatchesBandCenter(
             visualCenterPoint,
-            bandCenter.transform.position,
-            bandLineRenderer,
-            geometry,
+            context.BandCenter.transform.position,
+            context.BandLineRenderer,
+            context.Geometry,
             $"Shallow Lateral Pull offset {pullOffset} depth {pullDepth}");
 
-        AssertBandShapeMatchesRawTwoSpan(activeBandPositions, geometry, visualCenterPoint, 0.01f,
+        AssertBandShapeMatchesRawTwoSpan(activeBandPositions, context.Geometry, visualCenterPoint, 0.01f,
             $"Shallow Lateral Pull offset {pullOffset} depth {pullDepth}");
-
-        yield return SendMouse(mouse, pullScreenPosition, false);
     }
 
-    private IEnumerator AssertTargetColliderClampsInsideAnchorSpan(Mouse mouse, float lateralSign)
+    private IEnumerator AssertTargetColliderClampsInsideAnchorSpan(GameplaySceneContext context, Mouse mouse, float lateralSign)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
+        var leftAnchorOffset = Vector3.Dot(
+            context.Geometry.LeftAnchorPosition - context.Geometry.RestPoint,
+            context.Geometry.LaunchFrameRight);
 
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-        var targetCollider = GetSingleTargetCollider(launchTarget);
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-        var leftAnchorOffset = Vector3.Dot(geometry.LeftAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
-        var rightAnchorOffset = Vector3.Dot(geometry.RightAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
+        var rightAnchorOffset = Vector3.Dot(
+            context.Geometry.RightAnchorPosition - context.Geometry.RestPoint,
+            context.Geometry.LaunchFrameRight);
         var sideAnchorOffset = lateralSign > 0f ? rightAnchorOffset : leftAnchorOffset;
 
-        var beyondAnchorWorldPosition = geometry.RestPoint
-                                        + (geometry.LaunchFrameRight * (sideAnchorOffset + lateralSign))
-                                        - (geometry.LaunchFrameForward * 1.25f);
-        var beyondAnchorScreenPosition = GetScreenPosition(inputCamera, beyondAnchorWorldPosition);
+        var beyondAnchorWorldPosition = context.Geometry.RestPoint
+                                        + (context.Geometry.LaunchFrameRight * (sideAnchorOffset + lateralSign))
+                                        - (context.Geometry.LaunchFrameForward * 1.25f);
+        var beyondAnchorScreenPosition = GetScreenPosition(context.InputCamera, beyondAnchorWorldPosition);
 
-        yield return SendMouse(mouse, pressScreenPosition, true);
         yield return SendMouse(mouse, beyondAnchorScreenPosition, true);
 
-        var bandCenterOffset = Vector3.Dot(bandCenter.transform.position - geometry.RestPoint, geometry.LaunchFrameRight);
+        var bandCenterOffset = Vector3.Dot(
+            context.BandCenter.transform.position - context.Geometry.RestPoint,
+            context.Geometry.LaunchFrameRight);
 
         if (lateralSign > 0f)
             Assert.That(bandCenterOffset, Is.LessThan(rightAnchorOffset - 0.05f));
         else
             Assert.That(bandCenterOffset, Is.GreaterThan(leftAnchorOffset + 0.05f));
 
-        AssertTargetColliderWithinAnchorSpan(targetCollider, geometry, $"Lateral Clamp {lateralSign}");
-
-        yield return SendMouse(mouse, beyondAnchorScreenPosition, false);
+        AssertTargetColliderWithinAnchorSpan(context.TargetCollider, context.Geometry, $"Lateral Clamp {lateralSign}");
     }
 
-    private IEnumerator AssertRenderedAnchorSpan(Mouse mouse, float pullOffset, float pullDepth, string phase)
+    private IEnumerator AssertRenderedAnchorSpan(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float pullOffset,
+        float pullDepth,
+        string phase)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-        var targetCollider = GetSingleTargetCollider(launchTarget);
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDepth);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * pullDepth);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
         AssertTargetColliderWithinRenderedAnchorSpan(
-            targetCollider,
-            bandCenter.transform.position,
-            bandLineRenderer,
-            geometry,
+            context.TargetCollider,
+            context.BandCenter.transform.position,
+            context.BandLineRenderer,
+            context.Geometry,
             phase);
-        AssertBandCenterlineWithinAnchorSpan(activeBandPositions, geometry, phase);
-        AssertBandSamplesStayOutsideCollider(activeBandPositions, bandLineRenderer, targetCollider, phase);
-
-        yield return SendMouse(mouse, pullScreenPosition, false);
+        AssertBandCenterlineWithinAnchorSpan(activeBandPositions, context.Geometry, phase);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, phase);
     }
 
-    private IEnumerator AssertPulledBandShape(Mouse mouse, float pullOffset)
+    private IEnumerator AssertPulledBandShape(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float pullOffset,
+        bool releaseAndAssertRecoil)
     {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-        var targetCollider = GetSingleTargetCollider(launchTarget);
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * 1.25f);
-        var pullScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * 1.25f);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
         yield return SendMouse(mouse, pullScreenPosition, true);
 
-        var activeBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
-        AssertPulledSideWrap(activeBandPositions, pullWorldPosition, geometry.LaunchFrameRight, pullOffset);
-        AssertBandSamplesStayOutsideCollider(activeBandPositions, bandLineRenderer, targetCollider, "Active Pull");
+        AssertPulledSideWrap(activeBandPositions, pullWorldPosition, context.Geometry.LaunchFrameRight, pullOffset);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, "Active Pull");
+
+        if (!releaseAndAssertRecoil)
+            yield break;
 
         yield return SendMouse(mouse, pullScreenPosition, false);
         yield return null;
 
-        var recoilBandPositions = ReadWorldLinePositions(bandLineRenderer);
+        var recoilBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(recoilBandPositions, Has.Length.GreaterThan(3));
-        AssertBandSamplesStayOutsideCollider(recoilBandPositions, bandLineRenderer, targetCollider, "Band Release Recoil");
+        AssertBandSamplesStayOutsideCollider(recoilBandPositions, context.BandLineRenderer, context.TargetCollider, "Band Release Recoil");
     }
 
     private IEnumerator LoadGameplayScene()
     {
-        var loadOperation = SceneManager.LoadSceneAsync(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
+            yield break;
 
-        Assert.That(loadOperation, Is.Not.Null);
+        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        yield break;
+    }
 
-        while (!loadOperation.isDone)
-        {
-            yield return null;
-        }
+    private bool CanReuseGameplayScene(Scene scene)
+    {
+        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+            return false;
+
+        var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
+        var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
+
+        if (slingshotViews.Length != 1 || launchTargets.Length != 1)
+            return false;
+
+        var playerRigidbody = launchTargets[0].GetComponent<Rigidbody>();
+
+        if (playerRigidbody == null || !playerRigidbody.isKinematic)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
+            return false;
+
+        var geometry = slingshotViews[0].CreateGeometrySnapshot();
+        return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
@@ -539,6 +537,19 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
             yield return null;
         }
+    }
+
+    private IEnumerator WaitUntilPlayerIsHeld(GameplaySceneContext context)
+    {
+        for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
+        {
+            if (context.PlayerRigidbody != null && context.PlayerRigidbody.isKinematic)
+                yield break;
+
+            yield return null;
+        }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)
@@ -560,6 +571,15 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
     private GameObject FindGameObjectByName(Scene scene, string objectName)
     {
+        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
+            return gameObject;
+
+        Assert.Fail($"Expected scene object '{objectName}' to exist.");
+        return null;
+    }
+
+    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject gameObject)
+    {
         foreach (var rootGameObject in scene.GetRootGameObjects())
         {
             var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
@@ -567,12 +587,15 @@ public sealed class GameplaySceneNaturalBandShapeTests
             foreach (var childTransform in transforms)
             {
                 if (childTransform.name == objectName)
-                    return childTransform.gameObject;
+                {
+                    gameObject = childTransform.gameObject;
+                    return true;
+                }
             }
         }
 
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
+        gameObject = null;
+        return false;
     }
 
     private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
@@ -594,8 +617,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
     {
         QueueMouse(mouse, screenPosition, isPressed);
-        yield return null;
-        yield return null;
+        yield break;
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
@@ -966,6 +988,53 @@ public sealed class GameplaySceneNaturalBandShapeTests
                 Vector3.Distance(bandPositions[pointIndex], expectedPoint),
                 Is.LessThanOrEqualTo(tolerance),
                 $"{phase} Band Shape should use clean two-span geometry near rest.");
+        }
+    }
+
+    private GameplaySceneContext CreateSceneContext(Scene scene)
+    {
+        var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
+        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(scene, "RigidbodyLaunchTarget");
+        var inputCamera = FindSingleInScene<Camera>(scene, "Input Camera");
+        var bandCenter = FindGameObjectByName(scene, "Band Center");
+        var geometry = slingshotView.CreateGeometrySnapshot();
+
+        return new GameplaySceneContext(
+            inputCamera,
+            slingshotView.GetComponent<LineRenderer>(),
+            GetSingleTargetCollider(launchTarget),
+            launchTarget.GetComponent<Rigidbody>(),
+            bandCenter,
+            geometry,
+            GetScreenPosition(inputCamera, geometry.RestPoint));
+    }
+
+    private sealed class GameplaySceneContext
+    {
+        public Camera InputCamera { get; }
+        public LineRenderer BandLineRenderer { get; }
+        public Collider TargetCollider { get; }
+        public Rigidbody PlayerRigidbody { get; }
+        public GameObject BandCenter { get; }
+        public SlingshotGeometrySnapshot Geometry { get; }
+        public Vector2 PressScreenPosition { get; }
+
+        public GameplaySceneContext(
+            Camera inputCamera,
+            LineRenderer bandLineRenderer,
+            Collider targetCollider,
+            Rigidbody playerRigidbody,
+            GameObject bandCenter,
+            SlingshotGeometrySnapshot geometry,
+            Vector2 pressScreenPosition)
+        {
+            InputCamera = inputCamera;
+            BandLineRenderer = bandLineRenderer;
+            TargetCollider = targetCollider;
+            PlayerRigidbody = playerRigidbody;
+            BandCenter = bandCenter;
+            Geometry = geometry;
+            PressScreenPosition = pressScreenPosition;
         }
     }
 }

@@ -281,19 +281,45 @@ public sealed class GameplaySceneCompositionTests
 
     private IEnumerator LoadGameplayScene()
     {
-        var loadOperation = SceneManager.LoadSceneAsync(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
+            yield break;
 
-        Assert.That(loadOperation, Is.Not.Null);
+        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        yield break;
+    }
 
-        while (!loadOperation.isDone)
-        {
-            yield return null;
-        }
+    private bool CanReuseGameplayScene(Scene scene)
+    {
+        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+            return false;
+
+        var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
+        var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
+
+        if (slingshotViews.Length != 1 || launchTargets.Length != 1)
+            return false;
+
+        var playerRigidbody = launchTargets[0].GetComponent<Rigidbody>();
+
+        if (playerRigidbody == null || !playerRigidbody.isKinematic)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || !pullHint.activeInHierarchy)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)
+            return false;
+
+        var geometry = slingshotViews[0].CreateGeometrySnapshot();
+        return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
     {
-        for (var frameIndex = 0; frameIndex < 30; frameIndex += 1)
+        for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
         {
             var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
 
@@ -307,6 +333,8 @@ public sealed class GameplaySceneCompositionTests
 
             yield return null;
         }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)
@@ -328,6 +356,15 @@ public sealed class GameplaySceneCompositionTests
 
     private GameObject FindGameObjectByName(Scene scene, string objectName)
     {
+        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
+            return gameObject;
+
+        Assert.Fail($"Expected scene object '{objectName}' to exist.");
+        return null;
+    }
+
+    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject gameObject)
+    {
         foreach (var rootGameObject in scene.GetRootGameObjects())
         {
             var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
@@ -335,12 +372,15 @@ public sealed class GameplaySceneCompositionTests
             foreach (var childTransform in transforms)
             {
                 if (childTransform.name == objectName)
-                    return childTransform.gameObject;
+                {
+                    gameObject = childTransform.gameObject;
+                    return true;
+                }
             }
         }
 
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
+        gameObject = null;
+        return false;
     }
 
     private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
@@ -362,8 +402,7 @@ public sealed class GameplaySceneCompositionTests
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
     {
         QueueMouse(mouse, screenPosition, isPressed);
-        yield return null;
-        yield return null;
+        yield break;
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
@@ -409,10 +448,7 @@ public sealed class GameplaySceneCompositionTests
 
     private IEnumerator WaitFrames(int frameCount)
     {
-        for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
-        {
-            yield return null;
-        }
+        yield break;
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)
