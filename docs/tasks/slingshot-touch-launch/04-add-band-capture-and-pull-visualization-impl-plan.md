@@ -1,5 +1,9 @@
 # Implement Issue 04: Band Capture And Pull Visualization
 
+> Superseded behavior note: this implementation plan records the original first-slice visualization. Current Band Shape behavior is tracked by
+> `docs/tasks/slingshot-natural-band-shape/` and uses fixed `BandWrapSampleCount + 4` point polylines from the natural taut solver instead of the
+> three-point path described below.
+
 ## Summary
 
 - Add the reusable Slingshot feature under `Assets/Game/Gameplay/Slingshot`.
@@ -23,7 +27,8 @@
   - `SlingshotView : MonoBehaviour` owns serialized refs for left/right/rest anchors, Launch Frame, Band `LineRenderer`, Pull Hint UI object, Touch
     Indicator UI object, and optional gizmo config.
   - `OnValidate` validates assigned references; no `Reset()` or dependency injection.
-  - Band Shape is always three points: left anchor, pull/rest point, right anchor.
+  - Original superseded first-slice Band Shape was three points: left anchor, pull/rest point, right anchor. Current natural Band Shape behavior is
+    owned by `docs/tasks/slingshot-natural-band-shape/`.
   - Pull Hint and Touch Indicator are controlled as authored UI objects, with Touch Indicator positioned from the clamped projected point.
 - Add plain C# controller and math seams:
   - `SlingshotController : IInitializable, IDisposable` subscribes once to `IUnityInput` pointer events and

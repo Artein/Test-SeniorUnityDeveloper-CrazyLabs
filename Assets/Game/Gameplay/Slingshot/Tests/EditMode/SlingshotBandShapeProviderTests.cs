@@ -1,0 +1,168 @@
+using System;
+using Game.Gameplay.Slingshot;
+using Game.Gameplay.Slingshot.Tests.EditMode;
+using NUnit.Framework;
+using UnityEngine;
+
+// ReSharper disable once CheckNamespace
+public sealed class SlingshotBandShapeProviderTests
+{
+    [Test]
+    public void TryCreateBandShape_ValidQuery_WritesWorldShapeIntoCallerOwnedBuffer()
+    {
+        var config = new FakeSlingshotConfig
+        {
+            TouchTargetRadiusPixels = 30f,
+            MinimumPullDistance = 0.25f,
+            MaximumPullDistance = 2f,
+            MaximumLateralPull = 1.25f,
+            MaximumLaunchAngleDegrees = 35f,
+            MinimumLaunchSpeed = 4f,
+            MaximumLaunchSpeed = 12f,
+            LaunchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f),
+            LaunchUpSpeed = 1.5f,
+            BandContactPadding = 0f,
+            BandSilhouetteSampleCount = 8,
+            BandWrapSampleCount = 5,
+            BandRecoilDuration = 0.2f,
+            BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
+        };
+
+        var source = new FakeLaunchTargetSilhouetteSource(
+            new Vector3(-1f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(1f, 0f, -2f),
+            new Vector3(-1f, 0f, -2f));
+        var provider = new SlingshotBandShapeProvider(source, config);
+        var output = new Vector3[provider.BandShapePointCount];
+
+        var solved = provider.TryCreateBandShape(
+            new SlingshotBandShapeQuery(
+                new Vector3(-3f, 0f, 0f),
+                new Vector3(3f, 0f, 0f),
+                Vector3.zero,
+                new Vector3(0f, 0f, -1f),
+                Vector3.right,
+                Vector3.forward,
+                Vector3.up),
+            output,
+            out var pointCount);
+
+        Assert.That(solved, Is.True);
+        Assert.That(pointCount, Is.EqualTo(9));
+        Assert.That(output[0], Is.EqualTo(new Vector3(-3f, 0f, 0f)));
+        Assert.That(output[8], Is.EqualTo(new Vector3(3f, 0f, 0f)));
+        AssertVector3(output[4], new Vector3(0f, 0f, -2f));
+        Assert.That(source.Queries, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TryCreateBandShape_SourceFailure_ReturnsFalseWithoutThrowing()
+    {
+        var config = CreateValidConfig();
+        var source = new FakeLaunchTargetSilhouetteSource(Array.Empty<Vector3>()) { ShouldFail = true };
+        var provider = new SlingshotBandShapeProvider(source, config);
+        var output = new Vector3[provider.BandShapePointCount];
+
+        var solved = provider.TryCreateBandShape(CreateQuery(), output, out var pointCount);
+
+        Assert.That(solved, Is.False);
+        Assert.That(pointCount, Is.Zero);
+    }
+
+    [Test]
+    public void TryCreateBandShape_OutputBufferTooSmall_ThrowsArgumentException()
+    {
+        var provider = new SlingshotBandShapeProvider(new FakeLaunchTargetSilhouetteSource(CreateSquareSamples()), CreateValidConfig());
+
+        Assert.That(
+            () => provider.TryCreateBandShape(CreateQuery(), new Vector3[provider.BandShapePointCount - 1], out _),
+            Throws.TypeOf<ArgumentException>());
+    }
+
+    private FakeSlingshotConfig CreateValidConfig()
+    {
+        return new FakeSlingshotConfig
+        {
+            TouchTargetRadiusPixels = 30f,
+            MinimumPullDistance = 0.25f,
+            MaximumPullDistance = 2f,
+            MaximumLateralPull = 1.25f,
+            MaximumLaunchAngleDegrees = 35f,
+            MinimumLaunchSpeed = 4f,
+            MaximumLaunchSpeed = 12f,
+            LaunchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f),
+            LaunchUpSpeed = 1.5f,
+            BandContactPadding = 0f,
+            BandSilhouetteSampleCount = 8,
+            BandWrapSampleCount = 5,
+            BandRecoilDuration = 0.2f,
+            BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
+        };
+    }
+
+    private SlingshotBandShapeQuery CreateQuery()
+    {
+        return new SlingshotBandShapeQuery(
+            new Vector3(-3f, 0f, 0f),
+            new Vector3(3f, 0f, 0f),
+            Vector3.zero,
+            new Vector3(0f, 0f, -1f),
+            Vector3.right,
+            Vector3.forward,
+            Vector3.up);
+    }
+
+    private Vector3[] CreateSquareSamples()
+    {
+        return new[]
+        {
+            new Vector3(-1f, 0f, 0f),
+            new Vector3(1f, 0f, 0f),
+            new Vector3(1f, 0f, -2f),
+            new Vector3(-1f, 0f, -2f)
+        };
+    }
+
+    private void AssertVector3(Vector3 actual, Vector3 expected)
+    {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
+    }
+
+    private sealed class FakeLaunchTargetSilhouetteSource : ILaunchTargetSilhouetteSource
+    {
+        private readonly Vector3[] _samples;
+
+        public int Queries { get; private set; }
+        public bool ShouldFail { get; set; }
+
+        public FakeLaunchTargetSilhouetteSource(params Vector3[] samples)
+        {
+            _samples = samples;
+        }
+
+        public bool TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount)
+        {
+            Queries += 1;
+
+            if (ShouldFail)
+            {
+                sampleCount = 0;
+                return false;
+            }
+
+            if (outputSamples.Length < _samples.Length)
+                throw new ArgumentException("Output buffer is too small.", nameof(outputSamples));
+
+            for (var i = 0; i < _samples.Length; i += 1)
+            {
+                outputSamples[i] = _samples[i];
+            }
+
+            sampleCount = _samples.Length;
+            return true;
+        }
+    }
+}

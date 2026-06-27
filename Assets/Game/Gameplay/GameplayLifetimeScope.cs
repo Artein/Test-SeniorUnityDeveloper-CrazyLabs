@@ -34,7 +34,7 @@ namespace Game.Gameplay
             new UnityInputInstaller().Install(builder);
             new GameplayStateInstaller(_gameplayStateConfig).Install(builder);
 
-            builder.RegisterInstance(_launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ISlingshotBandContactProvider>();
+            builder.RegisterInstance(_launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
 
             new SlingshotInstaller(_slingshotConfig, _preLaunchStateId, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_runningStateId).Install(builder);

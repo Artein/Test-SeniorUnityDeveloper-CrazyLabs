@@ -20,6 +20,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public AnimationCurve LaunchSpeedCurve { get; set; }
         public float LaunchUpSpeed { get; set; }
         public float BandContactPadding { get; set; }
+        public int BandSilhouetteSampleCount { get; set; }
         public int BandWrapSampleCount { get; set; }
         public float BandRecoilDuration { get; set; }
         public AnimationCurve BandRecoilCurve { get; set; }
@@ -202,27 +203,57 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         }
     }
 
-    internal sealed class FakeSlingshotBandContactProvider : ISlingshotBandContactProvider
+    internal sealed class FakeSlingshotBandShapeProvider : ISlingshotBandShapeProvider
     {
         private readonly List<string> _observations;
 
-        public List<SlingshotBandContactQuery> Queries { get; } = new();
+        public int BandShapePointCount => ShapePoints.Length;
 
-        public SlingshotBandContactShape Shape { get; set; } = new(
-            new Vector3(-0.6f, 0f, -0.4f),
-            new[] { new Vector3(0f, 0f, -0.7f) },
-            new Vector3(0.6f, 0f, -0.4f));
+        public List<SlingshotBandShapeQuery> Queries { get; } = new();
+        public bool ShouldFail { get; set; }
 
-        public FakeSlingshotBandContactProvider(List<string> observations)
+        public Vector3[] ShapePoints { get; set; } =
+        {
+            new(-1f, 0f, 0f),
+            new(-0.75f, 0f, -0.1f),
+            new(-0.5f, 0f, -0.35f),
+            new(-0.25f, 0f, -0.55f),
+            new(0f, 0f, -0.7f),
+            new(0.25f, 0f, -0.55f),
+            new(0.5f, 0f, -0.35f),
+            new(0.75f, 0f, -0.1f),
+            new(1f, 0f, 0f)
+        };
+
+        public FakeSlingshotBandShapeProvider(List<string> observations)
         {
             _observations = observations;
         }
 
-        public SlingshotBandContactShape CreateBandContactShape(SlingshotBandContactQuery query)
+        public bool TryCreateBandShape(SlingshotBandShapeQuery query, Vector3[] outputPoints, out int pointCount)
         {
             Queries.Add(query);
-            _observations.Add("band-contact");
-            return Shape;
+            _observations.Add("band-shape");
+
+            if (ShouldFail)
+            {
+                pointCount = 0;
+                return false;
+            }
+
+            if (outputPoints is null)
+                throw new ArgumentNullException(nameof(outputPoints));
+
+            if (outputPoints.Length < ShapePoints.Length)
+                throw new ArgumentException("Output buffer is too small.", nameof(outputPoints));
+
+            for (var pointIndex = 0; pointIndex < ShapePoints.Length; pointIndex += 1)
+            {
+                outputPoints[pointIndex] = ShapePoints[pointIndex];
+            }
+
+            pointCount = ShapePoints.Length;
+            return true;
         }
     }
 

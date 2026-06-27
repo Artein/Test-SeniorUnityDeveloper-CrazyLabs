@@ -179,7 +179,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - The accepted launch path keeps the final loaded Band Shape through the synchronous launch handoff. It must not show the idle/rest Band Shape before
   the launch request has been accepted and applied.
 - After the launch request is accepted and applied, the Band enters Band Release Recoil. Recoil starts from the final loaded Band Shape and keeps
-  querying contact/wrap against the moving Launch Target collider while the Band returns toward Rest Shape.
+  querying contact/wrap against the moving Launch Target collider while a virtual recoil Pull Point relaxes from the final Pull Point toward Rest
+  Point.
 - Band Release Recoil ends when the Band reaches the rest/idle/default shape. At that point the Band detaches and must not keep following the
   Launch Target.
 - Slingshot capture enable and disable paths are idempotent.
@@ -209,68 +210,58 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - During Active Pull, first-slice held target updates are position-only and preserve the Launch Target rotation. Future target-facing, lean, spin, or
   orientation changes should be added through an explicit rotation/orientation contract or presentation layer, not hidden inside position updates.
 - During an Active Pull update, `SlingshotController` computes the clamped Pull Point, calls
-  `IHeldLaunchTargetPositioner.SetHeldPosition(pullPoint)`, then requests Band Contact Points and Band Wrap data from
-  `ILaunchTargetBandContactProvider`.
+  `IHeldLaunchTarget.SetHeldPosition(pullPoint)`, then requests the complete ordered Band Shape from `ISlingshotBandShapeProvider`.
 - `SetHeldPosition` is an immediate held-target positioning contract: after it returns, the assigned Collider pose is expected to be current enough
   for same-frame Band contact calculation.
 - The Pull Point remains the gameplay held/launch position and must not be treated as a Band renderer point when it would place the Band inside the
   Launch Target mesh.
-- Band Shape uses Band Contact Points derived from the held Launch Target's single assigned `Collider` so the visible Band meets the target instead of
-  passing through it.
-- First-slice Band Contact and Band Wrap generation supports one explicitly assigned Unity `Collider` of any Collider type, not only the current
-  Gameplay Scene `CapsuleCollider`. Compound or multi-collider target shape support is deferred.
-- First-slice Band Contact Points are computed as closest padded points from each Band anchor to the assigned Launch Target Collider using generic
-  Collider surface queries. This is intentionally not a full rope-physics or tangent solve.
-- First-slice rendered Band Contact Points and Band Wrap samples are projected onto the Slingshot Pull Plane/Band height after Collider contact,
-  wrap, and padding calculations. The assigned Collider provides horizontal contact shape; arbitrary vertical closest-point coordinates from tall
-  Colliders are not preserved in the rendered Band Shape.
-- Generic any-Collider Band Wrap is a best-effort visual approximation. It does not promise exact silhouette, tangent, or mesh-topology wrapping for
-  arbitrary collider shapes.
-- Generic Band Wrap sample origins are generated on an arc in the Pull Plane around the Pull Point, then projected to the assigned Collider with
-  generic surface queries and padded outward.
-- When contact directions are asymmetric, the Band Wrap arc uses the backward/pulled side of the Launch Target: the side most aligned with
-  `-LaunchFrameForward` in the Pull Plane. It does not choose the shortest arc if that would move the visible wrap to the front or side of the target.
-- Generic Collider contact and wrap padding offsets from the `Collider.ClosestPoint` result back toward the query origin, using
-  `normalize(queryOrigin - closestPoint) * padding` when that direction is valid. For Band Contact Points, the query origin is the relevant Band
-  anchor. For Band Wrap samples, the query origin is the Pull Plane arc sample origin.
-- If `queryOrigin - closestPoint` is near zero, generic Collider padding falls back in order: projected direction from Collider bounds center to the
-  closest point in the Pull Plane, then `-LaunchFrameForward`, then no padding if no valid direction exists.
-- Do not generate the first-slice Band Wrap by linearly interpolating between Band Contact Points, because that describes a chord through the target
-  before projection and weakens the visual feeling that the Band wraps around the held target.
-- Arc-based Band Wrap sampling remains presentation-only and uses `BandWrapSegmentCount`. It does not affect Pull Point, Pull Offset, launch power, or
-  launch direction.
-- Band contact calculation aligns the visual contact data to the assigned Collider shape instead of using arbitrary scene-authored offsets.
-  Shape-specific precision can be improved inside the Launch Target Band contact provider/adapter without changing SlingshotController or
-  SlingshotView.
-- First-slice Band Shape is an ordered visual path: left anchor, left Band leg, left Band Contact Point, collider-aligned Band Wrap, right Band
-  Contact Point, right Band leg, right anchor.
-- First-slice Band Shape does not draw a straight visible segment between Band Contact Points through the Launch Target. The Band Wrap follows the
-  padded target collider shape between the Band Contact Points.
+- Band Shape uses tangent Band Contact Points and a pulled-side Band Wrap around the held Launch Target's single assigned `Collider` silhouette so
+  the visible Band reads as a taut rubber band instead of passing through the target.
+- First-slice Launch Target Silhouette sampling supports one explicitly assigned Unity `Collider` of any Collider type, not only the current Gameplay
+  Scene `CapsuleCollider`. Compound or multi-collider target shape support is deferred.
+- Unity Collider access is isolated behind `ILaunchTargetSilhouetteSource`. It receives a narrow `LaunchTargetSilhouetteQuery` with Pull Plane basis,
+  band-height plane origin, and sample count data, then writes raw world samples into a caller-owned buffer.
+- The silhouette source samples the current assigned Collider pose by radial sampling around the Collider bounds center, calling
+  `Collider.ClosestPoint` from outside origins, and projecting results to the Pull Plane/Band height. It does not auto-discover child Colliders.
+- `SlingshotBandShapeProvider` owns reusable world and solver buffers sized from immutable config, maps silhouette samples into 2D Pull Plane
+  coordinates, calls the pure taut solver, and writes the resulting world-space polyline into a caller-owned output buffer.
+- The pure solver reduces raw samples to a convex outer Launch Target Silhouette, inflates it by `BandContactPadding` in Pull Plane space, finds
+  tangent Band Contact Points from the anchors, rejects free spans that cross the inflated silhouette, and chooses the pulled-side contour.
+- The Pulled-Side Center comes from the actual Pull vector from Rest Point to Pull Point, including lateral Pull Offset. Near-zero Pull falls back to
+  the backward `-LaunchFrameForward` side.
+- Band Wrap sampling uses odd `BandWrapSampleCount`; the middle Band Wrap sample is exactly the Pulled-Side Center, and the remaining samples are
+  distributed along the selected contour from left contact to center and center to right contact.
+- The valid live Band Shape has a stable fixed point count of `BandWrapSampleCount + 4`: left anchor, left Band Contact Point, Band Wrap samples,
+  right Band Contact Point, and right anchor.
+- Rest/idle/inactive Band Shape uses the same fixed point count as live shapes, distributed along left anchor to Rest Point and Rest Point to right
+  anchor with exactly one Rest Point corner.
 - Band Shape data may contain multiple visual sample points so the Band Wrap can read as smooth, elastic, and polished without changing launch math.
 - First-slice Band Shape is represented to the view as one ordered world-space polyline, not separate renderer pieces for left leg, Band Wrap, and
   right leg.
 - The ordered Band Shape polyline starts at the left anchor, includes Band Contact Points and Band Wrap samples in order, and ends at the right
   anchor.
-- Band Wrap visual quality is designer-tuned through `SlingshotConfig`, using a clamped `BandWrapSegmentCount` value such as `[Range(2, 24)]` with
-  a sensible default around `12`.
-- Band Contact Points may include a small designer-authored non-negative padding value so the Band visually sits just outside the target mesh.
+- Band Wrap visual quality is designer-tuned through odd `SlingshotConfig.BandWrapSampleCount`, using a clamped value such as `[Range(3, 31)]` with
+  a sensible default around `13`.
+- Launch Target Silhouette accuracy is designer-tuned separately through `SlingshotConfig.BandSilhouetteSampleCount`, using a clamped value such as
+  `[Range(8, 64)]` with a sensible default around `32`.
+- Band Contact Points may include a small designer-authored non-negative `BandContactPadding` value so the Band visually sits just outside the target
+  mesh.
 - The Slingshot geometry Rest Point is the source of truth for the unloaded Pull Point and held Launch Target reset position.
 - Canceling, weak release, or invalid projection returns the held Launch Target to the Rest Point.
 - Valid release keeps the Launch Target at the final pulled point until launch is applied, so launch starts from the loaded Slingshot position.
 - After launch application/shoot, the Band enters Band Release Recoil while the Launch Target leaves the Slingshot. This reset/recoil is a post-shot
   visual behavior, not pre-launch cleanup.
-- During Band Release Recoil, the Band continues computing Band Contact Points and Band Wrap from the moving Launch Target collider so the shot
-  reads as the Band pushing the target forward.
+- During Band Release Recoil, the moving Launch Target silhouette supplies live contact geometry, while the virtual recoil Pull Point supplies how
+  loaded the Band still is. The pulled-side contour should not be derived only from the launched target pose.
 - Band Release Recoil stops following the Launch Target when the Band reaches the rest/idle/default shape.
-- Rest Band Shape may use the Rest Point only when no visible target contact is required. If the held Launch Target is visible at the Rest Point, the
-  same Band Contact Point rule applies so the Band does not pass through the mesh while idle.
+- Rest/idle/inactive Band Shape uses the fixed anchor-to-Rest-Point-to-anchor shape. It does not wrap the Launch Target Silhouette in this slice.
 - Additional Band sag, secondary motion, or richer rope visuals can be added later without changing launch math.
 - Pull Hint is a scene-authored UI object controlled by the Slingshot view.
 - Touch Indicator is a scene-authored UI object controlled by the Slingshot view during Active Pull.
 - Pull Hint and Touch Indicator live under a Canvas; the Band remains world-rendered.
 - Slingshot view exposes command-style methods for pull visuals, idle visuals, and capture availability. It does not own Launch Target movement.
-- Slingshot view receives an already computed Band Shape. It does not query Launch Target colliders or decide Band Contact Points or Band Wrap
-  geometry.
+- Slingshot view receives an already computed Band Shape. It does not query Launch Target colliders, sample silhouettes, or decide Band Contact
+  Points or Band Wrap geometry.
 - Slingshot view renders the first-slice Band Shape with one LineRenderer by applying every ordered polyline point.
 - Slingshot view exposes a read-only geometry snapshot method. It fails fast when required serialized references are missing.
 - Slingshot view or geometry snapshot validation fails fast when left anchor, right anchor, or Rest Point is authored off the Pull Plane/Band Plane
@@ -335,21 +326,23 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Final velocity is horizontal direction multiplied by launch speed plus up direction multiplied by launch up speed.
 - Slingshot launcher returns void. Defensive invalid-request skips warn instead of returning a result.
 - `ILaunchTarget` exposes `Hold()` and `Launch(velocity)`.
-- Held Launch Target positioning is exposed through a separate narrow interface, such as `IHeldLaunchTargetPositioner.SetHeldPosition(Vector3 position)`.
-- Launch Target Band contact is exposed through a separate narrow interface, such as `ILaunchTargetBandContactProvider`, so Slingshot can compute
-  presentation contact points without leaking Rigidbody or Collider details into the controller.
-- `ILaunchTargetBandContactProvider` is backed by an explicitly assigned Launch Target Collider in the Unity adapter, not by a separate
-  designer-authored proxy shape in the first slice.
-- `ILaunchTargetBandContactProvider` accepts exactly one explicitly assigned Unity `Collider` of any Collider type and uses generic Collider surface
-  queries for first-slice contact and wrap data.
-- `ILaunchTargetBandContactProvider` does not auto-discover child Colliders or choose among multiple Colliders in the first slice. Multi-collider
-  Launch Target shapes require a later compound-shape decision.
-- `ILaunchTargetBandContactProvider` calculates contacts from the assigned Collider's current Transform after `SetHeldPosition`. It does not accept a
-  virtual Pull Point, target pose, or predicted transform in the first slice.
-- `ILaunchTargetBandContactProvider` may use `Collider.ClosestPoint(Vector3)` as the generic first-slice surface query. Exact collider-specific
-  silhouette support is deferred.
-- The Launch Target Band contact adapter validates the assigned Collider and contact padding through `OnValidate`, and fails fast before use if
-  required references are missing.
+- Held Launch Target positioning is exposed through `IHeldLaunchTarget.SetHeldPosition(Vector3 position)`.
+- Launch Target silhouette sampling is exposed through `ILaunchTargetSilhouetteSource`, so Slingshot Band Shape solving can use collider-derived
+  presentation geometry without leaking Rigidbody details into the controller.
+- `ILaunchTargetSilhouetteSource` is backed by one explicitly assigned Launch Target Collider in the Unity adapter, not by a designer-authored proxy
+  shape in the first slice.
+- `ILaunchTargetSilhouetteSource` accepts exactly one explicitly assigned Unity `Collider` of any Collider type and writes raw Pull Plane samples
+  into caller-owned buffers.
+- `ILaunchTargetSilhouetteSource` does not auto-discover child Colliders or choose among multiple Colliders in the first slice. Multi-collider Launch
+  Target shapes require a later compound-shape decision.
+- `ILaunchTargetSilhouetteSource` samples from the assigned Collider's current Transform after `SetHeldPosition`. It does not accept a virtual Pull
+  Point, target pose, or predicted transform in the first slice.
+- `ISlingshotBandShapeProvider` is the controller-facing visual geometry boundary. It combines the silhouette source, immutable config, reusable
+  scratch buffers, and the pure Pull Plane taut solver, then writes a complete ordered Band Shape to caller-owned output.
+- Runtime geometry failures return false from the provider and solver on the hot path. Invalid queries, too-small output buffers, missing required
+  references, and invalid config are setup/programmer errors that fail fast before use.
+- The Launch Target silhouette adapter validates the assigned Collider through `OnValidate`, and fails fast before use if required references are
+  missing.
 - Slingshot pull interpretation depends on held positioning, while Slingshot launch application depends on both `ILaunchTarget` and held positioning.
 - Held positioning is valid only after the Launch Target has been held; calling `SetHeldPosition` before `Hold()` fails fast instead of implicitly
   holding or silently no-oping.
@@ -364,7 +357,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Rigidbody Launch Target held positioning uses immediate Rigidbody/Transform pose assignment while held, not `Rigidbody.MovePosition`, because Band
   contact calculation needs the assigned Collider pose to be observable in the same frame.
 - Do not call Unity physics transform synchronization unconditionally after every held target move in the hot path.
-- Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` correctness. If that test proves explicit Unity physics transform
+- Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` silhouette sampling correctness. If that test proves explicit Unity physics transform
   synchronization is required, add the narrow sync in the Rigidbody Launch Target or contact-calculation path and document why there.
 - Rigidbody Launch Target launch restores saved state if held, clears linear/angular velocity again, and applies velocity change.
 - Launch Target launch behaves deterministically even if hold was never called.
@@ -397,7 +390,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Changing subscriber exception is logged and isolated while the transition still completes.
   - Config validator reports nulls, self-transitions, and duplicate transitions with stable typed errors.
 - Slingshot config EditMode tests:
-  - Validator reports invalid Band Wrap segment counts outside the supported range.
+  - Validator reports invalid Band Silhouette sample counts outside the supported range.
+  - Validator reports invalid Band Wrap sample counts outside the supported odd range, including even values.
 - Slingshot EditMode tests:
   - Initialization while already Pre-Launch enables capture and input.
   - Entering and leaving Pre-Launch acquire/dispose input handles and update view state in the expected order.
@@ -411,25 +405,28 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Weak, forward-only, and canceled Pulls produce no launch request.
   - Active Pull moves the held Launch Target to the clamped Pull Point.
   - Active Pull held target positioning preserves the Launch Target rotation.
-  - Active Pull creates Band Shape from target Band Contact Points and Band Wrap, not from the Pull Point as a renderer middle point.
+  - Active Pull creates Band Shape from the Band Shape provider, not from the Pull Point as a renderer middle point.
   - Active Pull Band Shape contains visible Band legs, a collider-aligned Band Wrap, and no straight segment through the Launch Target.
-  - Active Pull requests Band Contact Points through the target contact provider and does not query Collider data directly.
-  - Active Pull positions the held Launch Target before requesting Band Contact Points and Band Wrap data.
-  - Active Pull Band Contact Points are derived as left-anchor and right-anchor closest padded points against the assigned target Collider.
+  - Active Pull requests complete Band Shape data through the Band Shape provider and does not query Collider data directly.
+  - Active Pull positions the held Launch Target before requesting Band Shape data.
+  - Active Pull Band Contact Points are tangent points against the inflated Launch Target Silhouette, not closest points from the anchors.
   - Geometry validation rejects left anchor, right anchor, or Rest Point authoring that is off the Pull Plane/Band Plane beyond tolerance.
   - Geometry validation does not silently project misaligned anchors or Rest Point to make invalid authoring pass.
   - Geometry validation uses an implementation-owned coplanarity tolerance and does not read tolerance from `SlingshotConfig` or scene-authored
     values.
   - Active Pull Band Shape contains enough ordered visual sample points to represent the configured Band Wrap quality.
-  - Active Pull Band Shape respects the configured `BandWrapSegmentCount` while staying within the validated clamp range.
-  - Changing `BandWrapSegmentCount` changes visual sample density but does not change launch request power, direction, Pull Offset, or Pull Point.
+  - Active Pull Band Shape respects the configured odd `BandWrapSampleCount` while staying within the validated clamp range.
+  - Changing `BandWrapSampleCount` changes visual sample density but does not change launch request power, direction, Pull Offset, or Pull Point.
+  - Active Pull Band Shape has exactly `BandWrapSampleCount + 4` points.
+  - Failed Active Pull Band Shape solve keeps the last valid Band Shape visible and blocks release.
   - Active Pull Band Shape is one ordered polyline that starts at the left anchor and ends at the right anchor.
   - Forward-only Pull keeps the held Launch Target at the Rest Point.
   - Canceled, invalidly projected, and weak Pull releases return the held Launch Target to the Rest Point.
   - Valid Pull Release keeps the held Launch Target at the final pulled point before launch application.
   - Valid Pull Release keeps the loaded Band Shape through launch request notification instead of resetting visuals before launch handoff.
   - Accepted launch starts Band Release Recoil after launch application.
-  - During Band Release Recoil, the Band continues requesting Band Contact Points and Band Wrap from the moving Launch Target collider.
+  - During Band Release Recoil, the Band continues requesting the natural Band Shape from the moving Launch Target silhouette.
+  - Failed recoil Band Shape solve continues interpolating from the last valid live shape toward rest.
   - Band Release Recoil detaches from the Launch Target when the Band reaches the rest/idle/default shape.
   - Initialization and Pre-Launch state entry do not call held target positioning.
   - Valid Pull Release raises a launch request with expected normalized power, Pull distance, Pull Offset, Pull Point world position, direction,
@@ -449,24 +446,17 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Verify held positioning preserves Rigidbody rotation.
   - Verify held positioning uses immediate pose assignment rather than `Rigidbody.MovePosition`.
   - Verify held positioning fails fast if called before hold.
-  - Verify held positioning updates the assigned Collider pose before same-frame Band Contact Point and Band Wrap calculation.
-  - Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` correctness before introducing explicit physics transform
+  - Verify held positioning updates the assigned Collider pose before same-frame Launch Target Silhouette sampling.
+  - Add a boundary test for same-frame `SetHeldPosition -> Collider.ClosestPoint` silhouette sampling correctness before introducing explicit physics transform
     synchronization.
-  - Verify Band Contact Point calculation uses the assigned target Collider and contact padding.
-  - Verify Band Contact Point and Band Wrap calculation use the single explicitly assigned Collider and do not auto-select from child Colliders.
-  - Verify Band Contact Point calculation returns collider-aligned contacts for the assigned target Collider shape.
-  - Verify Band Contact Points and Band Wrap samples are projected onto the Slingshot Pull Plane/Band height instead of preserving arbitrary Collider
-    vertical closest-point coordinates.
-  - Verify generic Collider padding offsets valid `ClosestPoint` results back toward the query origin: anchor for Band Contact Points, arc sample
-    origin for Band Wrap samples.
-  - Verify degenerate generic Collider padding falls back to Pull Plane bounds-center direction, then `-LaunchFrameForward`, then no padding.
-  - Verify Band Wrap calculation returns padded collider-aligned sample points between the left and right Band Contact Points.
-  - Verify Band Wrap generation samples from a Pull Plane arc around the Pull Point before Collider projection, not from a linear chord between Band
-    Contact Points.
-  - Verify asymmetric contact directions choose the backward/pulled Band Wrap arc side instead of the shortest arc when those differ.
-  - Verify Band Contact Point and Band Wrap calculation work through the base Collider contract with representative Collider types, not just
-    `CapsuleCollider`.
-  - Verify generic Band Wrap behavior is stable and padded, without asserting exact arbitrary-collider silhouettes.
+  - Verify Launch Target Silhouette sampling uses the assigned target Collider and does not auto-select from child Colliders.
+  - Verify Launch Target Silhouette samples are projected onto the Slingshot Pull Plane/Band height instead of preserving arbitrary Collider vertical
+    closest-point coordinates.
+  - Verify Launch Target Silhouette sampling works through the base Collider contract with representative Collider types, not just `CapsuleCollider`.
+  - Verify the Band Shape provider writes into caller-owned buffers, returns point count, and does not allocate/copy Band Shape arrays per frame.
+  - Verify the pure solver reduces raw samples to a convex silhouette, inflates it by contact padding, selects tangent Band Contact Points, rejects
+    crossing spans, and chooses the pulled-side contour from the actual Pull vector.
+  - Verify odd Band Wrap sample counts place the middle wrap sample exactly at the Pulled-Side Center.
   - Verify launch clears stale velocities and applies velocity change.
 - Gameplay Flow EditMode tests:
   - Valid launch request transitions to Running before calling launcher.

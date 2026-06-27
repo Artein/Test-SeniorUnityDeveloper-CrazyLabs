@@ -45,7 +45,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   _launchUpSpeed: 1.5
   _bandContactPadding: 0.05
-  _bandWrapSampleCount: 12
+  _bandSilhouetteSampleCount: 32
+  _bandWrapSampleCount: 13
   _bandRecoilDuration: 0.18
   _bandRecoilCurve:
     serializedVersion: 2

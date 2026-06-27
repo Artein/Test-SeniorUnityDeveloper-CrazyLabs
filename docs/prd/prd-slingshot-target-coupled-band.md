@@ -1,5 +1,9 @@
 ## Problem Statement
 
+> Superseded behavior note: this PRD records the completed target-coupled Band milestone. The current Band Shape target is the natural taut follow-up
+> in `docs/tasks/slingshot-natural-band-shape/` and ADR-0008, which replaces the closest-point/contact and Pull Plane arc-wrap approximation with an
+> inflated Launch Target Silhouette, tangent Band Contact Points, and pulled-side contour solving.
+
 The current Slingshot launch slice can interpret Pull input and deform the Band, but the visible interaction still risks feeling disconnected from the Launch Target. If the player pulls the Band backward, the target must look like it is being physically loaded by the Slingshot. If the target remains at its idle position while only the Band moves, the interaction reads as a UI drag rather than a slingshot.
 
 The current three-point Band Shape also treats the interpreted Pull Point as the visible Band middle. That is no longer correct once the Pull Point becomes the held Launch Target position. A Band renderer point at the Pull Point can run through the Launch Target mesh, which breaks the physical read of the loaded Band. The Band must instead meet the Launch Target at Band Contact Points and draw a collider-aligned Band Wrap around the target.
@@ -103,7 +107,7 @@ On weak Pull Release, canceled Pull, or invalid Pull projection, the held Launch
 - Pull Point remains the gameplay held/launch position. It is not a renderer point when that would place the Band inside the Launch Target.
 - Band Shape becomes one ordered world-space polyline. It includes anchors, contact points, and wrap samples in render order.
 - SlingshotView receives already computed Band Shape data and applies every point to the Band LineRenderer. It does not query colliders or calculate contacts.
-- Rest Band Shape may use Rest Point only when visible target contact is not required. If the held target is visibly present at rest, the same contact/wrap rule should be used to avoid mesh intersection.
+- Rest/idle/inactive Band Shape uses the fixed anchor-to-Rest-Point-to-anchor shape. It does not wrap the Launch Target Silhouette in this slice.
 - Band Wrap sample origins are generated from an arc on the Pull Plane around the Pull Point, then projected to the assigned Collider and padded outward.
 - If left/right contact directions are asymmetric, Band Wrap uses the backward/pulled side aligned with negative Launch Frame forward rather than blindly selecting the shortest arc.
 - Rendered Band Contact Points and Band Wrap samples are constrained back onto the Pull Plane/Band height after generic Collider queries.
@@ -118,7 +122,7 @@ On weak Pull Release, canceled Pull, or invalid Pull projection, the held Launch
 - Weak, canceled, or invalid Pulls reset the held Launch Target and Band to Rest Point.
 - Valid Pull Release keeps the Launch Target at the final Pull Point and keeps the loaded Band Shape through launch request notification and accepted launch handoff.
 - Band Release Recoil starts only after launch application. It is post-shot visual behavior, not pre-launch cleanup.
-- During Band Release Recoil, the Band continues querying contact/wrap from the moving Launch Target Collider while interpolating toward the rest/idle/default Band Shape.
+- During Band Release Recoil, the moving Launch Target Collider supplies live contact geometry, while a virtual recoil Pull Point interpolates from the final Pull Point toward the Rest Point to define how loaded the Band still is.
 - Band Release Recoil completion is defined by reaching the rest/idle/default Band Shape. There is no separate max-duration safety guard in this slice.
 - Once Band Release Recoil reaches rest, it detaches from the Launch Target and stops querying target contact/wrap.
 - Recoil timing or curve may be designer-tuned, but that tuning drives the intended visual interpolation rather than acting as a failure fallback.
@@ -182,7 +186,7 @@ On weak Pull Release, canceled Pull, or invalid Pull projection, the held Launch
 ## Further Notes
 
 - This PRD narrows the next implementation around the user-facing physical read: the player pulls the target, the Band wraps the target, the target launches from the loaded position, and the Band recoils with the target before detaching.
-- The current implementation still contains three-point Band Shape behavior and tests that assert that behavior. Those should be treated as stale relative to this PRD.
+- Older pre-target-coupled implementation notes and tests that assert a three-point Band Shape should be treated as stale relative to this PRD.
 - Assumption: designer-tuned recoil duration/curve is acceptable as the intended visual interpolation driver, but there should be no independent max-duration safety guard.
 - Assumption: one explicit Collider is enough for the current player target. Compound target wrapping can be revisited after this slice is playable.
 - Assumption: if same-frame Collider queries after immediate held positioning are already correct, no explicit physics transform synchronization should be added.

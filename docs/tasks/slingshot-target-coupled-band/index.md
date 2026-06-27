@@ -4,6 +4,10 @@ Parent PRD: [Slingshot Target-Coupled Band PRD](../../prd/prd-slingshot-target-c
 
 These local implementation issues are ordered by dependency. They are follow-up tracer-bullet slices for the existing Slingshot touch-launch feature, focused on making the Launch Target move with the Pull, making the Band Shape collider-aligned, and adding post-shot Band Release Recoil.
 
+> Superseded behavior note: this issue set records the completed closest-point/contact and arc-wrap milestone. The current target behavior is the
+> natural taut Band Shape follow-up in `docs/tasks/slingshot-natural-band-shape/`, which replaces closest-point contacts and arc-only wrap samples
+> with an inflated silhouette, tangent contacts, and pulled-side contour solving.
+
 ## Issues
 
 | ID | Title | Type | Blocked by | User stories covered |

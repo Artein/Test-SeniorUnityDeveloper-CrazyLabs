@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
@@ -15,20 +14,26 @@ namespace Game.Gameplay.Slingshot
         event Action<SlingshotLaunchRequest> LaunchRequested;
     }
 
-    public sealed class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotLaunchNotifier
+    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotLaunchNotifier
     {
         private readonly IUnityInput _unityInput;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotView _view;
         private readonly ISlingshotInputProjector _inputProjector;
         private readonly IHeldLaunchTarget _heldLaunchTarget;
-        private readonly ISlingshotBandContactProvider _bandContactProvider;
+        private readonly ISlingshotBandShapeProvider _bandShapeProvider;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
         private readonly GameplayStateId _preLaunchStateId;
 
         private IDisposable _inputEnableHandle;
+        private Vector3[] _firstActiveBandShapeBuffer;
+        private Vector3[] _secondActiveBandShapeBuffer;
+        private Vector3[] _currentActiveBandShapeBuffer;
+        private Vector3[] _inactiveActiveBandShapeBuffer;
+        private Vector3[] _restBandShapeBuffer;
+        private Vector3[] _recoilBandShapeBuffer;
         private SlingshotGeometrySnapshot _geometry;
         private SlingshotLaunchRequest _pendingLaunchRequest;
         private float _releaseRecoilElapsed;
@@ -36,6 +41,8 @@ namespace Game.Gameplay.Slingshot
         private bool _isDisposed;
         private bool _isCaptureEnabled;
         private bool _hasActivePointer;
+        private bool _hasLastValidActiveBandShape;
+        private bool _isCurrentPullBandShapeValid;
         private bool _isLaunchHandoffPending;
         private bool _isReleaseRecoilActive;
         private int _activePointerId;
@@ -48,7 +55,7 @@ namespace Game.Gameplay.Slingshot
             ISlingshotView view,
             ISlingshotInputProjector inputProjector,
             IHeldLaunchTarget heldLaunchTarget,
-            ISlingshotBandContactProvider bandContactProvider,
+            ISlingshotBandShapeProvider bandShapeProvider,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             ITime clock,
             ISlingshotConfig config,
@@ -59,7 +66,7 @@ namespace Game.Gameplay.Slingshot
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _inputProjector = inputProjector ?? throw new ArgumentNullException(nameof(inputProjector));
             _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
-            _bandContactProvider = bandContactProvider ?? throw new ArgumentNullException(nameof(bandContactProvider));
+            _bandShapeProvider = bandShapeProvider ?? throw new ArgumentNullException(nameof(bandShapeProvider));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -77,6 +84,7 @@ namespace Game.Gameplay.Slingshot
                 return;
 
             _geometry = _view.CreateGeometrySnapshot();
+            InitializeBandShapeBuffers();
             _unityInput.PointerPressed += HandlePointerPressed;
             _unityInput.PointerMoved += HandlePointerMoved;
             _unityInput.PointerReleased += HandlePointerReleased;
@@ -154,6 +162,8 @@ namespace Game.Gameplay.Slingshot
             _hasActivePointer = false;
             _isLaunchHandoffPending = false;
             _isReleaseRecoilActive = false;
+            _hasLastValidActiveBandShape = false;
+            _isCurrentPullBandShapeValid = false;
             _inputEnableHandle = _unityInput.Enable();
             _isCaptureEnabled = true;
             SetHeldTargetToRest();
@@ -237,6 +247,12 @@ namespace Game.Gameplay.Slingshot
                 return;
             }
 
+            if (!_isCurrentPullBandShapeValid)
+            {
+                CancelActivePullToCaptureIdle();
+                return;
+            }
+
             if (!TryCreateLaunchRequest(pullVisual, out var launchRequest))
             {
                 CancelActivePullToCaptureIdle();
@@ -296,6 +312,8 @@ namespace Game.Gameplay.Slingshot
             _hasActivePointer = false;
             _isLaunchHandoffPending = false;
             _isReleaseRecoilActive = false;
+            _hasLastValidActiveBandShape = false;
+            _isCurrentPullBandShapeValid = false;
 
             if (!_isCaptureEnabled)
                 return;
@@ -383,7 +401,15 @@ namespace Game.Gameplay.Slingshot
             _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
 
             var normalizedPull = Mathf.Clamp01(pullDistance / _config.MaximumPullDistance);
-            var shape = CreateLoadedBandShape(clampedPullPoint);
+            _isCurrentPullBandShapeValid = TryUpdateActiveBandShape(clampedPullPoint);
+
+            if (!_isCurrentPullBandShapeValid && !_hasLastValidActiveBandShape)
+            {
+                pullVisual = default;
+                return false;
+            }
+
+            var shape = new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
             pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull);
             return true;
         }
@@ -421,76 +447,6 @@ namespace Game.Gameplay.Slingshot
             var segmentProgress = Mathf.Clamp01(Vector2.Dot(point - segmentStart, segment) / segmentLengthSquared);
             var closestPoint = segmentStart + (segment * segmentProgress);
             return Vector2.Distance(point, closestPoint);
-        }
-
-        private SlingshotBandShape CreateLoadedBandShape(Vector3 pullPoint)
-        {
-            var contactShape = _bandContactProvider.CreateBandContactShape(new SlingshotBandContactQuery(
-                _geometry.LeftAnchorPosition,
-                _geometry.RightAnchorPosition,
-                pullPoint,
-                _geometry.LaunchFrameRight,
-                _geometry.LaunchFrameForward,
-                _geometry.LaunchFrameUp,
-                _config.BandContactPadding,
-                _config.BandWrapSampleCount));
-
-            var points = new List<Vector3>(contactShape.WrapPoints.Count + 4)
-            {
-                _geometry.LeftAnchorPosition,
-                contactShape.LeftContactPoint
-            };
-
-            for (var pointIndex = 0; pointIndex < contactShape.WrapPoints.Count; pointIndex += 1)
-            {
-                points.Add(contactShape.WrapPoints[pointIndex]);
-            }
-
-            points.Add(contactShape.RightContactPoint);
-            points.Add(_geometry.RightAnchorPosition);
-
-            return new SlingshotBandShape(points);
-        }
-
-        private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
-        {
-            var liveShape = CreateLoadedBandShape(_pendingLaunchRequest.FinalPullPoint);
-            var restShape = CreateRestBandShape(liveShape.Points.Count);
-            var points = new Vector3[liveShape.Points.Count];
-
-            for (var pointIndex = 0; pointIndex < points.Length; pointIndex += 1)
-            {
-                points[pointIndex] = Vector3.Lerp(liveShape.Points[pointIndex], restShape.Points[pointIndex], progress);
-            }
-
-            return new SlingshotBandShape(points);
-        }
-
-        private SlingshotBandShape CreateRestBandShape()
-        {
-            return new SlingshotBandShape(_geometry.LeftAnchorPosition, _geometry.RestPoint, _geometry.RightAnchorPosition);
-        }
-
-        private SlingshotBandShape CreateRestBandShape(int pointCount)
-        {
-            if (pointCount <= 3)
-                return CreateRestBandShape();
-
-            var points = new Vector3[pointCount];
-            points[0] = _geometry.LeftAnchorPosition;
-            points[pointCount - 1] = _geometry.RightAnchorPosition;
-
-            for (var pointIndex = 1; pointIndex < pointCount - 1; pointIndex += 1)
-            {
-                points[pointIndex] = _geometry.RestPoint;
-            }
-
-            return new SlingshotBandShape(points);
-        }
-
-        private void SetHeldTargetToRest()
-        {
-            _heldLaunchTarget.SetHeldPosition(_geometry.RestPoint);
         }
     }
 }

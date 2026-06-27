@@ -41,8 +41,14 @@ namespace Game.Gameplay.Slingshot
             if (!math.isfinite(config.BandContactPadding) || config.BandContactPadding < 0f)
                 yield return $"Slingshot {nameof(config.BandContactPadding)} must be a finite non-negative value.";
 
-            if (config.BandWrapSampleCount is < 2 or > 24)
-                yield return $"Slingshot {nameof(config.BandWrapSampleCount)} must be between 2 and 24.";
+            if (config.BandSilhouetteSampleCount is < 8 or > 64)
+                yield return $"Slingshot {nameof(config.BandSilhouetteSampleCount)} must be between 8 and 64.";
+
+            if (config.BandWrapSampleCount is < 3 or > 31)
+                yield return $"Slingshot {nameof(config.BandWrapSampleCount)} must be between 3 and 31.";
+
+            if (config.BandWrapSampleCount % 2 == 0)
+                yield return $"Slingshot {nameof(config.BandWrapSampleCount)} must be odd.";
 
             if (!config.BandRecoilDuration.IsFinitePositive())
                 yield return $"Slingshot {nameof(config.BandRecoilDuration)} must be a finite positive value.";

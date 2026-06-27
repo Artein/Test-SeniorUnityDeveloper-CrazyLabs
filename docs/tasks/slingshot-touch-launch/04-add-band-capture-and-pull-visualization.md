@@ -1,5 +1,9 @@
 # Add Band Capture And Pull Visualization
 
+> Superseded behavior note: this issue records the original first-slice visualization. The current Band Shape target is the follow-up natural taut
+> Band Shape in `docs/tasks/slingshot-natural-band-shape/`, where rest, pull, and recoil shapes use fixed `BandWrapSampleCount + 4` point polylines
+> from a silhouette/tangent solver rather than the three-point path below.
+
 ## Parent
 
 [Slingshot Touch Launch PRD](../../prd/prd-slingshot-touch-launch.md)

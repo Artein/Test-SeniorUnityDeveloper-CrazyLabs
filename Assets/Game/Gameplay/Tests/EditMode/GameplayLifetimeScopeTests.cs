@@ -77,7 +77,8 @@ public sealed class GameplayLifetimeScopeTests
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
         var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
-        var bandContactProvider = container.Resolve<ISlingshotBandContactProvider>();
+        var silhouetteSource = container.Resolve<ILaunchTargetSilhouetteSource>();
+        var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
@@ -86,7 +87,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(initializables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
-        Assert.That(bandContactProvider, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(bandShapeProvider, Is.Not.Null);
     }
 
     private ValidScopeFixture CreateValidScopeFixture()

@@ -1,11 +1,12 @@
 using System.Collections;
+using System.Linq;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
-public sealed class SlingshotBandContactProviderTests
+public sealed class LaunchTargetSilhouetteSourceTests
 {
     private GameObject _rootObject;
     private GameObject _colliderObject;
@@ -16,12 +17,12 @@ public sealed class SlingshotBandContactProviderTests
     [SetUp]
     public void OnSetUp()
     {
-        _rootObject = new GameObject("Band Contact Target");
+        _rootObject = new GameObject("Band Silhouette Target");
         _rigidbody = _rootObject.AddComponent<Rigidbody>();
         _rigidbody.useGravity = false;
         _target = _rootObject.AddComponent<RigidbodyLaunchTarget>();
 
-        _colliderObject = new GameObject("Explicit Band Collider");
+        _colliderObject = new GameObject("Explicit Silhouette Collider");
         _colliderObject.transform.SetParent(_rootObject.transform, false);
         _colliderObject.transform.localPosition = Vector3.up;
         _collider = _colliderObject.AddComponent<SphereCollider>();
@@ -37,7 +38,7 @@ public sealed class SlingshotBandContactProviderTests
     }
 
     [UnityTest]
-    public IEnumerator CreateBandContactShape_AfterHeldPosition_UsesAssignedColliderCurrentPoseAndProjectsToBandPlane()
+    public IEnumerator TryWriteSilhouetteSamples_AfterHeldPosition_UsesAssignedColliderCurrentPoseAndProjectsToBandPlane()
     {
         var pullPoint = new Vector3(0.25f, 1.05f, -1.25f);
         ((ILaunchTarget)_target).Hold();
@@ -45,28 +46,26 @@ public sealed class SlingshotBandContactProviderTests
 
         yield return null;
 
-        var query = new SlingshotBandContactQuery(
-            new Vector3(-1.35f, 1.05f, -0.25f),
-            new Vector3(1.35f, 1.05f, -0.25f),
+        var query = new LaunchTargetSilhouetteQuery(
             pullPoint,
             Vector3.right,
             Vector3.forward,
             Vector3.up,
-            0.05f,
-            6);
+            8);
+        var samples = new Vector3[8];
 
-        var shape = ((ISlingshotBandContactProvider)_target).CreateBandContactShape(query);
+        var solved = ((ILaunchTargetSilhouetteSource)_target).TryWriteSilhouetteSamples(query, samples, out var sampleCount);
 
-        Assert.That(shape.LeftContactPoint.y, Is.EqualTo(pullPoint.y).Within(0.0001f));
-        Assert.That(shape.RightContactPoint.y, Is.EqualTo(pullPoint.y).Within(0.0001f));
-        Assert.That(shape.WrapPoints.Count, Is.EqualTo(6));
-        Assert.That(shape.LeftContactPoint.x, Is.LessThan(pullPoint.x));
-        Assert.That(shape.RightContactPoint.x, Is.GreaterThan(pullPoint.x));
+        Assert.That(solved, Is.True);
+        Assert.That(sampleCount, Is.EqualTo(8));
+        Assert.That(samples.Min(sample => sample.x), Is.LessThan(pullPoint.x));
+        Assert.That(samples.Max(sample => sample.x), Is.GreaterThan(pullPoint.x));
+        Assert.That(samples.Min(sample => sample.z), Is.LessThan(pullPoint.z));
+        Assert.That(samples.Max(sample => sample.z), Is.GreaterThan(pullPoint.z));
 
-        foreach (var wrapPoint in shape.WrapPoints)
+        foreach (var sample in samples)
         {
-            Assert.That(wrapPoint.y, Is.EqualTo(pullPoint.y).Within(0.0001f));
-            Assert.That(wrapPoint.z, Is.LessThanOrEqualTo(pullPoint.z + 0.1f));
+            Assert.That(sample.y, Is.EqualTo(pullPoint.y).Within(0.0001f));
         }
     }
 

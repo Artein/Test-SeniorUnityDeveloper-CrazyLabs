@@ -25,7 +25,7 @@ public sealed class SlingshotLaunchRequestedTests
     private FakeSlingshotView _view;
     private FakeSlingshotInputProjector _projector;
     private FakeHeldLaunchTarget _heldLaunchTarget;
-    private FakeSlingshotBandContactProvider _bandContactProvider;
+    private FakeSlingshotBandShapeProvider _bandShapeProvider;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakeTime _clock;
 
@@ -63,7 +63,8 @@ public sealed class SlingshotLaunchRequestedTests
             LaunchSpeedCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f),
             LaunchUpSpeed = 1.5f,
             BandContactPadding = 0.05f,
-            BandWrapSampleCount = 6,
+            BandSilhouetteSampleCount = 8,
+            BandWrapSampleCount = 5,
             BandRecoilDuration = 0.2f,
             BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
         };
@@ -72,7 +73,7 @@ public sealed class SlingshotLaunchRequestedTests
         _view = new FakeSlingshotView(_observations);
         _projector = new FakeSlingshotInputProjector();
         _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
-        _bandContactProvider = new FakeSlingshotBandContactProvider(_observations);
+        _bandShapeProvider = new FakeSlingshotBandShapeProvider(_observations);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _clock = new FakeTime { DeltaTime = 0.1f };
         ConfigureRestBandScreenProjection();
@@ -91,7 +92,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Has.Count.EqualTo(1));
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "view-loaded-release", "launch-requested" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-loaded-release", "launch-requested" }));
         var request = _launchRequests[0];
         Assert.That(request.PullDistance, Is.EqualTo(1.25f));
         Assert.That(request.PullOffset, Is.EqualTo(0.5f));
@@ -117,7 +118,7 @@ public sealed class SlingshotLaunchRequestedTests
         _launchAppliedNotifier.Apply(_launchRequests[0]);
         ((ITickable)controller).Tick();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "band-contact", "view-loaded-release" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-shape", "view-loaded-release" }));
         _observations.Clear();
 
         ((ITickable)controller).Tick();
@@ -152,7 +153,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -168,7 +169,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-contact", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -199,6 +200,23 @@ public sealed class SlingshotLaunchRequestedTests
 
         Assert.That(_launchRequests, Is.Empty);
         Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
+    }
+
+    [Test]
+    public void PointerReleased_BandShapeSolveFailureAfterLastValidShape_BlocksLaunchAndRestoresIdle()
+    {
+        using var controller = CreateInitializedController();
+        SubscribeToLaunchRequests(controller);
+        StartActivePull(1);
+        _observations.Clear();
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
+        _bandShapeProvider.ShouldFail = true;
+
+        _input.Release(1, releaseScreenPosition);
+
+        Assert.That(_launchRequests, Is.Empty);
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -274,8 +292,7 @@ public sealed class SlingshotLaunchRequestedTests
         builder.RegisterInstance(_input).As<IUnityInput>();
         builder.RegisterInstance(_stateService).As<IGameplayStateService>();
         var launchTarget = new TestLaunchTarget();
-        builder.RegisterInstance(launchTarget).As<ILaunchTarget, IHeldLaunchTarget>();
-        builder.RegisterInstance(new TestBandContactProvider()).As<ISlingshotBandContactProvider>();
+        builder.RegisterInstance(launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
         var installer = new SlingshotInstaller(_config, _preLaunchStateId, _view, camera);
 
         installer.Install(builder);
@@ -283,11 +300,13 @@ public sealed class SlingshotLaunchRequestedTests
         using var container = builder.Build();
         var notifier = container.Resolve<ISlingshotLaunchNotifier>();
         var launcher = container.Resolve<ISlingshotLauncher>();
+        var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         UnityEngine.Object.DestroyImmediate(cameraObject);
 
         Assert.That(notifier, Is.Not.Null);
         Assert.That(launcher, Is.Not.Null);
+        Assert.That(bandShapeProvider, Is.Not.Null);
         Assert.That(initializables.Count, Is.EqualTo(2));
     }
 
@@ -306,7 +325,7 @@ public sealed class SlingshotLaunchRequestedTests
 
     private SlingshotController CreateInitializedController()
     {
-        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandContactProvider,
+        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandShapeProvider,
             _launchAppliedNotifier, _clock, _config, _preLaunchStateId);
         ((IInitializable)controller).Initialize();
         return controller;
@@ -376,7 +395,7 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(actual.magnitude, Is.EqualTo(1f).Within(0.0001f));
     }
 
-    private sealed class TestLaunchTarget : ILaunchTarget, IHeldLaunchTarget
+    private sealed class TestLaunchTarget : ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource
     {
         public void Hold()
         {
@@ -389,16 +408,21 @@ public sealed class SlingshotLaunchRequestedTests
         public void SetHeldPosition(Vector3 heldPosition)
         {
         }
-    }
 
-    private sealed class TestBandContactProvider : ISlingshotBandContactProvider
-    {
-        public SlingshotBandContactShape CreateBandContactShape(SlingshotBandContactQuery query)
+        public bool TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount)
         {
-            return new SlingshotBandContactShape(
-                query.LeftAnchorPosition,
-                new[] { query.PullPoint },
-                query.RightAnchorPosition);
+            if (outputSamples is null)
+                throw new ArgumentNullException(nameof(outputSamples));
+
+            if (outputSamples.Length < 4)
+                throw new ArgumentException("Output buffer is too small.", nameof(outputSamples));
+
+            outputSamples[0] = new Vector3(-1f, 0f, 0f);
+            outputSamples[1] = new Vector3(1f, 0f, 0f);
+            outputSamples[2] = new Vector3(1f, 0f, -2f);
+            outputSamples[3] = new Vector3(-1f, 0f, -2f);
+            sampleCount = 4;
+            return true;
         }
     }
 }

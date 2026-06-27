@@ -13,7 +13,7 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneCompositionSmokeTests
+public sealed class GameplaySceneCompositionTests
 {
     // TODO - AI Note: We should load scene via SceneRefernce + EditorAssetProvider instead of scene build index
     private readonly int _gameplaySceneBuildIndex = 0;
@@ -36,15 +36,19 @@ public sealed class GameplaySceneCompositionSmokeTests
         var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
-        var contactShape = ((ISlingshotBandContactProvider)launchTarget).CreateBandContactShape(new SlingshotBandContactQuery(
-            geometry.LeftAnchorPosition,
-            geometry.RightAnchorPosition,
-            geometry.RestPoint,
-            geometry.LaunchFrameRight,
-            geometry.LaunchFrameForward,
-            geometry.LaunchFrameUp,
-            0.05f,
-            6));
+        var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
+        var bandShapeOutput = new Vector3[bandShapeProvider.BandShapePointCount];
+
+        var bandShapeSolved = bandShapeProvider.TryCreateBandShape(new SlingshotBandShapeQuery(
+                geometry.LeftAnchorPosition,
+                geometry.RightAnchorPosition,
+                geometry.RestPoint,
+                geometry.RestPoint,
+                geometry.LaunchFrameRight,
+                geometry.LaunchFrameForward,
+                geometry.LaunchFrameUp),
+            bandShapeOutput,
+            out var bandShapePointCount);
 
         Assert.That(activeScene.buildIndex, Is.EqualTo(_gameplaySceneBuildIndex));
         Assert.That(lifetimeScope, Is.Not.Null);
@@ -56,7 +60,9 @@ public sealed class GameplaySceneCompositionSmokeTests
         Assert.That(Vector3.Dot(geometry.LaunchFrameForward, Vector3.forward), Is.GreaterThan(0.99f));
         Assert.That(playerRigidbody, Is.Not.Null);
         Assert.That(targetCollider, Is.Not.Null);
-        Assert.That(contactShape.WrapPoints, Is.Not.Empty);
+        Assert.That(bandShapeSolved, Is.True);
+        Assert.That(bandShapePointCount, Is.EqualTo(bandShapeProvider.BandShapePointCount));
+        Assert.That(bandShapePointCount, Is.GreaterThan(3));
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(pullHint.activeInHierarchy, Is.True);

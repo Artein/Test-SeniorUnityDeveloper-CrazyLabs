@@ -1,5 +1,9 @@
 # Add Arc-Based Band Wrap Visuals
 
+> Superseded behavior note: this issue records the completed arc-wrap approximation. Current natural Band Shape work is tracked in
+> `docs/tasks/slingshot-natural-band-shape/` and replaces arc-only wrap selection with ADR-0008's inflated silhouette, tangent contacts, and
+> pulled-side contour solver.
+
 ## Parent
 
 [Slingshot Target-Coupled Band PRD](../../prd/prd-slingshot-target-coupled-band.md)

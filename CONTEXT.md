@@ -69,6 +69,14 @@ _Avoid_: Rope wrap, physics wrap
 A visible tangent point where a taut **Band Shape** meets the held **Launch Target**.
 _Avoid_: Pull point, middle point
 
+**Pulled Side**:
+The side of the **Launch Target Silhouette** facing the backward direction of the current **Active Pull**, including lateral **Pull Offset**.
+_Avoid_: Nearest side, shortest side
+
+**Pulled-Side Center**:
+The central point of a **Band Wrap** on the **Pulled Side** of the current **Launch Target Silhouette**.
+_Avoid_: Wrap midpoint, contact midpoint
+
 **Rest Point**:
 The **Slingshot**-owned position where the **Band** and held **Launch Target** return when no **Active Pull** is loaded.
 On a valid **Launch**, the **Launch Target** launches from the loaded **Pull Point** first; the **Band** returns toward the **Rest Point** only as
@@ -120,6 +128,10 @@ _Avoid_: Fire, shoot
 The scene object that is held by an **Active Pull** and receives launch energy from a **Slingshot**.
 _Avoid_: Projectile, payload
 
+**Launch Target Silhouette**:
+The inflated convex band-height **Pull Plane** outline of the held **Launch Target** used by a taut **Band Shape**.
+_Avoid_: Collider mesh, 3D wrap shape, concave collider outline
+
 ## Relationships
 
 - A **Slingshot** has one **Band**.
@@ -131,6 +143,13 @@ _Avoid_: Projectile, payload
 - A **Band Shape** may have **Band Contact Points**.
 - A **Band Wrap** is bounded by **Band Contact Points**.
 - A **Band Wrap** follows the held **Launch Target** silhouette.
+- A rest/idle **Band Shape** passes through the **Rest Point**.
+- **Band Contact Points** are tangent points from **Slingshot** anchors to the **Launch Target Silhouette**.
+- A taut **Band Shape** does not pass through the **Launch Target Silhouette**.
+- During an **Active Pull**, a **Band Wrap** follows the **Pulled Side** of the current **Launch Target Silhouette**.
+- A **Band Wrap** curves through the **Pulled-Side Center**.
+- A **Band Wrap** follows the **Launch Target Silhouette** contour between **Band Contact Points** that contains the **Pulled-Side Center**.
+- **Pulled-Side Center** follows the actual **Active Pull** direction, including **Pull Offset**.
 - A **Slingshot** may show one **Pull Hint** while idle.
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
 - A **Run** is governed by one current **Gameplay State**.
@@ -148,12 +167,15 @@ _Avoid_: Projectile, payload
 - An **Active Pull** has one **Pull Point**.
 - An ended **Active Pull** may return a held **Launch Target** to the **Rest Point**.
 - An accepted **Pull Release** keeps the **Band Shape** loaded through launch handoff, then enters **Band Release Recoil**.
-- During **Band Release Recoil**, the **Band** updates **Band Contact Points** and **Band Wrap** from the moving **Launch Target** collider until
+- During **Band Release Recoil**, the **Band** updates **Band Contact Points** and **Band Wrap** from the current **Launch Target Silhouette** until
   it reaches the rest/idle/default shape; after that, it detaches and must not keep chasing the **Launch Target**.
 - A **Pull** may have a **Pull Offset**.
 - A **Slingshot** owns one **Launch Frame**.
 - A **Slingshot** owns one **Pull Plane**.
 - A **Launch** affects one **Launch Target**.
+- A **Launch Target** has one **Launch Target Silhouette** for the current **Pull Plane**.
+- A taut **Band Shape** wraps around the **Launch Target Silhouette**.
+- A **Launch Target Silhouette** is an outer outline; a taut **Band Shape** bridges over concave details.
 
 ## Example dialogue
 
@@ -225,4 +247,9 @@ _Avoid_: Projectile, payload
 - "Before launch movement" refers to held **Launch Target** positioning during **Active Pull**, not the start of a **Run**.
 - "Rest position" means **Rest Point** owned by the **Slingshot**, not the **Launch Target** object's initial scene transform.
 - "Pull point" and "band middle" were used interchangeably, but the **Pull Point** positions the held **Launch Target** while **Band Contact Points** shape the visible **Band** around it.
+- "Closest contact point" is not a **Band Contact Point** unless it is also tangent to the **Launch Target Silhouette** from a **Slingshot** anchor.
 - "More segments" means visual points in the **Band Wrap**, not physics bodies or gameplay samples.
+- "Collider outline" means the **Launch Target Silhouette** in the **Pull Plane**, not the whole 3D collider volume.
+- "Silhouette" means the inflated convex outer outline of the **Launch Target** for **Band Shape** purposes, not every concave collider detail.
+- "3D wrap" is not a **Band Shape** concern; the **Band** wraps the band-height **Launch Target Silhouette**.
+- "Back side" and "pulled side" resolve to **Pulled Side**; do not choose **Band Wrap** by nearest or shortest contour side.

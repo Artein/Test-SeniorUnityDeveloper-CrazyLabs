@@ -34,6 +34,7 @@ namespace Game.Gameplay.Slingshot
                 .WithParameter(_camera);
 
             builder.Register<ITime, UnityTime>(Lifetime.Singleton);
+            builder.Register<ISlingshotBandShapeProvider, SlingshotBandShapeProvider>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<SlingshotLaunchController>()
                 .WithParameter(_preLaunchStateId);
