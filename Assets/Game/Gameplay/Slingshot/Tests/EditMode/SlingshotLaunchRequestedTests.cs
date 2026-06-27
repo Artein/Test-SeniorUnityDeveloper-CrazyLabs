@@ -101,7 +101,7 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(request.LaunchSpeed, Is.EqualTo(Mathf.Lerp(4f, 12f, request.NormalizedPower)).Within(0.0001f));
         Assert.That(request.LaunchUpDirection, Is.EqualTo(Vector3.up));
         Assert.That(request.LaunchUpSpeed, Is.EqualTo(1.5f));
-        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-14f, Vector3.up) * Vector3.forward);
+        AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-17.5f, Vector3.up) * Vector3.forward);
     }
 
     [Test]
@@ -153,7 +153,8 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "target-position", "view-capture-idle" }));
+        Assert.That(_bandShapeProvider.Queries, Is.Empty);
     }
 
     [Test]
@@ -169,7 +170,8 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "target-position", "view-capture-idle" }));
+        Assert.That(_bandShapeProvider.Queries, Is.Empty);
     }
 
     [Test]
@@ -183,7 +185,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Cancel(1, new Vector2(60f, 30f));
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -199,7 +201,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -217,7 +219,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         Assert.That(_launchRequests, Is.Empty);
-        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "band-shape", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position", "view-capture-idle" }));
     }
 
     [Test]
@@ -251,7 +253,7 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
-    public void PointerReleased_LateralOffsetBeyondLimit_ClampsLaunchDirectionAngle()
+    public void PointerReleased_LateralOffsetBeyondAnchorSpan_ClampsLaunchDirectionAngle()
     {
         using var controller = CreateInitializedController();
         SubscribeToLaunchRequests(controller);
@@ -262,7 +264,7 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
 
         var request = _launchRequests[0];
-        Assert.That(request.PullOffset, Is.EqualTo(1.25f));
+        Assert.That(request.PullOffset, Is.EqualTo(1f));
         AssertDirectionEquals(request.LaunchDirection, Quaternion.AngleAxis(-35f, Vector3.up) * Vector3.forward);
     }
 
@@ -363,10 +365,22 @@ public sealed class SlingshotLaunchRequestedTests
             0f,
             _config.MaximumPullDistance);
 
+        var anchorOffsetA = Vector3.Dot(_view.Geometry.LeftAnchorPosition - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
+        var anchorOffsetB = Vector3.Dot(_view.Geometry.RightAnchorPosition - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
+        var minimumAnchorOffset = Mathf.Min(anchorOffsetA, anchorOffsetB);
+        var maximumAnchorOffset = Mathf.Max(anchorOffsetA, anchorOffsetB);
+
+        var fullLateralPullDistance = Mathf.Max(0.02f, _config.MinimumPullDistance + (_config.BandContactPadding * 2f))
+                                      + (_config.BandContactPadding * 2f);
+
+        var lateralPullScale = fullLateralPullDistance <= 0.000001f
+            ? 1f
+            : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+
         var pullOffset = Mathf.Clamp(
             Vector3.Dot(delta, _view.Geometry.LaunchFrameRight),
-            -_config.MaximumLateralPull,
-            _config.MaximumLateralPull);
+            Mathf.Max(-_config.MaximumLateralPull, minimumAnchorOffset) * lateralPullScale,
+            Mathf.Min(_config.MaximumLateralPull, maximumAnchorOffset) * lateralPullScale);
 
         return _view.Geometry.RestPoint
                + (_view.Geometry.LaunchFrameRight * pullOffset)

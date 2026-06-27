@@ -26,7 +26,7 @@ This slice should preserve existing launch behavior while replacing the visible 
 - [x] Failed runtime solve during Active Pull keeps the last valid Band Shape visible and blocks release until a valid shape exists again.
 - [x] Rest/idle/inactive Band Shape uses the same fixed point count as live shapes, with exactly one Rest Point corner from odd `BandWrapSampleCount`.
 - [x] Recoil live-solves the Band Shape from the moving Launch Target as the recoil Pull Point relaxes toward rest, instead of interpolating through the target mesh.
-- [x] Recoil keeps target silhouette geometry and recoil-load direction separate: the moving target supplies live contact geometry, and the virtual recoil Pull Point defines the pulled-side contour.
+- [x] Recoil keeps target silhouette geometry and recoil-load direction separate: the moving target supplies live contact geometry, and the virtual recoil Pull Point defines the silhouette-relative pulled-side contour.
 - [x] If live target-following solve fails during recoil, recoil continues from the last valid live shape toward rest instead of snapping or canceling.
 - [x] Once recoil reaches rest, the Band detaches and stops following the Launch Target.
 - [x] Launch request data and launch steering remain governed by Pull distance and Pull Offset, not by Band Wrap sample positions.

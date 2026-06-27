@@ -50,7 +50,8 @@ Concrete first implementation decisions:
 - `BandContactPadding` inflates the convex silhouette by offsetting hull edges outward in Pull Plane space.
 - `BandSilhouetteSampleCount` controls raw Collider sampling density. `BandWrapSampleCount` controls visual contour samples, must be odd, and produces
   exactly `BandWrapSampleCount + 4` output points.
-- The Pulled-Side Center comes from the actual Pull vector including lateral Pull Offset, with backward fallback only for near-zero Pull.
+- The Pulled-Side Center comes from the silhouette-relative Pull vector from the inflated silhouette centroid to the Pull Point, including lateral
+  Pull Offset, with backward fallback only for near-zero relative Pull.
 - Runtime geometry failures return false on the hot path; invalid config, missing references, invalid queries, and too-small buffers fail fast.
 
 ## Alternatives considered

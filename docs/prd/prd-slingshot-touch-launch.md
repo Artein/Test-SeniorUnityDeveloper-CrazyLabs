@@ -229,8 +229,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   coordinates, calls the pure taut solver, and writes the resulting world-space polyline into a caller-owned output buffer.
 - The pure solver reduces raw samples to a convex outer Launch Target Silhouette, inflates it by `BandContactPadding` in Pull Plane space, finds
   tangent Band Contact Points from the anchors, rejects free spans that cross the inflated silhouette, and chooses the pulled-side contour.
-- The Pulled-Side Center comes from the actual Pull vector from Rest Point to Pull Point, including lateral Pull Offset. Near-zero Pull falls back to
-  the backward `-LaunchFrameForward` side.
+- The Pulled-Side Center comes from the silhouette-relative Pull vector from the inflated silhouette centroid to the Pull Point, including lateral
+  Pull Offset. Near-zero relative Pull falls back to the backward `-LaunchFrameForward` side.
 - Band Wrap sampling uses odd `BandWrapSampleCount`; the middle Band Wrap sample is exactly the Pulled-Side Center, and the remaining samples are
   distributed along the selected contour from left contact to center and center to right contact.
 - The valid live Band Shape has a stable fixed point count of `BandWrapSampleCount + 4`: left anchor, left Band Contact Point, Band Wrap samples,
@@ -457,7 +457,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Verify Launch Target Silhouette sampling works through the base Collider contract with representative Collider types, not just `CapsuleCollider`.
   - Verify the Band Shape provider writes into caller-owned buffers, returns point count, and does not allocate/copy Band Shape arrays per frame.
   - Verify the pure solver reduces raw samples to a convex silhouette, inflates it by contact padding, selects tangent Band Contact Points, rejects
-    crossing spans, and chooses the pulled-side contour from the actual Pull vector.
+    crossing spans, and chooses the pulled-side contour from the silhouette-relative Pull vector.
   - Verify odd Band Wrap sample counts place the middle wrap sample exactly at the Pulled-Side Center.
   - Verify launch clears stale velocities and applies velocity change.
 - Gameplay Flow EditMode tests:

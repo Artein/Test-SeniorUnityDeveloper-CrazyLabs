@@ -15,7 +15,7 @@ MonoBehaviour:
   _touchTargetRadiusPixels: 80
   _minimumPullDistance: 0.25
   _maximumPullDistance: 3
-  _maximumLateralPull: 1.5
+  _maximumLateralPull: 0.75
   _maximumLaunchAngleDegrees: 35
   _minimumLaunchSpeed: 4
   _maximumLaunchSpeed: 12
