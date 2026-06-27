@@ -2,6 +2,7 @@
   "name": "Game.Gameplay.Tests.EditMode",
   "rootNamespace": "",
   "references": [
+    "Game.Foundation",
     "Game.Gameplay.GameplayState",
     "Game.Gameplay",
     "Game.Gameplay.Slingshot",

@@ -1147,6 +1147,8 @@ MonoBehaviour:
   _preLaunchStateId: {fileID: 11400000, guid: 8220010fc093428b8882e25db2fb3d88, type: 2}
   _runningStateId: {fileID: 11400000, guid: 54391115de2a48119431ec1489080deb, type: 2}
   _slingshotConfig: {fileID: 11400000, guid: 6454db76b261c41cca31feece26b9777, type: 2}
+  _playerSteeringConfig: {fileID: 11400000, guid: bd2c80f3680341359fc50b94915fdba7, type: 2}
+  _playerSteeringTarget: {fileID: 1918570527}
   _inputCamera: {fileID: 330585545}
   _slingshotView: {fileID: 1003457364}
   _launchTarget: {fileID: 1918570526}
@@ -1282,6 +1284,7 @@ GameObject:
   - component: {fileID: 1918570524}
   - component: {fileID: 1918570525}
   - component: {fileID: 1918570526}
+  - component: {fileID: 1918570527}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1346,6 +1349,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Gameplay.Slingshot::Game.Gameplay.Slingshot.RigidbodyLaunchTarget
   _rigidbody: {fileID: 1918570525}
   _bandContactCollider: {fileID: 200501558}
+--- !u!114 &1918570527
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918570521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab44011bdda643eaad74d3544f988ba4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RigidbodyPlayerSteeringTarget
+  _rigidbody: {fileID: 1918570525}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

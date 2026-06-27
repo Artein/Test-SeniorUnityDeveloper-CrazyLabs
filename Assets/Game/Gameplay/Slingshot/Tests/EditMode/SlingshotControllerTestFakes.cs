@@ -270,6 +270,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
     internal sealed class FakeTime : ITime
     {
         public float DeltaTime { get; set; }
+        public float FixedDeltaTime { get; set; }
     }
 
     internal sealed class FakeSlingshotInputProjector : ISlingshotInputProjector

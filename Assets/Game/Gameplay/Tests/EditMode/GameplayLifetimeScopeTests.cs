@@ -48,6 +48,8 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Pre-Launch State Id")
                 .And.Message.Contains("Running State Id")
                 .And.Message.Contains("Slingshot Config")
+                .And.Message.Contains("Player Steering Config")
+                .And.Message.Contains("Player Steering Target")
                 .And.Message.Contains("Input Camera")
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Launch Target"));
@@ -75,19 +77,26 @@ public sealed class GameplayLifetimeScopeTests
         var slingshotNotifier = container.Resolve<ISlingshotLaunchNotifier>();
         var slingshotLauncher = container.Resolve<ISlingshotLauncher>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
+        var fixedTickables = container.Resolve<ContainerLocal<IReadOnlyList<IFixedTickable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
         var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
         var silhouetteSource = container.Resolve<ILaunchTargetSilhouetteSource>();
+        var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
+        var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(3));
+        Assert.That(initializables.Count, Is.EqualTo(4));
+        Assert.That(fixedTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
+        Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
+        Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(bandShapeProvider, Is.Not.Null);
     }
 
@@ -99,13 +108,23 @@ public sealed class GameplayLifetimeScopeTests
         var transition = CreateTransition(preLaunch, running);
         var gameplayStateConfig = CreateGameplayStateConfig(preLaunch, transition);
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
+        var playerSteeringConfig = Track(ScriptableObject.CreateInstance<PlayerSteeringConfig>());
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
-        var launchTarget = CreateLaunchTarget();
+        var launchTarget = CreateLaunchTarget(out var playerSteeringTarget);
 
-        scope.SetReferencesForTests(gameplayStateConfig, preLaunch, running, slingshotConfig, camera, slingshotView, launchTarget);
+        scope.SetReferencesForTests(
+            gameplayStateConfig,
+            preLaunch,
+            running,
+            slingshotConfig,
+            playerSteeringConfig,
+            playerSteeringTarget,
+            camera,
+            slingshotView,
+            launchTarget);
 
-        return new ValidScopeFixture(scope, preLaunch, launchTarget);
+        return new ValidScopeFixture(scope, preLaunch, launchTarget, playerSteeringTarget);
     }
 
     private SlingshotView CreateSlingshotView(SlingshotConfig config)
@@ -130,12 +149,14 @@ public sealed class GameplayLifetimeScopeTests
         return view;
     }
 
-    private RigidbodyLaunchTarget CreateLaunchTarget()
+    private RigidbodyLaunchTarget CreateLaunchTarget(out RigidbodyPlayerSteeringTarget playerSteeringTarget)
     {
         var rigidbody = CreateGameObject("Player").AddComponent<Rigidbody>();
         var collider = rigidbody.gameObject.AddComponent<SphereCollider>();
         var launchTarget = rigidbody.gameObject.AddComponent<RigidbodyLaunchTarget>();
         launchTarget.SetReferencesForTests(rigidbody, collider);
+        playerSteeringTarget = rigidbody.gameObject.AddComponent<RigidbodyPlayerSteeringTarget>();
+        playerSteeringTarget.SetRigidbodyForTests(rigidbody);
 
         return launchTarget;
     }
@@ -182,12 +203,18 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayLifetimeScope Scope { get; }
         public GameplayStateId PreLaunchStateId { get; }
         public RigidbodyLaunchTarget LaunchTarget { get; }
+        public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; }
 
-        public ValidScopeFixture(GameplayLifetimeScope scope, GameplayStateId preLaunchStateId, RigidbodyLaunchTarget launchTarget)
+        public ValidScopeFixture(
+            GameplayLifetimeScope scope,
+            GameplayStateId preLaunchStateId,
+            RigidbodyLaunchTarget launchTarget,
+            RigidbodyPlayerSteeringTarget playerSteeringTarget)
         {
             Scope = scope;
             PreLaunchStateId = preLaunchStateId;
             LaunchTarget = launchTarget;
+            PlayerSteeringTarget = playerSteeringTarget;
         }
     }
 }

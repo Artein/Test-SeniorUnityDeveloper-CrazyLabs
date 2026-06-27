@@ -28,6 +28,7 @@ public sealed class GameplaySceneCompositionTests
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+        var playerSteeringTarget = FindSingleInScene<RigidbodyPlayerSteeringTarget>(activeScene, "RigidbodyPlayerSteeringTarget");
         var canvas = FindSingleInScene<Canvas>(activeScene, "Gameplay UI Canvas");
         var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
         var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
@@ -37,6 +38,9 @@ public sealed class GameplaySceneCompositionTests
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
+        var resolvedPlayerSteeringTarget = lifetimeScope.Container.Resolve<IPlayerSteeringTarget>();
+        var playerSteeringConfig = lifetimeScope.Container.Resolve<IPlayerSteeringConfig>();
+        var assignedPlayerSteeringConfigs = GetAssignedPlayerSteeringConfigs(activeScene);
         var bandShapeOutput = new Vector3[bandShapeProvider.BandShapePointCount];
 
         var bandShapeSolved = bandShapeProvider.TryCreateBandShape(new SlingshotBandShapeQuery(
@@ -59,10 +63,16 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(geometry.LeftAnchorPosition.x, Is.LessThan(geometry.RightAnchorPosition.x));
         Assert.That(Vector3.Dot(geometry.LaunchFrameForward, Vector3.forward), Is.GreaterThan(0.99f));
         Assert.That(playerRigidbody, Is.Not.Null);
+        Assert.That(playerSteeringTarget.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
+        Assert.That(resolvedPlayerSteeringTarget, Is.SameAs(playerSteeringTarget));
+        Assert.That(((IPlayerSteeringTarget)playerSteeringTarget).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(bandShapeSolved, Is.True);
         Assert.That(bandShapePointCount, Is.EqualTo(bandShapeProvider.BandShapePointCount));
         Assert.That(bandShapePointCount, Is.GreaterThan(3));
+        Assert.That(assignedPlayerSteeringConfigs, Has.Length.EqualTo(1));
+        Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
+        Assert.That(playerSteeringConfig, Is.Not.Null);
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(pullHint.activeInHierarchy, Is.True);
@@ -316,6 +326,15 @@ public sealed class GameplaySceneCompositionTests
     {
         return scene.GetRootGameObjects()
             .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
+            .ToArray();
+    }
+
+    private PlayerSteeringConfig[] GetAssignedPlayerSteeringConfigs(Scene scene)
+    {
+        return FindComponentsInScene<GameplayLifetimeScope>(scene)
+            .Select(lifetimeScope => lifetimeScope.PlayerSteeringConfigForTests)
+            .Where(config => config != null)
+            .Distinct()
             .ToArray();
     }
 

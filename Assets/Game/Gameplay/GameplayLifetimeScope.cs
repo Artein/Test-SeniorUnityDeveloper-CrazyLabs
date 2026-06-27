@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Foundation.Screen;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Input.UnityInput;
@@ -16,6 +17,8 @@ namespace Game.Gameplay
         [SerializeField] private GameplayStateId _preLaunchStateId;
         [SerializeField] private GameplayStateId _runningStateId;
         [SerializeField] private SlingshotConfig _slingshotConfig;
+        [SerializeField] private PlayerSteeringConfig _playerSteeringConfig;
+        [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private Camera _inputCamera;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
@@ -35,9 +38,16 @@ namespace Game.Gameplay
             new GameplayStateInstaller(_gameplayStateConfig).Install(builder);
 
             builder.RegisterInstance(_launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
+            builder.RegisterInstance(_playerSteeringTarget).As<IPlayerSteeringTarget>();
 
             new SlingshotInstaller(_slingshotConfig, _preLaunchStateId, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_runningStateId).Install(builder);
+
+            builder.RegisterInstance(_playerSteeringConfig).As<IPlayerSteeringConfig>();
+            builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
+
+            builder.RegisterEntryPoint<PlayerSteeringController>()
+                .WithParameter(_runningStateId);
         }
 
         private void OnValidate()
@@ -75,6 +85,12 @@ namespace Game.Gameplay
 
             if (_slingshotConfig == null)
                 yield return "GameplayLifetimeScope requires a Slingshot Config reference.";
+
+            if (_playerSteeringConfig == null)
+                yield return "GameplayLifetimeScope requires a Player Steering Config reference.";
+
+            if (_playerSteeringTarget == null)
+                yield return "GameplayLifetimeScope requires a Player Steering Target reference.";
 
             if (_inputCamera == null)
                 yield return "GameplayLifetimeScope requires an Input Camera reference.";

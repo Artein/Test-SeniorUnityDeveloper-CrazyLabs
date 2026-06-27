@@ -2,9 +2,11 @@
   "name": "Game.Gameplay",
   "rootNamespace": "",
   "references": [
+    "Game.Foundation",
     "Game.Gameplay.GameplayState",
     "Game.Gameplay.Slingshot",
     "Game.Input.UnityInput",
+    "Game.Utils.Mathematics",
     "VContainer"
   ],
   "includePlatforms": [],
