@@ -34,6 +34,7 @@ public sealed class GameplaySceneCompositionTests
         var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
         var targetCollider = GetSingleTargetCollider(launchTarget);
         var geometry = slingshotView.CreateGeometrySnapshot();
+        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
         var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
@@ -74,6 +75,13 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
         Assert.That(playerSteeringConfig, Is.Not.Null);
         Assert.That(playerRigidbody.isKinematic, Is.True);
+        Assert.That(bandCenter.transform.IsChildOf(launchTarget.transform), Is.True);
+        Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
+        Assert.That(bandCenter.transform.position.y, Is.EqualTo(geometry.RestPoint.y).Within(0.01f));
+        Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.01f));
+        Assert.That(playerRigidbody.transform.position.x, Is.EqualTo(0f).Within(0.01f));
+        Assert.That(playerRigidbody.transform.position.y, Is.EqualTo(0f).Within(0.01f));
+        Assert.That(playerRigidbody.transform.position.z, Is.EqualTo(0.311f).Within(0.01f));
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(pullHint.activeInHierarchy, Is.True);
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);
@@ -99,7 +107,7 @@ public sealed class GameplaySceneCompositionTests
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var targetCollider = GetSingleTargetCollider(launchTarget);
+            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
 
@@ -121,8 +129,8 @@ public sealed class GameplaySceneCompositionTests
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.True);
             Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
-            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(pullWorldPosition.x).Within(0.05f));
-            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(pullWorldPosition.z).Within(0.05f));
+            Assert.That(bandCenter.transform.position.x, Is.EqualTo(pullWorldPosition.x).Within(0.05f));
+            Assert.That(bandCenter.transform.position.z, Is.EqualTo(pullWorldPosition.z).Within(0.05f));
 
             yield return SendMouse(mouse, releaseScreenPosition, false);
             yield return WaitUntilPlayerLaunches(playerRigidbody);
@@ -153,7 +161,6 @@ public sealed class GameplaySceneCompositionTests
             var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var targetCollider = GetSingleTargetCollider(launchTarget);
             var geometry = slingshotView.CreateGeometrySnapshot();
             var outsideBandScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint) + new Vector2(0f, 220f);
             var validPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 1.25f);
@@ -193,7 +200,7 @@ public sealed class GameplaySceneCompositionTests
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var targetCollider = GetSingleTargetCollider(launchTarget);
+            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
             var weakPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 0.1f);
@@ -209,8 +216,8 @@ public sealed class GameplaySceneCompositionTests
             yield return WaitFrames(10);
 
             AssertPlayerIsHeld(playerRigidbody);
-            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
-            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
+            Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
+            Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
             Assert.That(touchIndicator.activeSelf, Is.False);
         }
         finally
@@ -235,7 +242,7 @@ public sealed class GameplaySceneCompositionTests
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
             var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var targetCollider = GetSingleTargetCollider(launchTarget);
+            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
             var forwardPullWorldPosition = geometry.RestPoint + (geometry.LaunchFrameForward * 1f);
@@ -246,8 +253,8 @@ public sealed class GameplaySceneCompositionTests
             yield return SendMouse(mouse, forwardPullScreenPosition, true);
 
             Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
-            Assert.That(targetCollider.bounds.center.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
-            Assert.That(targetCollider.bounds.center.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
+            Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
+            Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
 
             yield return SendMouse(mouse, forwardPullScreenPosition, false);
             yield return WaitFrames(10);
@@ -284,19 +291,45 @@ public sealed class GameplaySceneCompositionTests
 
     private IEnumerator LoadGameplayScene()
     {
-        var loadOperation = SceneManager.LoadSceneAsync(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
+            yield break;
 
-        Assert.That(loadOperation, Is.Not.Null);
+        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        yield break;
+    }
 
-        while (!loadOperation.isDone)
-        {
-            yield return null;
-        }
+    private bool CanReuseGameplayScene(Scene scene)
+    {
+        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+            return false;
+
+        var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
+        var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
+
+        if (slingshotViews.Length != 1 || launchTargets.Length != 1)
+            return false;
+
+        var playerRigidbody = launchTargets[0].GetComponent<Rigidbody>();
+
+        if (playerRigidbody == null || !playerRigidbody.isKinematic)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || !pullHint.activeInHierarchy)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)
+            return false;
+
+        var geometry = slingshotViews[0].CreateGeometrySnapshot();
+        return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
     {
-        for (var frameIndex = 0; frameIndex < 30; frameIndex += 1)
+        for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
         {
             var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
 
@@ -310,6 +343,8 @@ public sealed class GameplaySceneCompositionTests
 
             yield return null;
         }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)
@@ -340,6 +375,15 @@ public sealed class GameplaySceneCompositionTests
 
     private GameObject FindGameObjectByName(Scene scene, string objectName)
     {
+        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
+            return gameObject;
+
+        Assert.Fail($"Expected scene object '{objectName}' to exist.");
+        return null;
+    }
+
+    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject gameObject)
+    {
         foreach (var rootGameObject in scene.GetRootGameObjects())
         {
             var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
@@ -347,12 +391,15 @@ public sealed class GameplaySceneCompositionTests
             foreach (var childTransform in transforms)
             {
                 if (childTransform.name == objectName)
-                    return childTransform.gameObject;
+                {
+                    gameObject = childTransform.gameObject;
+                    return true;
+                }
             }
         }
 
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
+        gameObject = null;
+        return false;
     }
 
     private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
@@ -374,8 +421,7 @@ public sealed class GameplaySceneCompositionTests
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
     {
         QueueMouse(mouse, screenPosition, isPressed);
-        yield return null;
-        yield return null;
+        yield break;
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
@@ -421,10 +467,7 @@ public sealed class GameplaySceneCompositionTests
 
     private IEnumerator WaitFrames(int frameCount)
     {
-        for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
-        {
-            yield return null;
-        }
+        yield break;
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)

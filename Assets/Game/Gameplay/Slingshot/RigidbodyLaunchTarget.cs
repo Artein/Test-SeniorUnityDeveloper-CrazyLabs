@@ -14,6 +14,7 @@ namespace Game.Gameplay.Slingshot
 
     public interface IHeldLaunchTarget
     {
+        // Aligns the authored Band Center marker to the requested held position.
         void SetHeldPosition(Vector3 heldPosition);
     }
 
@@ -24,14 +25,16 @@ namespace Game.Gameplay.Slingshot
 
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Collider _bandContactCollider;
+        [SerializeField] private Transform _bandCenter;
 
+        private readonly LaunchFrameValidator _launchFrameValidator = new LaunchFrameValidator();
         private bool _isHeld;
         private bool _previousIsKinematic;
         private RigidbodyConstraints _previousConstraints;
 
         void ILaunchTarget.Hold()
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
             if (!_isHeld)
             {
@@ -46,7 +49,7 @@ namespace Game.Gameplay.Slingshot
 
         void ILaunchTarget.Launch(Vector3 velocity)
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
             var launchBaseConstraints = _rigidbody.constraints;
 
@@ -73,12 +76,13 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Held position must be finite.", nameof(heldPosition));
 
             // TODO - AI Note: If held visuals need facing, lean, or spin, add an explicit orientation contract instead of rotating here.
-            var colliderCenter = _bandContactCollider.bounds.center;
-            var positionDelta = heldPosition - colliderCenter;
-            var targetPosition = _rigidbody.transform.position + positionDelta;
+            var targetRotation = _rigidbody.rotation;
+            var positionDelta = heldPosition - GetBandCenterPositionFromRigidbodyPose();
+            var targetPosition = _rigidbody.position + positionDelta;
 
-            _rigidbody.transform.position = targetPosition;
+            _rigidbody.transform.SetPositionAndRotation(targetPosition, targetRotation);
             _rigidbody.position = targetPosition;
+            _rigidbody.rotation = targetRotation;
             ClearVelocity();
         }
 
@@ -116,6 +120,17 @@ namespace Game.Gameplay.Slingshot
 
             if (_bandContactCollider == null)
                 Debug.LogWarning("RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.", this);
+
+            if (_bandCenter == null)
+                Debug.LogWarning("RigidbodyLaunchTarget requires a Band Center reference.", this);
+
+            if (_rigidbody != null
+                && _bandCenter != null
+                && _bandCenter != _rigidbody.transform
+                && !_bandCenter.IsChildOf(_rigidbody.transform))
+            {
+                Debug.LogWarning("RigidbodyLaunchTarget Band Center must be assigned under the Rigidbody transform hierarchy.", this);
+            }
         }
 
         private void ClearVelocity()
@@ -126,10 +141,25 @@ namespace Game.Gameplay.Slingshot
 
         private void ThrowIfInvalidReferences()
         {
-            UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyLaunchTarget requires a Rigidbody reference.");
+            ThrowIfMissingRigidbody();
 
-            UnityEngine.Assertions.Assert.IsNotNull(_bandContactCollider,
-                "RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.");
+            if (_bandContactCollider == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Launch Target Silhouette Collider reference.");
+
+            if (_bandCenter == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Band Center reference.");
+
+            if (_bandCenter != _rigidbody.transform
+                && !_bandCenter.IsChildOf(_rigidbody.transform))
+            {
+                throw new InvalidOperationException("RigidbodyLaunchTarget Band Center must be assigned under the Rigidbody transform hierarchy.");
+            }
+        }
+
+        private void ThrowIfMissingRigidbody()
+        {
+            if (_rigidbody == null)
+                throw new InvalidOperationException("RigidbodyLaunchTarget requires a Rigidbody reference.");
         }
 
         private void ThrowIfInvalidQuery(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples)
@@ -138,12 +168,10 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentNullException(nameof(outputSamples));
 
             if (!query.PlaneOrigin.IsFinite()
-                || !query.LaunchFrameRight.IsFinite()
-                || !query.LaunchFrameForward.IsFinite()
-                || !query.LaunchFrameUp.IsFinite()
-                || !query.LaunchFrameRight.IsApproximatelyUnit()
-                || !query.LaunchFrameForward.IsApproximatelyUnit()
-                || !query.LaunchFrameUp.IsApproximatelyUnit()
+                || !_launchFrameValidator.IsValid(
+                    query.LaunchFrameRight,
+                    query.LaunchFrameForward,
+                    query.LaunchFrameUp)
                 || query.SampleCount < 3)
             {
                 throw new ArgumentException("Invalid Launch Target silhouette query.", nameof(query));
@@ -156,6 +184,25 @@ namespace Game.Gameplay.Slingshot
         private Vector3 GetCurrentBandCenter(LaunchTargetSilhouetteQuery query)
         {
             return ProjectPointOntoPlane(_bandContactCollider.bounds.center, query.PlaneOrigin, query.LaunchFrameUp);
+        }
+
+        private Vector3 GetBandCenterPositionFromRigidbodyPose()
+        {
+            var localBandCenterPosition = GetBandCenterLocalPositionInRigidbodySpace();
+            var scaledLocalBandCenterPosition = Vector3.Scale(localBandCenterPosition, _rigidbody.transform.lossyScale);
+            return _rigidbody.position + (_rigidbody.rotation * scaledLocalBandCenterPosition);
+        }
+
+        private Vector3 GetBandCenterLocalPositionInRigidbodySpace()
+        {
+            var localToRigidbody = Matrix4x4.identity;
+
+            for (var current = _bandCenter; current != _rigidbody.transform; current = current.parent)
+            {
+                localToRigidbody = Matrix4x4.TRS(current.localPosition, current.localRotation, current.localScale) * localToRigidbody;
+            }
+
+            return localToRigidbody.MultiplyPoint3x4(Vector3.zero);
         }
 
         private float GetSilhouetteSampleRadius(Vector3 center, LaunchTargetSilhouetteQuery query)

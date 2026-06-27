@@ -17,6 +17,7 @@ namespace Game.Gameplay.Slingshot
         private readonly ILaunchTargetSilhouetteSource _silhouetteSource;
         private readonly ISlingshotConfig _config;
         private readonly PullPlaneTautBandSolver _solver;
+        private readonly LaunchFrameValidator _launchFrameValidator;
         private readonly Vector3[] _worldSilhouetteSamples;
         private readonly float2[] _solverSilhouetteSamples;
         private readonly float2[] _solverOutputPoints;
@@ -29,6 +30,7 @@ namespace Game.Gameplay.Slingshot
             _config = config ?? throw new ArgumentNullException(nameof(config));
             ValidateConfig(config);
 
+            _launchFrameValidator = new LaunchFrameValidator();
             BandShapePointCount = config.BandWrapSampleCount + 4;
             _worldSilhouetteSamples = new Vector3[config.BandSilhouetteSampleCount];
             _solverSilhouetteSamples = new float2[config.BandSilhouetteSampleCount];
@@ -112,12 +114,10 @@ namespace Game.Gameplay.Slingshot
                    && query.RightAnchorPosition.IsFinite()
                    && query.RestPoint.IsFinite()
                    && query.PullPoint.IsFinite()
-                   && query.LaunchFrameRight.IsFinite()
-                   && query.LaunchFrameForward.IsFinite()
-                   && query.LaunchFrameUp.IsFinite()
-                   && query.LaunchFrameRight.IsApproximatelyUnit()
-                   && query.LaunchFrameForward.IsApproximatelyUnit()
-                   && query.LaunchFrameUp.IsApproximatelyUnit();
+                   && _launchFrameValidator.IsValid(
+                       query.LaunchFrameRight,
+                       query.LaunchFrameForward,
+                       query.LaunchFrameUp);
         }
 
         private float2 ToPullPlane(Vector3 point, SlingshotBandShapeQuery query)

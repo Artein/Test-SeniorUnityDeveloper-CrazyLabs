@@ -68,7 +68,67 @@ public sealed class PullPlaneTautBandSolverTests
 
         Assert.That(solved, Is.True);
         Assert.That(pointCount, Is.EqualTo(9));
-        AssertFloat2(output[4], new float2(1f, 2f));
+        AssertFloat2(output[4], new float2(1f, 1f));
+    }
+
+    [Test]
+    public void TrySolve_PullPointFrontCenterOfMovedSilhouette_UsesSilhouetteRelativePulledSide()
+    {
+        var solver = new PullPlaneTautBandSolver(4, 5);
+
+        var silhouette = new[]
+        {
+            new float2(-0.25f, 0.25f),
+            new float2(1.75f, 0.25f),
+            new float2(1.75f, 1.25f),
+            new float2(-0.25f, 1.25f)
+        };
+        var output = new float2[9];
+
+        var solved = solver.TrySolve(
+            new float2(-3f, 0f),
+            new float2(3f, 0f),
+            new float2(0.75f, 1.6f),
+            silhouette,
+            silhouette.Length,
+            0f,
+            5,
+            output,
+            out var pointCount);
+
+        Assert.That(solved, Is.True);
+        Assert.That(pointCount, Is.EqualTo(9));
+        AssertFloat2(output[4], new float2(0.75f, 1.25f));
+    }
+
+    [Test]
+    public void TrySolve_OutsidePullPointNearSilhouetteSurface_UsesClosestPulledSidePoint()
+    {
+        var solver = new PullPlaneTautBandSolver(4, 5);
+
+        var silhouette = new[]
+        {
+            new float2(-0.5f, -0.5f),
+            new float2(0.5f, -0.5f),
+            new float2(0.5f, 0.5f),
+            new float2(-0.5f, 0.5f)
+        };
+        var output = new float2[9];
+
+        var solved = solver.TrySolve(
+            new float2(-1.35f, 0f),
+            new float2(1.35f, 0f),
+            new float2(0.45f, 0.56f),
+            silhouette,
+            silhouette.Length,
+            0f,
+            5,
+            output,
+            out var pointCount);
+
+        Assert.That(solved, Is.True);
+        Assert.That(pointCount, Is.EqualTo(9));
+        AssertFloat2(output[4], new float2(0.45f, 0.5f));
     }
 
     [Test]

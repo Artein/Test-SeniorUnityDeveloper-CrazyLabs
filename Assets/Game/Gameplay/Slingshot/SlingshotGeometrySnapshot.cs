@@ -1,5 +1,3 @@
-using System;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace Game.Gameplay.Slingshot
@@ -21,26 +19,22 @@ namespace Game.Gameplay.Slingshot
             Vector3 launchFrameForward,
             Vector3 launchFrameUp)
         {
-            var validator = new SlingshotGeometrySnapshotValidator();
-            validator.ThrowIfInvalidAxis(launchFrameRight, nameof(launchFrameRight));
-            validator.ThrowIfInvalidAxis(launchFrameForward, nameof(launchFrameForward));
-            validator.ThrowIfInvalidAxis(launchFrameUp, nameof(launchFrameUp));
+            var validator = new LaunchFrameValidator();
+
+            validator.ThrowIfInvalidAndNormalize(
+                launchFrameRight,
+                launchFrameForward,
+                launchFrameUp,
+                out var normalizedRight,
+                out var normalizedForward,
+                out var normalizedUp);
 
             LeftAnchorPosition = leftAnchorPosition;
             RightAnchorPosition = rightAnchorPosition;
             RestPoint = restPoint;
-            LaunchFrameRight = launchFrameRight.normalized;
-            LaunchFrameForward = launchFrameForward.normalized;
-            LaunchFrameUp = launchFrameUp.normalized;
-        }
-
-        private sealed class SlingshotGeometrySnapshotValidator
-        {
-            public void ThrowIfInvalidAxis(Vector3 axis, string parameterName)
-            {
-                if (axis.sqrMagnitude <= 0.000001f || !math.isfinite(axis.sqrMagnitude))
-                    throw new ArgumentException("Slingshot Launch Frame axis must be finite and non-zero.", parameterName);
-            }
+            LaunchFrameRight = normalizedRight;
+            LaunchFrameForward = normalizedForward;
+            LaunchFrameUp = normalizedUp;
         }
     }
 }

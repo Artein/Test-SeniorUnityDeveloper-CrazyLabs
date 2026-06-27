@@ -99,7 +99,7 @@ namespace Game.Gameplay.Slingshot
                 return;
             }
 
-            _view.ShowInactiveIdle(CreateRestBandShape());
+            _view.ShowInactiveIdle(CreateDetachedRestBandShape());
         }
 
         void ITickable.Tick()
@@ -167,7 +167,7 @@ namespace Game.Gameplay.Slingshot
             _inputEnableHandle = _unityInput.Enable();
             _isCaptureEnabled = true;
             SetHeldTargetToRest();
-            _view.ShowCaptureIdle(CreateRestBandShape());
+            _view.ShowCaptureIdle(CreateHeldRestBandShape());
         }
 
         private void DisableCapture()
@@ -184,7 +184,7 @@ namespace Game.Gameplay.Slingshot
                     return;
 
                 SetHeldTargetToRest();
-                _view.ShowInactiveIdle(CreateRestBandShape());
+                _view.ShowInactiveIdle(CreateDetachedRestBandShape());
             }
             finally
             {
@@ -294,7 +294,7 @@ namespace Game.Gameplay.Slingshot
             if (normalizedTime >= 1f)
             {
                 _isReleaseRecoilActive = false;
-                _view.ShowInactiveIdle(CreateRestBandShape());
+                _view.ShowInactiveIdle(CreateDetachedRestBandShape());
                 return;
             }
 
@@ -319,7 +319,7 @@ namespace Game.Gameplay.Slingshot
                 return;
 
             SetHeldTargetToRest();
-            _view.ShowCaptureIdle(CreateRestBandShape());
+            _view.ShowCaptureIdle(CreateHeldRestBandShape());
         }
 
         private bool TryCreateLaunchRequest(SlingshotPullVisual pullVisual, out SlingshotLaunchRequest launchRequest)
@@ -362,9 +362,10 @@ namespace Game.Gameplay.Slingshot
         private Vector3 GetLaunchDirection(float pullOffset)
         {
             var steering = 0f;
+            var maximumSteeringOffset = GetMaximumSteeringOffset(pullOffset);
 
-            if (_config.MaximumLateralPull > 0.000001f)
-                steering = Mathf.Clamp(-pullOffset / _config.MaximumLateralPull, -1f, 1f);
+            if (maximumSteeringOffset > 0.000001f)
+                steering = Mathf.Clamp(-pullOffset / maximumSteeringOffset, -1f, 1f);
 
             return (Quaternion.AngleAxis(steering * _config.MaximumLaunchAngleDegrees, _geometry.LaunchFrameUp) * _geometry.LaunchFrameForward)
                 .normalized;
@@ -385,10 +386,7 @@ namespace Game.Gameplay.Slingshot
                 0f,
                 _config.MaximumPullDistance);
 
-            var pullOffset = Mathf.Clamp(
-                Vector3.Dot(delta, _geometry.LaunchFrameRight),
-                -_config.MaximumLateralPull,
-                _config.MaximumLateralPull);
+            var pullOffset = ClampPullOffset(Vector3.Dot(delta, _geometry.LaunchFrameRight), pullDistance);
 
             var clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
 
@@ -419,6 +417,55 @@ namespace Game.Gameplay.Slingshot
             return _geometry.RestPoint
                    + (_geometry.LaunchFrameRight * pullOffset)
                    - (_geometry.LaunchFrameForward * pullDistance);
+        }
+
+        private float ClampPullOffset(float rawPullOffset, float pullDistance)
+        {
+            var lateralPullScale = GetLateralPullScale(pullDistance);
+
+            return Mathf.Clamp(
+                rawPullOffset,
+                GetMinimumAllowedPullOffset() * lateralPullScale,
+                GetMaximumAllowedPullOffset() * lateralPullScale);
+        }
+
+        private float GetLateralPullScale(float pullDistance)
+        {
+            var fullLateralPullDistance = GetFullLateralPullDistance();
+
+            if (fullLateralPullDistance <= 0.000001f)
+                return 1f;
+
+            return Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+        }
+
+        private float GetFullLateralPullDistance()
+        {
+            return GetMinimumLateralPullRampDistance() + (_config.BandContactPadding * 2f);
+        }
+
+        private float GetMaximumSteeringOffset(float pullOffset)
+        {
+            if (pullOffset < 0f)
+                return -GetMinimumAllowedPullOffset();
+
+            return GetMaximumAllowedPullOffset();
+        }
+
+        private float GetMinimumAllowedPullOffset()
+        {
+            var leftAnchorOffset = Vector3.Dot(_geometry.LeftAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            var rightAnchorOffset = Vector3.Dot(_geometry.RightAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            var minimumAnchorOffset = Mathf.Min(leftAnchorOffset, rightAnchorOffset);
+            return Mathf.Max(-_config.MaximumLateralPull, minimumAnchorOffset);
+        }
+
+        private float GetMaximumAllowedPullOffset()
+        {
+            var leftAnchorOffset = Vector3.Dot(_geometry.LeftAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            var rightAnchorOffset = Vector3.Dot(_geometry.RightAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            var maximumAnchorOffset = Mathf.Max(leftAnchorOffset, rightAnchorOffset);
+            return Mathf.Min(_config.MaximumLateralPull, maximumAnchorOffset);
         }
 
         private bool IsInsideBandTouchTarget(Vector2 screenPosition)

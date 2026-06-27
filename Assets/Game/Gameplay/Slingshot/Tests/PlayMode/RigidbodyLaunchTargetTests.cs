@@ -13,6 +13,7 @@ public sealed class RigidbodyLaunchTargetTests
     private GameObject _gameObject;
     private Rigidbody _rigidbody;
     private SphereCollider _collider;
+    private Transform _bandCenter;
     private RigidbodyLaunchTarget _target;
 
     [SetUp]
@@ -22,8 +23,12 @@ public sealed class RigidbodyLaunchTargetTests
         _rigidbody = _gameObject.AddComponent<Rigidbody>();
         _rigidbody.useGravity = false;
         _collider = _gameObject.AddComponent<SphereCollider>();
+        var bandCenterObject = new GameObject("Band Center");
+        bandCenterObject.transform.SetParent(_gameObject.transform, false);
+        bandCenterObject.transform.localPosition = Vector3.forward * 0.25f;
+        _bandCenter = bandCenterObject.transform;
         _target = _gameObject.AddComponent<RigidbodyLaunchTarget>();
-        _target.SetReferencesForTests(_rigidbody, _collider);
+        _target.SetReferencesForTests(_rigidbody, _collider, _bandCenter);
     }
 
     [TearDown]

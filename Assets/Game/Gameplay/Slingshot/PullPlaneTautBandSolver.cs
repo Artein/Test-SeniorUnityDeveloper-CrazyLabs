@@ -237,8 +237,57 @@ namespace Game.Gameplay.Slingshot
         private bool TryFindPulledSideCenter(float2 pullPoint, int hullCount, out float2 pulledSideCenter)
         {
             pulledSideCenter = default;
+
+            if (!IsPointStrictlyInsideConvexHull(pullPoint, hullCount)
+                && TryFindClosestPointOnHull(pullPoint, hullCount, out pulledSideCenter))
+            {
+                return true;
+            }
+
+            return TryFindRadialPulledSideCenter(pullPoint, hullCount, out pulledSideCenter);
+        }
+
+        private bool TryFindClosestPointOnHull(float2 point, int hullCount, out float2 closestPoint)
+        {
+            closestPoint = default;
+            var bestDistanceSquared = float.MaxValue;
+            var found = false;
+
+            for (var i = 0; i < hullCount; i += 1)
+            {
+                var edgeStart = _inflatedHull[i];
+                var edgeEnd = _inflatedHull[NextIndex(i, hullCount)];
+                var candidatePoint = GetClosestPointOnSegment(point, edgeStart, edgeEnd);
+                var distanceSquared = math.distancesq(point, candidatePoint);
+
+                if (distanceSquared >= bestDistanceSquared)
+                    continue;
+
+                bestDistanceSquared = distanceSquared;
+                closestPoint = candidatePoint;
+                found = true;
+            }
+
+            return found && IsFinite(closestPoint);
+        }
+
+        private float2 GetClosestPointOnSegment(float2 point, float2 segmentStart, float2 segmentEnd)
+        {
+            var segment = segmentEnd - segmentStart;
+            var lengthSquared = math.lengthsq(segment);
+
+            if (lengthSquared <= _epsilon * _epsilon)
+                return segmentStart;
+
+            var progress = math.clamp(math.dot(point - segmentStart, segment) / lengthSquared, 0f, 1f);
+            return math.lerp(segmentStart, segmentEnd, progress);
+        }
+
+        private bool TryFindRadialPulledSideCenter(float2 pullPoint, int hullCount, out float2 pulledSideCenter)
+        {
+            pulledSideCenter = default;
             var center = GetCentroid(_inflatedHull, hullCount);
-            var direction = math.normalizesafe(pullPoint, new float2(0f, 1f));
+            var direction = math.normalizesafe(pullPoint - center, new float2(0f, 1f));
             var bestDistance = float.MaxValue;
             var found = false;
 

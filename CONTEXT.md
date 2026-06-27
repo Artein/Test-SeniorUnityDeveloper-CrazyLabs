@@ -113,7 +113,7 @@ The interpreted **Pull Plane** position that holds the **Launch Target** during 
 _Avoid_: Band middle, contact point
 
 **Launch Frame**:
-The **Slingshot**-owned orientation that defines forward, backward, lateral, and up directions for a **Pull** and **Launch**.
+The **Slingshot**-owned orthonormal orientation that defines forward, backward, lateral, and up directions for a **Pull** and **Launch**.
 _Avoid_: Camera forward, world forward
 
 **Pull Plane**:
@@ -171,6 +171,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
   it reaches the rest/idle/default shape; after that, it detaches and must not keep chasing the **Launch Target**.
 - A **Pull** may have a **Pull Offset**.
 - A **Slingshot** owns one **Launch Frame**.
+- A **Launch Frame** has perpendicular unit right, forward, and up axes.
 - A **Slingshot** owns one **Pull Plane**.
 - A **Launch** affects one **Launch Target**.
 - A **Launch Target** has one **Launch Target Silhouette** for the current **Pull Plane**.
