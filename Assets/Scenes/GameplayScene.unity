@@ -2150,7 +2150,7 @@ GameObject:
   - component: {fileID: 2200000401}
   - component: {fileID: 2200000402}
   - component: {fileID: 2200000403}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Run Obstacle
   m_TagString: Untagged
   m_Icon: {fileID: 0}

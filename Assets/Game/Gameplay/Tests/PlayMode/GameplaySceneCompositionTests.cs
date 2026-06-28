@@ -109,6 +109,7 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(cameraTerrainLayer, Is.GreaterThanOrEqualTo(0));
         Assert.That(cameraObstacleLayer, Is.GreaterThanOrEqualTo(0));
         Assert.That(surface.layer, Is.EqualTo(cameraTerrainLayer));
+        Assert.That(runObstacle.layer, Is.EqualTo(cameraObstacleLayer));
         Assert.That(surfaceContact, Is.Not.Null);
         Assert.That(surfaceContact.Category, Is.EqualTo(RunContactCategory.Surface));
         Assert.That(decollider.TerrainResolution.Enabled, Is.True);
