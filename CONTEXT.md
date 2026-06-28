@@ -12,6 +12,38 @@ _Avoid_: Launcher, rope input
 A gameplay attempt that begins with **Launch** and ends by crash, lost momentum, or reaching the level end.
 _Avoid_: Session, attempt
 
+**Level Session**:
+The currently loaded level instance that can contain multiple **Runs**.
+_Avoid_: App session, Run
+
+**Resource Definition**:
+The authored identity of a resource balance bucket that pickups can grant.
+_Avoid_: SKU, currency enum, Coin Definition
+
+**Pickup Definition**:
+The authored reward definition for a pickup, including which **Resource Definition** is granted and in what amount.
+_Avoid_: Coin Definition, prefab value
+
+**Pickup**:
+The scene object collected by the **Launch Target** during a **Run**.
+_Avoid_: Coin Pickup, collectible
+
+**Pickup Collector**:
+The explicit **Launch Target** capability that allows collecting **Pickups**.
+_Avoid_: Player tag, layer-as-identity
+
+**Level Pickup State**:
+The level-session owner of which **Pickups** are available or consumed.
+_Avoid_: Pickup local flag, save registry, scene search
+
+**Resource Balance**:
+The current app-session total held for one **Resource Definition**.
+_Avoid_: Coin Balance, run score
+
+**Run Resource Accumulator**:
+The run-scoped holder that accumulates accepted resource grant amounts during the current **Run**.
+_Avoid_: Run Resource Collection, Run Resource Tally, ResourceStorage
+
 **Run Camera**:
 The camera behavior that follows the controlled **Launch Target** during a **Run**.
 _Avoid_: Player camera, target camera, follow camera
@@ -165,6 +197,32 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Slingshot** may show one **Pull Hint** while idle.
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
 - A **Run** is governed by one current **Gameplay State**.
+- A **Level Session** may contain multiple **Runs**.
+- A **Level Session** has one **Level Pickup State**.
+- A **Level Pickup State** resets when a **Level Session** starts.
+- A **Pickup Definition** grants one **Resource Definition**.
+- A **Pickup** has one **Pickup Definition**.
+- A **Pickup** forwards Unity trigger contacts; it does not decide collectability or grant resources.
+- A **Pickup** publishes trigger contacts for the **Pickup Collection Controller** to interpret.
+- A **Pickup** trigger contact passes the contacted Unity `Collider`.
+- A **Pickup Collection Controller** subscribes to **Pickup** trigger contacts from explicit scene references.
+- A **Pickup Collection Controller** resolves contacted colliders to a **Pickup Collector** locally.
+- A **Pickup Collection Controller** may search the contacted collider's parent hierarchy for a **Pickup Collector**.
+- A **Level Pickup State** tracks **Pickups** from explicit scene references.
+- A **Level Pickup State** determines whether a **Pickup** is available or consumed.
+- A **Pickup** applies availability by enabling or disabling its scene root GameObject.
+- A consumed **Pickup** disables its scene root GameObject.
+- A **Pickup** is marked consumed before resource totals are mutated.
+- A **Pickup Collector** collects **Pickups**.
+- A **Launch Target** may have one **Pickup Collector**.
+- A **Pickup** may increase a **Resource Balance** during a **Run**.
+- A **Pickup** may increase the **Run Resource Accumulator** during a **Run**.
+- A **Pickup** may increase a **Resource Balance** at most once per **Level Session**.
+- A **Resource Balance** belongs to one **Resource Definition**.
+- A **Resource Balance** spans multiple **Runs** during the current app session.
+- A **Run Resource Accumulator** is keyed by **Resource Definition**.
+- A **Run Resource Accumulator** resets when a new **Run** starts.
+- A **Run Resource Accumulator** is read by end-of-run UI.
 - During a **Run**, the user controls the **Launch Target**.
 - A **Run Camera** follows the **Launch Target** during a **Run**.
 - A **Run Camera** uses one **Run Camera Anchor** to frame the **Launch Target**.
