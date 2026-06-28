@@ -5,6 +5,7 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Input.UnityInput;
 using NUnit.Framework;
+using Unity.Cinemachine;
 using UnityEngine;
 using VContainer;
 using VContainer.Internal;
@@ -49,7 +50,11 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Running State Id")
                 .And.Message.Contains("Slingshot Config")
                 .And.Message.Contains("Player Steering Config")
+                .And.Message.Contains("Run Camera Config")
                 .And.Message.Contains("Player Steering Target")
+                .And.Message.Contains("Run Camera Source")
+                .And.Message.Contains("Run Camera Anchor")
+                .And.Message.Contains("Run Camera Rig")
                 .And.Message.Contains("Input Camera")
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Launch Target"));
@@ -78,25 +83,35 @@ public sealed class GameplayLifetimeScopeTests
         var slingshotLauncher = container.Resolve<ISlingshotLauncher>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var fixedTickables = container.Resolve<ContainerLocal<IReadOnlyList<IFixedTickable>>>().Value;
+        var lateTickables = container.Resolve<ContainerLocal<IReadOnlyList<ILateTickable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
         var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
         var silhouetteSource = container.Resolve<ILaunchTargetSilhouetteSource>();
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
+        var runCameraConfig = container.Resolve<IRunCameraConfig>();
+        var runCameraSource = container.Resolve<IRunCameraSource>();
+        var runCameraAnchor = container.Resolve<IRunCameraAnchor>();
+        var runCameraRig = container.Resolve<IRunCameraRig>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(4));
+        Assert.That(initializables.Count, Is.EqualTo(5));
         Assert.That(fixedTickables.Count, Is.EqualTo(1));
+        Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
         Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
+        Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
+        Assert.That(runCameraSource, Is.SameAs(fixture.RunCameraSource));
+        Assert.That(runCameraAnchor, Is.SameAs(fixture.RunCameraAnchor));
+        Assert.That(runCameraRig, Is.SameAs(fixture.RunCameraRig));
         Assert.That(bandShapeProvider, Is.Not.Null);
     }
 
@@ -109,9 +124,15 @@ public sealed class GameplayLifetimeScopeTests
         var gameplayStateConfig = CreateGameplayStateConfig(preLaunch, transition);
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
         var playerSteeringConfig = Track(ScriptableObject.CreateInstance<PlayerSteeringConfig>());
+        var runCameraConfig = Track(ScriptableObject.CreateInstance<RunCameraConfig>());
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
-        var launchTarget = CreateLaunchTarget(out var playerSteeringTarget);
+        var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource);
+        var runCameraAnchor = CreateGameObject("Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
+        var runCameraRig = CreateGameObject("Run Camera Rig").AddComponent<CinemachineRunCameraRig>();
+        var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
+        var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
+        runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
 
         scope.SetReferencesForTests(
             gameplayStateConfig,
@@ -119,12 +140,16 @@ public sealed class GameplayLifetimeScopeTests
             running,
             slingshotConfig,
             playerSteeringConfig,
+            runCameraConfig,
             playerSteeringTarget,
+            runCameraSource,
+            runCameraAnchor,
+            runCameraRig,
             camera,
             slingshotView,
             launchTarget);
 
-        return new ValidScopeFixture(scope, preLaunch, launchTarget, playerSteeringTarget);
+        return new ValidScopeFixture(scope, preLaunch, launchTarget, playerSteeringTarget, runCameraConfig, runCameraSource, runCameraAnchor, runCameraRig);
     }
 
     private SlingshotView CreateSlingshotView(SlingshotConfig config)
@@ -149,7 +174,9 @@ public sealed class GameplayLifetimeScopeTests
         return view;
     }
 
-    private RigidbodyLaunchTarget CreateLaunchTarget(out RigidbodyPlayerSteeringTarget playerSteeringTarget)
+    private RigidbodyLaunchTarget CreateLaunchTarget(
+        out RigidbodyPlayerSteeringTarget playerSteeringTarget,
+        out RigidbodyRunCameraSource runCameraSource)
     {
         var rigidbody = CreateGameObject("Player").AddComponent<Rigidbody>();
         var collider = rigidbody.gameObject.AddComponent<SphereCollider>();
@@ -159,6 +186,8 @@ public sealed class GameplayLifetimeScopeTests
         launchTarget.SetReferencesForTests(rigidbody, collider, bandCenter);
         playerSteeringTarget = rigidbody.gameObject.AddComponent<RigidbodyPlayerSteeringTarget>();
         playerSteeringTarget.SetRigidbodyForTests(rigidbody);
+        runCameraSource = rigidbody.gameObject.AddComponent<RigidbodyRunCameraSource>();
+        runCameraSource.SetRigidbodyForTests(rigidbody);
 
         return launchTarget;
     }
@@ -206,17 +235,29 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayStateId PreLaunchStateId { get; }
         public RigidbodyLaunchTarget LaunchTarget { get; }
         public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; }
+        public RunCameraConfig RunCameraConfig { get; }
+        public RigidbodyRunCameraSource RunCameraSource { get; }
+        public TransformRunCameraAnchor RunCameraAnchor { get; }
+        public CinemachineRunCameraRig RunCameraRig { get; }
 
         public ValidScopeFixture(
             GameplayLifetimeScope scope,
             GameplayStateId preLaunchStateId,
             RigidbodyLaunchTarget launchTarget,
-            RigidbodyPlayerSteeringTarget playerSteeringTarget)
+            RigidbodyPlayerSteeringTarget playerSteeringTarget,
+            RunCameraConfig runCameraConfig,
+            RigidbodyRunCameraSource runCameraSource,
+            TransformRunCameraAnchor runCameraAnchor,
+            CinemachineRunCameraRig runCameraRig)
         {
             Scope = scope;
             PreLaunchStateId = preLaunchStateId;
             LaunchTarget = launchTarget;
             PlayerSteeringTarget = playerSteeringTarget;
+            RunCameraConfig = runCameraConfig;
+            RunCameraSource = runCameraSource;
+            RunCameraAnchor = runCameraAnchor;
+            RunCameraRig = runCameraRig;
         }
     }
 }

@@ -18,7 +18,11 @@ namespace Game.Gameplay
         [SerializeField] private GameplayStateId _runningStateId;
         [SerializeField] private SlingshotConfig _slingshotConfig;
         [SerializeField] private PlayerSteeringConfig _playerSteeringConfig;
+        [SerializeField] private RunCameraConfig _runCameraConfig;
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
+        [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
+        [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
+        [SerializeField] private CinemachineRunCameraRig _runCameraRig;
         [SerializeField] private Camera _inputCamera;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
@@ -38,18 +42,26 @@ namespace Game.Gameplay
             new GameplayStateInstaller(_gameplayStateConfig).Install(builder);
 
             builder.RegisterInstance(_launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
-            builder.RegisterInstance(_playerSteeringTarget).As<IPlayerSteeringTarget>();
+            builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
+            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
+            builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
+            builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
 
             new SlingshotInstaller(_slingshotConfig, _preLaunchStateId, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_runningStateId).Install(builder);
 
-            builder.RegisterInstance(_playerSteeringConfig).As<IPlayerSteeringConfig>();
+            builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
+            builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<PlayerSteeringController>()
                 .WithParameter(_runningStateId);
+
+            builder.RegisterEntryPoint<RunCameraController>()
+                .WithParameter(_runningStateId);
         }
 
+        // TODO - AI Note: Move to partial-class "GameplayLifetimeScope.Validation.cs" file
         private void OnValidate()
         {
             LogReferenceValidationWarnings();
@@ -89,8 +101,20 @@ namespace Game.Gameplay
             if (_playerSteeringConfig == null)
                 yield return "GameplayLifetimeScope requires a Player Steering Config reference.";
 
+            if (_runCameraConfig == null)
+                yield return "GameplayLifetimeScope requires a Run Camera Config reference.";
+
             if (_playerSteeringTarget == null)
                 yield return "GameplayLifetimeScope requires a Player Steering Target reference.";
+
+            if (_runCameraSource == null)
+                yield return "GameplayLifetimeScope requires a Run Camera Source reference.";
+
+            if (_runCameraAnchor == null)
+                yield return "GameplayLifetimeScope requires a Run Camera Anchor reference.";
+
+            if (_runCameraRig == null)
+                yield return "GameplayLifetimeScope requires a Run Camera Rig reference.";
 
             if (_inputCamera == null)
                 yield return "GameplayLifetimeScope requires an Input Camera reference.";

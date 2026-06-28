@@ -5,6 +5,7 @@
     "Game.Gameplay",
     "Game.Gameplay.Slingshot",
     "Game.Input.UnityInput",
+    "Unity.Cinemachine",
     "Unity.InputSystem",
     "VContainer"
   ],

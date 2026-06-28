@@ -10,6 +10,7 @@ namespace Game.Gameplay
     public sealed partial class GameplayLifetimeScope
     {
         internal PlayerSteeringConfig PlayerSteeringConfigForTests => _playerSteeringConfig;
+        internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
@@ -17,7 +18,11 @@ namespace Game.Gameplay
             GameplayStateId runningStateId,
             SlingshotConfig slingshotConfig,
             PlayerSteeringConfig playerSteeringConfig,
+            RunCameraConfig runCameraConfig,
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
+            RigidbodyRunCameraSource runCameraSource,
+            TransformRunCameraAnchor runCameraAnchor,
+            CinemachineRunCameraRig runCameraRig,
             Camera inputCamera,
             SlingshotView slingshotView,
             RigidbodyLaunchTarget launchTarget)
@@ -27,7 +32,11 @@ namespace Game.Gameplay
             _runningStateId = runningStateId;
             _slingshotConfig = slingshotConfig;
             _playerSteeringConfig = playerSteeringConfig;
+            _runCameraConfig = runCameraConfig;
             _playerSteeringTarget = playerSteeringTarget;
+            _runCameraSource = runCameraSource;
+            _runCameraAnchor = runCameraAnchor;
+            _runCameraRig = runCameraRig;
             _inputCamera = inputCamera;
             _slingshotView = slingshotView;
             _launchTarget = launchTarget;

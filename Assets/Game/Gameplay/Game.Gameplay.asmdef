@@ -7,6 +7,7 @@
     "Game.Gameplay.Slingshot",
     "Game.Input.UnityInput",
     "Game.Utils.Mathematics",
+    "Unity.Cinemachine",
     "VContainer"
   ],
   "includePlatforms": [],
