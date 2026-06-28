@@ -69,12 +69,24 @@ The authored reward definition for a pickup, including which **Resource Definiti
 _Avoid_: Coin Definition, prefab value
 
 **Pickup**:
-The scene object collected by the **Launch Target** during a **Run**.
+The scene object collected during a **Run** when touched by a collider with the configured **Player Tag**.
 _Avoid_: Coin Pickup, collectible
 
-**Pickup Collector**:
-The explicit **Launch Target** capability that allows collecting **Pickups**.
-_Avoid_: Player tag, layer-as-identity
+**Pickup Collection Event**:
+The notification that one **Pickup** was accepted and its resource grant was applied.
+_Avoid_: Coin collected event, feedback trigger
+
+**Player Tag**:
+The Unity tag applied to every collider GameObject that may collect **Pickups**.
+_Avoid_: LaunchTarget tag, PickupCollector, layer-as-identity
+
+**Player Layer**:
+The Unity physics layer assigned to player colliders that may overlap **Pickup** triggers.
+_Avoid_: Player identity, Player Tag
+
+**Pickup Layer**:
+The Unity physics layer assigned to **Pickup** trigger colliders for broad-phase filtering.
+_Avoid_: Pickup identity, resource type
 
 **Level Pickup State**:
 The level-session owner of which **Pickups** are available or consumed.
@@ -87,6 +99,10 @@ _Avoid_: Coin Balance, run score
 **Run Resource Accumulator**:
 The run-scoped holder that accumulates accepted resource grant amounts during the current **Run**.
 _Avoid_: Run Resource Collection, Run Resource Tally, ResourceStorage
+
+**Run Resource Snapshot**:
+The immutable resource amounts captured for one ended **Run**.
+_Avoid_: Live accumulator view, ResourceStorage
 
 **Run Camera**:
 The camera behavior that follows the controlled **Launch Target** during a **Run**.
@@ -245,6 +261,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Run** ends with one **Run End Reason**.
 - A **Run Result** summarizes one ended **Run**.
 - A **Run Result** has one **Run End Reason**.
+- A **Run Result** has one **Run Resource Snapshot**.
 - A **Run Result** uses the **Run Progress Frame** to describe forward downhill progress.
 - **Run End Flow** produces one **Run Result** for an ended **Run**.
 - A **Run Contact Category** determines how a **Run** contact or region affects the **Run**.
@@ -259,28 +276,54 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Level Session** has one **Level Pickup State**.
 - A **Level Pickup State** resets when a **Level Session** starts.
 - A **Pickup Definition** grants one **Resource Definition**.
+- A **Pickup Definition** has a positive grant amount.
+- A **Pickup Definition** without a **Resource Definition** is invalid authoring.
 - A **Pickup** has one **Pickup Definition**.
-- A **Pickup** forwards Unity trigger contacts; it does not decide collectability or grant resources.
-- A **Pickup** publishes trigger contacts for the **Pickup Collection Controller** to interpret.
+- A **Pickup** without a **Pickup Definition** is invalid authoring.
+- A **Pickup** uses a trigger collider for collection.
+- A **Pickup** trigger collider uses the **Pickup Layer**.
+- A **Pickup** collection collider that is not a trigger is invalid authoring.
+- A **Pickup** collection collider outside the **Pickup Layer** is invalid authoring.
+- A **Pickup** forwards Unity trigger-enter contacts; it does not decide collectability or grant resources.
+- A **Pickup** publishes trigger-enter contacts for the **Pickup Collection Controller** to interpret.
 - A **Pickup** trigger contact passes the contacted Unity `Collider`.
+- A **Pickup** does not use trigger-stay polling for collection.
 - A **Pickup Collection Controller** subscribes to **Pickup** trigger contacts from explicit scene references.
-- A **Pickup Collection Controller** resolves contacted colliders to a **Pickup Collector** locally.
-- A **Pickup Collection Controller** may search the contacted collider's parent hierarchy for a **Pickup Collector**.
+- A **Pickup Collection Controller** accepts only contacted colliders with the configured **Player Tag**.
+- A **Pickup Collection Controller** compares the configured **Player Tag** with Unity `CompareTag`.
+- Physics layers filter pickup/player trigger overlap before **Player Tag** identity is checked.
+- The **Pickup Layer** overlaps the **Player Layer** for collection.
+- The **Pickup Layer** avoids unnecessary overlaps with non-player layers.
+- The **Player Layer** keeps required world and run-contact interactions.
+- A collider can collect a **Pickup** only if that collider's own GameObject is on the **Player Layer**.
+- A collider can collect a **Pickup** only if that collider's own GameObject has the configured **Player Tag**.
+- A collecting collider without both the **Player Layer** and configured **Player Tag** is invalid authoring.
+- Player pickup-contact colliders are serialized explicitly for setup validation.
+- Player pickup-contact collider references are manually assigned in the first slice.
+- Serialized player pickup-contact colliders are not a collector mechanism.
+- A player root may also have the configured **Player Tag**, but root tagging does not make untagged child colliders collect **Pickups**.
+- Invalid pickup collection authoring fails fast instead of silently skipping **Pickups** or granting fallback resources.
+- Pickup collection setup is validated during runtime composition before the first **Run**, not lazily on first trigger contact.
 - A **Level Pickup State** tracks **Pickups** from explicit scene references.
+- A **Level Pickup State** tracks each **Pickup** at most once.
+- Duplicate explicit **Pickup** references are invalid authoring.
 - A **Level Pickup State** determines whether a **Pickup** is available or consumed.
 - A **Pickup** applies availability by enabling or disabling its scene root GameObject.
 - A consumed **Pickup** disables its scene root GameObject.
 - A **Pickup** is marked consumed before resource totals are mutated.
-- A **Pickup Collector** collects **Pickups**.
-- A **Launch Target** may have one **Pickup Collector**.
 - A **Pickup** may increase a **Resource Balance** during a **Run**.
 - A **Pickup** may increase the **Run Resource Accumulator** during a **Run**.
 - A **Pickup** may increase a **Resource Balance** at most once per **Level Session**.
+- A **Pickup Collection Event** follows an accepted **Pickup** resource grant.
+- A **Pickup Collection Event** identifies the **Pickup**, **Resource Definition**, grant amount, and collection position.
 - A **Resource Balance** belongs to one **Resource Definition**.
 - A **Resource Balance** spans multiple **Runs** during the current app session.
 - A **Run Resource Accumulator** is keyed by **Resource Definition**.
-- A **Run Resource Accumulator** resets when a new **Run** starts.
-- A **Run Resource Accumulator** is read by end-of-run UI.
+- A **Run Resource Accumulator** resets when gameplay enters **Pre-Launch** for the next **Run**.
+- A **Run Resource Accumulator** produces a **Run Resource Snapshot** when a **Run** ends.
+- A **Run Resource Snapshot** contains resources collected during its **Run**.
+- A missing **Resource Definition** in a **Run Resource Snapshot** means zero collected for that **Run**.
+- A **Run Resource Snapshot** is read by end-of-run UI.
 - During a **Run**, the user controls the **Launch Target**.
 - A **Run Camera** follows the **Launch Target** during a **Run**.
 - A **Run Camera** uses one **Run Camera Anchor** to frame the **Launch Target**.
