@@ -72,6 +72,10 @@ _Avoid_: Idle camera, static camera
 The phase before a **Run** begins, when the **Slingshot** can accept a **Pull**.
 _Avoid_: Waiting, ready state
 
+**Pre-Launch Rig Pose**:
+The authored pose where the **Slingshot** and **Launch Target** are aligned before **Pre-Launch** interaction.
+_Avoid_: Player initial position, spawn point, reset transform
+
 **Gameplay State**:
 The single current phase of gameplay flow.
 _Avoid_: Gameplay tag, flag
@@ -209,6 +213,8 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - **Pulled-Side Center** follows the actual **Active Pull** direction, including **Pull Offset**.
 - A **Slingshot** may show one **Pull Hint** while idle.
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
+- A **Pre-Launch Rig Pose** aligns one **Slingshot** with one **Launch Target**.
+- A **Pre-Launch Rig Pose** places the held **Launch Target** so its **Band Center** aligns with the **Rest Point**.
 - A **Run** is governed by one current **Gameplay State**.
 - A **Run** has one **Run Progress Frame**.
 - A **Run** ends with one **Run End Reason**.
@@ -298,6 +304,9 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 > **Dev:** "Can **Pre-Launch** and running be active at the same time?"
 > **Domain expert:** "No — there is one current **Gameplay State**."
 
+> **Dev:** "Is the **Rest Point** the same thing as the level start pose?"
+> **Domain expert:** "No — the **Rest Point** is owned by the **Slingshot**, while the **Pre-Launch Rig Pose** aligns the **Slingshot** and **Launch Target** before a new **Pull**."
+
 > **Dev:** "Can **Gameplay Flow** switch to any **Gameplay State** asset?"
 > **Domain expert:** "No — the change must match an authored **Gameplay State Transition**."
 
@@ -356,6 +365,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "Touch" and "mouse" were used as input sources, but gameplay consumes **Pointer Input** from **Unity Input**.
 - "Before launch movement" refers to held **Launch Target** positioning during **Active Pull**, not the start of a **Run**.
 - "Rest position" means **Rest Point** owned by the **Slingshot**, not the **Launch Target** object's initial scene transform.
+- "Level initial position" resolves to **Pre-Launch Rig Pose** when discussing same-session restart alignment, not to **Rest Point**.
 - "Pull point" and "band middle" were used interchangeably, but the **Pull Point** positions the held **Launch Target** while **Band Contact Points** shape the visible **Band** around it.
 - "Closest contact point" is not a **Band Contact Point** unless it is also tangent to the **Launch Target Silhouette** from a **Slingshot** anchor.
 - "More segments" means visual points in the **Band Wrap**, not physics bodies or gameplay samples.
