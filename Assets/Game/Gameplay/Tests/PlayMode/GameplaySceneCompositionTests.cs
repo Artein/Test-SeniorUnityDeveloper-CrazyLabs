@@ -134,6 +134,23 @@ public sealed class GameplaySceneCompositionTests
     }
 
     [UnityTest]
+    public IEnumerator given_GameplayScene_when_Loaded_then_SlingshotPolesFrameBandAnchors()
+    {
+        yield return LoadGameplayScene();
+        var activeScene = SceneManager.GetActiveScene();
+
+        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+        var geometry = slingshotView.CreateGeometrySnapshot();
+        var leftAnchor = FindGameObjectByName(activeScene, "Left Anchor");
+        var rightAnchor = FindGameObjectByName(activeScene, "Right Anchor");
+        var leftPole = FindGameObjectByName(activeScene, "Left Slingshot Pole");
+        var rightPole = FindGameObjectByName(activeScene, "Right Slingshot Pole");
+
+        AssertPoleFramesAnchor(leftPole, leftAnchor.transform, geometry.LeftAnchorPosition, "Left Slingshot Pole");
+        AssertPoleFramesAnchor(rightPole, rightAnchor.transform, geometry.RightAnchorPosition, "Right Slingshot Pole");
+    }
+
+    [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsSlingshot_then_PlayerLaunches()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Smoke Mouse");
@@ -478,6 +495,24 @@ public sealed class GameplaySceneCompositionTests
 
         Assert.That(colliders, Has.Length.EqualTo(1));
         return colliders[0];
+    }
+
+    private void AssertPoleFramesAnchor(GameObject pole, Transform anchor, Vector3 anchorPosition, string poleName)
+    {
+        var meshRenderer = pole.GetComponent<MeshRenderer>();
+        var meshFilter = pole.GetComponent<MeshFilter>();
+        var colliders = pole.GetComponentsInChildren<Collider>(true);
+
+        Assert.That(pole.transform.IsChildOf(anchor), Is.True, poleName);
+        Assert.That(meshRenderer, Is.Not.Null, poleName);
+        Assert.That(meshRenderer.enabled, Is.True, poleName);
+        Assert.That(meshRenderer.sharedMaterial, Is.Not.Null, poleName);
+        Assert.That(meshFilter, Is.Not.Null, poleName);
+        Assert.That(meshFilter.sharedMesh, Is.Not.Null, poleName);
+        Assert.That(colliders, Is.Empty, poleName);
+        Assert.That(pole.transform.position.x, Is.EqualTo(anchorPosition.x).Within(0.01f), poleName);
+        Assert.That(pole.transform.position.z, Is.EqualTo(anchorPosition.z).Within(0.01f), poleName);
+        Assert.That(pole.transform.position.y, Is.LessThan(anchorPosition.y), poleName);
     }
 
     private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)
