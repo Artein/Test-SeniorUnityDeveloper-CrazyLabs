@@ -42,8 +42,8 @@ namespace Game.Gameplay
             if (_isInitialized)
                 return;
 
-            _slingshotLaunchNotifier.LaunchRequested += HandleLaunchRequested;
-            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
+            _slingshotLaunchNotifier.LaunchRequested += OnSlingshotLaunchRequested;
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
 
             if (_gameplayStateService.IsCurrent(_preLaunchStateId))
@@ -59,12 +59,12 @@ namespace Game.Gameplay
 
             if (_isInitialized)
             {
-                _slingshotLaunchNotifier.LaunchRequested -= HandleLaunchRequested;
-                _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
+                _slingshotLaunchNotifier.LaunchRequested -= OnSlingshotLaunchRequested;
+                _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
             }
         }
 
-        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
             if (_isDisposed)
                 return;
@@ -79,7 +79,7 @@ namespace Game.Gameplay
                 _slingshotCapture.DisableCapture();
         }
 
-        private void HandleLaunchRequested(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchRequested(SlingshotLaunchRequest launchRequest)
         {
             if (_isDisposed)
                 return;

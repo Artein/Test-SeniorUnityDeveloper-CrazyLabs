@@ -55,8 +55,8 @@ namespace Game.Gameplay
             if (_isInitialized)
                 return;
 
-            _launchAppliedNotifier.LaunchApplied += HandleLaunchApplied;
-            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
+            _launchAppliedNotifier.LaunchApplied += OnSlingshotLaunchApplied;
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
             ActivatePreLaunchCamera();
             UpdateAnchorPose(0f, true);
@@ -79,15 +79,15 @@ namespace Game.Gameplay
 
             if (_isInitialized)
             {
-                _launchAppliedNotifier.LaunchApplied -= HandleLaunchApplied;
-                _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
+                _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
+                _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
             }
 
             _hasLaunchApplied = false;
             _isRunCameraActive = false;
         }
 
-        private void HandleLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
         {
             if (_isDisposed)
                 return;
@@ -100,7 +100,7 @@ namespace Game.Gameplay
                 ActivateRunCamera();
         }
 
-        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
             if (_isDisposed)
                 return;

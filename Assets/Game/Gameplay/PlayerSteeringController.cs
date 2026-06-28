@@ -59,12 +59,12 @@ namespace Game.Gameplay
             if (_isInitialized)
                 return;
 
-            _launchAppliedNotifier.LaunchApplied += HandleLaunchApplied;
-            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
-            _unityInput.PointerPressed += HandlePointerPressed;
-            _unityInput.PointerMoved += HandlePointerMoved;
-            _unityInput.PointerReleased += HandlePointerReleased;
-            _unityInput.PointerCanceled += HandlePointerCanceled;
+            _launchAppliedNotifier.LaunchApplied += OnSlingshotLaunchApplied;
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
+            _unityInput.PointerPressed += OnInputPointerPressed;
+            _unityInput.PointerMoved += OnInputPointerMoved;
+            _unityInput.PointerReleased += OnInputPointerReleased;
+            _unityInput.PointerCanceled += OnInputPointerCanceled;
             _isInitialized = true;
         }
 
@@ -86,18 +86,18 @@ namespace Game.Gameplay
 
             if (_isInitialized)
             {
-                _launchAppliedNotifier.LaunchApplied -= HandleLaunchApplied;
-                _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
-                _unityInput.PointerPressed -= HandlePointerPressed;
-                _unityInput.PointerMoved -= HandlePointerMoved;
-                _unityInput.PointerReleased -= HandlePointerReleased;
-                _unityInput.PointerCanceled -= HandlePointerCanceled;
+                _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
+                _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+                _unityInput.PointerPressed -= OnInputPointerPressed;
+                _unityInput.PointerMoved -= OnInputPointerMoved;
+                _unityInput.PointerReleased -= OnInputPointerReleased;
+                _unityInput.PointerCanceled -= OnInputPointerCanceled;
             }
 
             DeactivateSteering();
         }
 
-        private void HandleLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
         {
             if (_isDisposed)
                 return;
@@ -109,7 +109,7 @@ namespace Game.Gameplay
                 ActivateSteering();
         }
 
-        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
             if (_isDisposed)
                 return;
@@ -157,7 +157,7 @@ namespace Game.Gameplay
             _currentSteer = 0f;
         }
 
-        private void HandlePointerPressed(PointerInput pointerInput)
+        private void OnInputPointerPressed(PointerInput pointerInput)
         {
             if (!_isSteeringActive || _hasActivePointer)
                 return;
@@ -167,7 +167,7 @@ namespace Game.Gameplay
             _desiredSteer = GetSteerFromScreenPosition(pointerInput.ScreenPosition);
         }
 
-        private void HandlePointerMoved(PointerInput pointerInput)
+        private void OnInputPointerMoved(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;
@@ -175,7 +175,7 @@ namespace Game.Gameplay
             _desiredSteer = GetSteerFromScreenPosition(pointerInput.ScreenPosition);
         }
 
-        private void HandlePointerReleased(PointerInput pointerInput)
+        private void OnInputPointerReleased(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;
@@ -184,7 +184,7 @@ namespace Game.Gameplay
             _desiredSteer = 0f;
         }
 
-        private void HandlePointerCanceled(PointerInput pointerInput)
+        private void OnInputPointerCanceled(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;

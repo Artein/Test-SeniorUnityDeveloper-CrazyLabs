@@ -16,11 +16,15 @@ namespace Game.Gameplay
         [SerializeField] private GameplayStateConfig _gameplayStateConfig;
         [SerializeField] private GameplayStateId _preLaunchStateId;
         [SerializeField] private GameplayStateId _runningStateId;
+        [SerializeField] private GameplayStateId _runEndedStateId;
         [SerializeField] private SlingshotConfig _slingshotConfig;
         [SerializeField] private PlayerSteeringConfig _playerSteeringConfig;
         [SerializeField] private RunCameraConfig _runCameraConfig;
+        [SerializeField] private RunEndConfig _runEndConfig;
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
+        [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
+        [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
         [SerializeField] private Camera _inputCamera;
@@ -41,9 +45,11 @@ namespace Game.Gameplay
             new UnityInputInstaller().Install(builder);
             new GameplayStateInstaller(_gameplayStateConfig).Install(builder);
 
-            builder.RegisterInstance(_launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
+            builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget);
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
-            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
+            builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
+            builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
+            builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
 
@@ -52,12 +58,25 @@ namespace Game.Gameplay
 
             builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
+            builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
+            builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+
+            builder.RegisterEntryPoint<RunProgressService>();
 
             builder.RegisterEntryPoint<PlayerSteeringController>()
                 .WithParameter(_runningStateId);
 
             builder.RegisterEntryPoint<RunCameraController>()
+                .WithParameter(_runningStateId);
+
+            // TODO - AI Note: Use IID (injection id) instead of argument name
+            builder.RegisterEntryPoint<RunEndFlow>()
+                .WithParameter("preLaunchStateId", _preLaunchStateId)
+                .WithParameter("runningStateId", _runningStateId)
+                .WithParameter("runEndedStateId", _runEndedStateId);
+
+            builder.RegisterEntryPoint<LostMomentumDetector>()
                 .WithParameter(_runningStateId);
         }
 
@@ -95,6 +114,9 @@ namespace Game.Gameplay
             if (_runningStateId == null)
                 yield return "GameplayLifetimeScope requires a Running State Id reference.";
 
+            if (_runEndedStateId == null)
+                yield return "GameplayLifetimeScope requires a Run Ended State Id reference.";
+
             if (_slingshotConfig == null)
                 yield return "GameplayLifetimeScope requires a Slingshot Config reference.";
 
@@ -104,11 +126,20 @@ namespace Game.Gameplay
             if (_runCameraConfig == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Config reference.";
 
+            if (_runEndConfig == null)
+                yield return "GameplayLifetimeScope requires a Run End Config reference.";
+
             if (_playerSteeringTarget == null)
                 yield return "GameplayLifetimeScope requires a Player Steering Target reference.";
 
             if (_runCameraSource == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Source reference.";
+
+            if (_runProgressFrameSource == null)
+                yield return "GameplayLifetimeScope requires a Run Progress Frame Source reference.";
+
+            if (_contactNotifier == null)
+                yield return "GameplayLifetimeScope requires a Rigidbody Contact Notifier reference.";
 
             if (_runCameraAnchor == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Anchor reference.";
