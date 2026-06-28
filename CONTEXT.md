@@ -12,6 +12,50 @@ _Avoid_: Launcher, rope input
 A gameplay attempt that begins with **Launch** and ends by crash, lost momentum, or reaching the level end.
 _Avoid_: Session, attempt
 
+**Run End Reason**:
+The single cause that ended a **Run**.
+_Avoid_: Game over type, fail reason, death reason
+
+**Run Result**:
+The immutable summary captured when a **Run** ends.
+_Avoid_: Score state, end payload, outcome data
+
+**Run Progress Frame**:
+The course reference that defines forward downhill progress, lateral direction, and up direction during a **Run**.
+_Avoid_: World forward, launch direction, camera forward
+
+**Run End Flow**:
+The gameplay flow that accepts run-ending signals and produces one **Run Result**.
+_Avoid_: Game over manager, result controller, death handler
+
+**Run Contact Category**:
+The gameplay meaning of a contact or region encountered during a **Run**.
+_Avoid_: Collider type, physics layer, tag
+
+**Run Surface**:
+A **Run Contact Category** that allows the **Launch Target** to slide, jump, or redirect without ending the **Run**.
+_Avoid_: Ground, floor, ramp
+
+**Run Obstacle**:
+A **Run Contact Category** that can end a **Run** by `ObstacleHit`.
+_Avoid_: Tree collider, wall tag
+
+**Obstacle Impact**:
+A **Run Obstacle** contact strong enough to end a **Run** by `ObstacleHit`.
+_Avoid_: Any collision, speed drop
+
+**Lost Momentum**:
+A **Run End Reason** caused by sustained lack of meaningful **Run** progress.
+_Avoid_: Stopped, idle, one-frame low speed
+
+**Run Safety Net**:
+A **Run Contact Category** that ends a **Run** when the **Launch Target** falls below the playable course.
+_Avoid_: Boundary, kill plane, infinite fall detector
+
+**Run Finish**:
+A **Run Contact Category** that ends a **Run** by `Finished`.
+_Avoid_: Goal trigger, finish line
+
 **Run Camera**:
 The camera behavior that follows the controlled **Launch Target** during a **Run**.
 _Avoid_: Player camera, target camera, follow camera
@@ -165,6 +209,20 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Slingshot** may show one **Pull Hint** while idle.
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
 - A **Run** is governed by one current **Gameplay State**.
+- A **Run** has one **Run Progress Frame**.
+- A **Run** ends with one **Run End Reason**.
+- A **Run Result** summarizes one ended **Run**.
+- A **Run Result** has one **Run End Reason**.
+- A **Run Result** uses the **Run Progress Frame** to describe forward downhill progress.
+- **Run End Flow** produces one **Run Result** for an ended **Run**.
+- A **Run Contact Category** determines how a **Run** contact or region affects the **Run**.
+- A **Run Surface** does not end a **Run**.
+- A **Run Obstacle** may end a **Run** with `ObstacleHit`.
+- An **Obstacle Impact** ends a **Run** with `ObstacleHit`.
+- **Lost Momentum** ends a **Run** with `LostMomentum`.
+- **Lost Momentum** is measured against the **Run Progress Frame**.
+- A **Run Safety Net** ends a **Run** with `OutOfBounds`.
+- A **Run Finish** ends a **Run** with `Finished`.
 - During a **Run**, the user controls the **Launch Target**.
 - A **Run Camera** follows the **Launch Target** during a **Run**.
 - A **Run Camera** uses one **Run Camera Anchor** to frame the **Launch Target**.
@@ -212,6 +270,27 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 
 > **Dev:** "Can the **Slingshot** accept another **Pull** after **Launch**?"
 > **Domain expert:** "No — after **Launch**, the **Run** has started and **Pre-Launch** is over."
+
+> **Dev:** "Is the thing that stops the **Run** the same as the score shown after it?"
+> **Domain expert:** "No — **Run End Reason** says why the **Run** ended, while **Run Result** is the summary captured for the ended **Run**."
+
+> **Dev:** "Can a finish trigger and obstacle contact both publish separate results?"
+> **Domain expert:** "No — **Run End Flow** accepts one run-ending signal and produces one **Run Result**."
+
+> **Dev:** "Does every collider hit during a **Run** end the **Run**?"
+> **Domain expert:** "No — **Run Surface** contacts are traversal, while **Run Obstacle** and **Run Finish** contacts can end the **Run**."
+
+> **Dev:** "Does any touch against a **Run Obstacle** end the **Run**?"
+> **Domain expert:** "No — only an **Obstacle Impact** ends the **Run** by `ObstacleHit`; light obstacle contact can be bearable."
+
+> **Dev:** "Does the **Run** end the moment the **Launch Target** has one low-speed frame?"
+> **Domain expert:** "No — `LostMomentum` means **Lost Momentum**, a sustained lack of meaningful **Run** progress."
+
+> **Dev:** "What catches the **Launch Target** if it falls below the course?"
+> **Domain expert:** "A **Run Safety Net** ends the **Run** by `OutOfBounds`."
+
+> **Dev:** "Is forward progress the same as launch direction?"
+> **Domain expert:** "No — **Launch** direction can include **Pull Offset**, while the **Run Progress Frame** defines forward downhill progress."
 
 > **Dev:** "Can **Pre-Launch** and running be active at the same time?"
 > **Domain expert:** "No — there is one current **Gameplay State**."
@@ -284,3 +363,10 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "Player" and "target" were used ambiguously for the controlled object during a **Run**; resolved as **Launch Target**.
 - "Camera target", "camera pivot", and "follow target" resolve to **Run Camera Anchor** when discussing **Run Camera** framing.
 - "Idle camera" and "static camera" resolve to **Pre-Launch Camera** when discussing the camera before a **Run**.
+- "Stops" resolves to the `LostMomentum` **Run End Reason**, not to arbitrary one-frame low velocity.
+- "Ramp" resolves to **Run Surface** for first-slice run-ending logic unless future ramp-specific gameplay events need a separate term.
+- "Boundary" is not a first-slice **Run Contact Category**; use **Run Safety Net** for the below-map infinite-fall catch volume.
+- "Forward", "downhill", "distance", and "progress" resolve to **Run Progress Frame** when discussing **Run** metrics and momentum.
+- "Camera obstacle" is not the same concept as **Run Obstacle**; camera safety and **Run End Reason** use separate meanings.
+- Collider shape does not define **Run Contact Category**.
+- "Meaningful impact" and "hard collision" resolve to **Obstacle Impact**, not raw speed loss after contact.
