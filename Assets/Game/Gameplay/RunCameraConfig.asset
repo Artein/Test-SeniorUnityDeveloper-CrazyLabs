@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81868c43dffe4953830710be911e776f, type: 3}
+  m_Name: RunCameraConfig
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunCameraConfig
+  _anchorOffset: {x: 0, y: 1.2, z: 0}
+  _positionResponseRate: 12
+  _yawResponseRate: 12
+  _minimumYawSpeed: 0.25
+  _preLaunchCameraPriority: 10
+  _runCameraInactivePriority: 0
+  _runCameraActivePriority: 20

@@ -34,7 +34,7 @@ namespace Game.Foundation.Input
         internal UnityInput(IUnityInputBackend backend)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
-            _backend.PointerInputReceived += HandlePointerInputReceived;
+            _backend.PointerInputReceived += OnPointerInputReceived;
         }
 
         IDisposable IEnhancedTouchSupportApi.Enable()
@@ -55,7 +55,7 @@ namespace Game.Foundation.Input
                 return;
 
             _isDisposed = true;
-            _backend.PointerInputReceived -= HandlePointerInputReceived;
+            _backend.PointerInputReceived -= OnPointerInputReceived;
 
             try
             {
@@ -82,7 +82,7 @@ namespace Game.Foundation.Input
                 _backend.Disable();
         }
 
-        private void HandlePointerInputReceived(UnityInputBackendPointerInput backendPointerInput)
+        private void OnPointerInputReceived(UnityInputBackendPointerInput backendPointerInput)
         {
             if (_isDisposed || _enableCount <= 0)
                 return;

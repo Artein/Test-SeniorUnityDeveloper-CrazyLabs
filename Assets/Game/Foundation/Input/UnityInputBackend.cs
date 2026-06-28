@@ -59,13 +59,13 @@ namespace Game.Foundation.Input
                 return;
 
             EnhancedTouchSupport.Enable();
-            Touch.onFingerDown += HandleFingerDown;
-            Touch.onFingerMove += HandleFingerMove;
-            Touch.onFingerUp += HandleFingerUp;
+            Touch.onFingerDown += OnTouchFingerDown;
+            Touch.onFingerMove += OnTouchFingerMove;
+            Touch.onFingerUp += OnTouchFingerUp;
             _isEnabled = true;
 
 #if UNITY_EDITOR
-            InputSystem.onEvent += HandleInputSystemEvent;
+            InputSystem.onEvent += OnInputSystemEvent;
             _wasEditorMousePressed = IsEditorMousePressed();
 #endif
         }
@@ -75,14 +75,14 @@ namespace Game.Foundation.Input
             if (!_isEnabled)
                 return;
 
-            Touch.onFingerDown -= HandleFingerDown;
-            Touch.onFingerMove -= HandleFingerMove;
-            Touch.onFingerUp -= HandleFingerUp;
+            Touch.onFingerDown -= OnTouchFingerDown;
+            Touch.onFingerMove -= OnTouchFingerMove;
+            Touch.onFingerUp -= OnTouchFingerUp;
             EnhancedTouchSupport.Disable();
             _isEnabled = false;
 
 #if UNITY_EDITOR
-            InputSystem.onEvent -= HandleInputSystemEvent;
+            InputSystem.onEvent -= OnInputSystemEvent;
             _wasEditorMousePressed = false;
 #endif
         }
@@ -96,7 +96,7 @@ namespace Game.Foundation.Input
             _isDisposed = true;
         }
 
-        private void HandleInputSystemEvent(InputEventPtr inputEventPtr, InputDevice inputDevice)
+        private void OnInputSystemEvent(InputEventPtr inputEventPtr, InputDevice inputDevice)
         {
 #if UNITY_EDITOR
             if (!_isEnabled || _isDisposed)
@@ -139,17 +139,17 @@ namespace Game.Foundation.Input
         }
 #endif
 
-        private void HandleFingerDown(Finger finger)
+        private void OnTouchFingerDown(Finger finger)
         {
             Raise(PointerInputPhase.Pressed, CreatePointerInput(finger));
         }
 
-        private void HandleFingerMove(Finger finger)
+        private void OnTouchFingerMove(Finger finger)
         {
             Raise(PointerInputPhase.Moved, CreatePointerInput(finger));
         }
 
-        private void HandleFingerUp(Finger finger)
+        private void OnTouchFingerUp(Finger finger)
         {
             var touch = GetCurrentOrLastTouch(finger);
 
