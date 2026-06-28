@@ -12,13 +12,13 @@ This slice should make pickup availability deterministic across repeated runs in
 
 ## Acceptance criteria
 
-- [ ] **Pickup** exposes its assigned **Pickup Definition** and fails loud when required authored data is missing.
-- [ ] **Pickup** forwards `OnTriggerEnter` contacts while enabled, including the raw contacted `Collider`.
-- [ ] **Pickup** does not grant resources, check gameplay state, compare tags, store consumed state, or update score/UI.
-- [ ] `SetAvailable(bool)` enables/disables the whole pickup scene root GameObject so visuals and trigger participation stop together.
-- [ ] `LevelPickupState` is initialized from explicit pickup references.
-- [ ] `LevelPickupState.TryConsume` succeeds only once per pickup until a **Level Session** reset.
-- [ ] `LevelPickupState` rejects null and duplicate pickup references deterministically.
+- [x] **Pickup** exposes its assigned **Pickup Definition** and fails loud when required authored data is missing.
+- [x] **Pickup** forwards `OnTriggerEnter` contacts while enabled, including the raw contacted `Collider`.
+- [x] **Pickup** does not grant resources, check gameplay state, compare tags, store consumed state, or update score/UI.
+- [x] `SetAvailable(bool)` enables/disables the whole pickup scene root GameObject so visuals and trigger participation stop together.
+- [x] `LevelPickupState` is initialized from explicit pickup references.
+- [x] `LevelPickupState.TryConsume` succeeds only once per pickup until a **Level Session** reset.
+- [x] `LevelPickupState` rejects null and duplicate pickup references deterministically.
 
 ## Verification
 

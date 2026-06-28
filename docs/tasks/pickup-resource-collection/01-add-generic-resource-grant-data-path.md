@@ -13,13 +13,13 @@ catalog, multipliers, icons, display names, VFX/SFX, or economy concepts.
 
 ## Acceptance criteria
 
-- [ ] **Resource Definition** is an authored asset-backed identity suitable for keying resource balances by asset reference.
-- [ ] **Pickup Definition** references exactly one **Resource Definition** and one positive base amount.
-- [ ] Missing **Resource Definition** and zero/negative **Pickup Definition** amounts are rejected loudly.
-- [ ] `ResourceStorage` grants positive amounts and returns zero for resources with no stored balance.
-- [ ] `RunResourceAccumulator` grants positive amounts, accumulates by **Resource Definition**, resets for the next **Run**, and can create a snapshot.
-- [ ] **Run Resource Snapshot** is immutable and sparse; missing resources read as zero.
-- [ ] Runtime code and tests use generic resource/pickup terminology, not coin-specific controller names.
+- [x] **Resource Definition** is an authored asset-backed identity suitable for keying resource balances by asset reference.
+- [x] **Pickup Definition** references exactly one **Resource Definition** and one positive base amount.
+- [x] Missing **Resource Definition** and zero/negative **Pickup Definition** amounts are rejected loudly.
+- [x] `ResourceStorage` grants positive amounts and returns zero for resources with no stored balance.
+- [x] `RunResourceAccumulator` grants positive amounts, accumulates by **Resource Definition**, resets for the next **Run**, and can create a snapshot.
+- [x] **Run Resource Snapshot** is immutable and sparse; missing resources read as zero.
+- [x] Runtime code and tests use generic resource/pickup terminology, not coin-specific controller names.
 
 ## Verification
 

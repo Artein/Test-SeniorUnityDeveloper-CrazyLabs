@@ -12,14 +12,14 @@ This slice should prove that real Unity trigger-enter physics reaches the generi
 
 ## Acceptance criteria
 
-- [ ] Project has **Player Layer** and **Pickup Layer**, reusing equivalent existing layers only if they already exist.
-- [ ] 3D Layer Collision Matrix allows **Player Layer** to overlap **Pickup Layer**.
-- [ ] Pickup trigger colliders use **Pickup Layer** and are authored as triggers.
-- [ ] Player pickup-contact colliders use **Player Layer** and have the configured **Player Tag** on the collider GameObject itself.
-- [ ] Root-only player tagging is rejected for pickup collection.
-- [ ] Real trigger-enter contact from a correctly tagged/layered player collider collects one pickup.
-- [ ] Non-player contacts and incorrectly tagged player colliders do not collect pickups.
-- [ ] No `OnTriggerStay`, per-frame pickup scans, or hierarchy lookup are added.
+- [x] Project has **Player Layer** and **Pickup Layer**, reusing equivalent existing layers only if they already exist.
+- [x] 3D Layer Collision Matrix allows **Player Layer** to overlap **Pickup Layer**.
+- [x] Pickup trigger colliders use **Pickup Layer** and are authored as triggers.
+- [x] Player pickup-contact colliders use **Player Layer** and have the configured **Player Tag** on the collider GameObject itself.
+- [x] Root-only player tagging is rejected for pickup collection.
+- [x] Real trigger-enter contact from a correctly tagged/layered player collider collects one pickup.
+- [x] Non-player contacts and incorrectly tagged player colliders do not collect pickups.
+- [x] No `OnTriggerStay`, per-frame pickup scans, or hierarchy lookup are added.
 
 ## Verification
 

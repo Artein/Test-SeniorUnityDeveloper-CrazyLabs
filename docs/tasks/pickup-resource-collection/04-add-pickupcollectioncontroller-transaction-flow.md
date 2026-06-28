@@ -13,15 +13,15 @@ This slice should prove transaction ordering and duplicate-contact safety withou
 
 ## Acceptance criteria
 
-- [ ] Controller subscribes to all explicit pickup contact events and unsubscribes when disposed.
-- [ ] Contacts outside `Running` do not consume pickups, grant resources, disable pickups, or publish collection events.
-- [ ] Contacts from colliders without the configured **Player Tag** are ignored.
-- [ ] Accepted collection consumes `LevelPickupState` before mutating resource totals.
-- [ ] Duplicate accepted contacts for the same pickup cannot double grant.
-- [ ] Accepted collection grants the same resource amount to `ResourceStorage` and `RunResourceAccumulator`.
-- [ ] Accepted collection disables the pickup root after the grant.
-- [ ] **Pickup Collection Event** is published after grant application and includes pickup, resource, amount, and world position.
-- [ ] No `PickupCollector`, parent hierarchy lookup, `PickupContact` struct, event bus, or coin-specific controller is introduced.
+- [x] Controller subscribes to all explicit pickup contact events and unsubscribes when disposed.
+- [x] Contacts outside `Running` do not consume pickups, grant resources, disable pickups, or publish collection events.
+- [x] Contacts from colliders without the configured **Player Tag** are ignored.
+- [x] Accepted collection consumes `LevelPickupState` before mutating resource totals.
+- [x] Duplicate accepted contacts for the same pickup cannot double grant.
+- [x] Accepted collection grants the same resource amount to `ResourceStorage` and `RunResourceAccumulator`.
+- [x] Accepted collection disables the pickup root after the grant.
+- [x] **Pickup Collection Event** is published after grant application and includes pickup, resource, amount, and world position.
+- [x] No `PickupCollector`, parent hierarchy lookup, `PickupContact` struct, event bus, or coin-specific controller is introduced.
 
 ## Verification
 

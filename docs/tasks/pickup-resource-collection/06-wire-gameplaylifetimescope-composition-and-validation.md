@@ -12,14 +12,14 @@ This slice should make the runtime dependency graph complete without relying on 
 
 ## Acceptance criteria
 
-- [ ] `GameplayLifetimeScope` serializes explicit pickup references used by pickup collection.
-- [ ] `GameplayLifetimeScope` serializes the configured **Player Tag** and passes it into `PickupCollectionController`.
-- [ ] `GameplayLifetimeScope` serializes explicit player pickup-contact collider references for validation only.
-- [ ] Composition registers `ResourceStorage`, `RunResourceAccumulator`, `LevelPickupState`, and `PickupCollectionController` through VContainer.
-- [ ] **Level Pickup State** is initialized for the current **Level Session** at composition time until a dedicated level lifecycle exists.
-- [ ] Runtime setup validation fails loud for missing references, duplicate pickups, invalid definitions, non-positive amounts, wrong layers, missing tags, non-trigger pickup colliders, and missing player pickup-contact colliders.
-- [ ] `OnValidate` may warn but does not auto-populate pickup references.
-- [ ] Root gameplay references the pickup feature only where composition and run-result integration need it.
+- [x] `GameplayLifetimeScope` serializes explicit pickup references used by pickup collection.
+- [x] `GameplayLifetimeScope` serializes the configured **Player Tag** and passes it into `PickupCollectionController`.
+- [x] `GameplayLifetimeScope` serializes explicit player pickup-contact collider references for validation only.
+- [x] Composition registers `ResourceStorage`, `RunResourceAccumulator`, `LevelPickupState`, and `PickupCollectionController` through VContainer.
+- [x] **Level Pickup State** is initialized for the current **Level Session** at composition time until a dedicated level lifecycle exists.
+- [x] Runtime setup validation fails loud for missing references, duplicate pickups, invalid definitions, non-positive amounts, wrong layers, missing tags, non-trigger pickup colliders, and missing player pickup-contact colliders.
+- [x] `OnValidate` may warn but does not auto-populate pickup references.
+- [x] Root gameplay references the pickup feature only where composition and run-result integration need it.
 
 ## Verification
 

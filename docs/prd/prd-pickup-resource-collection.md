@@ -118,7 +118,7 @@ The first slice separates three lifetimes:
 52. As a developer, I want accepted collection to grant both `ResourceStorage` and `RunResourceAccumulator`, so that totals and current-run deltas stay in sync.
 53. As a developer, I want accepted collection to disable the pickup root after the grant, so that the scene reflects consumed state immediately.
 54. As a developer, I want a generic **Pickup Collection Event** after grant application, so that future feedback can observe accepted pickups.
-55. As a developer, I want the **Pickup Collection Event** payload to include pickup, resource, amount, and world position, so that future VFX/UI do not read live state.
+55. As a developer, I want the **Pickup Collection Event** payload to include resource, amount, and world position, so that future VFX/UI do not read live state.
 56. As a developer, I want direct C# events instead of an event bus, so that local pickup coordination follows current ADR guidance.
 57. As a developer, I want runtime setup validation during composition, so that invalid pickup authoring fails before the first run.
 58. As a developer, I want validation to include pickup definitions, resource definitions, positive amounts, layers, tags, trigger setup, serialized pickup refs, and player pickup-contact collider refs, so that setup failures are actionable.
@@ -176,7 +176,7 @@ The first slice separates three lifetimes:
 - Accepted pickup collection order is: trigger contact, `Running` gate, `CompareTag` against the configured **Player Tag**, `LevelPickupState.TryConsume`, `ResourceStorage` grant, `RunResourceAccumulator` grant, pickup root deactivation, then **Pickup Collection Event** publication.
 - Consuming pickup state before mutating resource totals prevents duplicate trigger contacts from double-granting.
 - Publish a generic **Pickup Collection Event** after the resource grant is applied.
-- **Pickup Collection Event** payload includes **Pickup**, **Resource Definition**, grant amount, and collection world position.
+- **Pickup Collection Event** payload includes **Resource Definition**, grant amount, and collection world position.
 - Do not implement VFX, SFX, HUD animation, floating counters, or end-screen presentation in this first slice unless the implementation task explicitly expands scope.
 - Use configured **Player Tag** for collection identity, not `LaunchTarget`.
 - Serialize the **Player Tag** name on `GameplayLifetimeScope` and pass it into `PickupCollectionController`.

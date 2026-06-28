@@ -11,14 +11,14 @@ This slice should improve authoring ergonomics without changing runtime ownershi
 
 ## Acceptance criteria
 
-- [ ] Serialized tag-name fields can use a tag selector attribute/property drawer instead of typo-prone free text.
-- [ ] `GameplayLifetimeScope` custom inspector includes exactly one button named `Refresh Pickup References From Scene`.
-- [ ] Refresh finds same-scene **Pickup** objects.
-- [ ] Refresh includes inactive pickups.
-- [ ] Refresh orders pickup references deterministically for stable serialized diffs.
-- [ ] Refresh records Undo and marks the scope dirty.
-- [ ] Refresh does not populate player pickup-contact collider references.
-- [ ] `OnValidate` does not auto-populate pickup references.
+- [x] Serialized tag-name fields can use a tag selector attribute/property drawer instead of typo-prone free text.
+- [x] `GameplayLifetimeScope` custom inspector includes exactly one button named `Refresh Pickup References From Scene`.
+- [x] Refresh finds same-scene **Pickup** objects.
+- [x] Refresh includes inactive pickups.
+- [x] Refresh orders pickup references deterministically for stable serialized diffs.
+- [x] Refresh records Undo and marks the scope dirty.
+- [x] Refresh does not populate player pickup-contact collider references.
+- [x] `OnValidate` does not auto-populate pickup references.
 
 ## Verification
 

@@ -13,12 +13,12 @@ add only the minimal direct C# notification path needed by current consumers.
 
 ## Acceptance criteria
 
-- [ ] **Run Result** includes a **Run Resource Snapshot** captured at accepted run end.
-- [ ] Existing run-result fields and behavior continue to work.
-- [ ] `RunResourceAccumulator` resets when entering **Pre-Launch** for the next **Run**, not at launch time.
-- [ ] A captured **Run Result** keeps its snapshot stable after the accumulator is reset or receives later grants.
-- [ ] Missing resources in the result snapshot read as zero for UI consumers.
-- [ ] Any new run-result observation path uses direct C# events and does not introduce an event bus.
+- [x] **Run Result** includes a **Run Resource Snapshot** captured at accepted run end.
+- [x] Existing run-result fields and behavior continue to work.
+- [x] `RunResourceAccumulator` resets when entering **Pre-Launch** for the next **Run**, not at launch time.
+- [x] A captured **Run Result** keeps its snapshot stable after the accumulator is reset or receives later grants.
+- [x] Missing resources in the result snapshot read as zero for UI consumers.
+- [x] Any new run-result observation path uses direct C# events and does not introduce an event bus.
 
 ## Verification
 

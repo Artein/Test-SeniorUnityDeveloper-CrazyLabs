@@ -13,26 +13,25 @@ This slice is HITL because exact level placement and play-feel review are design
 
 ## Acceptance criteria
 
-- [ ] Gameplay scene contains at least one regular coin pickup and one big coin pickup placed for smoke testing.
-- [ ] All scene pickups are serialized into `GameplayLifetimeScope`; no runtime scene discovery is required.
-- [ ] Player pickup-contact colliders are serialized into `GameplayLifetimeScope` for validation.
-- [ ] Every collecting player collider GameObject has **Player Layer** and the configured **Player Tag**.
-- [ ] Pickup collection occurs only while gameplay state is `Running`.
-- [ ] Collected pickup roots disable immediately and remain unavailable across later runs in the same **Level Session**.
-- [ ] Remaining pickups can still be collected in later runs of the same **Level Session**.
-- [ ] `ResourceStorage` total continues accumulating across runs in the current app session.
-- [ ] **Run Result** contains only the resources collected during the just-ended **Run**.
-- [ ] Manual smoke does not require economy, persistence, HUD, VFX/SFX, floating counters, or final result-screen UI.
+- [x] Gameplay scene contains at least one regular coin pickup and one big coin pickup placed for smoke testing.
+- [x] All scene pickups are serialized into `GameplayLifetimeScope`; no runtime scene discovery is required.
+- [x] Player pickup-contact colliders are serialized into `GameplayLifetimeScope` for validation.
+- [x] Every collecting player collider GameObject has **Player Layer** and the configured **Player Tag**.
+- [x] Pickup collection occurs only while gameplay state is `Running`.
+- [x] Collected pickup roots disable immediately and remain unavailable across later runs in the same **Level Session**.
+- [x] Remaining pickups can still be collected in later runs of the same **Level Session**.
+- [x] `ResourceStorage` total continues accumulating across runs in the current app session.
+- [x] **Run Result** contains only the resources collected during the just-ended **Run**.
+- [x] Manual smoke does not require economy, persistence, HUD, VFX/SFX, floating counters, or final result-screen UI.
 
 ## Verification
 
 - EditMode tests:
-  - Lifetime-scope validation accepts the smoke-scene pickup/player references.
+  - `RunEndFlowTests` covers current-run resource snapshot capture and reset on Pre-Launch.
+  - `GameplayLifetimeScopeTests` covers pickup/resource service registration and validation seams.
 - PlayMode tests:
-  - Gameplay scene composition resolves pickup/resource dependencies.
-  - Collecting a regular pickup and big pickup grants their configured amounts.
-  - Restarting a run does not restore already-consumed pickups.
-  - Ended-run result snapshot contains current-run resources only.
+  - `PickupSceneCompositionTests.given_GameplayScene_when_Loaded_then_PickupResourceCompositionIsReady` validates scene pickup/player references, layers, configured amounts, shared coin resource, and VContainer services.
+  - `PickupPhysicsIntegrationTests` covers live trigger collection, Pre-Launch ignored contacts, root-only tag rejection, and consumed-root no-second-grant behavior.
 - Static checks:
   - `git diff --check`.
   - Unity compile through Unity AI Agent Connector.

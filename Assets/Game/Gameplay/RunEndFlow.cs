@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
+using Game.Utils.Invocation;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -13,7 +15,12 @@ namespace Game.Gameplay
         void SubmitCandidate(RunEndCandidate candidate);
     }
 
-    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver
+    public interface IRunResultNotifier
+    {
+        event Action<RunResult> RunResultAccepted;
+    }
+
+    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -21,6 +28,7 @@ namespace Game.Gameplay
         private readonly IRunContactClassifier _contactClassifier;
         private readonly IRunProgressService _progressService;
         private readonly IRunMotionSource _motionSource;
+        private readonly IRunResourceAccumulator _runResourceAccumulator;
         private readonly IRunEndConfig _config;
         private readonly ITime _clock;
         private readonly GameplayStateId _preLaunchStateId;
@@ -36,6 +44,8 @@ namespace Game.Gameplay
         private float _elapsedSinceLaunch;
         private float _runEndedElapsed;
 
+        public event Action<RunResult> RunResultAccepted;
+
         public RunEndFlow(
             IGameplayStateService gameplayStateService,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
@@ -43,6 +53,7 @@ namespace Game.Gameplay
             IRunContactClassifier contactClassifier,
             IRunProgressService progressService,
             IRunMotionSource motionSource,
+            IRunResourceAccumulator runResourceAccumulator,
             IRunEndConfig config,
             ITime clock,
             GameplayStateId preLaunchStateId,
@@ -55,6 +66,7 @@ namespace Game.Gameplay
             _contactClassifier = contactClassifier ?? throw new ArgumentNullException(nameof(contactClassifier));
             _progressService = progressService ?? throw new ArgumentNullException(nameof(progressService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
+            _runResourceAccumulator = runResourceAccumulator ?? throw new ArgumentNullException(nameof(runResourceAccumulator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
@@ -119,7 +131,7 @@ namespace Game.Gameplay
             ResetRunEndState();
         }
 
-        public void SubmitCandidate(RunEndCandidate candidate)
+        void IRunEndCandidateReceiver.SubmitCandidate(RunEndCandidate candidate)
         {
             if (_isDisposed
                 || _hasAcceptedResult
@@ -156,19 +168,22 @@ namespace Game.Gameplay
             _pendingCandidates.Clear();
 
             if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            {
+                _runResourceAccumulator.Reset();
                 ResetRunEndState();
+            }
         }
 
         private void OnCollisionEntered(RigidbodyCollisionNotification notification)
         {
             if (_contactClassifier.TryClassify(notification, out var candidate))
-                SubmitCandidate(candidate);
+                ((IRunEndCandidateReceiver)this).SubmitCandidate(candidate);
         }
 
         private void OnTriggerEntered(RigidbodyTriggerNotification notification)
         {
             if (_contactClassifier.TryClassify(notification, out var candidate))
-                SubmitCandidate(candidate);
+                ((IRunEndCandidateReceiver)this).SubmitCandidate(candidate);
         }
 
         private void ResolvePendingCandidates()
@@ -224,8 +239,10 @@ namespace Game.Gameplay
                 _elapsedSinceLaunch,
                 _progressService.MaximumForwardProgress,
                 finalPosition,
-                finalVelocity.magnitude);
+                finalVelocity.magnitude,
+                _runResourceAccumulator.CreateSnapshot());
 
+            RunResultAccepted?.InvokeSafely(result);
             Debug.Log(result.ToString());
         }
 
