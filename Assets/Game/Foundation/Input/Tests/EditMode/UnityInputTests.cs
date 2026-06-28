@@ -1,6 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
-using Game.Input.UnityInput;
+using Game.Foundation.Input;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;

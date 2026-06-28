@@ -44,7 +44,7 @@
 
 ## Test Plan
 
-- EditMode tests use local fakes for Slingshot view, Unity Input, Gameplay State, and input projector.
+- EditMode tests use local fakes for Slingshot view, Unity Input, launch target seams, and input projector.
 - Cover valid release:
   - A captured pointer release raises exactly one request.
   - Payload includes expected normalized power, Pull distance, Pull Offset, launch direction, launch speed, up direction, and up speed.
@@ -68,7 +68,8 @@
 
 ## Assumptions
 
-- Issues 01-04 are implemented first: VContainer, Gameplay State, Unity Input, and Slingshot capture/pull visualization exist.
+- Issues 01-04 are implemented first: VContainer, Gameplay State, Unity Input, and Slingshot capture/pull visualization exist. Gameplay State remains
+  outside the Slingshot assembly and is bridged by Gameplay Flow.
 - `SlingshotConfig` already contains the launch tuning fields planned in issue 04.
 - Broken launch tuning is caught by existing config validation; issue 05 does not add a second validation system.
 - Gameplay Flow subscription, transition to Running, launch target hold/release, and Rigidbody launch application are deferred to issues 06 and 07.

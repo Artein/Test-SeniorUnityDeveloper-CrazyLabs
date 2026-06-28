@@ -3,7 +3,7 @@ using System.Collections;
 using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
-using Game.Input.UnityInput;
+using Game.Foundation.Input;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -592,7 +592,10 @@ public sealed class GameplaySceneCompositionTests
     // TODO: Fix this
     private IEnumerator WaitFrames(int frameCount)
     {
-        yield break;
+        for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
+        {
+            yield return null;
+        }
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)

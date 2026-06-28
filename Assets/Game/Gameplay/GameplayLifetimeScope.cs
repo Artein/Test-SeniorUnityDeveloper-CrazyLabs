@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Foundation.Input;
 using Game.Foundation.Screen;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Input.UnityInput;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -47,8 +47,8 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
 
-            new SlingshotInstaller(_slingshotConfig, _preLaunchStateId, _slingshotView, _inputCamera).Install(builder);
-            new GameplayFlowInstaller(_runningStateId).Install(builder);
+            new SlingshotInstaller(_slingshotConfig, _slingshotView, _inputCamera).Install(builder);
+            new GameplayFlowInstaller(_preLaunchStateId, _runningStateId).Install(builder);
 
             builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);

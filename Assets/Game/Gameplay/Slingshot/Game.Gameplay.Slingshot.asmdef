@@ -3,8 +3,7 @@
   "rootNamespace": "",
   "references": [
     "Game.Foundation",
-    "Game.Gameplay.GameplayState",
-    "Game.Input.UnityInput",
+    "Game.Foundation.Input",
     "Game.Utils.Invocation",
     "Game.Utils.Mathematics",
     "Unity.Mathematics",

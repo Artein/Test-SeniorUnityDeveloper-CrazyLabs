@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Game.Foundation.Input;
 using Game.Foundation.Time;
-using Game.Gameplay.GameplayState;
-using Game.Input.UnityInput;
 using Game.Utils.Invocation;
 using UnityEngine;
 
@@ -97,40 +96,6 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         }
     }
 
-    internal sealed class FakeGameplayStateService : IGameplayStateService
-    {
-        public GameplayStateId CurrentStateId { get; set; }
-        public int TryTransitionCallCount { get; private set; }
-
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
-
-        public FakeGameplayStateService(GameplayStateId currentStateId)
-        {
-            CurrentStateId = currentStateId;
-        }
-
-        public bool IsCurrent(GameplayStateId stateId)
-        {
-            return ReferenceEquals(CurrentStateId, stateId);
-        }
-
-        public bool TryTransitionTo(GameplayStateId nextStateId)
-        {
-            TryTransitionCallCount += 1;
-            ChangeTo(nextStateId);
-            return true;
-        }
-
-        public void ChangeTo(GameplayStateId nextStateId)
-        {
-            var previousStateId = CurrentStateId;
-            GameplayStateChanging?.Invoke(nextStateId, previousStateId);
-            CurrentStateId = nextStateId;
-            GameplayStateChanged?.Invoke(nextStateId, previousStateId);
-        }
-    }
-
     internal sealed class FakeSlingshotView : ISlingshotView
     {
         private readonly List<string> _observations;
@@ -200,6 +165,31 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         {
             HeldPositions.Add(heldPosition);
             _observations.Add("target-position");
+        }
+    }
+
+    internal sealed class FakeLaunchTarget : ILaunchTarget
+    {
+        private readonly List<string> _observations;
+
+        public int HoldCallCount { get; private set; }
+        public List<Vector3> LaunchVelocities { get; } = new();
+
+        public FakeLaunchTarget(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public void Hold()
+        {
+            HoldCallCount += 1;
+            _observations.Add("target-hold");
+        }
+
+        public void Launch(Vector3 velocity)
+        {
+            LaunchVelocities.Add(velocity);
+            _observations.Add("target-launch");
         }
     }
 

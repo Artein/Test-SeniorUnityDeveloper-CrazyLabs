@@ -15,8 +15,7 @@
 ## Key Changes
 
 - Create runtime/test asmdefs:
-  - `Game.Gameplay.Slingshot.asmdef`, referencing `Game.Input.UnityInput`, `Game.Gameplay.GameplayState`, Unity UI/runtime assemblies, and
-    VContainer.
+  - `Game.Gameplay.Slingshot.asmdef`, referencing `Game.Foundation.Input`, Unity UI/runtime assemblies, and VContainer.
   - `Game.Gameplay.Slingshot.Tests.EditMode.asmdef`, referencing Slingshot plus NUnit/Test Framework.
 - Add `SlingshotConfig : ScriptableObject` and default asset at `Assets/Game/Gameplay/SlingshotConfig.asset`.
   - Fields: Band Touch Target radius in pixels, min/max Pull distance, max lateral Pull, max launch angle, min/max launch speed, launch speed curve,
@@ -31,11 +30,10 @@
     owned by `docs/tasks/slingshot-natural-band-shape/`.
   - Pull Hint and Touch Indicator are controlled as authored UI objects, with Touch Indicator positioned from the clamped projected point.
 - Add plain C# controller and math seams:
-  - `SlingshotController : IInitializable, IDisposable` subscribes once to `IUnityInput` pointer events and
-    `IGameplayStateService.GameplayStateChanged`.
-  - Controller enables capture only while current state is the injected `PreLaunchStateId`.
-  - Enter Pre-Launch: acquire `IUnityInput.Enable()` handle, reset capture, show capture idle.
-  - Leave Pre-Launch: cancel Active Pull, restore inactive idle, disable capture, then dispose the input handle.
+  - `SlingshotController : IInitializable, IDisposable, ISlingshotCapture` subscribes once to `IUnityInput` pointer events.
+  - Controller does not know Gameplay State; higher-level Gameplay Flow calls `EnableCapture()` and `DisableCapture()`.
+  - Enable capture: acquire `IUnityInput.Enable()` handle, reset capture, show capture idle.
+  - Disable capture: cancel Active Pull, restore inactive idle, disable capture, then dispose the input handle.
   - Only the first captured pointer controls Active Pull; all other pointer ids are ignored.
   - `ISlingshotInputProjector` handles screen-to-Pull-Plane and world-to-screen projection without physics raycasts or layers.
   - Band Touch Target uses screen-space distance from pointer to the projected visible rest Band polyline through the rest point.
@@ -44,17 +42,17 @@
   - Projection failure during Active Pull cancels Pull and restores capture idle.
 - Add selected-object gizmos on `SlingshotView` for anchors, Launch Frame axes, Pull Plane, Pull limits, lateral limits/angle, and Band Touch Target
   radius preview.
-- Add a small `SlingshotInstaller : IInstaller` for later LifetimeScope use; it registers config, pre-launch state id, projector, controller
-  lifecycle, and view interface instances supplied by composition. It must not inject MonoBehaviours.
+- Add a small `SlingshotInstaller : IInstaller` for later LifetimeScope use; it registers config, projector, controller lifecycle, `ISlingshotCapture`,
+  and view interface instances supplied by composition. It must not inject MonoBehaviours.
 
 ## Test Plan
 
-- EditMode tests use local fakes for Unity Input, Gameplay State, Slingshot view, and input projector.
+- EditMode tests use local fakes for Unity Input, Slingshot view, and input projector.
 - Cover state/input lifecycle:
-  - Initializing while already Pre-Launch acquires input handle and shows capture idle.
-  - Entering Pre-Launch acquires input before enabling capture visuals.
-  - Leaving Pre-Launch cancels Active Pull and restores idle before disposing input handle.
-  - Disposal unsubscribes from input and state events and disposes any active handle.
+  - Enabling capture after initialization acquires input before enabling capture visuals.
+  - Disabling capture cancels Active Pull and restores idle before disposing input handle.
+  - Capture enable/disable is idempotent while initialized and not disposed.
+  - Disposal unsubscribes from input events and disposes any active handle.
 - Cover capture behavior:
   - Press inside generous screen-space Band Touch Target, including near either visible rest Band segment, starts Active Pull.
   - Press outside target is ignored.
@@ -73,7 +71,8 @@
 
 ## Assumptions
 
-- Issues 01-03 are implemented first: VContainer composition spine, Gameplay State, and Unity Input exist.
+- Issues 01-03 are implemented first: VContainer composition spine, Gameplay State, and Unity Input exist. Slingshot depends on Unity Input, while
+  Gameplay Flow bridges Gameplay State to Slingshot capture.
 - No `LaunchRequested`, launch payload, Gameplay Flow, Rigidbody launch, rope physics, Burst, haptics, audio, or camera sequence work in this issue.
 - No `GameplayScene.unity` mutation is required here; issue 08 owns final scene composition.
 - Controller exceptions are allowed to surface; Unity Input subscriber isolation is owned by issue 03.

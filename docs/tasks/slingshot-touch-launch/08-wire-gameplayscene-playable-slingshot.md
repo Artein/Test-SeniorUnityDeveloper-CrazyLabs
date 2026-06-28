@@ -24,10 +24,10 @@ The completed slice should be playable in the Editor using mouse simulation and 
 - [x] Band visual is assigned and renders through the Slingshot view.
 - [x] Pull Hint and Touch Indicator are scene-authored UI objects under a Canvas and controlled by the Slingshot view.
 - [x] Gameplay State assets/config and Slingshot config are assigned through explicit serialized references.
-- [x] Gameplay `LifetimeScope` registers UnityInput, Gameplay State, Slingshot controller, Slingshot launcher, Gameplay Flow, scene view interfaces, and launch target adapter.
+- [x] Gameplay `LifetimeScope` registers Foundation Unity Input, Gameplay State, Slingshot controller, Slingshot launcher, Gameplay Flow bridge, scene view interfaces, and launch target adapter.
 - [x] Existing Player Rigidbody is assigned to the Rigidbody Launch Target adapter.
 - [x] Missing required scene references fail fast through validation/assertions instead of null-reference drift.
-- [x] Starting in Pre-Launch shows the Pull Hint and holds the Player.
+- [x] Starting in Pre-Launch lets Gameplay Flow enable Slingshot capture, shows the Pull Hint, and holds the Player.
 - [x] Pulling from the Band updates the Band Shape and Touch Indicator.
 - [x] Releasing a valid Pull transitions to Running and launches the Player forward.
 - [x] After launch, Slingshot capture is disabled and accidental re-pulls do not relaunch.

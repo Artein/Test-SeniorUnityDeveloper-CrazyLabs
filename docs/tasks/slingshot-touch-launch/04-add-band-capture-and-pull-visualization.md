@@ -29,9 +29,9 @@ This slice should stop before raising a real launch request. It should make the 
 - [x] Slingshot view is a shallow MonoBehaviour adapter with explicit serialized references, `OnValidate`, geometry snapshot creation, view command methods, and selected-object gizmos.
 - [x] Band Shape uses a three-point visual path from left anchor to pull/rest point to right anchor.
 - [x] Pull Hint and Touch Indicator are controlled as scene-authored UI objects.
-- [x] Controller subscribes to Unity Input and Gameplay State once for lifetime and enables capture only while the current state is Pre-Launch.
-- [x] Entering Pre-Launch acquires an input enable handle before enabling capture visuals.
-- [x] Leaving Pre-Launch cancels any Active Pull, returns visuals to idle, disables capture, then disposes the input handle.
+- [x] Controller subscribes to Unity Input once for lifetime and exposes capture enable/disable through `ISlingshotCapture`.
+- [x] Gameplay Flow enables Slingshot capture on entering Pre-Launch; capture acquires an input enable handle before enabling capture visuals.
+- [x] Gameplay Flow disables Slingshot capture on leaving Pre-Launch; capture cancels any Active Pull, returns visuals to idle, disables capture, then disposes the input handle.
 - [x] A pointer press starts Active Pull only when capture is enabled and the press is within the generous screen-space Band Touch Target.
 - [x] Only the first captured pointer controls the Active Pull; other pointers are ignored.
 - [x] Pointer movement is projected to the Slingshot Pull Plane without physics raycasts.
@@ -41,7 +41,7 @@ This slice should stop before raising a real launch request. It should make the 
 
 ## Verification
 
-- EditMode tests: initial Pre-Launch enables capture/input; enter/leave order; leave cancels Active Pull before handle disposal; disposal unsubscribes; touch target accepts/rejects by screen distance; first pointer capture; projection failure cancel; forward/lateral/backward clamp behavior; Touch Indicator projected position.
+- EditMode tests: direct capture enable/disable order; disable cancels Active Pull before handle disposal; disposal unsubscribes; touch target accepts/rejects by screen distance; first pointer capture; projection failure cancel; forward/lateral/backward clamp behavior; Touch Indicator projected position.
 - PlayMode tests: none required for this slice.
 - Static checks: Rider reformat/problems on changed files; Unity compile via Unity AI Agent Connector before tests.
 - Manual Unity smoke check: use editor mouse simulation to confirm Band, Pull Hint, and Touch Indicator update in a temporary scene setup or Gameplay Scene if issue 08 wiring is pulled forward.

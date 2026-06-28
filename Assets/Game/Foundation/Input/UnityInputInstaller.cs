@@ -2,7 +2,7 @@ using System;
 using VContainer;
 using VContainer.Unity;
 
-namespace Game.Input.UnityInput
+namespace Game.Foundation.Input
 {
     public sealed class UnityInputInstaller : IInstaller
     {

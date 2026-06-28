@@ -1,30 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Gameplay.Slingshot.Tests.EditMode;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
 public sealed class SlingshotLaunchControllerTests
 {
-    private GameplayStateId _preLaunchStateId;
-    private GameplayStateId _runningStateId;
-    private GameplayStateId _runEndedStateId;
-    private FakeGameplayStateService _stateService;
     private FakeLaunchTarget _target;
 
     [SetUp]
     public void OnSetUp()
     {
-        _preLaunchStateId = CreateStateId("PreLaunch");
-        _runningStateId = CreateStateId("Running");
-        _runEndedStateId = CreateStateId("RunEnded");
-        _stateService = new FakeGameplayStateService(_runningStateId);
         _target = new FakeLaunchTarget();
     }
 
@@ -32,63 +21,6 @@ public sealed class SlingshotLaunchControllerTests
     public void OnTearDown()
     {
         LogAssert.NoUnexpectedReceived();
-    }
-
-    [Test]
-    public void Initialize_CurrentPreLaunch_HoldsTargetOnce()
-    {
-        _stateService.CurrentStateId = _preLaunchStateId;
-        var controller = CreateController();
-
-        ((IInitializable)controller).Initialize();
-
-        Assert.That(_target.HoldCallCount, Is.EqualTo(1));
-    }
-
-    [Test]
-    public void GameplayStateChanged_ReEnteringPreLaunch_HoldsTargetEveryTime()
-    {
-        var controller = CreateController();
-        ((IInitializable)controller).Initialize();
-
-        _stateService.ChangeTo(_preLaunchStateId);
-        _stateService.ChangeTo(_runningStateId);
-        _stateService.ChangeTo(_preLaunchStateId);
-
-        Assert.That(_target.HoldCallCount, Is.EqualTo(2));
-    }
-
-    [Test]
-    public void Initialize_NotPreLaunch_DoesNotHoldTarget()
-    {
-        var controller = CreateController();
-
-        ((IInitializable)controller).Initialize();
-
-        Assert.That(_target.HoldCallCount, Is.Zero);
-    }
-
-    [Test]
-    public void GameplayStateChanged_UnrelatedTransition_DoesNotHoldTarget()
-    {
-        var controller = CreateController();
-        ((IInitializable)controller).Initialize();
-
-        _stateService.ChangeTo(_runEndedStateId);
-
-        Assert.That(_target.HoldCallCount, Is.Zero);
-    }
-
-    [Test]
-    public void Dispose_AfterInitialize_UnsubscribesFromGameplayState()
-    {
-        var controller = CreateController();
-        ((IInitializable)controller).Initialize();
-        ((IDisposable)controller).Dispose();
-
-        _stateService.ChangeTo(_preLaunchStateId);
-
-        Assert.That(_target.HoldCallCount, Is.Zero);
     }
 
     [Test]
@@ -186,14 +118,14 @@ public sealed class SlingshotLaunchControllerTests
     }
 
     [Test]
-    public void Launch_ValidRequest_DoesNotRequestGameplayTransition()
+    public void Launch_ValidRequest_DoesNotHoldTarget()
     {
         var controller = CreateController();
         var request = CreateRequest(Vector3.forward, 8f, Vector3.up, 2f);
 
         controller.Launch(request);
 
-        Assert.That(_stateService.TryTransitionCallCount, Is.Zero);
+        Assert.That(_target.HoldCallCount, Is.Zero);
     }
 
     [Test]
@@ -210,7 +142,7 @@ public sealed class SlingshotLaunchControllerTests
 
     private SlingshotLaunchController CreateController()
     {
-        return new SlingshotLaunchController(_target, _target, _stateService, _preLaunchStateId);
+        return new SlingshotLaunchController(_target, _target);
     }
 
     private SlingshotLaunchRequest CreateRequest(Vector3 launchDirection, float launchSpeed, Vector3 launchUpDirection, float launchUpSpeed)
@@ -222,13 +154,6 @@ public sealed class SlingshotLaunchControllerTests
         Vector3 finalPullPoint)
     {
         return new SlingshotLaunchRequest(1f, 3f, 0f, finalPullPoint, launchDirection, launchSpeed, launchUpDirection, launchUpSpeed);
-    }
-
-    private GameplayStateId CreateStateId(string name)
-    {
-        var stateId = ScriptableObject.CreateInstance<GameplayStateId>();
-        stateId.name = name;
-        return stateId;
     }
 
     private sealed class FakeLaunchTarget : ILaunchTarget, IHeldLaunchTarget

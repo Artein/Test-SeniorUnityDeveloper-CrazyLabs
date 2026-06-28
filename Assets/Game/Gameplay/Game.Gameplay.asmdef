@@ -5,7 +5,7 @@
     "Game.Foundation",
     "Game.Gameplay.GameplayState",
     "Game.Gameplay.Slingshot",
-    "Game.Input.UnityInput",
+    "Game.Foundation.Input",
     "Game.Utils.Mathematics",
     "Unity.Cinemachine",
     "VContainer"

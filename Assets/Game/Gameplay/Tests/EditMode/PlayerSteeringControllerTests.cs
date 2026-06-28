@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
+using Game.Foundation.Input;
 using Game.Foundation.Screen;
 using Game.Foundation.Time;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Input.UnityInput;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;

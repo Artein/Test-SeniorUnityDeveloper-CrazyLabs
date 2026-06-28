@@ -1,4 +1,4 @@
-using Game.Input.UnityInput;
+using Game.Foundation.Input;
 using NUnit.Framework;
 using VContainer;
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Input.UnityInput;
+using Game.Foundation.Input;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -99,7 +99,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(5));
+        Assert.That(initializables.Count, Is.EqualTo(4));
         Assert.That(fixedTickables.Count, Is.EqualTo(1));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));

@@ -1,18 +1,25 @@
 {
-  "name": "Game.Input.UnityInput",
+  "name": "Game.Foundation.Input.Tests.EditMode",
   "rootNamespace": "",
   "references": [
-    "Game.Utils.Invocation",
+    "Game.Foundation.Input",
     "Unity.InputSystem",
     "VContainer"
   ],
-  "includePlatforms": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [],
   "autoReferenced": true,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

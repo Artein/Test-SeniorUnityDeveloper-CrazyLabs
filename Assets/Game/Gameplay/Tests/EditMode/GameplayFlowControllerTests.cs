@@ -35,6 +35,7 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
 
         var stateService = new FakeGameplayStateService(preLaunch, _observations)
@@ -42,14 +43,14 @@ public sealed class GameplayFlowControllerTests
             ShouldTransitionSucceed = true
         };
         var launcher = new FakeSlingshotLauncher(_observations);
-        using var controller = CreateInitializedController(notifier, stateService, launcher, running);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
 
         notifier.RequestLaunch(request);
 
         Assert.That(stateService.RequestedStateIds, Is.EqualTo(new[] { running }));
         Assert.That(launcher.LaunchRequests, Has.Count.EqualTo(1));
         Assert.That(launcher.LaunchRequests[0].LaunchSpeed, Is.EqualTo(request.LaunchSpeed));
-        Assert.That(_observations, Is.EqualTo(new[] { "transition", "launch" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "transition", "capture-disable", "launch" }));
     }
 
     [Test]
@@ -58,6 +59,7 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
 
         var stateService = new FakeGameplayStateService(preLaunch, _observations)
@@ -65,7 +67,7 @@ public sealed class GameplayFlowControllerTests
             ShouldTransitionSucceed = false
         };
         var launcher = new FakeSlingshotLauncher(_observations);
-        using var controller = CreateInitializedController(notifier, stateService, launcher, running);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
 
         notifier.RequestLaunch(request);
 
@@ -80,6 +82,7 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
 
         var stateService = new FakeGameplayStateService(preLaunch, _observations)
@@ -91,13 +94,13 @@ public sealed class GameplayFlowControllerTests
         {
             ThrowOnLaunch = true
         };
-        using var controller = CreateInitializedController(notifier, stateService, launcher, running);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
 
         Assert.That(
             () => notifier.RequestLaunch(request),
             Throws.TypeOf<InvalidOperationException>().With.Message.EqualTo("Launch failed"));
         Assert.That(stateService.RequestedStateIds, Is.EqualTo(new[] { running }));
-        Assert.That(_observations, Is.EqualTo(new[] { "transition", "launch" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "transition", "capture-disable", "launch" }));
     }
 
     [Test]
@@ -106,6 +109,7 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
 
         var stateService = new FakeGameplayStateService(preLaunch, _observations)
@@ -117,7 +121,7 @@ public sealed class GameplayFlowControllerTests
         {
             ThrowOnLaunch = true
         };
-        using var controller = CreateInitializedController(notifier, stateService, launcher, running);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
 
         Assert.That(
             () => notifier.RequestLaunch(request),
@@ -133,10 +137,11 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
         var stateService = new FakeGameplayStateService(preLaunch, _observations);
         var launcher = new FakeSlingshotLauncher(_observations);
-        using var controller = CreateInitializedController(notifier, stateService, launcher, running);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
 
         ((IDisposable)controller).Dispose();
         notifier.RequestLaunch(request);
@@ -153,10 +158,11 @@ public sealed class GameplayFlowControllerTests
         var running = CreateStateId("Running");
         var anotherRunning = CreateStateId("Another Running");
         var request = CreateLaunchRequest();
+        var capture = new FakeSlingshotCapture(_observations);
         var notifier = new FakeSlingshotLaunchNotifier();
         var stateService = new FakeGameplayStateService(preLaunch, _observations);
         var launcher = new FakeSlingshotLauncher(_observations);
-        using var controller = CreateInitializedController(notifier, stateService, launcher, anotherRunning);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, anotherRunning);
 
         notifier.RequestLaunch(request);
 
@@ -165,15 +171,103 @@ public sealed class GameplayFlowControllerTests
     }
 
     [Test]
+    public void Initialize_CurrentPreLaunch_EnablesSlingshotCapture()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(preLaunch, _observations);
+        var launcher = new FakeSlingshotLauncher(_observations);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running, false);
+
+        Assert.That(capture.EnableCallCount, Is.EqualTo(1));
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(_observations, Is.EqualTo(new[] { "capture-enable" }));
+    }
+
+    [Test]
+    public void Initialize_CurrentStateIsNotPreLaunch_LeavesSlingshotCaptureDisabled()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(running, _observations);
+        var launcher = new FakeSlingshotLauncher(_observations);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running, false);
+
+        Assert.That(capture.EnableCallCount, Is.Zero);
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(_observations, Is.Empty);
+    }
+
+    [Test]
+    public void GameplayStateChanged_EnteringPreLaunch_EnablesSlingshotCapture()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(running, _observations);
+        var launcher = new FakeSlingshotLauncher(_observations);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
+
+        stateService.ChangeTo(preLaunch);
+
+        Assert.That(capture.EnableCallCount, Is.EqualTo(1));
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(_observations, Is.EqualTo(new[] { "capture-enable" }));
+    }
+
+    [Test]
+    public void GameplayStateChanged_LeavingPreLaunch_DisablesSlingshotCapture()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(preLaunch, _observations);
+        var launcher = new FakeSlingshotLauncher(_observations);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
+
+        stateService.ChangeTo(running);
+
+        Assert.That(capture.EnableCallCount, Is.EqualTo(1));
+        Assert.That(capture.DisableCallCount, Is.EqualTo(1));
+        Assert.That(_observations, Is.EqualTo(new[] { "capture-disable" }));
+    }
+
+    [Test]
+    public void Dispose_WhenGameplayStateChangesAfterDispose_DoesNotToggleCapture()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(running, _observations);
+        var launcher = new FakeSlingshotLauncher(_observations);
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running);
+
+        ((IDisposable)controller).Dispose();
+        stateService.ChangeTo(preLaunch);
+
+        Assert.That(capture.EnableCallCount, Is.Zero);
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(_observations, Is.Empty);
+    }
+
+    [Test]
     public void Install_ContainerBuilt_RegistersGameplayFlowEntryPoint()
     {
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var builder = new ContainerBuilder();
+        builder.RegisterInstance(new FakeSlingshotCapture(_observations)).As<ISlingshotCapture>();
         builder.RegisterInstance(new FakeSlingshotLaunchNotifier()).As<ISlingshotLaunchNotifier>();
         builder.RegisterInstance(new FakeGameplayStateService(preLaunch, _observations)).As<IGameplayStateService>();
         builder.RegisterInstance(new FakeSlingshotLauncher(_observations)).As<ISlingshotLauncher>();
-        var installer = new GameplayFlowInstaller(running);
+        var installer = new GameplayFlowInstaller(preLaunch, running);
 
         installer.Install(builder);
 
@@ -184,13 +278,19 @@ public sealed class GameplayFlowControllerTests
     }
 
     private GameplayFlowController CreateInitializedController(
+        ISlingshotCapture capture,
         ISlingshotLaunchNotifier notifier,
         IGameplayStateService stateService,
         ISlingshotLauncher launcher,
-        GameplayStateId runningStateId)
+        GameplayStateId preLaunchStateId,
+        GameplayStateId runningStateId,
+        bool clearObservationsAfterInitialize = true)
     {
-        var controller = new GameplayFlowController(notifier, stateService, launcher, runningStateId);
+        var controller = new GameplayFlowController(capture, notifier, stateService, launcher, preLaunchStateId, runningStateId);
         ((IInitializable)controller).Initialize();
+
+        if (clearObservationsAfterInitialize)
+            _observations.Clear();
 
         return controller;
     }
@@ -271,6 +371,39 @@ public sealed class GameplayFlowControllerTests
             GameplayStateChanged?.Invoke(nextStateId, previousStateId);
 
             return true;
+        }
+
+        public void ChangeTo(GameplayStateId nextStateId)
+        {
+            var previousStateId = CurrentStateId;
+            GameplayStateChanging?.Invoke(nextStateId, previousStateId);
+            CurrentStateId = nextStateId;
+            GameplayStateChanged?.Invoke(nextStateId, previousStateId);
+        }
+    }
+
+    private sealed class FakeSlingshotCapture : ISlingshotCapture
+    {
+        private readonly List<string> _observations;
+
+        public int EnableCallCount { get; private set; }
+        public int DisableCallCount { get; private set; }
+
+        public FakeSlingshotCapture(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public void EnableCapture()
+        {
+            EnableCallCount += 1;
+            _observations.Add("capture-enable");
+        }
+
+        public void DisableCapture()
+        {
+            DisableCallCount += 1;
+            _observations.Add("capture-disable");
         }
     }
 

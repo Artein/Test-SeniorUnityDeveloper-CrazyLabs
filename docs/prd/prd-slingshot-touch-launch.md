@@ -38,7 +38,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 ## Unity Surfaces
 
 - Runtime assemblies and asmdefs:
-  - `Game.Input.UnityInput` for shared Unity Input infrastructure.
+  - `Game.Foundation.Input` for shared Unity Input infrastructure.
   - `Game.Gameplay.GameplayState` for reusable asset-backed Gameplay State mechanics.
   - `Game.Gameplay.Slingshot` for Slingshot input interpretation, launch request data, launch application, and shallow view contracts.
   - `Game.Gameplay` for game-specific Gameplay Flow composition between Slingshot and Gameplay State.
@@ -164,14 +164,15 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Lateral Pull Offset affects launch direction only. Backward Pull distance controls launch power.
 - Use a single Slingshot controller for first-slice Slingshot input gating, Pull interpretation, simple presentation commands, and launch notification.
   Defer extracting a separate presenter until visual responsibilities grow.
-- The Slingshot controller depends on Unity Input, Gameplay State, Slingshot view interfaces, Slingshot config, immutable Slingshot geometry, and an
-  input projector abstraction.
-- The Slingshot controller subscribes to Pointer Input once for its lifetime, but only enables capture and holds a Unity Input enable handle while
-  the current Gameplay State is Pre-Launch.
-- The Slingshot controller reacts to Gameplay State changed events, not changing events, so input side effects happen only after accepted
+- The Slingshot controller depends on Unity Input, Slingshot view interfaces, Slingshot config, immutable Slingshot geometry, launch target
+  interfaces, and an input projector abstraction. It does not depend on Gameplay State.
+- The Slingshot controller subscribes to Pointer Input once for its lifetime and exposes `ISlingshotCapture` so higher-level gameplay flow can enable
+  or disable capture.
+- Gameplay Flow reacts to Gameplay State changed events, not changing events, so Slingshot capture side effects happen only after accepted
   transitions.
-- On initialization, the Slingshot controller checks whether Gameplay State already is Pre-Launch and enables capture immediately if needed.
-- Each Pre-Launch re-entry creates a fresh Unity Input enable handle, resets capture state, and shows the Pull Hint.
+- On initialization, Gameplay Flow checks whether Gameplay State already is Pre-Launch and enables Slingshot capture immediately if needed.
+- Each Pre-Launch re-entry creates a fresh Unity Input enable handle through Slingshot capture, resets capture state, holds the Launch Target at Rest,
+  and shows the Pull Hint.
 - Leaving Pre-Launch without an accepted launch cancels any Active Pull, restores idle Band Shape, hides the Touch Indicator, disables capture, and
   disposes the input enable handle.
 - The accepted launch path clears Pull ownership and input capture without returning the held Launch Target to the Rest Point. The Launch Target
@@ -316,10 +317,10 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Gameplay Flow listens to `LaunchRequested`, requests transition to Running, and calls the Slingshot launcher only if the transition succeeds.
 - Gameplay Flow does not pre-validate launch requests, does not duplicate invalid transition logging, and does not rollback if launch application
   throws after a successful transition.
-- Gameplay Flow is configured with Running state id and lets Gameplay State service decide legality from the current state.
+- Gameplay Flow is configured with Pre-Launch and Running state ids and lets Gameplay State service decide transition legality from the current state.
+- Gameplay Flow enables Slingshot capture when entering Pre-Launch and disables Slingshot capture when leaving Pre-Launch.
 - Slingshot launch controller implements the launching boundary and exposes only `ISlingshotLauncher` to consumers.
-- Slingshot launch controller subscribes to Gameplay State and holds the Launch Target when entering Pre-Launch. It also holds immediately on
-  initialization if the game already starts in Pre-Launch.
+- Slingshot launch controller does not subscribe to Gameplay State and does not hold the Launch Target on state changes.
 - Slingshot launch controller does not authorize flow transitions. It assumes Gameplay Flow already accepted the transition before calling launch.
 - Slingshot launch controller validates launch request direction, speeds, Pull Point, and final velocity only at launch boundary. Invalid requests warn
   and skip.
@@ -350,8 +351,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   holding or silently no-oping.
 - Held positioning preserves the Launch Target's rotation in the first slice. The code should keep a TODO at the Launch Target boundary for future
   explicit rotation/orientation support if game feel later needs the target to face the launch direction.
-- SlingshotController does not position the held Launch Target during initialization or Pre-Launch state entry; it positions only from pointer
-  lifecycle handling after input capture begins, avoiding dependency on VContainer initializer order or Gameplay State subscriber order.
+- SlingshotController does not position the held Launch Target during initialization. `ISlingshotCapture.EnableCapture()` holds the Launch Target and
+  positions the authored Band Center at Rest before pointer capture can move it.
 - Rigidbody Launch Target is a shallow MonoBehaviour adapter over an explicitly assigned Rigidbody.
 - Rigidbody Launch Target uses `OnValidate` for missing reference authoring validation and production assertions before dereference.
 - Rigidbody Launch Target hold preserves previous kinematic state and constraints, sets kinematic true, and clears linear/angular velocity.
@@ -395,10 +396,11 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - Validator reports invalid Band Silhouette sample counts outside the supported range.
   - Validator reports invalid Band Wrap sample counts outside the supported odd range, including even values.
 - Slingshot EditMode tests:
-  - Initialization while already Pre-Launch enables capture and input.
-  - Entering and leaving Pre-Launch acquire/dispose input handles and update view state in the expected order.
-  - Leaving Pre-Launch cancels Active Pull and returns visuals to idle before input handle disposal.
-  - Disposal unsubscribes from input and state events.
+  - Direct capture enable after initialization holds the target, acquires input, and shows capture idle.
+  - Repeated capture enable/disable calls are idempotent while the controller is initialized and not disposed.
+  - Capture disable cancels Active Pull and returns visuals to idle before input handle disposal.
+  - Capture calls before initialization or after disposal fail fast.
+  - Disposal unsubscribes from input events and disposes any active input handle.
   - Screen-space Band Touch Target accepts nearby presses against the visible rest Band polyline and rejects distant presses.
   - Active Pull captures only the first pointer and ignores others.
   - Pull projection failure cancels the Pull.
@@ -430,13 +432,13 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
   - During Band Release Recoil, the Band continues requesting the natural Band Shape from the moving Launch Target silhouette.
   - Failed recoil Band Shape solve continues interpolating from the last valid live shape toward rest.
   - Band Release Recoil detaches from the Launch Target when the Band reaches the rest/idle/default shape.
-  - Initialization and Pre-Launch state entry do not call held target positioning.
+  - Initialization alone does not call held target positioning; `ISlingshotCapture.EnableCapture()` holds and positions the target at Rest.
   - Valid Pull Release raises a launch request with expected normalized power, Pull distance, Pull Offset, Pull Point world position, direction,
     speed, and lift.
   - Touch Indicator screen position follows the projected clamped Pull Point, not the raw finger.
-- Slingshot tests should use local fakes for Unity Input, Gameplay State, Slingshot view, input projector, and launcher dependencies.
+- Slingshot tests should use local fakes for Unity Input, Slingshot view, input projector, launch target, Band Shape provider, and launcher
+  dependencies.
 - Slingshot launch EditMode tests:
-  - Target is held on initial Pre-Launch and every Pre-Launch re-entry.
   - Valid launch request positions the held Launch Target at the request's final Pull Point before launching.
   - Valid launch request computes final velocity and calls target launch.
   - Invalid request, invalid Pull Point, or invalid final velocity warns and skips held target positioning and target launch.
@@ -487,7 +489,7 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - This feature does not introduce `com.unity.logging`; structured logging remains a future ADR-backed refactor.
 - This feature adds new asmdefs and test asmdefs; dependencies must remain acyclic:
   - Unity Input must not depend on Slingshot or Gameplay State.
-  - Slingshot may depend on Unity Input and Gameplay State.
+  - Slingshot may depend on Unity Input, but must not depend on Gameplay State or root Gameplay composition.
   - Gameplay Flow may depend on Slingshot and Gameplay State.
   - Generic Gameplay State must not depend on Slingshot or Gameplay Flow.
 - Backward compatibility risk is low because the repo currently has no gameplay C# source or asmdefs, but scene serialization and package changes

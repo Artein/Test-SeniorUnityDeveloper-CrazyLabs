@@ -1,7 +1,7 @@
 using System;
 using Game.Utils.Invocation;
 
-namespace Game.Input.UnityInput
+namespace Game.Foundation.Input
 {
     public interface IEnhancedTouchSupportApi
     {

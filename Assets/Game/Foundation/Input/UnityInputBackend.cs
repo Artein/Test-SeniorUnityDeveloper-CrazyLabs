@@ -8,7 +8,7 @@ using UnityEngine.InputSystem.LowLevel;
 using InputTouchPhase = UnityEngine.InputSystem.TouchPhase;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
-namespace Game.Input.UnityInput
+namespace Game.Foundation.Input
 {
     internal interface IUnityInputBackend : IDisposable
     {
