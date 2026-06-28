@@ -31,6 +31,8 @@ public sealed class GameplaySceneCompositionTests
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
         var playerSteeringTarget = FindSingleInScene<RigidbodyPlayerSteeringTarget>(activeScene, "RigidbodyPlayerSteeringTarget");
         var runCameraSource = FindSingleInScene<RigidbodyRunCameraSource>(activeScene, "RigidbodyRunCameraSource");
+        var contactNotifier = FindSingleInScene<RigidbodyContactNotifier>(activeScene, "RigidbodyContactNotifier");
+        var runProgressFrameSource = FindSingleInScene<RunProgressFrameSource>(activeScene, "RunProgressFrameSource");
         var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, "Run Camera Rig");
         var mainCamera = FindSingleInScene<Camera>(activeScene, "Main Camera");
@@ -41,6 +43,11 @@ public sealed class GameplaySceneCompositionTests
         var decollider = runCamera.GetComponent<CinemachineDecollider>();
         var deoccluder = runCamera.GetComponent<CinemachineDeoccluder>();
         var surface = FindGameObjectByName(activeScene, "Surface");
+        var surfaceContact = surface.GetComponent<RunContact>();
+        var runContactsRoot = FindGameObjectByName(activeScene, "Run Contacts");
+        var runFinish = FindGameObjectByName(activeScene, "Run Finish");
+        var runSafetyNet = FindGameObjectByName(activeScene, "Run Safety Net");
+        var runObstacle = FindGameObjectByName(activeScene, "Run Obstacle");
         var canvas = FindSingleInScene<Canvas>(activeScene, "Gameplay UI Canvas");
         var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
         var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
@@ -54,11 +61,20 @@ public sealed class GameplaySceneCompositionTests
         var resolvedPlayerSteeringTarget = lifetimeScope.Container.Resolve<IPlayerSteeringTarget>();
         var playerSteeringConfig = lifetimeScope.Container.Resolve<IPlayerSteeringConfig>();
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
+        var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
+        var resolvedRunProgressFrameSource = lifetimeScope.Container.Resolve<IRunProgressFrameSource>();
+        var resolvedContactNotifier = lifetimeScope.Container.Resolve<IRigidbodyContactNotifier>();
+        var resolvedRunEndConfig = lifetimeScope.Container.Resolve<IRunEndConfig>();
+        var resolvedRunProgressService = lifetimeScope.Container.Resolve<IRunProgressService>();
+        var resolvedRunContactClassifier = lifetimeScope.Container.Resolve<IRunContactClassifier>();
+        var resolvedRunEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
         var resolvedRunCameraAnchor = lifetimeScope.Container.Resolve<IRunCameraAnchor>();
         var resolvedRunCameraRig = lifetimeScope.Container.Resolve<IRunCameraRig>();
         var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
         var assignedPlayerSteeringConfigs = GetAssignedPlayerSteeringConfigs(activeScene);
         var assignedRunCameraConfigs = GetAssignedRunCameraConfigs(activeScene);
+        var assignedRunEndConfigs = GetAssignedRunEndConfigs(activeScene);
+        var assignedRunProgressFrameSources = GetAssignedRunProgressFrameSources(activeScene);
         var cameraTerrainLayer = LayerMask.NameToLayer("CameraTerrain");
         var cameraObstacleLayer = LayerMask.NameToLayer("CameraObstacle");
         var bandShapeOutput = new Vector3[bandShapeProvider.BandShapePointCount];
@@ -77,6 +93,8 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(activeScene.buildIndex, Is.EqualTo(_gameplaySceneBuildIndex));
         Assert.That(lifetimeScope, Is.Not.Null);
         Assert.That(runCameraSource, Is.Not.Null);
+        Assert.That(contactNotifier, Is.Not.Null);
+        Assert.That(runProgressFrameSource, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.Not.Null);
         Assert.That(runCameraRig, Is.Not.Null);
         Assert.That(brain, Is.Not.Null);
@@ -91,6 +109,9 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(cameraTerrainLayer, Is.GreaterThanOrEqualTo(0));
         Assert.That(cameraObstacleLayer, Is.GreaterThanOrEqualTo(0));
         Assert.That(surface.layer, Is.EqualTo(cameraTerrainLayer));
+        Assert.That(runObstacle.layer, Is.EqualTo(cameraObstacleLayer));
+        Assert.That(surfaceContact, Is.Not.Null);
+        Assert.That(surfaceContact.Category, Is.EqualTo(RunContactCategory.Surface));
         Assert.That(decollider.TerrainResolution.Enabled, Is.True);
         Assert.That(decollider.TerrainResolution.TerrainLayers.value, Is.EqualTo(1 << cameraTerrainLayer));
         Assert.That(decollider.Decollision.Enabled, Is.True);
@@ -104,21 +125,43 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(playerRigidbody, Is.Not.Null);
         Assert.That(runCameraSource.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
         Assert.That(playerSteeringTarget.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
+        Assert.That(contactNotifier.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
         Assert.That(resolvedPlayerSteeringTarget, Is.SameAs(playerSteeringTarget));
         Assert.That(resolvedRunCameraSource, Is.SameAs(runCameraSource));
+        Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
+        Assert.That(resolvedRunProgressFrameSource, Is.SameAs(runProgressFrameSource));
+        Assert.That(resolvedContactNotifier, Is.SameAs(contactNotifier));
+        Assert.That(resolvedRunEndConfig, Is.SameAs(assignedRunEndConfigs[0]));
+        Assert.That(resolvedRunProgressService, Is.Not.Null);
+        Assert.That(resolvedRunContactClassifier, Is.Not.Null);
+        Assert.That(resolvedRunEndCandidateReceiver, Is.Not.Null);
         Assert.That(resolvedRunCameraAnchor, Is.SameAs(runCameraAnchor));
         Assert.That(resolvedRunCameraRig, Is.SameAs(runCameraRig));
         Assert.That(((IPlayerSteeringTarget)playerSteeringTarget).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
+        Assert.That(((IRunMotionSource)runCameraSource).Position, Is.EqualTo(playerRigidbody.position));
+        Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(bandShapeSolved, Is.True);
         Assert.That(bandShapePointCount, Is.EqualTo(bandShapeProvider.BandShapePointCount));
         Assert.That(bandShapePointCount, Is.GreaterThan(3));
         Assert.That(assignedPlayerSteeringConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunCameraConfigs, Has.Length.EqualTo(1));
+        Assert.That(assignedRunEndConfigs, Has.Length.EqualTo(1));
+        Assert.That(assignedRunProgressFrameSources, Has.Length.EqualTo(1));
         Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
         Assert.That(playerSteeringConfig, Is.Not.Null);
         Assert.That(runCameraConfig, Is.Not.Null);
+        Assert.That(resolvedRunEndConfig, Is.Not.Null);
+        Assert.That(runProgressFrameSource.TryCreateSnapshot(playerRigidbody.position, out var frameSnapshot, out var frameError), Is.True, frameError);
+        Assert.That(frameSnapshot.ForwardDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(frameSnapshot.RightDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(frameSnapshot.UpDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
+        AssertRunContactPlaceholder(runContactsRoot, runFinish, RunContactCategory.Finish, true);
+        AssertRunContactPlaceholder(runContactsRoot, runSafetyNet, RunContactCategory.SafetyNet, true);
+        AssertRunContactPlaceholder(runContactsRoot, runObstacle, RunContactCategory.Obstacle, false);
+        Assert.That(Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
+        Assert.That(Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(bandCenter.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
@@ -460,6 +503,24 @@ public sealed class GameplaySceneCompositionTests
             .ToArray();
     }
 
+    private RunEndConfig[] GetAssignedRunEndConfigs(Scene scene)
+    {
+        return FindComponentsInScene<GameplayLifetimeScope>(scene)
+            .Select(lifetimeScope => lifetimeScope.RunEndConfigForTests)
+            .Where(config => config != null)
+            .Distinct()
+            .ToArray();
+    }
+
+    private RunProgressFrameSource[] GetAssignedRunProgressFrameSources(Scene scene)
+    {
+        return FindComponentsInScene<GameplayLifetimeScope>(scene)
+            .Select(lifetimeScope => lifetimeScope.RunProgressFrameSourceForTests)
+            .Where(source => source != null)
+            .Distinct()
+            .ToArray();
+    }
+
     private GameObject FindGameObjectByName(Scene scene, string objectName)
     {
         if (TryFindGameObjectByName(scene, objectName, out var gameObject))
@@ -495,6 +556,24 @@ public sealed class GameplaySceneCompositionTests
 
         Assert.That(colliders, Has.Length.EqualTo(1));
         return colliders[0];
+    }
+
+    private void AssertRunContactPlaceholder(
+        GameObject runContactsRoot,
+        GameObject placeholder,
+        RunContactCategory expectedCategory,
+        bool expectTrigger)
+    {
+        Assert.That(placeholder.transform.IsChildOf(runContactsRoot.transform), Is.True, placeholder.name);
+
+        var collider = placeholder.GetComponent<Collider>();
+        var contact = placeholder.GetComponent<RunContact>();
+
+        Assert.That(collider, Is.Not.Null, placeholder.name);
+        Assert.That(collider.isTrigger, Is.EqualTo(expectTrigger), placeholder.name);
+        Assert.That(contact, Is.Not.Null, placeholder.name);
+        Assert.That(contact.Category, Is.EqualTo(expectedCategory), placeholder.name);
+        Assert.That(contact.gameObject, Is.SameAs(collider.gameObject), placeholder.name);
     }
 
     private void AssertPoleFramesAnchor(GameObject pole, Transform anchor, Vector3 anchorPosition, string poleName)

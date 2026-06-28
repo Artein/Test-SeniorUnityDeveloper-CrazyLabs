@@ -87,11 +87,11 @@ namespace Game.Gameplay.Slingshot
 
             _geometry = _view.CreateGeometrySnapshot();
             InitializeBandShapeBuffers();
-            _unityInput.PointerPressed += HandlePointerPressed;
-            _unityInput.PointerMoved += HandlePointerMoved;
-            _unityInput.PointerReleased += HandlePointerReleased;
-            _unityInput.PointerCanceled += HandlePointerCanceled;
-            _launchAppliedNotifier.LaunchApplied += HandleLaunchApplied;
+            _unityInput.PointerPressed += OnInputPointerPressed;
+            _unityInput.PointerMoved += OnInputPointerMoved;
+            _unityInput.PointerReleased += OnInputPointerReleased;
+            _unityInput.PointerCanceled += OnInputPointerCanceled;
+            _launchAppliedNotifier.LaunchApplied += OnSlingshotLaunchApplied;
             _isInitialized = true;
         }
 
@@ -110,11 +110,11 @@ namespace Game.Gameplay.Slingshot
 
             _isDisposed = true;
 
-            _unityInput.PointerPressed -= HandlePointerPressed;
-            _unityInput.PointerMoved -= HandlePointerMoved;
-            _unityInput.PointerReleased -= HandlePointerReleased;
-            _unityInput.PointerCanceled -= HandlePointerCanceled;
-            _launchAppliedNotifier.LaunchApplied -= HandleLaunchApplied;
+            _unityInput.PointerPressed -= OnInputPointerPressed;
+            _unityInput.PointerMoved -= OnInputPointerMoved;
+            _unityInput.PointerReleased -= OnInputPointerReleased;
+            _unityInput.PointerCanceled -= OnInputPointerCanceled;
+            _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
 
             _hasActivePointer = false;
             _isCaptureEnabled = false;
@@ -197,7 +197,7 @@ namespace Game.Gameplay.Slingshot
             inputEnableHandle.Dispose();
         }
 
-        private void HandlePointerPressed(PointerInput pointerInput)
+        private void OnInputPointerPressed(PointerInput pointerInput)
         {
             if (!_isCaptureEnabled
                 || _isLaunchHandoffPending
@@ -216,7 +216,7 @@ namespace Game.Gameplay.Slingshot
             _view.ShowActivePull(pullVisual);
         }
 
-        private void HandlePointerMoved(PointerInput pointerInput)
+        private void OnInputPointerMoved(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;
@@ -230,7 +230,7 @@ namespace Game.Gameplay.Slingshot
             _view.ShowActivePull(pullVisual);
         }
 
-        private void HandlePointerReleased(PointerInput pointerInput)
+        private void OnInputPointerReleased(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;
@@ -261,7 +261,7 @@ namespace Game.Gameplay.Slingshot
             LaunchRequested?.InvokeSafely(launchRequest);
         }
 
-        private void HandlePointerCanceled(PointerInput pointerInput)
+        private void OnInputPointerCanceled(PointerInput pointerInput)
         {
             if (!IsActivePointer(pointerInput))
                 return;
@@ -269,7 +269,7 @@ namespace Game.Gameplay.Slingshot
             CancelActivePullToCaptureIdle();
         }
 
-        private void HandleLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
         {
             if (!_isLaunchHandoffPending)
                 return;

@@ -2,11 +2,11 @@ using UnityEngine;
 
 namespace Game.Gameplay
 {
-    public sealed partial class RigidbodyRunCameraSource : MonoBehaviour, IRunCameraSource
+    public sealed partial class RigidbodyRunCameraSource : MonoBehaviour, IRunCameraSource, IRunMotionSource
     {
         [SerializeField] private Rigidbody _rigidbody;
 
-        Vector3 IRunCameraSource.Position
+        public Vector3 Position
         {
             get
             {
@@ -15,7 +15,7 @@ namespace Game.Gameplay
             }
         }
 
-        Vector3 IRunCameraSource.LinearVelocity
+        public Vector3 LinearVelocity
         {
             get
             {
