@@ -27,6 +27,7 @@ namespace Game.Gameplay.Slingshot
         private readonly ILaunchTarget _launchTarget;
         private readonly IHeldLaunchTarget _heldLaunchTarget;
         private readonly ISlingshotBandShapeProvider _bandShapeProvider;
+        private readonly ISlingshotBandShapeDepthProvider _bandShapeDepthProvider;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
@@ -69,6 +70,11 @@ namespace Game.Gameplay.Slingshot
             _launchTarget = launchTarget ?? throw new ArgumentNullException(nameof(launchTarget));
             _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
             _bandShapeProvider = bandShapeProvider ?? throw new ArgumentNullException(nameof(bandShapeProvider));
+
+            _bandShapeDepthProvider = bandShapeProvider as ISlingshotBandShapeDepthProvider
+                                      ?? throw new ArgumentException(
+                                          "Slingshot Band Shape provider must support silhouette depth spans.",
+                                          nameof(bandShapeProvider));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -284,7 +290,7 @@ namespace Game.Gameplay.Slingshot
             _releaseRecoilElapsed += Mathf.Max(0f, _clock.DeltaTime);
             var normalizedTime = Mathf.Clamp01(_releaseRecoilElapsed / _config.BandRecoilDuration);
 
-            if (normalizedTime >= 1f && IsDetachedRestBandShapeClear())
+            if (IsDetachedRestBandShapeClear() && HasTargetSilhouettePassedRestBandShape())
             {
                 _isReleaseRecoilActive = false;
                 _view.ShowInactiveIdle(CreateDetachedRestBandShape());

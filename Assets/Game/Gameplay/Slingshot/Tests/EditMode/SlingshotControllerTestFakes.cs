@@ -194,7 +194,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         }
     }
 
-    internal sealed class FakeSlingshotBandShapeProvider : ISlingshotBandShapeProvider
+    internal sealed class FakeSlingshotBandShapeProvider : ISlingshotBandShapeProvider, ISlingshotBandShapeDepthProvider
     {
         private readonly List<string> _observations;
 
@@ -202,12 +202,17 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
 
         public List<SlingshotBandShapeQuery> Queries { get; } = new();
         public List<SlingshotBandShapeQuery> ClearanceQueries { get; } = new();
+        public List<SlingshotBandShapeQuery> DepthSpanQueries { get; } = new();
         public List<Vector3[]> ClearanceBandShapes { get; } = new();
         public List<float> ClearanceRadii { get; } = new();
+        public Queue<bool> ClearanceResults { get; } = new();
         public bool ShouldFail { get; set; }
         public bool ShouldFailActivePullOnly { get; set; }
         public bool ShouldFailClearance { get; set; }
+        public bool ShouldFailDepthSpan { get; set; }
         public bool IsBandShapeClear { get; set; } = true;
+        public float SilhouetteMinimumDepth { get; set; } = -0.25f;
+        public float SilhouetteMaximumDepth { get; set; } = -0.1f;
 
         public Vector3[] ShapePoints { get; set; } =
         {
@@ -281,7 +286,27 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
                 return false;
             }
 
-            isClear = IsBandShapeClear;
+            isClear = ClearanceResults.Count > 0
+                ? ClearanceResults.Dequeue()
+                : IsBandShapeClear;
+
+            return true;
+        }
+
+        public bool TryGetSilhouetteDepthSpan(SlingshotBandShapeQuery query, out float minimumDepth, out float maximumDepth)
+        {
+            DepthSpanQueries.Add(query);
+            _observations.Add("band-depth-span");
+
+            if (ShouldFailDepthSpan)
+            {
+                minimumDepth = 0f;
+                maximumDepth = 0f;
+                return false;
+            }
+
+            minimumDepth = SilhouetteMinimumDepth;
+            maximumDepth = SilhouetteMaximumDepth;
             return true;
         }
     }

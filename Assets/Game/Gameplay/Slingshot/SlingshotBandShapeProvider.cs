@@ -19,7 +19,15 @@ namespace Game.Gameplay.Slingshot
             out bool isClear);
     }
 
-    public sealed class SlingshotBandShapeProvider : ISlingshotBandShapeProvider
+    internal interface ISlingshotBandShapeDepthProvider
+    {
+        bool TryGetSilhouetteDepthSpan(
+            SlingshotBandShapeQuery query,
+            out float minimumDepth,
+            out float maximumDepth);
+    }
+
+    public sealed class SlingshotBandShapeProvider : ISlingshotBandShapeProvider, ISlingshotBandShapeDepthProvider
     {
         private readonly ILaunchTargetSilhouetteSource _silhouetteSource;
         private readonly ISlingshotConfig _config;
@@ -123,6 +131,33 @@ namespace Game.Gameplay.Slingshot
 
             isClear = _clearance.IsClear(_clearanceBandShapePoints, bandShapePoints.Count, _solverSilhouetteSamples, silhouetteSampleCount,
                 clearanceRadius);
+            return true;
+        }
+
+        bool ISlingshotBandShapeDepthProvider.TryGetSilhouetteDepthSpan(
+            SlingshotBandShapeQuery query,
+            out float minimumDepth,
+            out float maximumDepth)
+        {
+            minimumDepth = 0f;
+            maximumDepth = 0f;
+
+            if (!IsValidQuery(query))
+                throw new ArgumentException("Invalid Slingshot Band Shape query.", nameof(query));
+
+            if (!TryWriteSilhouetteSamplesToPullPlane(query, out var silhouetteSampleCount))
+                return false;
+
+            minimumDepth = float.PositiveInfinity;
+            maximumDepth = float.NegativeInfinity;
+
+            for (var sampleIndex = 0; sampleIndex < silhouetteSampleCount; sampleIndex += 1)
+            {
+                var depth = _solverSilhouetteSamples[sampleIndex].y;
+                minimumDepth = Mathf.Min(minimumDepth, depth);
+                maximumDepth = Mathf.Max(maximumDepth, depth);
+            }
+
             return true;
         }
 

@@ -47,24 +47,78 @@ namespace Game.Gameplay.Slingshot
 
         private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
         {
-            var recoilPullPoint = Vector3.Lerp(_pendingLaunchRequest.FinalPullPoint, _geometry.RestPoint, progress);
+            var recoilPullPoint = GetReleaseRecoilPullPoint(progress, out var wasDepthClamped);
 
-            if (TryUpdateTautActiveBandShape(recoilPullPoint))
+            if (wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint))
                 return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
+
+            if (TryUpdateTautActiveBandShape(recoilPullPoint)
+                || (!wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint)))
+            {
+                return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
+            }
 
             return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
         }
 
+        private Vector3 GetReleaseRecoilPullPoint(float progress, out bool wasDepthClamped)
+        {
+            wasDepthClamped = false;
+            var recoilPullPoint = Vector3.Lerp(_pendingLaunchRequest.FinalPullPoint, _geometry.RestPoint, progress);
+
+            if (!_bandShapeDepthProvider.TryGetSilhouetteDepthSpan(
+                    CreateBandShapeQuery(_geometry.RestPoint),
+                    out _,
+                    out var maximumDepth))
+            {
+                return recoilPullPoint;
+            }
+
+            var currentDepth = GetPullDistance(recoilPullPoint);
+            var minimumClearDepth = Mathf.Max(0f, maximumDepth + _view.VisibleBandRadius + _config.BandContactPadding);
+
+            if (currentDepth >= minimumClearDepth)
+                return recoilPullPoint;
+
+            wasDepthClamped = true;
+            return recoilPullPoint - (_geometry.LaunchFrameForward * (minimumClearDepth - currentDepth));
+        }
+
+        private bool TryUpdateClearSimpleReleaseRecoilBandShape(Vector3 pullPoint)
+        {
+            FillSimpleBandShapeBuffer(_inactiveActiveBandShapeBuffer, pullPoint);
+            var candidateBandShape = new SlingshotBandShape(_inactiveActiveBandShapeBuffer, true);
+
+            if (!IsBandShapeClear(candidateBandShape, pullPoint))
+                return false;
+
+            (_currentActiveBandShapeBuffer, _inactiveActiveBandShapeBuffer) = (_inactiveActiveBandShapeBuffer, _currentActiveBandShapeBuffer);
+            _hasLastValidActiveBandShape = true;
+            return true;
+        }
+
         private bool IsDetachedRestBandShapeClear()
         {
-            var detachedRestBandShape = CreateDetachedRestBandShape();
+            return IsBandShapeClear(CreateDetachedRestBandShape(), _geometry.RestPoint);
+        }
 
+        private bool IsBandShapeClear(SlingshotBandShape bandShape, Vector3 pullPoint)
+        {
             return _bandShapeProvider.TryCheckBandShapeClearance(
-                       CreateBandShapeQuery(_geometry.RestPoint),
-                       detachedRestBandShape.Points,
+                       CreateBandShapeQuery(pullPoint),
+                       bandShape.Points,
                        _view.VisibleBandRadius,
                        out var isClear)
                    && isClear;
+        }
+
+        private bool HasTargetSilhouettePassedRestBandShape()
+        {
+            return _bandShapeDepthProvider.TryGetSilhouetteDepthSpan(
+                       CreateBandShapeQuery(_geometry.RestPoint),
+                       out _,
+                       out var maximumDepth)
+                   && maximumDepth <= -_view.VisibleBandRadius;
         }
 
         private SlingshotBandShape CreateDetachedRestBandShape()

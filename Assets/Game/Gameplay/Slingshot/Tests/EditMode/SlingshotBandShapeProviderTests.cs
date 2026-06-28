@@ -148,6 +148,24 @@ public sealed class SlingshotBandShapeProviderTests
         Assert.That(isClear, Is.False);
     }
 
+    [Test]
+    public void TryGetSilhouetteDepthSpan_ValidSamples_ReturnsPullPlaneDepthRange()
+    {
+        var source = new FakeLaunchTargetSilhouetteSource(
+            new Vector3(-1f, 0f, 1f),
+            new Vector3(1f, 0f, 1f),
+            new Vector3(1f, 0f, -2f),
+            new Vector3(-1f, 0f, -2f));
+        ISlingshotBandShapeDepthProvider provider = new SlingshotBandShapeProvider(source, CreateValidConfig());
+
+        var gotDepthSpan = provider.TryGetSilhouetteDepthSpan(CreateQuery(), out var minimumDepth, out var maximumDepth);
+
+        Assert.That(gotDepthSpan, Is.True);
+        Assert.That(minimumDepth, Is.EqualTo(-1f).Within(0.0001f));
+        Assert.That(maximumDepth, Is.EqualTo(2f).Within(0.0001f));
+        Assert.That(source.Queries, Is.EqualTo(1));
+    }
+
     private FakeSlingshotConfig CreateValidConfig()
     {
         return new FakeSlingshotConfig

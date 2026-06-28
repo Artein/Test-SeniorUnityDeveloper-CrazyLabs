@@ -412,7 +412,7 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
-    public void LaunchApplied_RecoilTick_UsesLiveBandShapeProviderInsteadOfInterpolatingThroughRest()
+    public void LaunchApplied_RecoilClearanceBlocked_UsesLiveBandShapeProviderInsteadOfInterpolatingThroughRest()
     {
         using var controller = CreateInitializedController();
         StartActivePull(1);
@@ -431,18 +431,19 @@ public sealed class SlingshotControllerTests
 
         _input.Release(1, releaseScreenPosition);
         _observations.Clear();
+        _bandShapeProvider.IsBandShapeClear = false;
         _launchAppliedNotifier.Apply(launchRequest);
         ((ITickable)controller).Tick();
 
         var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
         Assert.That(wasLaunchRequested, Is.True);
-        Assert.That(_observations, Is.EqualTo(new[] { "band-shape", "view-loaded-release" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-shape", "view-loaded-release" }));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
         AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
     }
 
     [Test]
-    public void LaunchApplied_RecoilTick_WhenRecoilPullPointIsNearRest_UsesLiveBandShapeProvider()
+    public void LaunchApplied_RecoilClearanceBlocked_WhenRecoilPullPointIsNearRest_UsesLiveBandShapeProvider()
     {
         using var controller = CreateInitializedController();
         StartActivePull(1);
@@ -456,11 +457,12 @@ public sealed class SlingshotControllerTests
 
         _input.Release(1, releaseScreenPosition);
         _observations.Clear();
+        _bandShapeProvider.IsBandShapeClear = false;
         _launchAppliedNotifier.Apply(launchRequest);
         ((ITickable)controller).Tick();
 
         var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
-        Assert.That(_observations, Is.EqualTo(new[] { "band-shape", "view-loaded-release" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-shape", "view-loaded-release" }));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
         AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
     }
@@ -479,6 +481,7 @@ public sealed class SlingshotControllerTests
         controller.LaunchRequested += request => launchRequest = request;
 
         _input.Release(1, releaseScreenPosition);
+        _bandShapeProvider.IsBandShapeClear = false;
         _launchAppliedNotifier.Apply(launchRequest);
         ((ITickable)controller).Tick();
 
@@ -491,8 +494,73 @@ public sealed class SlingshotControllerTests
 
         ((ITickable)controller).Tick();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-shape", "view-loaded-release" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-shape", "band-clearance", "view-loaded-release" }));
         AssertBandShapeEquals(_view.LastBandShape, expectedLastValidShape);
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilSolveFailsBeforeClearance_UsesClearSimpleRecoilFallback()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        var finalPullPoint = new Vector3(0.5f, 0f, -1f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(75f, 10f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        _bandShapeProvider.ShouldFail = true;
+        _bandShapeProvider.ClearanceResults.Enqueue(false);
+        _bandShapeProvider.ClearanceResults.Enqueue(true);
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-shape", "band-clearance", "view-loaded-release" }));
+        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        Assert.That(_bandShapeProvider.ClearanceQueries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, GetExpectedSimpleBandVisualCenterPoint(expectedRecoilPullPoint));
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilDepthClampedAndSimpleBandClear_UsesClearSimpleRecoilBeforeTautWrap()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(65f, 45f);
+        var finalPullPoint = new Vector3(0.2f, 0f, -0.3f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(65f, 5f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        _bandShapeProvider.SilhouetteMaximumDepth = 0.2f;
+        _bandShapeProvider.ClearanceResults.Enqueue(false);
+        _bandShapeProvider.ClearanceResults.Enqueue(true);
+        var queryCountBeforeRecoil = _bandShapeProvider.Queries.Count;
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        var rawRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
+        var minimumClearDepth = _bandShapeProvider.SilhouetteMaximumDepth + _view.VisibleBandRadius + _config.BandContactPadding;
+        var currentDepth = -Vector3.Dot(rawRecoilPullPoint - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameForward);
+
+        var expectedRecoilPullPoint = rawRecoilPullPoint
+                                      - (_view.Geometry.LaunchFrameForward
+                                         * (minimumClearDepth - currentDepth));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-clearance", "view-loaded-release" }));
+        Assert.That(_bandShapeProvider.Queries, Has.Count.EqualTo(queryCountBeforeRecoil));
+        Assert.That(_bandShapeProvider.ClearanceQueries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, GetExpectedSimpleBandVisualCenterPoint(expectedRecoilPullPoint));
     }
 
     [Test]
