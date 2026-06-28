@@ -4,6 +4,7 @@
   "references": [
     "Game.Foundation",
     "Game.Gameplay.GameplayState",
+    "Game.Gameplay.Pickups",
     "Game.Gameplay",
     "Game.Gameplay.Slingshot",
     "Game.Foundation.Input",

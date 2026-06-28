@@ -15,8 +15,8 @@ TagManager:
   - 
   - CameraTerrain
   - CameraObstacle
-  - 
-  - 
+  - Player
+  - Pickup
   - 
   - 
   - 
