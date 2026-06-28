@@ -114,7 +114,8 @@ _Avoid_: Rope physics, band simulation
 
 **Band Release Recoil**:
 The post-shot visual phase where the **Band** follows the moving **Launch Target** contact points while returning from the loaded **Band Shape** to
-the rest/idle/default shape. When the **Band** reaches that rest shape, it detaches and stops following the **Launch Target**.
+the rest/idle/default shape. It detaches only once that rest shape is clear of the current **Launch Target Silhouette**, including visible **Band**
+thickness.
 _Avoid_: Snap back, leash
 
 **Band Wrap**:
@@ -136,8 +137,8 @@ _Avoid_: Wrap midpoint, contact midpoint
 **Rest Point**:
 The **Slingshot**-owned position where the **Band** and held **Launch Target** return when no **Active Pull** is loaded.
 On a valid **Launch**, the **Launch Target** launches from the loaded **Pull Point** first; the **Band** returns toward the **Rest Point** only as
-post-shot **Band Release Recoil**. During that recoil, the **Band** keeps following the moving **Launch Target** contact points until it reaches
-the rest/idle/default shape, then detaches.
+post-shot **Band Release Recoil**. During that recoil, the **Band** keeps following the moving **Launch Target** contact points until the
+rest/idle/default shape is clear of the current **Launch Target Silhouette**, then detaches.
 _Avoid_: Player initial position, spawn point
 
 **Touch Indicator**:
@@ -244,7 +245,9 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - An ended **Active Pull** may return a held **Launch Target** to the **Rest Point**.
 - An accepted **Pull Release** keeps the **Band Shape** loaded through launch handoff, then enters **Band Release Recoil**.
 - During **Band Release Recoil**, the **Band** updates **Band Contact Points** and **Band Wrap** from the current **Launch Target Silhouette** until
-  it reaches the rest/idle/default shape; after that, it detaches and must not keep chasing the **Launch Target**.
+  the rest/idle/default **Band Shape** is clear of that silhouette; after that, it detaches and must not keep chasing the **Launch Target**.
+- During **Band Release Recoil**, the **Pulled Side** relaxes from the launch **Pull Point** toward the **Rest Point**, while **Band Contact Points**
+  follow the current **Launch Target Silhouette**.
 - A **Pull** may have a **Pull Offset**.
 - A **Slingshot** owns one **Launch Frame**.
 - A **Launch Frame** has perpendicular unit right, forward, and up axes.
@@ -266,7 +269,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 > **Domain expert:** "No — the loaded **Band Shape** stays through launch handoff; after the shot, the **Band** moves back toward the **Rest Point** alongside the **Launch Target** leaving the **Slingshot**."
 
 > **Dev:** "During post-shot recoil, does the **Band** keep wrapping around the launched **Launch Target**?"
-> **Domain expert:** "Yes, briefly — after the shot, the **Band** follows the moving **Launch Target** contact points during **Band Release Recoil** so it feels like the **Band** pushed the target forward. Once the **Band** reaches its rest/idle/default shape, it detaches and stops following."
+> **Domain expert:** "Yes, briefly — after the shot, the **Band** follows the moving **Launch Target** contact points during **Band Release Recoil** so it feels like the **Band** pushed the target forward. Once the rest/idle/default **Band Shape** is clear of the current **Launch Target Silhouette**, it detaches and stops following."
 
 > **Dev:** "Can the **Slingshot** accept another **Pull** after **Launch**?"
 > **Domain expert:** "No — after **Launch**, the **Run** has started and **Pre-Launch** is over."
