@@ -1,0 +1,27 @@
+{
+  "name": "Game.Gameplay.Tests.EditMode",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay.GameplayState",
+    "Game.Gameplay",
+    "Game.Gameplay.Slingshot",
+    "Game.Foundation.Input",
+    "VContainer"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
