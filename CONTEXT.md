@@ -12,6 +12,7 @@ _Avoid_: Launcher, rope input
 A gameplay attempt that begins with **Launch** and ends by crash, lost momentum, or reaching the level end.
 _Avoid_: Session, attempt
 
+<<<<<<< HEAD
 **Run Camera**:
 The camera behavior that follows the controlled **Launch Target** during a **Run**.
 _Avoid_: Player camera, target camera, follow camera
@@ -24,6 +25,8 @@ _Avoid_: Camera target, camera pivot, follow target
 The camera behavior used during **Pre-Launch** before the **Run Camera** takes over.
 _Avoid_: Idle camera, static camera
 
+=======
+>>>>>>> refs/heads/main
 **Pre-Launch**:
 The phase before a **Run** begins, when the **Slingshot** can accept a **Pull**.
 _Avoid_: Waiting, ready state
@@ -137,8 +140,13 @@ The transition from a released **Pull** into forward motion for the **Launch Tar
 _Avoid_: Fire, shoot
 
 **Launch Target**:
+<<<<<<< HEAD
 The scene object that is held by an **Active Pull**, receives launch energy from a **Slingshot**, and is controlled during a **Run**.
 _Avoid_: Player, projectile, payload
+=======
+The scene object that is held by an **Active Pull** and receives launch energy from a **Slingshot**.
+_Avoid_: Projectile, payload
+>>>>>>> refs/heads/main
 
 **Launch Target Silhouette**:
 The inflated convex band-height **Pull Plane** outline of the held **Launch Target** used by a taut **Band Shape**.
@@ -165,12 +173,15 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Slingshot** may show one **Pull Hint** while idle.
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
 - A **Run** is governed by one current **Gameplay State**.
+<<<<<<< HEAD
 - During a **Run**, the user controls the **Launch Target**.
 - A **Run Camera** follows the **Launch Target** during a **Run**.
 - A **Run Camera** uses one **Run Camera Anchor** to frame the **Launch Target**.
 - A **Run Camera Anchor** is derived from the **Launch Target**.
 - A **Pre-Launch Camera** frames the **Slingshot** before a **Run**.
 - A **Run Camera** takes over from a **Pre-Launch Camera** after **Launch**.
+=======
+>>>>>>> refs/heads/main
 - A **Gameplay State Id** identifies one **Gameplay State**.
 - A **Gameplay State Transition** identifies one allowed change between two **Gameplay States**.
 - **Gameplay Flow** changes the current **Gameplay State**.
@@ -246,6 +257,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 > **Dev:** "Does moving the camera change **Pull** direction?"
 > **Domain expert:** "No — the **Launch Frame** belongs to the **Slingshot**, not the camera."
 
+<<<<<<< HEAD
 > **Dev:** "Does the **Run Camera** follow the player?"
 > **Domain expert:** "It follows the **Launch Target** during a **Run**; player is not the current gameplay term for that object."
 
@@ -255,6 +267,8 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 > **Dev:** "Which camera is active before the **Run** begins?"
 > **Domain expert:** "The **Pre-Launch Camera** frames the **Slingshot** until the **Run Camera** takes over after **Launch**."
 
+=======
+>>>>>>> refs/heads/main
 > **Dev:** "Can two touches create two **Pulls** at the same time?"
 > **Domain expert:** "No — a **Slingshot** can have only one **Active Pull**."
 
@@ -281,6 +295,9 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "Silhouette" means the inflated convex outer outline of the **Launch Target** for **Band Shape** purposes, not every concave collider detail.
 - "3D wrap" is not a **Band Shape** concern; the **Band** wraps the band-height **Launch Target Silhouette**.
 - "Back side" and "pulled side" resolve to **Pulled Side**; do not choose **Band Wrap** by nearest or shortest contour side.
+<<<<<<< HEAD
 - "Player" and "target" were used ambiguously for the controlled object during a **Run**; resolved as **Launch Target**.
 - "Camera target", "camera pivot", and "follow target" resolve to **Run Camera Anchor** when discussing **Run Camera** framing.
 - "Idle camera" and "static camera" resolve to **Pre-Launch Camera** when discussing the camera before a **Run**.
+=======
+>>>>>>> refs/heads/main
