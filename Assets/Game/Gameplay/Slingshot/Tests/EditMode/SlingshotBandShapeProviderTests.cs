@@ -100,6 +100,54 @@ public sealed class SlingshotBandShapeProviderTests
             Throws.TypeOf<ArgumentException>());
     }
 
+    [Test]
+    public void TryCheckBandShapeClearance_ValidClearShape_ReturnsTrueAndSamplesSource()
+    {
+        var source = new FakeLaunchTargetSilhouetteSource(CreateSquareSamples());
+        var provider = new SlingshotBandShapeProvider(source, CreateValidConfig());
+
+        var checkedClearance = provider.TryCheckBandShapeClearance(
+            CreateQuery(),
+            new[] { new Vector3(-3f, 0f, 1f), new Vector3(3f, 0f, 1f) },
+            0.1f,
+            out var isClear);
+
+        Assert.That(checkedClearance, Is.True);
+        Assert.That(isClear, Is.True);
+        Assert.That(source.Queries, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TryCheckBandShapeClearance_ShapeCrossesSilhouette_ReturnsBlocked()
+    {
+        var provider = new SlingshotBandShapeProvider(new FakeLaunchTargetSilhouetteSource(CreateSquareSamples()), CreateValidConfig());
+
+        var checkedClearance = provider.TryCheckBandShapeClearance(
+            CreateQuery(),
+            new[] { new Vector3(-3f, 0f, -1f), new Vector3(3f, 0f, -1f) },
+            0f,
+            out var isClear);
+
+        Assert.That(checkedClearance, Is.True);
+        Assert.That(isClear, Is.False);
+    }
+
+    [Test]
+    public void TryCheckBandShapeClearance_SourceFailure_ReturnsFalseWithoutThrowing()
+    {
+        var source = new FakeLaunchTargetSilhouetteSource(Array.Empty<Vector3>()) { ShouldFail = true };
+        var provider = new SlingshotBandShapeProvider(source, CreateValidConfig());
+
+        var checkedClearance = provider.TryCheckBandShapeClearance(
+            CreateQuery(),
+            new[] { new Vector3(-3f, 0f, 1f), new Vector3(3f, 0f, 1f) },
+            0.1f,
+            out var isClear);
+
+        Assert.That(checkedClearance, Is.False);
+        Assert.That(isClear, Is.False);
+    }
+
     private FakeSlingshotConfig CreateValidConfig()
     {
         return new FakeSlingshotConfig

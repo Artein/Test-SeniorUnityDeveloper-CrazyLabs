@@ -18,6 +18,8 @@ Run a human Unity smoke pass after the implementation slices are complete. The g
 
 Record any follow-up tuning or authoring concerns separately instead of expanding this bug-fix scope unless they block the recoil-clearance behavior.
 
+Use the [HITL QA Run Sheet](05-hitl-qa-run-sheet.md) to record the manual pass/fail result and any follow-up tuning or authoring concerns.
+
 ## Acceptance criteria
 
 - [ ] A shallow valid Pull Release just above MinimumPullDistance shows no visible Band pass-through from the player camera.

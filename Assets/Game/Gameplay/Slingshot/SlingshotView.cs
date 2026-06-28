@@ -7,6 +7,7 @@ namespace Game.Gameplay.Slingshot
 {
     public interface ISlingshotView
     {
+        float VisibleBandRadius { get; }
         SlingshotGeometrySnapshot CreateGeometrySnapshot();
         void ShowInactiveIdle(SlingshotBandShape bandShape);
         void ShowCaptureIdle(SlingshotBandShape bandShape);
@@ -27,6 +28,15 @@ namespace Game.Gameplay.Slingshot
         [SerializeField] private bool _drawGizmos = true;
         [SerializeField, Min(0.05f)] private float _gizmoFrameAxisLength = 0.75f;
         [SerializeField, Min(0.01f)] private float _gizmoTouchTargetWorldRadius = 0.25f;
+
+        public float VisibleBandRadius
+        {
+            get
+            {
+                ThrowIfInvalidReferences();
+                return GetMaximumRenderedBandRadius();
+            }
+        }
 
         public SlingshotGeometrySnapshot CreateGeometrySnapshot()
         {
@@ -108,6 +118,18 @@ namespace Game.Gameplay.Slingshot
             var indicatorTransform = _touchIndicatorObject.transform;
             var currentPosition = indicatorTransform.position;
             indicatorTransform.position = new Vector3(screenPosition.x, screenPosition.y, currentPosition.z);
+        }
+
+        private float GetMaximumRenderedBandRadius()
+        {
+            var maximumWidth = Mathf.Max(_bandLineRenderer.startWidth, _bandLineRenderer.endWidth);
+
+            foreach (var key in _bandLineRenderer.widthCurve.keys)
+            {
+                maximumWidth = Mathf.Max(maximumWidth, key.value);
+            }
+
+            return maximumWidth * _bandLineRenderer.widthMultiplier * 0.5f;
         }
 
         private SlingshotGeometrySnapshot CreateGeometrySnapshotFromTransforms()

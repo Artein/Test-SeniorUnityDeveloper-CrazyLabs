@@ -442,6 +442,60 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void LaunchApplied_RecoilTick_WhenRecoilPullPointIsNearRest_UsesLiveBandShapeProvider()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(55f, 45f);
+        var finalPullPoint = new Vector3(0.15f, 0f, -0.3f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(55f, 5f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _observations.Clear();
+        _launchAppliedNotifier.Apply(launchRequest);
+        ((ITickable)controller).Tick();
+
+        var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
+        Assert.That(_observations, Is.EqualTo(new[] { "band-shape", "view-loaded-release" }));
+        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilSolveFailsBeforeClearance_KeepsLastValidLiveBandShape()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        var finalPullPoint = new Vector3(0.5f, 0f, -1f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(75f, 10f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        ((ITickable)controller).Tick();
+
+        var expectedLastValidShape = (Vector3[])_bandShapeProvider.ShapePoints.Clone();
+        AssertBandShapeEquals(_view.LastBandShape, expectedLastValidShape);
+        _observations.Clear();
+
+        _bandShapeProvider.IsBandShapeClear = false;
+        _bandShapeProvider.ShouldFail = true;
+
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-shape", "view-loaded-release" }));
+        AssertBandShapeEquals(_view.LastBandShape, expectedLastValidShape);
+    }
+
+    [Test]
     public void PointerReleased_ActivePull_ReturnsToCaptureIdleWithoutLaunch()
     {
         using var controller = CreateInitializedController();

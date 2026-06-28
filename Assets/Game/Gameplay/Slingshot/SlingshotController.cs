@@ -37,7 +37,6 @@ namespace Game.Gameplay.Slingshot
         private Vector3[] _currentActiveBandShapeBuffer;
         private Vector3[] _inactiveActiveBandShapeBuffer;
         private Vector3[] _restBandShapeBuffer;
-        private Vector3[] _recoilBandShapeBuffer;
         private SlingshotGeometrySnapshot _geometry;
         private SlingshotLaunchRequest _pendingLaunchRequest;
         private float _releaseRecoilElapsed;
@@ -285,7 +284,7 @@ namespace Game.Gameplay.Slingshot
             _releaseRecoilElapsed += Mathf.Max(0f, _clock.DeltaTime);
             var normalizedTime = Mathf.Clamp01(_releaseRecoilElapsed / _config.BandRecoilDuration);
 
-            if (normalizedTime >= 1f)
+            if (normalizedTime >= 1f && IsDetachedRestBandShapeClear())
             {
                 _isReleaseRecoilActive = false;
                 _view.ShowInactiveIdle(CreateDetachedRestBandShape());

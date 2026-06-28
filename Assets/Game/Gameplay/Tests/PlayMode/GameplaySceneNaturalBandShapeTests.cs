@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneNaturalBandShapeTests
@@ -169,6 +171,69 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
             yield return AssertPulledBandShape(context, mouse, 0.75f, false);
             yield return AssertPulledBandShape(context, mouse, -0.75f, true);
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator given_GameplayScene_when_LowValidPullReleases_then_RecoilBandStaysOutsideTargetColliderAcrossFrames()
+    {
+        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Low Valid Recoil Mouse");
+
+        try
+        {
+            yield return LoadGameplayScene();
+            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            var lowValidPullDepth = context.SlingshotConfig.MinimumPullDistance + 0.02f;
+
+            var pullWorldPosition = context.Geometry.RestPoint
+                                    + (context.Geometry.LaunchFrameRight * 0.35f)
+                                    - (context.Geometry.LaunchFrameForward * lowValidPullDepth);
+            var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
+            yield return SendMouse(mouse, pullScreenPosition, true);
+
+            var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
+            Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
+
+            AssertBandSamplesStayOutsideCollider(
+                activeBandPositions,
+                context.BandLineRenderer,
+                context.TargetCollider,
+                "Low Valid Active Pull");
+
+            yield return SendMouse(mouse, pullScreenPosition, false);
+            Assert.That(context.PlayerRigidbody.isKinematic, Is.False);
+            var blockedRestBandColliderCenter = context.Geometry.RestPoint;
+            PinTargetColliderCenter(context, blockedRestBandColliderCenter);
+
+            Assert.That(
+                Vector3.Distance(
+                    blockedRestBandColliderCenter,
+                    context.TargetCollider.ClosestPoint(blockedRestBandColliderCenter)),
+                Is.LessThanOrEqualTo(GetMaximumRenderedBandRadius(context.BandLineRenderer)),
+                "Test setup should keep the Launch Target Collider blocking the detached rest Band Shape.");
+
+            for (var frameIndex = 0; frameIndex < 8; frameIndex += 1)
+            {
+                PinTargetColliderCenter(context, blockedRestBandColliderCenter);
+                yield return null;
+                PinTargetColliderCenter(context, blockedRestBandColliderCenter);
+
+                var recoilBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
+                Assert.That(recoilBandPositions, Has.Length.GreaterThan(3));
+
+                AssertBandSamplesStayOutsideCollider(
+                    recoilBandPositions,
+                    context.BandLineRenderer,
+                    context.TargetCollider,
+                    $"Low Valid Band Release Recoil frame {frameIndex}");
+            }
         }
         finally
         {
@@ -686,6 +751,15 @@ public sealed class GameplaySceneNaturalBandShapeTests
         }
     }
 
+    private void PinTargetColliderCenter(GameplaySceneContext context, Vector3 colliderCenterPosition)
+    {
+        var rigidbodyToColliderCenter = context.TargetCollider.bounds.center - context.PlayerRigidbody.position;
+        context.PlayerRigidbody.position = colliderCenterPosition - rigidbodyToColliderCenter;
+        context.PlayerRigidbody.linearVelocity = context.Geometry.LaunchFrameForward * 0.05f;
+        context.PlayerRigidbody.angularVelocity = Vector3.zero;
+        Physics.SyncTransforms();
+    }
+
     private float GetMaximumRenderedBandRadius(LineRenderer lineRenderer)
     {
         var maximumWidth = Mathf.Max(lineRenderer.startWidth, lineRenderer.endWidth);
@@ -993,6 +1067,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
     private GameplaySceneContext CreateSceneContext(Scene scene)
     {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
         var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(scene, "RigidbodyLaunchTarget");
         var inputCamera = FindSingleInScene<Camera>(scene, "Input Camera");
@@ -1005,6 +1080,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
             GetSingleTargetCollider(launchTarget),
             launchTarget.GetComponent<Rigidbody>(),
             bandCenter,
+            lifetimeScope.Container.Resolve<ISlingshotConfig>(),
             geometry,
             GetScreenPosition(inputCamera, geometry.RestPoint));
     }
@@ -1016,6 +1092,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         public Collider TargetCollider { get; }
         public Rigidbody PlayerRigidbody { get; }
         public GameObject BandCenter { get; }
+        public ISlingshotConfig SlingshotConfig { get; }
         public SlingshotGeometrySnapshot Geometry { get; }
         public Vector2 PressScreenPosition { get; }
 
@@ -1025,6 +1102,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
             Collider targetCollider,
             Rigidbody playerRigidbody,
             GameObject bandCenter,
+            ISlingshotConfig slingshotConfig,
             SlingshotGeometrySnapshot geometry,
             Vector2 pressScreenPosition)
         {
@@ -1033,6 +1111,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
             TargetCollider = targetCollider;
             PlayerRigidbody = playerRigidbody;
             BandCenter = bandCenter;
+            SlingshotConfig = slingshotConfig;
             Geometry = geometry;
             PressScreenPosition = pressScreenPosition;
         }

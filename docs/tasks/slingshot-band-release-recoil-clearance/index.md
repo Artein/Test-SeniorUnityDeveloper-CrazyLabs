@@ -20,6 +20,7 @@ These local implementation issues are ordered by dependency. They refine Band Re
 
 ## Notes
 
+- HITL QA run sheet: [05-hitl-qa-run-sheet.md](05-hitl-qa-run-sheet.md).
 - Do not publish these remotely unless explicitly requested.
 - Keep Band Shape visual-only; launch power, launch direction, Pull Offset, and Rigidbody launch semantics should not change.
 - Respect ADR-0008: keep deterministic Pull Plane taut solving and do not introduce runtime rope physics, joints, or Unity-physics-driven Band simulation.

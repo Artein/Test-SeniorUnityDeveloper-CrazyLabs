@@ -101,6 +101,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         private readonly List<string> _observations;
 
         public SlingshotGeometrySnapshot Geometry { get; }
+        public float VisibleBandRadius { get; set; } = 0.02f;
         public SlingshotBandShape LastBandShape { get; private set; }
         public SlingshotPullVisual LastActivePullVisual { get; private set; }
         public List<SlingshotPullVisual> ActivePullVisuals { get; } = new();
@@ -200,8 +201,13 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public int BandShapePointCount => ShapePoints.Length;
 
         public List<SlingshotBandShapeQuery> Queries { get; } = new();
+        public List<SlingshotBandShapeQuery> ClearanceQueries { get; } = new();
+        public List<Vector3[]> ClearanceBandShapes { get; } = new();
+        public List<float> ClearanceRadii { get; } = new();
         public bool ShouldFail { get; set; }
         public bool ShouldFailActivePullOnly { get; set; }
+        public bool ShouldFailClearance { get; set; }
+        public bool IsBandShapeClear { get; set; } = true;
 
         public Vector3[] ShapePoints { get; set; } =
         {
@@ -244,6 +250,38 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
             }
 
             pointCount = ShapePoints.Length;
+            return true;
+        }
+
+        public bool TryCheckBandShapeClearance(
+            SlingshotBandShapeQuery query,
+            IReadOnlyList<Vector3> bandShapePoints,
+            float clearanceRadius,
+            out bool isClear)
+        {
+            ClearanceQueries.Add(query);
+            ClearanceRadii.Add(clearanceRadius);
+            _observations.Add("band-clearance");
+
+            if (bandShapePoints is null)
+                throw new ArgumentNullException(nameof(bandShapePoints));
+
+            var snapshot = new Vector3[bandShapePoints.Count];
+
+            for (var pointIndex = 0; pointIndex < bandShapePoints.Count; pointIndex += 1)
+            {
+                snapshot[pointIndex] = bandShapePoints[pointIndex];
+            }
+
+            ClearanceBandShapes.Add(snapshot);
+
+            if (ShouldFailClearance)
+            {
+                isClear = false;
+                return false;
+            }
+
+            isClear = IsBandShapeClear;
             return true;
         }
     }

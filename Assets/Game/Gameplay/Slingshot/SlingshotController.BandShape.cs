@@ -12,7 +12,6 @@ namespace Game.Gameplay.Slingshot
             _currentActiveBandShapeBuffer = _firstActiveBandShapeBuffer;
             _inactiveActiveBandShapeBuffer = _secondActiveBandShapeBuffer;
             _restBandShapeBuffer = new Vector3[pointCount];
-            _recoilBandShapeBuffer = new Vector3[pointCount];
             FillBandShapeBuffer(_restBandShapeBuffer, _geometry.RestPoint);
         }
 
@@ -42,17 +41,7 @@ namespace Game.Gameplay.Slingshot
 
         private bool TryWriteBandShape(Vector3 pullPoint, Vector3[] buffer)
         {
-            var solved = _bandShapeProvider.TryCreateBandShape(new SlingshotBandShapeQuery(
-                    _geometry.LeftAnchorPosition,
-                    _geometry.RightAnchorPosition,
-                    _geometry.RestPoint,
-                    pullPoint,
-                    _geometry.LaunchFrameRight,
-                    _geometry.LaunchFrameForward,
-                    _geometry.LaunchFrameUp),
-                buffer,
-                out var pointCount);
-
+            var solved = _bandShapeProvider.TryCreateBandShape(CreateBandShapeQuery(pullPoint), buffer, out var pointCount);
             return solved && pointCount == buffer.Length;
         }
 
@@ -60,26 +49,22 @@ namespace Game.Gameplay.Slingshot
         {
             var recoilPullPoint = Vector3.Lerp(_pendingLaunchRequest.FinalPullPoint, _geometry.RestPoint, progress);
 
-            if (ShouldUseSimpleBandShape(recoilPullPoint))
-            {
-                FillSimpleBandShapeBuffer(_recoilBandShapeBuffer, recoilPullPoint);
-                return new SlingshotBandShape(_recoilBandShapeBuffer, true);
-            }
-
             if (TryUpdateTautActiveBandShape(recoilPullPoint))
                 return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
 
-            FillBandShapeBuffer(_restBandShapeBuffer, _geometry.RestPoint);
+            return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
+        }
 
-            for (var pointIndex = 0; pointIndex < _recoilBandShapeBuffer.Length; pointIndex += 1)
-            {
-                _recoilBandShapeBuffer[pointIndex] = Vector3.Lerp(
-                    _currentActiveBandShapeBuffer[pointIndex],
-                    _restBandShapeBuffer[pointIndex],
-                    progress);
-            }
+        private bool IsDetachedRestBandShapeClear()
+        {
+            var detachedRestBandShape = CreateDetachedRestBandShape();
 
-            return new SlingshotBandShape(_recoilBandShapeBuffer, true);
+            return _bandShapeProvider.TryCheckBandShapeClearance(
+                       CreateBandShapeQuery(_geometry.RestPoint),
+                       detachedRestBandShape.Points,
+                       _view.VisibleBandRadius,
+                       out var isClear)
+                   && isClear;
         }
 
         private SlingshotBandShape CreateDetachedRestBandShape()
@@ -143,6 +128,18 @@ namespace Game.Gameplay.Slingshot
         {
             var delta = pullPoint - _geometry.RestPoint;
             return Mathf.Max(0f, -Vector3.Dot(delta, _geometry.LaunchFrameForward));
+        }
+
+        private SlingshotBandShapeQuery CreateBandShapeQuery(Vector3 pullPoint)
+        {
+            return new SlingshotBandShapeQuery(
+                _geometry.LeftAnchorPosition,
+                _geometry.RightAnchorPosition,
+                _geometry.RestPoint,
+                pullPoint,
+                _geometry.LaunchFrameRight,
+                _geometry.LaunchFrameForward,
+                _geometry.LaunchFrameUp);
         }
 
         private void SetHeldTargetToRest()

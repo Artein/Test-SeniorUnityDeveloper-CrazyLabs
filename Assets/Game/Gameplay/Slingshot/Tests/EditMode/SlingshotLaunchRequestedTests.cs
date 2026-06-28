@@ -93,7 +93,7 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
-    public void LaunchApplied_AfterValidRelease_StartsRecoilAndDetachesAtRest()
+    public void LaunchApplied_AfterValidReleaseAndClearanceProven_StartsRecoilAndDetachesAtRest()
     {
         using var controller = CreateInitializedController();
         SubscribeToLaunchRequests(controller);
@@ -111,7 +111,36 @@ public sealed class SlingshotLaunchRequestedTests
 
         ((ITickable)controller).Tick();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "view-inactive-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "view-inactive-idle" }));
+        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(1));
+        Assert.That(_bandShapeProvider.ClearanceRadii[^1], Is.EqualTo(_view.VisibleBandRadius));
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.Empty);
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilReadyButClearanceBlocked_KeepsLoadedReleaseAndRetriesLiveProvider()
+    {
+        using var controller = CreateInitializedController();
+        SubscribeToLaunchRequests(controller);
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(_launchRequests[0]);
+        _bandShapeProvider.IsBandShapeClear = false;
+        _clock.DeltaTime = _config.BandRecoilDuration;
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-shape", "view-loaded-release" }));
+        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(1));
+        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
+        AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
     }
 
     [Test]
@@ -391,6 +420,16 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(actual.y, Is.EqualTo(normalizedExpected.y).Within(0.0001f));
         Assert.That(actual.z, Is.EqualTo(normalizedExpected.z).Within(0.0001f));
         Assert.That(actual.magnitude, Is.EqualTo(1f).Within(0.0001f));
+    }
+
+    private void AssertBandShapeEquals(SlingshotBandShape shape, params Vector3[] expectedPoints)
+    {
+        Assert.That(shape.Points.Count, Is.EqualTo(expectedPoints.Length));
+
+        for (var pointIndex = 0; pointIndex < expectedPoints.Length; pointIndex += 1)
+        {
+            Assert.That(shape.Points[pointIndex], Is.EqualTo(expectedPoints[pointIndex]));
+        }
     }
 
     private sealed class TestLaunchTarget : ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource
