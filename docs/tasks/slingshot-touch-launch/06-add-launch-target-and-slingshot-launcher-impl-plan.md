@@ -4,7 +4,7 @@
 
 - Add the Slingshot launch-application boundary: `ISlingshotLauncher` consumes a valid `SlingshotLaunchRequest`, computes final velocity, and delegates physics application to `ILaunchTarget`.
 - Add a shallow `RigidbodyLaunchTarget` MonoBehaviour adapter that handles hold/release mechanics around an explicitly assigned `Rigidbody`.
-- Keep Gameplay Flow authorization out of this slice. Issue 07 will decide when launch is allowed; this slice only holds during Pre-Launch and applies launch when called.
+- Keep Gameplay Flow authorization out of this slice. Issue 07 will decide when launch is allowed and when Slingshot capture is enabled; this slice applies launch when called.
 
 ## Key Changes
 
@@ -13,10 +13,8 @@
   - `ILaunchTarget` with `void Hold()` and `void Launch(Vector3 velocity)`.
   - Follow repo interface/file rule: keep each interface in the same file as its single production implementation until a second production implementation exists.
 - Add `SlingshotLaunchController : ISlingshotLauncher, IInitializable, IDisposable`:
-  - Depends on `ILaunchTarget`, `IGameplayStateService`, and the configured Pre-Launch `GameplayStateId`.
-  - Subscribes to Gameplay State changes on initialize and unsubscribes on dispose.
-  - Calls `Hold()` immediately if the current state is Pre-Launch.
-  - Calls `Hold()` on every accepted transition into Pre-Launch.
+  - Depends on `ILaunchTarget`/`IHeldLaunchTarget`.
+  - Does not subscribe to Gameplay State and does not hold the target on state changes.
   - Does not call `TryTransitionTo`, does not inspect Running state, and does not duplicate Gameplay Flow authorization.
 - Implement `Launch(SlingshotLaunchRequest request)`:
   - Validate launch-relevant request data: finite normalized direction/up direction, approximately unit direction/up direction, finite non-negative launch speeds, and finite non-zero final velocity.
@@ -38,14 +36,12 @@
 
 ## Test Plan
 
-- Add Slingshot EditMode tests with local fakes for `ILaunchTarget` and `IGameplayStateService`:
-  - Initial current Pre-Launch calls `Hold()` once during initialize.
-  - Transition re-entry into Pre-Launch calls `Hold()` every time.
-  - Non-Pre-Launch initialization and unrelated transitions do not hold.
-  - Dispose unsubscribes and does not mutate gameplay state or launch target.
+- Add Slingshot EditMode tests with local fakes for `ILaunchTarget`/`IHeldLaunchTarget`:
+  - Initialize does not hold the target; capture owns hold behavior.
+  - Dispose does not mutate gameplay state or launch target.
   - Valid request calls target launch with the exact computed final velocity.
   - Invalid direction, invalid speed, zero/non-finite final velocity warn and skip target launch.
-  - Launcher never calls `TryTransitionTo`.
+  - Launcher has no Gameplay State dependency and never authorizes transitions.
   - Target launch exception propagates for a valid request.
 - Add focused Rigidbody adapter tests:
   - Prefer PlayMode tests for the real `RigidbodyLaunchTarget` because it exercises Unity physics APIs.

@@ -2,7 +2,7 @@
 
 ## Summary
 
-- Add shared Unity Input under `Assets/Game/Input/UnityInput`.
+- Add shared Unity Input under `Assets/Game/Foundation/Input`.
 - Centralize Enhanced Touch enablement and source-agnostic pointer events behind `IUnityInput`.
 - Use a ref-counted disposable enable handle so multiple consumers can safely share global Enhanced Touch state.
 - Add editor-only mouse simulation with pointer id `-1`; player builds use Enhanced Touch only.
@@ -11,8 +11,8 @@
 ## Key Changes
 
 - Create runtime/test asmdefs:
-  - `Game.Input.UnityInput.asmdef`, referencing `Unity.InputSystem` and VContainer.
-  - `Game.Input.UnityInput.Tests.EditMode.asmdef`, referencing runtime, NUnit/Test Framework, and test runner assemblies.
+  - `Game.Foundation.Input.asmdef`, referencing `Unity.InputSystem` and VContainer.
+  - `Game.Foundation.Input.Tests.EditMode.asmdef`, referencing runtime, NUnit/Test Framework, and test runner assemblies.
 - Add public API:
   - `IEnhancedTouchSupportApi` with `IDisposable Enable()`.
   - `IEnhancedTouchPointerInput` with `PointerPressed`, `PointerMoved`, `PointerReleased`, and `PointerCanceled`.

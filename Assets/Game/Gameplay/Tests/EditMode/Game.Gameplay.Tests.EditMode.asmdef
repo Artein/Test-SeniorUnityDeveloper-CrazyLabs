@@ -5,7 +5,7 @@
     "Game.Gameplay.GameplayState",
     "Game.Gameplay",
     "Game.Gameplay.Slingshot",
-    "Game.Input.UnityInput",
+    "Game.Foundation.Input",
     "VContainer"
   ],
   "optionalUnityReferences": [

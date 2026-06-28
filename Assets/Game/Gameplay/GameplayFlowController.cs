@@ -7,23 +7,29 @@ namespace Game.Gameplay
 {
     public sealed class GameplayFlowController : IInitializable, IDisposable
     {
+        private readonly ISlingshotCapture _slingshotCapture;
         private readonly ISlingshotLaunchNotifier _slingshotLaunchNotifier;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLauncher _slingshotLauncher;
+        private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
 
         private bool _isInitialized;
         private bool _isDisposed;
 
         public GameplayFlowController(
+            ISlingshotCapture slingshotCapture,
             ISlingshotLaunchNotifier slingshotLaunchNotifier,
             IGameplayStateService gameplayStateService,
             ISlingshotLauncher slingshotLauncher,
+            GameplayStateId preLaunchStateId,
             GameplayStateId runningStateId)
         {
+            _slingshotCapture = slingshotCapture ?? throw new ArgumentNullException(nameof(slingshotCapture));
             _slingshotLaunchNotifier = slingshotLaunchNotifier ?? throw new ArgumentNullException(nameof(slingshotLaunchNotifier));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _slingshotLauncher = slingshotLauncher ?? throw new ArgumentNullException(nameof(slingshotLauncher));
+            _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
@@ -37,7 +43,11 @@ namespace Game.Gameplay
                 return;
 
             _slingshotLaunchNotifier.LaunchRequested += HandleLaunchRequested;
+            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
             _isInitialized = true;
+
+            if (_gameplayStateService.IsCurrent(_preLaunchStateId))
+                _slingshotCapture.EnableCapture();
         }
 
         void IDisposable.Dispose()
@@ -48,7 +58,25 @@ namespace Game.Gameplay
             _isDisposed = true;
 
             if (_isInitialized)
+            {
                 _slingshotLaunchNotifier.LaunchRequested -= HandleLaunchRequested;
+                _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
+            }
+        }
+
+        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        {
+            if (_isDisposed)
+                return;
+
+            if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            {
+                _slingshotCapture.EnableCapture();
+                return;
+            }
+
+            if (ReferenceEquals(previousStateId, _preLaunchStateId))
+                _slingshotCapture.DisableCapture();
         }
 
         private void HandleLaunchRequested(SlingshotLaunchRequest launchRequest)

@@ -3,15 +3,19 @@
 ## Summary
 
 - Add the game-specific `GameplayFlowController` in the root gameplay assembly.
-- Listen to Slingshot `LaunchRequested`, ask `IGameplayStateService` to transition to the configured Running `GameplayStateId`, and invoke `ISlingshotLauncher` only when the transition succeeds.
-- Keep this slice coordination-only: no launch payload validation, Rigidbody physics, player hold logic, Slingshot state mutation, or `GameplayScene.unity` wiring.
+- Listen to Gameplay State changes to enable/disable Slingshot capture, listen to Slingshot `LaunchRequested`, ask `IGameplayStateService` to transition
+  to the configured Running `GameplayStateId`, and invoke `ISlingshotLauncher` only when the transition succeeds.
+- Keep this slice coordination-only: no launch payload validation, Rigidbody physics, Slingshot pull math, or `GameplayScene.unity` wiring.
 
 ## Key Changes
 
 - Add `GameplayFlowController : IInitializable, IDisposable`:
-  - Constructor dependencies: `ISlingshotLaunchNotifier`, `IGameplayStateService`, `ISlingshotLauncher`, and Running `GameplayStateId`.
-  - `Initialize()` subscribes to `LaunchRequested`.
-  - `Dispose()` unsubscribes only.
+  - Constructor dependencies: `ISlingshotCapture`, `ISlingshotLaunchNotifier`, `IGameplayStateService`, `ISlingshotLauncher`, Pre-Launch
+    `GameplayStateId`, and Running `GameplayStateId`.
+  - `Initialize()` subscribes to `LaunchRequested` and Gameplay State changed events.
+  - If current state is Pre-Launch at initialize time, enable Slingshot capture.
+  - Entering Pre-Launch enables Slingshot capture; leaving Pre-Launch disables it.
+  - `Dispose()` unsubscribes only and does not mutate Gameplay State.
   - The launch-request handler calls `TryTransitionTo(_runningStateId)` before launching.
   - If transition returns `false`, skip launch silently and rely on Gameplay State service warnings for invalid transitions.
   - If transition returns `true`, call `_slingshotLauncher.Launch(request)`.
@@ -19,10 +23,10 @@
 - Add composition support through the gameplay composition spine:
   - Register `GameplayFlowController` as its concrete instance plus VContainer lifecycle interfaces.
   - Keep registration in gameplay composition code or a small `GameplayFlowInstaller` if that matches the implemented installer pattern.
-  - Accept the Running state id as an explicit configured dependency.
+  - Accept the Pre-Launch and Running state ids as explicit configured dependencies.
   - Do not inject MonoBehaviours and do not perform scene searches.
 - Preserve ownership boundaries:
-  - Slingshot remains an intent producer through `ISlingshotLaunchNotifier`.
+  - Slingshot remains a state-agnostic capture feature and intent producer through `ISlingshotCapture` and `ISlingshotLaunchNotifier`.
   - Gameplay State remains the source of transition legality.
   - `ISlingshotLauncher` remains the launch application boundary.
   - Issue 08 owns final scene assignment and full playable smoke wiring.
@@ -30,6 +34,10 @@
 ## Test Plan
 
 - Add EditMode tests for `GameplayFlowController` with local fakes:
+  - `Initialize_WhenCurrentStateIsPreLaunch_EnablesSlingshotCapture`.
+  - `Initialize_WhenCurrentStateIsNotPreLaunch_LeavesSlingshotCaptureDisabled`.
+  - `GameplayStateChanged_WhenEnteringPreLaunch_EnablesSlingshotCapture`.
+  - `GameplayStateChanged_WhenLeavingPreLaunch_DisablesSlingshotCapture`.
   - `Initialize_WhenLaunchRequested_TransitionsToRunningBeforeLaunching`.
   - `LaunchRequested_WhenTransitionFails_DoesNotLaunch`.
   - `LaunchRequested_WhenLauncherThrows_PropagatesAfterSuccessfulTransition`.
@@ -37,7 +45,8 @@
   - `LaunchRequested_DoesNotRollback_WhenLauncherThrows`.
   - `LaunchRequested_UsesConfiguredRunningStateId`.
 - Add a composition test if practical without scene loading:
-  - Container resolves and initializes `GameplayFlowController` from fake Slingshot notifier, fake Gameplay State service, fake launcher, and Running state id.
+  - Container resolves and initializes `GameplayFlowController` from fake Slingshot capture, fake Slingshot notifier, fake Gameplay State service, fake
+    launcher, and Pre-Launch/Running state ids.
   - No MonoBehaviour injection required.
 - Verification order for implementation:
   - Rider reformat/problems on changed C# and asmdef files.
@@ -47,7 +56,8 @@
 
 ## Assumptions
 
-- Issues 02, 05, and 06 already provide `IGameplayStateService`, `GameplayStateId`, `ISlingshotLaunchNotifier`, `SlingshotLaunchRequest`, and `ISlingshotLauncher`.
+- Issues 02, 04, 05, and 06 already provide `IGameplayStateService`, `GameplayStateId`, `ISlingshotCapture`, `ISlingshotLaunchNotifier`,
+  `SlingshotLaunchRequest`, and `ISlingshotLauncher`.
 - The controller lives under the root gameplay assembly because Gameplay Flow is game-specific orchestration rather than reusable Slingshot or Gameplay State logic.
 - The Running state id is configured explicitly by composition; no state enum, string lookup, asset path lookup, or scene search is introduced.
 - Failed transition means "do not launch"; it is not an error at the flow-controller level.

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Slingshot.Tests.EditMode;
 using NUnit.Framework;
@@ -11,13 +10,11 @@ using VContainer.Unity;
 public sealed class SlingshotControllerTests
 {
     private readonly List<string> _observations = new();
-    private GameplayStateId _preLaunchStateId;
-    private GameplayStateId _runningStateId;
     private FakeSlingshotConfig _config;
     private FakeUnityInput _input;
-    private FakeGameplayStateService _stateService;
     private FakeSlingshotView _view;
     private FakeSlingshotInputProjector _projector;
+    private FakeLaunchTarget _launchTarget;
     private FakeHeldLaunchTarget _heldLaunchTarget;
     private FakeSlingshotBandShapeProvider _bandShapeProvider;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -27,8 +24,6 @@ public sealed class SlingshotControllerTests
     public void OnSetUp()
     {
         _observations.Clear();
-        _preLaunchStateId = CreateStateId("Pre-Launch");
-        _runningStateId = CreateStateId("Running");
 
         _config = new FakeSlingshotConfig
         {
@@ -48,9 +43,9 @@ public sealed class SlingshotControllerTests
             BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
         };
         _input = new FakeUnityInput(_observations);
-        _stateService = new FakeGameplayStateService(_runningStateId);
         _view = new FakeSlingshotView(_observations);
         _projector = new FakeSlingshotInputProjector();
+        _launchTarget = new FakeLaunchTarget(_observations);
         _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
         _bandShapeProvider = new FakeSlingshotBandShapeProvider(_observations);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
@@ -58,48 +53,40 @@ public sealed class SlingshotControllerTests
         ConfigureRestBandScreenProjection();
     }
 
-    [TearDown]
-    public void OnTearDown()
-    {
-        UnityEngine.Object.DestroyImmediate(_preLaunchStateId);
-        UnityEngine.Object.DestroyImmediate(_runningStateId);
-    }
-
     [Test]
-    public void Initialize_CurrentStateIsPreLaunch_EnablesInputBeforeCaptureIdle()
+    public void EnableCapture_AfterInitialize_HoldsTargetAndEnablesInputBeforeCaptureIdle()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-hold", "target-position", "view-capture-idle" }));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+        Assert.That(_launchTarget.HoldCallCount, Is.EqualTo(1));
         Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
         Assert.That(_bandShapeProvider.Queries, Is.Empty);
         AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, _view.Geometry.RestPoint);
     }
 
     [Test]
-    public void GameplayStateChanged_EnteringPreLaunch_EnablesInputBeforeCaptureIdle()
+    public void EnableCapture_WhenAlreadyEnabled_DoesNothing()
     {
         using var controller = CreateInitializedController();
         _observations.Clear();
 
-        _stateService.ChangeTo(_preLaunchStateId);
+        ((ISlingshotCapture)controller).EnableCapture();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "input-enable", "target-position", "view-capture-idle" }));
+        Assert.That(_observations, Is.Empty);
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
-        Assert.That(_bandShapeProvider.Queries, Is.Empty);
+        Assert.That(_launchTarget.HoldCallCount, Is.EqualTo(1));
     }
 
     [Test]
-    public void GameplayStateChanged_LeavingPreLaunch_CancelsPullAndDisablesInputAfterInactiveIdle()
+    public void DisableCapture_WhenEnabled_CancelsPullAndDisablesInputAfterInactiveIdle()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
 
-        _stateService.ChangeTo(_runningStateId);
+        ((ISlingshotCapture)controller).DisableCapture();
 
         Assert.That(_observations, Is.EqualTo(new[] { "target-position", "view-inactive-idle", "input-disable" }));
         Assert.That(_input.ActiveHandleCount, Is.Zero);
@@ -108,12 +95,10 @@ public sealed class SlingshotControllerTests
     [Test]
     public void Dispose_WithActiveHandle_UnsubscribesAndDisposesHandleWithoutDrivingView()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         var controller = CreateInitializedController();
         _observations.Clear();
 
         ((IDisposable)controller).Dispose();
-        _stateService.ChangeTo(_runningStateId);
         _input.Press(1, new Vector2(50f, 20f));
 
         Assert.That(_observations, Is.EqualTo(new[] { "input-disable" }));
@@ -121,9 +106,52 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void EnableCapture_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        var controller = CreateController();
+
+        Assert.That(
+            () => ((ISlingshotCapture)controller).EnableCapture(),
+            Throws.TypeOf<InvalidOperationException>());
+    }
+
+    [Test]
+    public void DisableCapture_BeforeInitialize_ThrowsInvalidOperationException()
+    {
+        var controller = CreateController();
+
+        Assert.That(
+            () => ((ISlingshotCapture)controller).DisableCapture(),
+            Throws.TypeOf<InvalidOperationException>());
+    }
+
+    [Test]
+    public void EnableCapture_AfterDispose_ThrowsObjectDisposedException()
+    {
+        var controller = CreateInitializedController();
+
+        ((IDisposable)controller).Dispose();
+
+        Assert.That(
+            () => ((ISlingshotCapture)controller).EnableCapture(),
+            Throws.TypeOf<ObjectDisposedException>());
+    }
+
+    [Test]
+    public void DisableCapture_AfterDispose_ThrowsObjectDisposedException()
+    {
+        var controller = CreateInitializedController();
+
+        ((IDisposable)controller).Dispose();
+
+        Assert.That(
+            () => ((ISlingshotCapture)controller).DisableCapture(),
+            Throws.TypeOf<ObjectDisposedException>());
+    }
+
+    [Test]
     public void PointerPressed_OutsideBandTouchTarget_Ignored()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         _observations.Clear();
 
@@ -136,7 +164,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerPressed_InsideBandTouchTarget_StartsActivePull()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         _observations.Clear();
 
@@ -155,7 +182,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerPressed_AtRestPointAwayFromAnchorChord_StartsActivePull()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         _projector.SetWorldToScreen(_view.Geometry.RestPoint, new Vector2(50f, 40f));
         _projector.SetScreenToWorld(new Vector2(50f, 40f), _view.Geometry.RestPoint);
@@ -176,7 +202,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerEvents_SecondPointerWhileActive_Ignored()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -195,7 +220,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_ProjectionFailure_CancelsPullToCaptureIdle()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -209,7 +233,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_ForwardDisplacement_ClampsBackwardDistanceToZero()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -232,7 +255,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_NearRestPull_UsesCleanTwoSpanBandShape()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -251,7 +273,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_TinyLateralPullBelowTautMagnitude_UsesCleanTwoSpanBandShape()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -274,7 +295,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_ShallowBackwardLateralPullBelowMinimumTautDistance_UsesCleanTwoSpanBandShape()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -297,7 +317,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_ShallowBackwardMaxLateralPullAtRampThreshold_ClampsLateralAndUsesCleanTwoSpanBandShape()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -320,7 +339,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_BackwardLateralPullBeyondRampThreshold_UsesTautBandShape()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -344,7 +362,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_BackwardAndLateralDisplacement_ClampsLateralOffsetToAnchorSpan()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -368,7 +385,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerMoved_BandShapeSolveFailureAfterValidShape_KeepsLastValidShapeVisible()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -398,7 +414,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void LaunchApplied_RecoilTick_UsesLiveBandShapeProviderInsteadOfInterpolatingThroughRest()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         var releaseScreenPosition = new Vector2(75f, 80f);
@@ -429,7 +444,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerReleased_ActivePull_ReturnsToCaptureIdleWithoutLaunch()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -442,7 +456,6 @@ public sealed class SlingshotControllerTests
     [Test]
     public void PointerCanceled_ActivePull_ReturnsToCaptureIdleWithoutLaunch()
     {
-        _stateService.CurrentStateId = _preLaunchStateId;
         using var controller = CreateInitializedController();
         StartActivePull(1);
         _observations.Clear();
@@ -454,10 +467,16 @@ public sealed class SlingshotControllerTests
 
     private SlingshotController CreateInitializedController()
     {
-        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandShapeProvider,
-            _launchAppliedNotifier, _clock, _config, _preLaunchStateId);
+        var controller = CreateController();
         ((IInitializable)controller).Initialize();
+        ((ISlingshotCapture)controller).EnableCapture();
         return controller;
+    }
+
+    private SlingshotController CreateController()
+    {
+        return new SlingshotController(_input, _view, _projector, _launchTarget, _heldLaunchTarget, _bandShapeProvider,
+            _launchAppliedNotifier, _clock, _config);
     }
 
     private void StartActivePull(int pointerId)
@@ -525,13 +544,6 @@ public sealed class SlingshotControllerTests
         var rightAnchorOffset = Vector3.Dot(_view.Geometry.RightAnchorPosition - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
         var maximumAnchorOffset = Mathf.Max(leftAnchorOffset, rightAnchorOffset);
         return Mathf.Min(_config.MaximumLateralPull, maximumAnchorOffset);
-    }
-
-    private GameplayStateId CreateStateId(string name)
-    {
-        var stateId = ScriptableObject.CreateInstance<GameplayStateId>();
-        stateId.name = name;
-        return stateId;
     }
 
     private void AssertBandShapeEquals(SlingshotBandShape shape, params Vector3[] expectedPoints)

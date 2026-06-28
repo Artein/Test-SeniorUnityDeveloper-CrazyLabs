@@ -4,14 +4,15 @@
 
 - Wire the already-built slices from issues 01-07 into `GameplayScene.unity`.
 - Keep this issue scene/composition focused: explicit serialized references, shallow MonoBehaviours, no new gameplay rules.
-- Make the scene playable with Editor mouse input: Pre-Launch holds Player, Pull updates Band/UI, valid release transitions to Running and launches Player.
+- Make the scene playable with Editor mouse input: Gameplay Flow enables Slingshot capture in Pre-Launch, capture holds Player, Pull updates Band/UI,
+  valid release transitions to Running and launches Player.
 
 ## Key Changes
 
 - Extend `GameplayLifetimeScope` to own explicit serialized references for:
   - `GameplayStateConfig`, Pre-Launch `GameplayStateId`, Running `GameplayStateId`, and `SlingshotConfig`.
   - Main Camera/input camera, `SlingshotView`, and `RigidbodyLaunchTarget`.
-  - Feature installers for Unity Input, Gameplay State, Slingshot, Slingshot launch, and Gameplay Flow.
+  - Feature installers for Foundation Unity Input, Gameplay State, Slingshot, Slingshot launch, and Gameplay Flow.
   - Existing scene adapters registered as interface instances: `ISlingshotView` and `ILaunchTarget`.
   - `OnValidate` plus runtime assertions/fail-fast validation for every required reference.
 - Author `GameplayScene.unity`:

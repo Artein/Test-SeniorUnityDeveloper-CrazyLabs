@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Game.Input.UnityInput
+namespace Game.Foundation.Input
 {
     public readonly struct PointerInput
     {

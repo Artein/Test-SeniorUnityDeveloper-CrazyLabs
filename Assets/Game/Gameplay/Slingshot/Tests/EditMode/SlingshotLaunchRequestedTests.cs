@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Game.Gameplay.GameplayState;
+using Game.Foundation.Input;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Slingshot.Tests.EditMode;
-using Game.Input.UnityInput;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -17,13 +16,11 @@ public sealed class SlingshotLaunchRequestedTests
 {
     private readonly List<string> _observations = new();
     private readonly List<SlingshotLaunchRequest> _launchRequests = new();
-    private GameplayStateId _preLaunchStateId;
-    private GameplayStateId _runningStateId;
     private FakeSlingshotConfig _config;
     private FakeUnityInput _input;
-    private FakeGameplayStateService _stateService;
     private FakeSlingshotView _view;
     private FakeSlingshotInputProjector _projector;
+    private FakeLaunchTarget _launchTarget;
     private FakeHeldLaunchTarget _heldLaunchTarget;
     private FakeSlingshotBandShapeProvider _bandShapeProvider;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -34,16 +31,7 @@ public sealed class SlingshotLaunchRequestedTests
     {
         _observations.Clear();
         _launchRequests.Clear();
-        _preLaunchStateId = CreateStateId("Pre-Launch");
-        _runningStateId = CreateStateId("Running");
         ResetRuntimeFakes();
-    }
-
-    [TearDown]
-    public void OnTearDown()
-    {
-        UnityEngine.Object.DestroyImmediate(_preLaunchStateId);
-        UnityEngine.Object.DestroyImmediate(_runningStateId);
     }
 
     private void ResetRuntimeFakes()
@@ -69,9 +57,9 @@ public sealed class SlingshotLaunchRequestedTests
             BandRecoilCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f)
         };
         _input = new FakeUnityInput(_observations);
-        _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _view = new FakeSlingshotView(_observations);
         _projector = new FakeSlingshotInputProjector();
+        _launchTarget = new FakeLaunchTarget(_observations);
         _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
         _bandShapeProvider = new FakeSlingshotBandShapeProvider(_observations);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
@@ -293,24 +281,25 @@ public sealed class SlingshotLaunchRequestedTests
         var cameraObject = new GameObject("Slingshot Test Camera");
         var camera = cameraObject.AddComponent<Camera>();
         builder.RegisterInstance(_input).As<IUnityInput>();
-        builder.RegisterInstance(_stateService).As<IGameplayStateService>();
         var launchTarget = new TestLaunchTarget();
         builder.RegisterInstance(launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
-        var installer = new SlingshotInstaller(_config, _preLaunchStateId, _view, camera);
+        var installer = new SlingshotInstaller(_config, _view, camera);
 
         installer.Install(builder);
 
         using var container = builder.Build();
         var notifier = container.Resolve<ISlingshotLaunchNotifier>();
+        var capture = container.Resolve<ISlingshotCapture>();
         var launcher = container.Resolve<ISlingshotLauncher>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         UnityEngine.Object.DestroyImmediate(cameraObject);
 
         Assert.That(notifier, Is.Not.Null);
+        Assert.That(capture, Is.Not.Null);
         Assert.That(launcher, Is.Not.Null);
         Assert.That(bandShapeProvider, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(2));
+        Assert.That(initializables.Count, Is.EqualTo(1));
     }
 
     private SlingshotLaunchRequest ReleaseAndCaptureRequest(Vector3 rawPullPoint, Vector2 touchIndicatorScreenPosition)
@@ -328,9 +317,10 @@ public sealed class SlingshotLaunchRequestedTests
 
     private SlingshotController CreateInitializedController()
     {
-        var controller = new SlingshotController(_input, _stateService, _view, _projector, _heldLaunchTarget, _bandShapeProvider,
-            _launchAppliedNotifier, _clock, _config, _preLaunchStateId);
+        var controller = new SlingshotController(_input, _view, _projector, _launchTarget, _heldLaunchTarget, _bandShapeProvider,
+            _launchAppliedNotifier, _clock, _config);
         ((IInitializable)controller).Initialize();
+        ((ISlingshotCapture)controller).EnableCapture();
         return controller;
     }
 
@@ -392,13 +382,6 @@ public sealed class SlingshotLaunchRequestedTests
         _projector.SetWorldToScreen(_view.Geometry.LeftAnchorPosition, new Vector2(0f, 0f));
         _projector.SetWorldToScreen(_view.Geometry.RightAnchorPosition, new Vector2(100f, 0f));
         _projector.SetWorldToScreen(_view.Geometry.RestPoint, new Vector2(50f, 0f));
-    }
-
-    private GameplayStateId CreateStateId(string name)
-    {
-        var stateId = ScriptableObject.CreateInstance<GameplayStateId>();
-        stateId.name = name;
-        return stateId;
     }
 
     private void AssertDirectionEquals(Vector3 actual, Vector3 expected)

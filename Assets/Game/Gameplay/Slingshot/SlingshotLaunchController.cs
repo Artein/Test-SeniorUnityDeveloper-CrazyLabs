@@ -1,10 +1,8 @@
 using System;
-using Game.Gameplay.GameplayState;
 using Game.Utils.Invocation;
 using Game.Utils.Mathematics;
 using Unity.Mathematics;
 using UnityEngine;
-using VContainer.Unity;
 
 namespace Game.Gameplay.Slingshot
 {
@@ -18,60 +16,23 @@ namespace Game.Gameplay.Slingshot
         event Action<SlingshotLaunchRequest> LaunchApplied;
     }
 
-    public sealed class SlingshotLaunchController : IInitializable, IDisposable, ISlingshotLauncher, ISlingshotLaunchAppliedNotifier
+    public sealed class SlingshotLaunchController : ISlingshotLauncher, ISlingshotLaunchAppliedNotifier
     {
         private readonly ILaunchTarget _launchTarget;
         private readonly IHeldLaunchTarget _heldLaunchTarget;
-        private readonly IGameplayStateService _gameplayStateService;
-        private readonly GameplayStateId _preLaunchStateId;
-
-        private bool _isInitialized;
-        private bool _isDisposed;
 
         public event Action<SlingshotLaunchRequest> LaunchApplied;
 
         public SlingshotLaunchController(
             ILaunchTarget launchTarget,
-            IHeldLaunchTarget heldLaunchTarget,
-            IGameplayStateService gameplayStateService,
-            GameplayStateId preLaunchStateId)
+            IHeldLaunchTarget heldLaunchTarget)
         {
             _launchTarget = launchTarget ?? throw new ArgumentNullException(nameof(launchTarget));
             _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
-            _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
-            _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
-        }
-
-        void IInitializable.Initialize()
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(nameof(SlingshotLaunchController));
-
-            if (_isInitialized)
-                return;
-
-            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
-            _isInitialized = true;
-
-            if (_gameplayStateService.IsCurrent(_preLaunchStateId))
-                _launchTarget.Hold();
-        }
-
-        void IDisposable.Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
-            _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
         }
 
         public void Launch(SlingshotLaunchRequest request)
         {
-            if (_isDisposed)
-                throw new ObjectDisposedException(nameof(SlingshotLaunchController));
-
             if (!IsValidRequest(request))
             {
                 Debug.LogWarning("Invalid Slingshot launch request. Launch skipped.");
@@ -90,12 +51,6 @@ namespace Game.Gameplay.Slingshot
             _heldLaunchTarget.SetHeldPosition(request.FinalPullPoint);
             _launchTarget.Launch(finalVelocity);
             LaunchApplied?.InvokeSafely(request);
-        }
-
-        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
-        {
-            if (ReferenceEquals(nextStateId, _preLaunchStateId))
-                _launchTarget.Hold();
         }
 
         private bool IsValidRequest(SlingshotLaunchRequest request)

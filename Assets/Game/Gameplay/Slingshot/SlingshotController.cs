@@ -1,8 +1,7 @@
 using System;
 using System.Linq;
+using Game.Foundation.Input;
 using Game.Foundation.Time;
-using Game.Gameplay.GameplayState;
-using Game.Input.UnityInput;
 using Game.Utils.Invocation;
 using UnityEngine;
 using VContainer.Unity;
@@ -14,18 +13,23 @@ namespace Game.Gameplay.Slingshot
         event Action<SlingshotLaunchRequest> LaunchRequested;
     }
 
-    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotLaunchNotifier
+    public interface ISlingshotCapture
+    {
+        void EnableCapture();
+        void DisableCapture();
+    }
+
+    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotCapture, ISlingshotLaunchNotifier
     {
         private readonly IUnityInput _unityInput;
-        private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotView _view;
         private readonly ISlingshotInputProjector _inputProjector;
+        private readonly ILaunchTarget _launchTarget;
         private readonly IHeldLaunchTarget _heldLaunchTarget;
         private readonly ISlingshotBandShapeProvider _bandShapeProvider;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
-        private readonly GameplayStateId _preLaunchStateId;
 
         private IDisposable _inputEnableHandle;
         private Vector3[] _firstActiveBandShapeBuffer;
@@ -51,26 +55,24 @@ namespace Game.Gameplay.Slingshot
 
         public SlingshotController(
             IUnityInput unityInput,
-            IGameplayStateService gameplayStateService,
             ISlingshotView view,
             ISlingshotInputProjector inputProjector,
+            ILaunchTarget launchTarget,
             IHeldLaunchTarget heldLaunchTarget,
             ISlingshotBandShapeProvider bandShapeProvider,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             ITime clock,
-            ISlingshotConfig config,
-            GameplayStateId preLaunchStateId)
+            ISlingshotConfig config)
         {
             _unityInput = unityInput ?? throw new ArgumentNullException(nameof(unityInput));
-            _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _inputProjector = inputProjector ?? throw new ArgumentNullException(nameof(inputProjector));
+            _launchTarget = launchTarget ?? throw new ArgumentNullException(nameof(launchTarget));
             _heldLaunchTarget = heldLaunchTarget ?? throw new ArgumentNullException(nameof(heldLaunchTarget));
             _bandShapeProvider = bandShapeProvider ?? throw new ArgumentNullException(nameof(bandShapeProvider));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
 
             ValidateConfig();
         }
@@ -89,17 +91,8 @@ namespace Game.Gameplay.Slingshot
             _unityInput.PointerMoved += HandlePointerMoved;
             _unityInput.PointerReleased += HandlePointerReleased;
             _unityInput.PointerCanceled += HandlePointerCanceled;
-            _gameplayStateService.GameplayStateChanged += HandleGameplayStateChanged;
             _launchAppliedNotifier.LaunchApplied += HandleLaunchApplied;
             _isInitialized = true;
-
-            if (_gameplayStateService.IsCurrent(_preLaunchStateId))
-            {
-                EnableCapture();
-                return;
-            }
-
-            _view.ShowInactiveIdle(CreateDetachedRestBandShape());
         }
 
         void ITickable.Tick()
@@ -121,7 +114,6 @@ namespace Game.Gameplay.Slingshot
             _unityInput.PointerMoved -= HandlePointerMoved;
             _unityInput.PointerReleased -= HandlePointerReleased;
             _unityInput.PointerCanceled -= HandlePointerCanceled;
-            _gameplayStateService.GameplayStateChanged -= HandleGameplayStateChanged;
             _launchAppliedNotifier.LaunchApplied -= HandleLaunchApplied;
 
             _hasActivePointer = false;
@@ -131,31 +123,10 @@ namespace Game.Gameplay.Slingshot
             DisposeInputHandle();
         }
 
-        private void ValidateConfig()
+        void ISlingshotCapture.EnableCapture()
         {
-            var validator = new SlingshotConfigValidator();
-            var errors = validator.Validate(_config).ToList();
+            ThrowIfCaptureCallInvalid();
 
-            if (errors.Count <= 0)
-                return;
-
-            throw new ArgumentException("Invalid Slingshot config: " + string.Join(" ", errors), nameof(_config));
-        }
-
-        private void HandleGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
-        {
-            if (ReferenceEquals(nextStateId, _preLaunchStateId))
-            {
-                EnableCapture();
-                return;
-            }
-
-            if (_isCaptureEnabled || ReferenceEquals(previousStateId, _preLaunchStateId))
-                DisableCapture();
-        }
-
-        private void EnableCapture()
-        {
             if (_isCaptureEnabled)
                 return;
 
@@ -166,12 +137,15 @@ namespace Game.Gameplay.Slingshot
             _isCurrentPullBandShapeValid = false;
             _inputEnableHandle = _unityInput.Enable();
             _isCaptureEnabled = true;
+            _launchTarget.Hold();
             SetHeldTargetToRest();
             _view.ShowCaptureIdle(CreateHeldRestBandShape());
         }
 
-        private void DisableCapture()
+        void ISlingshotCapture.DisableCapture()
         {
+            ThrowIfCaptureCallInvalid();
+
             if (!_isCaptureEnabled && _inputEnableHandle is null)
                 return;
 
@@ -190,6 +164,26 @@ namespace Game.Gameplay.Slingshot
             {
                 DisposeInputHandle();
             }
+        }
+
+        private void ValidateConfig()
+        {
+            var validator = new SlingshotConfigValidator();
+            var errors = validator.Validate(_config).ToList();
+
+            if (errors.Count <= 0)
+                return;
+
+            throw new ArgumentException("Invalid Slingshot config: " + string.Join(" ", errors), nameof(_config));
+        }
+
+        private void ThrowIfCaptureCallInvalid()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(nameof(SlingshotController));
+
+            if (!_isInitialized)
+                throw new InvalidOperationException("Slingshot capture cannot be changed before initialization.");
         }
 
         private void DisposeInputHandle()
