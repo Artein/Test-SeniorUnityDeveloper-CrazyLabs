@@ -377,6 +377,8 @@ public sealed class SlingshotControllerTests
         Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "view-active-pull" }));
         Assert.That(_bandShapeProvider.Queries, Has.Count.EqualTo(1));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedPullPoint));
+        Assert.That(_bandShapeProvider.RenderedBandRadii, Has.Count.EqualTo(1));
+        Assert.That(_bandShapeProvider.RenderedBandRadii[^1], Is.EqualTo(_view.VisibleBandRadius + _config.BandContactPadding));
         Assert.That(_view.LastActivePullVisual.PullDistance, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(expectedPullPoint.x).Within(0.0001f));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(1f).Within(0.0001f));
@@ -405,6 +407,37 @@ public sealed class SlingshotControllerTests
 
         AssertBandShapeEquals(_view.LastActivePullVisual.BandShape, _bandShapeProvider.ShapePoints);
         Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(80f, 15f)));
+    }
+
+    [Test]
+    public void PointerMoved_RenderedSilhouetteWouldCrowdAnchor_ClampsLateralOffsetToRenderedCorridor()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        _observations.Clear();
+        _heldLaunchTarget.HeldPositions.Clear();
+        _bandShapeProvider.OffsetSpanQueries.Clear();
+        _bandShapeProvider.ShouldFailOffsetSpan = false;
+        _bandShapeProvider.SilhouetteMinimumOffsetFromPullPoint = -0.35f;
+        _bandShapeProvider.SilhouetteMaximumOffsetFromPullPoint = 0.35f;
+        var rawProjectedPoint = new Vector3(4f, 0f, -5f);
+        var preliminaryClampedPoint = new Vector3(1f, 0f, -2f);
+        var expectedPullOffset = 1f - 0.35f - ((_view.VisibleBandRadius + _config.BandContactPadding) * 3f);
+        var renderedCorridorClampedPoint = new Vector3(expectedPullOffset, 0f, -2f);
+        _projector.SetScreenToWorld(new Vector2(90f, 80f), rawProjectedPoint);
+        _projector.SetWorldToScreen(renderedCorridorClampedPoint, new Vector2(76f, 15f));
+
+        _input.Move(1, new Vector2(90f, 80f));
+
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "target-position", "band-shape", "view-active-pull" }));
+        Assert.That(_heldLaunchTarget.HeldPositions, Is.EqualTo(new[] { preliminaryClampedPoint, renderedCorridorClampedPoint }));
+        Assert.That(_bandShapeProvider.OffsetSpanQueries, Has.Count.EqualTo(1));
+        Assert.That(_bandShapeProvider.OffsetSpanQueries[^1].PullPoint, Is.EqualTo(preliminaryClampedPoint));
+        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(renderedCorridorClampedPoint));
+        Assert.That(_view.LastActivePullVisual.PullDistance, Is.EqualTo(2f));
+        Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(expectedPullOffset).Within(0.0001f));
+        AssertBandShapeEquals(_view.LastActivePullVisual.BandShape, _bandShapeProvider.ShapePoints);
+        Assert.That(_view.LastActivePullVisual.TouchIndicatorScreenPosition, Is.EqualTo(new Vector2(76f, 15f)));
     }
 
     [Test]

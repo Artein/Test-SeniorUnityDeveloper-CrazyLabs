@@ -11,8 +11,13 @@ namespace Game.Gameplay.Slingshot
         bool TryProjectWorldToScreen(Vector3 worldPosition, out Vector2 screenPosition);
     }
 
+    internal interface ISlingshotBandVisibilityRayProvider
+    {
+        bool TryCreateRayToWorldPoint(Vector3 worldPoint, out Ray ray, out float distance);
+    }
+
     [UsedImplicitly]
-    public sealed class SlingshotInputProjector : ISlingshotInputProjector
+    public sealed class SlingshotInputProjector : ISlingshotInputProjector, ISlingshotBandVisibilityRayProvider
     {
         private readonly Camera _camera;
 
@@ -21,7 +26,7 @@ namespace Game.Gameplay.Slingshot
             _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
         }
 
-        public bool TryProjectScreenToPullPlane(Vector2 screenPosition, SlingshotGeometrySnapshot geometry, out Vector3 worldPosition)
+        bool ISlingshotInputProjector.TryProjectScreenToPullPlane(Vector2 screenPosition, SlingshotGeometrySnapshot geometry, out Vector3 worldPosition)
         {
             var plane = new Plane(geometry.LaunchFrameUp, geometry.RestPoint);
             var ray = _camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
@@ -36,9 +41,10 @@ namespace Game.Gameplay.Slingshot
             return worldPosition.IsFinite();
         }
 
-        public bool TryProjectWorldToScreen(Vector3 worldPosition, out Vector2 screenPosition)
+        bool ISlingshotInputProjector.TryProjectWorldToScreen(Vector3 worldPosition, out Vector2 screenPosition)
         {
             var projectedPosition = _camera.WorldToScreenPoint(worldPosition);
+
             if (projectedPosition.z < 0f || !projectedPosition.IsFinite())
             {
                 screenPosition = Vector2.zero;
@@ -46,6 +52,21 @@ namespace Game.Gameplay.Slingshot
             }
 
             screenPosition = new Vector2(projectedPosition.x, projectedPosition.y);
+            return true;
+        }
+
+        bool ISlingshotBandVisibilityRayProvider.TryCreateRayToWorldPoint(Vector3 worldPoint, out Ray ray, out float distance)
+        {
+            var rayDirection = worldPoint - _camera.transform.position;
+            distance = rayDirection.magnitude;
+
+            if (distance <= 0.0001f || !rayDirection.IsFinite())
+            {
+                ray = default;
+                return false;
+            }
+
+            ray = new Ray(_camera.transform.position, rayDirection / distance);
             return true;
         }
     }

@@ -57,6 +57,22 @@ public sealed class SlingshotBandShapeProviderTests
     }
 
     [Test]
+    public void TryCreateRenderedBandShape_RenderedBandRadius_InflatesContactPadding()
+    {
+        var config = CreateValidConfig();
+        config.BandContactPadding = 0.05f;
+        var source = new FakeLaunchTargetSilhouetteSource(CreateSquareSamples());
+        ISlingshotRenderedBandShapeProvider provider = new SlingshotBandShapeProvider(source, config);
+        var output = new Vector3[config.BandWrapSampleCount + 4];
+
+        var solved = provider.TryCreateRenderedBandShape(CreateQuery(), 0.1f, output, out var pointCount);
+
+        Assert.That(solved, Is.True);
+        Assert.That(pointCount, Is.EqualTo(9));
+        AssertVector3(output[4], new Vector3(0f, 0f, -2.15f));
+    }
+
+    [Test]
     public void TryCreateBandShape_SourceFailure_ReturnsFalseWithoutThrowing()
     {
         var config = CreateValidConfig();
@@ -163,6 +179,24 @@ public sealed class SlingshotBandShapeProviderTests
         Assert.That(gotDepthSpan, Is.True);
         Assert.That(minimumDepth, Is.EqualTo(-1f).Within(0.0001f));
         Assert.That(maximumDepth, Is.EqualTo(2f).Within(0.0001f));
+        Assert.That(source.Queries, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TryGetSilhouetteOffsetSpan_ValidSamples_ReturnsPullPlaneOffsetRange()
+    {
+        var source = new FakeLaunchTargetSilhouetteSource(
+            new Vector3(-1.2f, 0f, 1f),
+            new Vector3(0.8f, 0f, 1f),
+            new Vector3(0.8f, 0f, -2f),
+            new Vector3(-1.2f, 0f, -2f));
+        ISlingshotBandShapeOffsetProvider provider = new SlingshotBandShapeProvider(source, CreateValidConfig());
+
+        var gotOffsetSpan = provider.TryGetSilhouetteOffsetSpan(CreateQuery(), out var minimumOffset, out var maximumOffset);
+
+        Assert.That(gotOffsetSpan, Is.True);
+        Assert.That(minimumOffset, Is.EqualTo(-1.2f).Within(0.0001f));
+        Assert.That(maximumOffset, Is.EqualTo(0.8f).Within(0.0001f));
         Assert.That(source.Queries, Is.EqualTo(1));
     }
 

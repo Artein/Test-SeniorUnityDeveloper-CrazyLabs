@@ -28,6 +28,10 @@ namespace Game.Gameplay.Slingshot
         private readonly IHeldLaunchTarget _heldLaunchTarget;
         private readonly ISlingshotBandShapeProvider _bandShapeProvider;
         private readonly ISlingshotBandShapeDepthProvider _bandShapeDepthProvider;
+        private readonly ISlingshotBandShapeOffsetProvider _bandShapeOffsetProvider;
+        private readonly ISlingshotRenderedBandShapeProvider _renderedBandShapeProvider;
+        private readonly ISlingshotBandVisibilityRayProvider _bandVisibilityRayProvider;
+        private readonly ILaunchTargetBandOcclusionSource _launchTargetBandOcclusionSource;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
@@ -38,6 +42,7 @@ namespace Game.Gameplay.Slingshot
         private Vector3[] _currentActiveBandShapeBuffer;
         private Vector3[] _inactiveActiveBandShapeBuffer;
         private Vector3[] _restBandShapeBuffer;
+        private Vector3[] _visibilityBandShapeBuffer;
         private SlingshotGeometrySnapshot _geometry;
         private SlingshotLaunchRequest _pendingLaunchRequest;
         private float _releaseRecoilElapsed;
@@ -75,6 +80,19 @@ namespace Game.Gameplay.Slingshot
                                       ?? throw new ArgumentException(
                                           "Slingshot Band Shape provider must support silhouette depth spans.",
                                           nameof(bandShapeProvider));
+
+            _bandShapeOffsetProvider = bandShapeProvider as ISlingshotBandShapeOffsetProvider
+                                       ?? throw new ArgumentException(
+                                           "Slingshot Band Shape provider must support silhouette offset spans.",
+                                           nameof(bandShapeProvider));
+
+            _renderedBandShapeProvider = bandShapeProvider as ISlingshotRenderedBandShapeProvider
+                                         ?? throw new ArgumentException(
+                                             "Slingshot Band Shape provider must support rendered Band Shape solves.",
+                                             nameof(bandShapeProvider));
+
+            _bandVisibilityRayProvider = inputProjector as ISlingshotBandVisibilityRayProvider;
+            _launchTargetBandOcclusionSource = launchTarget as ILaunchTargetBandOcclusionSource;
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -389,14 +407,31 @@ namespace Game.Gameplay.Slingshot
             var pullOffset = ClampPullOffset(Vector3.Dot(delta, _geometry.LaunchFrameRight), pullDistance);
 
             var clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
+            _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
+
+            var silhouetteClampedPullOffset = ClampPullOffsetToRenderedSilhouetteCorridor(pullOffset, clampedPullPoint);
+
+            if (Mathf.Abs(silhouetteClampedPullOffset - pullOffset) > 0.0001f)
+            {
+                pullOffset = silhouetteClampedPullOffset;
+                clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
+                _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
+            }
+
+            var visibleClampedPullOffset = ClampPullOffsetToVisibleBandShape(pullDistance, pullOffset);
+
+            if (Mathf.Abs(visibleClampedPullOffset - pullOffset) > 0.0001f)
+            {
+                pullOffset = visibleClampedPullOffset;
+                clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
+                _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
+            }
 
             if (!_inputProjector.TryProjectWorldToScreen(clampedPullPoint, out var touchIndicatorScreenPosition))
             {
                 pullVisual = default;
                 return false;
             }
-
-            _heldLaunchTarget.SetHeldPosition(clampedPullPoint);
 
             var normalizedPull = Mathf.Clamp01(pullDistance / _config.MaximumPullDistance);
             _isCurrentPullBandShapeValid = TryUpdateActiveBandShape(clampedPullPoint);
@@ -429,6 +464,33 @@ namespace Game.Gameplay.Slingshot
                 GetMaximumAllowedPullOffset() * lateralPullScale);
         }
 
+        private float ClampPullOffsetToRenderedSilhouetteCorridor(float pullOffset, Vector3 posedPullPoint)
+        {
+            if (!_bandShapeOffsetProvider.TryGetSilhouetteOffsetSpan(
+                    CreateBandShapeQuery(posedPullPoint),
+                    out var minimumSilhouetteOffset,
+                    out var maximumSilhouetteOffset))
+            {
+                return pullOffset;
+            }
+
+            var targetLeftExtent = Mathf.Max(0f, pullOffset - minimumSilhouetteOffset);
+            var targetRightExtent = Mathf.Max(0f, maximumSilhouetteOffset - pullOffset);
+            var renderedCorridorClearance = GetRenderedAnchorCorridorClearance();
+            var minimumPullOffset = GetMinimumAnchorOffset() + targetLeftExtent + renderedCorridorClearance;
+            var maximumPullOffset = GetMaximumAnchorOffset() - targetRightExtent - renderedCorridorClearance;
+
+            if (minimumPullOffset > maximumPullOffset)
+                return pullOffset;
+
+            return Mathf.Clamp(pullOffset, minimumPullOffset, maximumPullOffset);
+        }
+
+        private float GetRenderedAnchorCorridorClearance()
+        {
+            return GetRenderedBandSolverRadius() * 3f;
+        }
+
         private float GetLateralPullScale(float pullDistance)
         {
             var fullLateralPullDistance = GetFullLateralPullDistance();
@@ -454,18 +516,26 @@ namespace Game.Gameplay.Slingshot
 
         private float GetMinimumAllowedPullOffset()
         {
-            var leftAnchorOffset = Vector3.Dot(_geometry.LeftAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
-            var rightAnchorOffset = Vector3.Dot(_geometry.RightAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
-            var minimumAnchorOffset = Mathf.Min(leftAnchorOffset, rightAnchorOffset);
-            return Mathf.Max(-_config.MaximumLateralPull, minimumAnchorOffset);
+            return Mathf.Max(-_config.MaximumLateralPull, GetMinimumAnchorOffset());
         }
 
         private float GetMaximumAllowedPullOffset()
         {
+            return Mathf.Min(_config.MaximumLateralPull, GetMaximumAnchorOffset());
+        }
+
+        private float GetMinimumAnchorOffset()
+        {
             var leftAnchorOffset = Vector3.Dot(_geometry.LeftAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
             var rightAnchorOffset = Vector3.Dot(_geometry.RightAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
-            var maximumAnchorOffset = Mathf.Max(leftAnchorOffset, rightAnchorOffset);
-            return Mathf.Min(_config.MaximumLateralPull, maximumAnchorOffset);
+            return Mathf.Min(leftAnchorOffset, rightAnchorOffset);
+        }
+
+        private float GetMaximumAnchorOffset()
+        {
+            var leftAnchorOffset = Vector3.Dot(_geometry.LeftAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            var rightAnchorOffset = Vector3.Dot(_geometry.RightAnchorPosition - _geometry.RestPoint, _geometry.LaunchFrameRight);
+            return Mathf.Max(leftAnchorOffset, rightAnchorOffset);
         }
 
         private bool IsInsideBandTouchTarget(Vector2 screenPosition)
