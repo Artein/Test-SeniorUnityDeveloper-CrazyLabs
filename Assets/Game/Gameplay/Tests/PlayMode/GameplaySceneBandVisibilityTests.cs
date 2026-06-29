@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneBandVisibilityTests
@@ -22,7 +24,9 @@ public sealed class GameplaySceneBandVisibilityTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -58,13 +62,8 @@ public sealed class GameplaySceneBandVisibilityTests
         var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
-        AssertBandCenterlineVisibleFromCamera(
-            activeBandPositions,
-            context.InputCamera,
-            context.TargetCollider,
-            context.Geometry,
-            context.BandCenter.transform.position,
-            phase);
+        AssertBandCenterlineVisibleFromCamera(activeBandPositions, context.InputCamera, context.TargetCollider, context.Geometry,
+            context.BandCenter.transform.position, phase);
     }
 
     private IEnumerator LoadGameplayScene()
@@ -73,7 +72,6 @@ public sealed class GameplaySceneBandVisibilityTests
             yield break;
 
         SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
-        yield break;
     }
 
     private bool CanReuseGameplayScene(Scene scene)
@@ -110,6 +108,14 @@ public sealed class GameplaySceneBandVisibilityTests
         }
 
         Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)

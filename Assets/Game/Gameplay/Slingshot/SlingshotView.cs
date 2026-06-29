@@ -81,7 +81,6 @@ namespace Game.Gameplay.Slingshot
             DrawLaunchFrameGizmos(geometry);
             DrawPullPlaneGizmos(geometry);
             DrawPullLimitGizmos(geometry);
-            DrawLaunchAngleGizmos(geometry);
             DrawTouchTargetGizmos(geometry);
             DrawBandShapeTuningGizmos(geometry);
         }
@@ -228,41 +227,6 @@ namespace Game.Gameplay.Slingshot
             Gizmos.DrawLine(frontRight, backRight);
             Gizmos.DrawLine(backRight, backLeft);
             Gizmos.DrawLine(backLeft, frontLeft);
-        }
-
-        private void DrawLaunchAngleGizmos(SlingshotGeometrySnapshot geometry)
-        {
-            if (_gizmoConfig == null)
-                return;
-
-            var leftDirection = Quaternion.AngleAxis(-_gizmoConfig.MaximumLaunchAngleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
-            var rightDirection = Quaternion.AngleAxis(_gizmoConfig.MaximumLaunchAngleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
-
-            Gizmos.color = new Color(1f, 0.45f, 0.05f, 0.95f);
-            Gizmos.DrawLine(geometry.RestPoint, geometry.RestPoint + (leftDirection * _gizmoFrameAxisLength));
-            Gizmos.DrawLine(geometry.RestPoint, geometry.RestPoint + (rightDirection * _gizmoFrameAxisLength));
-            DrawLaunchAngleArc(geometry);
-        }
-
-        private void DrawLaunchAngleArc(SlingshotGeometrySnapshot geometry)
-        {
-            var segmentCount = 12;
-            var previousPoint = GetLaunchAngleArcPoint(geometry, -_gizmoConfig.MaximumLaunchAngleDegrees);
-
-            for (var segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex += 1)
-            {
-                var normalizedSegment = (float)segmentIndex / segmentCount;
-                var angle = Mathf.Lerp(-_gizmoConfig.MaximumLaunchAngleDegrees, _gizmoConfig.MaximumLaunchAngleDegrees, normalizedSegment);
-                var currentPoint = GetLaunchAngleArcPoint(geometry, angle);
-                Gizmos.DrawLine(previousPoint, currentPoint);
-                previousPoint = currentPoint;
-            }
-        }
-
-        private Vector3 GetLaunchAngleArcPoint(SlingshotGeometrySnapshot geometry, float angleDegrees)
-        {
-            var direction = Quaternion.AngleAxis(angleDegrees, geometry.LaunchFrameUp) * geometry.LaunchFrameForward;
-            return geometry.RestPoint + (direction * _gizmoFrameAxisLength);
         }
 
         private void DrawTouchTargetGizmos(SlingshotGeometrySnapshot geometry)

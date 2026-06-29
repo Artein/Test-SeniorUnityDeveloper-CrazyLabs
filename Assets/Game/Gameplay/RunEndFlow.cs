@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Game.Foundation.Time;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
-using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Utils.Invocation;
 using UnityEngine;
@@ -28,10 +28,10 @@ namespace Game.Gameplay
         private readonly IRunContactClassifier _contactClassifier;
         private readonly IRunProgressService _progressService;
         private readonly IRunMotionSource _motionSource;
-        private readonly IRunResourceAccumulator _runResourceAccumulator;
+        private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
         private readonly IRunEndConfig _config;
         private readonly ITime _clock;
-        private readonly GameplayStateId _preLaunchStateId;
+        private readonly GameplayStateId _restartStateId;
         private readonly GameplayStateId _runningStateId;
         private readonly GameplayStateId _runEndedStateId;
         private readonly List<RunEndCandidate> _pendingCandidates = new();
@@ -40,7 +40,7 @@ namespace Game.Gameplay
         private bool _isDisposed;
         private bool _hasLaunchApplied;
         private bool _hasAcceptedResult;
-        private bool _isAwaitingPreLaunch;
+        private bool _isAwaitingRestart;
         private float _elapsedSinceLaunch;
         private float _runEndedElapsed;
 
@@ -53,10 +53,10 @@ namespace Game.Gameplay
             IRunContactClassifier contactClassifier,
             IRunProgressService progressService,
             IRunMotionSource motionSource,
-            IRunResourceAccumulator runResourceAccumulator,
+            IRunCurrencyAccumulator runCurrencyAccumulator,
             IRunEndConfig config,
             ITime clock,
-            GameplayStateId preLaunchStateId,
+            GameplayStateId restartStateId,
             GameplayStateId runningStateId,
             GameplayStateId runEndedStateId)
         {
@@ -66,10 +66,10 @@ namespace Game.Gameplay
             _contactClassifier = contactClassifier ?? throw new ArgumentNullException(nameof(contactClassifier));
             _progressService = progressService ?? throw new ArgumentNullException(nameof(progressService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
-            _runResourceAccumulator = runResourceAccumulator ?? throw new ArgumentNullException(nameof(runResourceAccumulator));
+            _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
+            _restartStateId = restartStateId != null ? restartStateId : throw new ArgumentNullException(nameof(restartStateId));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
             _runEndedStateId = runEndedStateId != null ? runEndedStateId : throw new ArgumentNullException(nameof(runEndedStateId));
         }
@@ -96,7 +96,7 @@ namespace Game.Gameplay
 
             var fixedDeltaTime = Math.Max(0f, _clock.FixedDeltaTime);
 
-            if (_isAwaitingPreLaunch)
+            if (_isAwaitingRestart)
             {
                 TickRunEndedDelay(fixedDeltaTime);
                 return;
@@ -144,14 +144,14 @@ namespace Game.Gameplay
             _pendingCandidates.Add(candidate);
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
                 return;
 
             _hasLaunchApplied = true;
             _hasAcceptedResult = false;
-            _isAwaitingPreLaunch = false;
+            _isAwaitingRestart = false;
             _elapsedSinceLaunch = 0f;
             _runEndedElapsed = 0f;
             _pendingCandidates.Clear();
@@ -167,9 +167,9 @@ namespace Game.Gameplay
 
             _pendingCandidates.Clear();
 
-            if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            if (ReferenceEquals(nextStateId, _restartStateId))
             {
-                _runResourceAccumulator.Reset();
+                _runCurrencyAccumulator.Reset();
                 ResetRunEndState();
             }
         }
@@ -219,7 +219,7 @@ namespace Game.Gameplay
         private void AcceptCandidate(RunEndCandidate candidate)
         {
             _hasAcceptedResult = true;
-            _isAwaitingPreLaunch = _gameplayStateService.TryTransitionTo(_runEndedStateId);
+            _isAwaitingRestart = _gameplayStateService.TryTransitionTo(_runEndedStateId);
             _runEndedElapsed = 0f;
 
             if (!_progressService.HasValidSnapshot)
@@ -240,7 +240,7 @@ namespace Game.Gameplay
                 _progressService.MaximumForwardProgress,
                 finalPosition,
                 finalVelocity.magnitude,
-                _runResourceAccumulator.CreateSnapshot());
+                _runCurrencyAccumulator.CreateSnapshot());
 
             RunResultAccepted?.InvokeSafely(result);
             Debug.Log(result.ToString());
@@ -250,7 +250,7 @@ namespace Game.Gameplay
         {
             if (!_gameplayStateService.IsCurrent(_runEndedStateId))
             {
-                _isAwaitingPreLaunch = false;
+                _isAwaitingRestart = false;
                 return;
             }
 
@@ -259,8 +259,8 @@ namespace Game.Gameplay
             if (_runEndedElapsed < _config.RunEndedDelay)
                 return;
 
-            _isAwaitingPreLaunch = false;
-            _gameplayStateService.TryTransitionTo(_preLaunchStateId);
+            _isAwaitingRestart = false;
+            _gameplayStateService.TryTransitionTo(_restartStateId);
         }
 
         private int GetPriority(RunEndReason reason)
@@ -284,7 +284,7 @@ namespace Game.Gameplay
         {
             _hasLaunchApplied = false;
             _hasAcceptedResult = false;
-            _isAwaitingPreLaunch = false;
+            _isAwaitingRestart = false;
             _elapsedSinceLaunch = 0f;
             _runEndedElapsed = 0f;
             _pendingCandidates.Clear();

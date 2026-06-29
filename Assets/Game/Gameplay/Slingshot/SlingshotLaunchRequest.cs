@@ -4,33 +4,30 @@ namespace Game.Gameplay.Slingshot
 {
     public readonly struct SlingshotLaunchRequest
     {
-        public float NormalizedPower { get; }
+        public float PullStrength { get; }
         public float PullDistance { get; }
         public float PullOffset { get; }
+        public float NormalizedLateralPull { get; }
         public Vector3 FinalPullPoint { get; }
-        public Vector3 LaunchDirection { get; }
-        public float LaunchSpeed { get; }
-        public Vector3 LaunchUpDirection { get; }
-        public float LaunchUpSpeed { get; }
+        public Vector3 LaunchFrameForward { get; }
+        public Vector3 LaunchFrameUp { get; }
 
         public SlingshotLaunchRequest(
-            float normalizedPower,
+            float pullStrength,
             float pullDistance,
             float pullOffset,
+            float normalizedLateralPull,
             Vector3 finalPullPoint,
-            Vector3 launchDirection,
-            float launchSpeed,
-            Vector3 launchUpDirection,
-            float launchUpSpeed)
+            Vector3 launchFrameForward,
+            Vector3 launchFrameUp)
         {
-            NormalizedPower = normalizedPower;
+            PullStrength = pullStrength;
             PullDistance = pullDistance;
             PullOffset = pullOffset;
+            NormalizedLateralPull = normalizedLateralPull;
             FinalPullPoint = finalPullPoint;
-            LaunchDirection = launchDirection;
-            LaunchSpeed = launchSpeed;
-            LaunchUpDirection = launchUpDirection;
-            LaunchUpSpeed = launchUpSpeed;
+            LaunchFrameForward = launchFrameForward;
+            LaunchFrameUp = launchFrameUp;
         }
     }
 }

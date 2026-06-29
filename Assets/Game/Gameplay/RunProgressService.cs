@@ -114,7 +114,7 @@ namespace Game.Gameplay
             MaximumForwardProgress = 0f;
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
                 return;

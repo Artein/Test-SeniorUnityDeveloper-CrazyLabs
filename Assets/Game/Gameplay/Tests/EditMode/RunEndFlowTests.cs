@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using Game.Foundation.Time;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
-using Game.Gameplay.Pickups;
+using Game.Gameplay.Economy;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -15,7 +15,7 @@ using VContainer.Unity;
 public sealed class RunEndFlowTests
 {
     private readonly List<UnityEngine.Object> _objects = new();
-    private GameplayStateId _preLaunchStateId;
+    private GameplayStateId _runPreparationStateId;
     private GameplayStateId _runningStateId;
     private GameplayStateId _runEndedStateId;
     private FakeGameplayStateService _stateService;
@@ -24,19 +24,19 @@ public sealed class RunEndFlowTests
     private FakeRunContactClassifier _contactClassifier;
     private FakeRunProgressService _progressService;
     private FakeRunMotionSource _motionSource;
-    private RunResourceAccumulator _runResourceAccumulator;
+    private RunCurrencyAccumulator _runCurrencyAccumulator;
     private FakeRunEndConfig _config;
     private FakeTime _clock;
     private RunEndFlow _flow;
-    private ResourceDefinition _coins;
+    private CurrencyDefinition _coins;
 
     [SetUp]
     public void OnSetUp()
     {
-        _preLaunchStateId = CreateStateId("Pre-Launch");
+        _runPreparationStateId = CreateStateId("Run Preparation");
         _runningStateId = CreateStateId("Running");
         _runEndedStateId = CreateStateId("Run Ended");
-        _stateService = new FakeGameplayStateService(_preLaunchStateId);
+        _stateService = new FakeGameplayStateService(_runPreparationStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _contactNotifier = new FakeContactNotifier();
         _contactClassifier = new FakeRunContactClassifier();
@@ -52,10 +52,10 @@ public sealed class RunEndFlowTests
             Position = new Vector3(1f, 2f, 3f),
             LinearVelocity = new Vector3(0f, 0f, 4f)
         };
-        _runResourceAccumulator = new RunResourceAccumulator();
+        _runCurrencyAccumulator = new RunCurrencyAccumulator();
         _config = new FakeRunEndConfig { RunEndedDelay = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
-        _coins = CreateResourceDefinition("Coins");
+        _coins = CreateCurrencyDefinition("Coins");
         _flow = CreateFlow();
         ((IInitializable)_flow).Initialize();
     }
@@ -99,10 +99,10 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_FinishCandidate_PublishesRunResultWithResourceSnapshot()
+    public void FixedTick_FinishCandidate_PublishesRunResultWithCurrencySnapshot()
     {
         ActivateRun();
-        ((IRunResourceAccumulator)_runResourceAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -111,14 +111,14 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
 
         Assert.That(acceptedResult.HasValue, Is.True);
-        Assert.That(acceptedResult.Value.ResourceSnapshot.GetAmount(_coins), Is.EqualTo(7));
+        Assert.That(acceptedResult.Value.CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
     }
 
     [Test]
-    public void GameplayStateChanged_EnteringPreLaunch_ResetsAccumulatorWithoutMutatingAcceptedResult()
+    public void GameplayStateChanged_EnteringRunPreparation_ResetsAccumulatorWithoutMutatingAcceptedResult()
     {
         ActivateRun();
-        ((IRunResourceAccumulator)_runResourceAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -128,14 +128,14 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(_stateService.CurrentStateId, Is.SameAs(_preLaunchStateId));
-        Assert.That(((IRunResourceAccumulator)_runResourceAccumulator).CreateSnapshot().GetAmount(_coins), Is.Zero);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
+        Assert.That(((IRunCurrencyAccumulator)_runCurrencyAccumulator).CreateSnapshot().GetAmount(_coins), Is.Zero);
         Assert.That(acceptedResult.HasValue, Is.True);
-        Assert.That(acceptedResult.Value.ResourceSnapshot.GetAmount(_coins), Is.EqualTo(7));
+        Assert.That(acceptedResult.Value.CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
     }
 
     [Test]
-    public void FixedTick_RunEndedDelayElapsed_TransitionsBackToPreLaunch()
+    public void FixedTick_RunEndedDelayElapsed_TransitionsBackToRunPreparation()
     {
         ActivateRun();
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
@@ -145,8 +145,8 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(_stateService.CurrentStateId, Is.SameAs(_preLaunchStateId));
-        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _preLaunchStateId }));
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runPreparationStateId }));
     }
 
     [Test]
@@ -185,10 +185,10 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
         ((IFixedTickable)_flow).FixedTick();
-        _stateService.ChangeTo(_preLaunchStateId);
+        _stateService.ChangeTo(_runPreparationStateId);
 
         _stateService.ChangeTo(_runningStateId);
-        _launchAppliedNotifier.Apply(CreateLaunchRequest());
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=ObstacleHit"));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
         ((IFixedTickable)_flow).FixedTick();
@@ -226,13 +226,13 @@ public sealed class RunEndFlowTests
     private RunEndFlow CreateFlow()
     {
         return new RunEndFlow(_stateService, _launchAppliedNotifier, _contactNotifier, _contactClassifier, _progressService, _motionSource,
-            _runResourceAccumulator, _config, _clock, _preLaunchStateId, _runningStateId, _runEndedStateId);
+            _runCurrencyAccumulator, _config, _clock, _runPreparationStateId, _runningStateId, _runEndedStateId);
     }
 
     private void ActivateRun()
     {
         _stateService.ChangeTo(_runningStateId);
-        _launchAppliedNotifier.Apply(CreateLaunchRequest());
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -244,26 +244,31 @@ public sealed class RunEndFlowTests
         return stateId;
     }
 
-    private ResourceDefinition CreateResourceDefinition(string resourceName)
+    private CurrencyDefinition CreateCurrencyDefinition(string resourceName)
     {
-        var resourceDefinition = ScriptableObject.CreateInstance<ResourceDefinition>();
-        resourceDefinition.name = resourceName;
-        _objects.Add(resourceDefinition);
+        var currencyDefinition = ScriptableObject.CreateInstance<CurrencyDefinition>();
+        currencyDefinition.name = resourceName;
+        _objects.Add(currencyDefinition);
 
-        return resourceDefinition;
+        return currencyDefinition;
     }
 
-    private SlingshotLaunchRequest CreateLaunchRequest()
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
     {
-        return new SlingshotLaunchRequest(
+        var request = new SlingshotLaunchRequest(
             1f,
             1f,
             0f,
+            0f,
             Vector3.zero,
             Vector3.forward,
-            1f,
-            Vector3.up,
-            0f);
+            Vector3.up);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            Vector3.forward,
+            Vector3.forward,
+            Vector3.up);
     }
 
     private sealed class FakeGameplayStateService : IGameplayStateService
@@ -302,11 +307,11 @@ public sealed class RunEndFlowTests
 
     private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
-        public void Apply(SlingshotLaunchRequest request)
+        public void Apply(SlingshotLaunchAppliedEvent launchApplied)
         {
-            LaunchApplied?.Invoke(request);
+            LaunchApplied?.Invoke(launchApplied);
         }
     }
 

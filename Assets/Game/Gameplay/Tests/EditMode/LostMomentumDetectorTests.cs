@@ -33,6 +33,7 @@ public sealed class LostMomentumDetectorTests
         _progressService = new FakeRunProgressService();
         _motionSource = new FakeRunMotionSource();
         _candidateReceiver = new FakeRunEndCandidateReceiver();
+
         _config = new FakeRunEndConfig
         {
             LostMomentumLaunchGraceDuration = 0.1f,
@@ -131,7 +132,7 @@ public sealed class LostMomentumDetectorTests
     {
         _stateService.ChangeTo(_runningStateId);
         _progressService.BeginValidRun(Vector3.zero);
-        _launchAppliedNotifier.Apply(CreateLaunchRequest());
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
     }
 
     private void Tick(int count)
@@ -151,17 +152,22 @@ public sealed class LostMomentumDetectorTests
         return stateId;
     }
 
-    private SlingshotLaunchRequest CreateLaunchRequest()
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
     {
-        return new SlingshotLaunchRequest(
+        var request = new SlingshotLaunchRequest(
             1f,
             1f,
             0f,
+            0f,
             Vector3.zero,
             Vector3.forward,
-            1f,
-            Vector3.up,
-            0f);
+            Vector3.up);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            Vector3.forward,
+            Vector3.forward,
+            Vector3.up);
     }
 
     private sealed class FakeGameplayStateService : IGameplayStateService
@@ -198,11 +204,11 @@ public sealed class LostMomentumDetectorTests
 
     private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
-        public void Apply(SlingshotLaunchRequest request)
+        public void Apply(SlingshotLaunchAppliedEvent launchApplied)
         {
-            LaunchApplied?.Invoke(request);
+            LaunchApplied?.Invoke(launchApplied);
         }
     }
 

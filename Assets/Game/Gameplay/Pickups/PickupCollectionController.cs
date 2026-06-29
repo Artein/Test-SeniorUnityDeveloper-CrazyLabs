@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Utils.Invocation;
 using UnityEngine;
@@ -12,14 +13,22 @@ namespace Game.Gameplay.Pickups
         event Action<PickupCollectedEventArgs> PickupCollected;
     }
 
+    public interface IPickupCurrencyGrantResolver
+    {
+        PickupCurrencyGrantResolution Resolve(CurrencyGrant baseCurrencyGrant);
+        void Reset();
+    }
+
     public sealed class PickupCollectionController : IInitializable, IDisposable, IPickupCollectionNotifier
     {
         private readonly IReadOnlyList<Pickup> _pickups;
         private readonly ILevelPickupState _levelPickupState;
-        private readonly IResourceStorage _resourceStorage;
-        private readonly IRunResourceAccumulator _runResourceAccumulator;
+        private readonly ICurrencyStorage _currencyStorage;
+        private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
+        private readonly IPickupCurrencyGrantResolver _pickupCurrencyGrantResolver;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly GameplayStateId _runningStateId;
+        private readonly GameplayStateId _currencyGrantResolverResetStateId;
         private readonly string _playerTag;
 
         private bool _isInitialized;
@@ -30,18 +39,27 @@ namespace Game.Gameplay.Pickups
         public PickupCollectionController(
             IReadOnlyList<Pickup> pickups,
             ILevelPickupState levelPickupState,
-            IResourceStorage resourceStorage,
-            IRunResourceAccumulator runResourceAccumulator,
+            ICurrencyStorage currencyStorage,
+            IRunCurrencyAccumulator runCurrencyAccumulator,
+            IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
             GameplayStateId runningStateId,
+            GameplayStateId currencyGrantResolverResetStateId,
             string playerTag)
         {
             _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
-            _resourceStorage = resourceStorage ?? throw new ArgumentNullException(nameof(resourceStorage));
-            _runResourceAccumulator = runResourceAccumulator ?? throw new ArgumentNullException(nameof(runResourceAccumulator));
+            _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));
+            _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
+
+            _pickupCurrencyGrantResolver = pickupCurrencyGrantResolver
+                                           ?? throw new ArgumentNullException(nameof(pickupCurrencyGrantResolver));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
+
+            _currencyGrantResolverResetStateId = currencyGrantResolverResetStateId != null
+                ? currencyGrantResolverResetStateId
+                : throw new ArgumentNullException(nameof(currencyGrantResolverResetStateId));
 
             if (string.IsNullOrWhiteSpace(playerTag))
                 throw new ArgumentException("Pickup collection requires a non-empty Player Tag.", nameof(playerTag));
@@ -65,6 +83,7 @@ namespace Game.Gameplay.Pickups
                 pickup.TriggerEntered += OnPickupTriggerEntered;
             }
 
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
         }
 
@@ -85,6 +104,8 @@ namespace Game.Gameplay.Pickups
 
                 pickup.TriggerEntered -= OnPickupTriggerEntered;
             }
+
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
         }
 
         private void OnPickupTriggerEntered(Pickup pickup, Collider other)
@@ -102,14 +123,23 @@ namespace Game.Gameplay.Pickups
                 return;
 
             var definition = pickup.Definition;
-            var resourceDefinition = definition.ResourceDefinition;
-            var amount = definition.Amount;
+            var baseCurrencyGrant = definition.CurrencyGrant;
+            var resolution = _pickupCurrencyGrantResolver.Resolve(baseCurrencyGrant);
+            var finalCurrencyGrant = resolution.FinalCurrencyGrant;
             var position = pickup.Position;
 
-            _resourceStorage.Grant(resourceDefinition, amount);
-            _runResourceAccumulator.Grant(resourceDefinition, amount);
+            _currencyStorage.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
+            _runCurrencyAccumulator.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
             pickup.SetAvailable(false);
-            PickupCollected?.InvokeSafely(new PickupCollectedEventArgs(resourceDefinition, amount, position));
+            PickupCollected?.InvokeSafely(new PickupCollectedEventArgs(baseCurrencyGrant, finalCurrencyGrant, position));
+        }
+
+        private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        {
+            if (_isDisposed || !ReferenceEquals(nextStateId, _currencyGrantResolverResetStateId))
+                return;
+
+            _pickupCurrencyGrantResolver.Reset();
         }
     }
 }
