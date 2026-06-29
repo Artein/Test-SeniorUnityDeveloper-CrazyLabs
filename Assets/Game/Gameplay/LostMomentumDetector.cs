@@ -105,7 +105,7 @@ namespace Game.Gameplay
             Deactivate();
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
                 return;

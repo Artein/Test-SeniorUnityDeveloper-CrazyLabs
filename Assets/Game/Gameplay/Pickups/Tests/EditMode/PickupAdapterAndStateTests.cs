@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using NUnit.Framework;
 using UnityEngine;
@@ -8,13 +9,13 @@ using UnityEngine;
 public sealed class PickupAdapterAndStateTests
 {
     private readonly List<UnityEngine.Object> _objects = new();
-    private ResourceDefinition _coins;
+    private CurrencyDefinition _coins;
     private PickupDefinition _pickupDefinition;
 
     [SetUp]
     public void OnSetUp()
     {
-        _coins = Track(ScriptableObject.CreateInstance<ResourceDefinition>());
+        _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
         _pickupDefinition = CreatePickupDefinition(_coins, 1);
     }
@@ -78,7 +79,7 @@ public sealed class PickupAdapterAndStateTests
     public void TryConsume_AvailablePickup_SucceedsOnlyOnce()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new[] { pickup });
 
         var firstConsume = state.TryConsume(pickup);
         var secondConsume = state.TryConsume(pickup);
@@ -92,7 +93,7 @@ public sealed class PickupAdapterAndStateTests
     public void ResetForLevelSession_ConsumedPickup_RestoresAvailabilityAndEnablesRoot()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new[] { pickup });
         state.TryConsume(pickup);
         pickup.SetAvailable(false);
 
@@ -137,10 +138,10 @@ public sealed class PickupAdapterAndStateTests
         return pickup;
     }
 
-    private PickupDefinition CreatePickupDefinition(ResourceDefinition resourceDefinition, int amount)
+    private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
     {
         var definition = Track(ScriptableObject.CreateInstance<PickupDefinition>());
-        definition.SetValuesForTests(resourceDefinition, amount);
+        definition.SetValuesForTests(currencyDefinition, amount);
         return definition;
     }
 

@@ -21,6 +21,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
     {
         yield return LoadGameplayScene();
         var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
         yield return WaitUntilPlayerIsHeld(activeScene);
 
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -45,6 +46,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -89,6 +91,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -138,7 +141,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -165,7 +170,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -186,7 +193,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -249,7 +258,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -393,7 +404,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -416,7 +429,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -441,7 +456,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -464,7 +481,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -489,7 +508,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -514,7 +535,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -808,6 +831,16 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
             yield return null;
         }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(GameplaySceneContext context)

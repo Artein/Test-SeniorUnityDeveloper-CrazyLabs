@@ -1,13 +1,21 @@
 #if UNITY_INCLUDE_TESTS
 
+using Game.Gameplay.Economy;
+
 namespace Game.Gameplay.Pickups
 {
     public sealed partial class PickupDefinition
     {
-        internal void SetValuesForTests(ResourceDefinition resourceDefinition, int amount)
+        internal void SetValuesForTests(CurrencyDefinition currencyDefinition, int amount)
         {
-            _resourceDefinition = resourceDefinition;
+            _currencyDefinition = currencyDefinition;
             _amount = amount;
+        }
+
+        internal void SetCurrencyGrantForTests(CurrencyGrant currencyGrant)
+        {
+            _currencyDefinition = currencyGrant.CurrencyDefinition;
+            _amount = currencyGrant.Amount;
         }
     }
 }

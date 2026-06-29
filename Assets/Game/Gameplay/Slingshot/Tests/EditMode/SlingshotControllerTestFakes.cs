@@ -13,11 +13,6 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public float MinimumPullDistance { get; set; }
         public float MaximumPullDistance { get; set; }
         public float MaximumLateralPull { get; set; }
-        public float MaximumLaunchAngleDegrees { get; set; }
-        public float MinimumLaunchSpeed { get; set; }
-        public float MaximumLaunchSpeed { get; set; }
-        public AnimationCurve LaunchSpeedCurve { get; set; }
-        public float LaunchUpSpeed { get; set; }
         public float BandContactPadding { get; set; }
         public int BandSilhouetteSampleCount { get; set; }
         public int BandWrapSampleCount { get; set; }
@@ -356,11 +351,15 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
 
     internal sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
         public void Apply(SlingshotLaunchRequest request)
         {
-            LaunchApplied?.InvokeSafely(request);
+            LaunchApplied?.InvokeSafely(new SlingshotLaunchAppliedEvent(
+                request,
+                Vector3.forward,
+                Vector3.forward,
+                Vector3.up));
         }
     }
 

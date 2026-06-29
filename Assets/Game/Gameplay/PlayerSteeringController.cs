@@ -4,6 +4,7 @@ using Game.Foundation.Screen;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Upgrades;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -16,9 +17,12 @@ namespace Game.Gameplay
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly IPlayerSteeringTarget _steeringTarget;
         private readonly IPlayerSteeringConfig _config;
+        private readonly IRunGameplayStatResolver _statResolver;
         private readonly ITime _clock;
         private readonly IScreen _screen;
         private readonly GameplayStateId _runningStateId;
+        private readonly GameplayStatId _playerMaxSpeedStatId;
+        private readonly GameplayStatId _playerSteeringResponsivenessStatId;
 
         private IDisposable _inputEnableHandle;
         private Vector3 _steeringUp = Vector3.up;
@@ -37,18 +41,30 @@ namespace Game.Gameplay
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IPlayerSteeringTarget steeringTarget,
             IPlayerSteeringConfig config,
+            IRunGameplayStatResolver statResolver,
             ITime clock,
             IScreen screen,
-            GameplayStateId runningStateId)
+            GameplayStateId runningStateId,
+            GameplayStatId playerMaxSpeedStatId,
+            GameplayStatId playerSteeringResponsivenessStatId)
         {
             _unityInput = unityInput ?? throw new ArgumentNullException(nameof(unityInput));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _steeringTarget = steeringTarget ?? throw new ArgumentNullException(nameof(steeringTarget));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
+
+            _playerMaxSpeedStatId = playerMaxSpeedStatId != null
+                ? playerMaxSpeedStatId
+                : throw new ArgumentNullException(nameof(playerMaxSpeedStatId));
+
+            _playerSteeringResponsivenessStatId = playerSteeringResponsivenessStatId != null
+                ? playerSteeringResponsivenessStatId
+                : throw new ArgumentNullException(nameof(playerSteeringResponsivenessStatId));
         }
 
         void IInitializable.Initialize()
@@ -97,13 +113,13 @@ namespace Game.Gameplay
             DeactivateSteering();
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
                 return;
 
             _hasLaunchApplied = true;
-            _steeringUp = GetValidUpDirection(launchRequest.LaunchUpDirection);
+            _steeringUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
                 ActivateSteering();
@@ -218,7 +234,7 @@ namespace Game.Gameplay
 
         private void UpdateSmoothedSteer()
         {
-            var responseRate = Mathf.Max(0f, _config.SteeringResponseRate);
+            var responseRate = ResolveSteeringResponsiveness();
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
             _currentSteer = Mathf.MoveTowards(_currentSteer, _desiredSteer, responseRate * fixedDeltaTime);
         }
@@ -233,6 +249,11 @@ namespace Game.Gameplay
 
             if (planarSpeed < Mathf.Max(0f, _config.MinimumSteerSpeed))
                 return;
+
+            var maximumPlanarSpeed = ResolveMaximumPlanarSpeed();
+
+            if (planarSpeed > maximumPlanarSpeed)
+                planarVelocity = planarVelocity.normalized * maximumPlanarSpeed;
 
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
             var turnAngle = _currentSteer * Mathf.Max(0f, _config.MaximumTurnDegreesPerSecond) * fixedDeltaTime;
@@ -251,6 +272,16 @@ namespace Game.Gameplay
                 return Vector3.up;
 
             return upDirection.normalized;
+        }
+
+        private float ResolveSteeringResponsiveness()
+        {
+            return Mathf.Max(0f, _statResolver.Resolve(_playerSteeringResponsivenessStatId, _config.SteeringResponseRate));
+        }
+
+        private float ResolveMaximumPlanarSpeed()
+        {
+            return Mathf.Max(0.0001f, _statResolver.Resolve(_playerMaxSpeedStatId, _config.MaximumPlanarSpeed));
         }
     }
 }

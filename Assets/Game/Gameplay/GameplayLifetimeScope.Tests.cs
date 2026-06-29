@@ -2,9 +2,11 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Upgrades;
 using UnityEngine;
 using VContainer;
 
@@ -13,6 +15,7 @@ namespace Game.Gameplay
     public sealed partial class GameplayLifetimeScope
     {
         internal GameplayStateId PreLaunchStateIdForTests => _preLaunchStateId;
+        internal GameplayStateId RunPreparationStateIdForTests => _runPreparationStateId;
         internal GameplayStateId RunningStateIdForTests => _runningStateId;
         internal GameplayStateId RunEndedStateIdForTests => _runEndedStateId;
         internal PlayerSteeringConfig PlayerSteeringConfigForTests => _playerSteeringConfig;
@@ -25,10 +28,18 @@ namespace Game.Gameplay
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
+            GameplayStateId runPreparationStateId,
             GameplayStateId preLaunchStateId,
             GameplayStateId runningStateId,
             GameplayStateId runEndedStateId,
+            UpgradeCatalog upgradeCatalog,
+            GameplayStatId slingshotLaunchPowerStatId,
+            GameplayStatId playerMaxSpeedStatId,
+            GameplayStatId playerSteeringResponsivenessStatId,
+            CurrencyDefinition coinCurrencyDefinition,
+            GameplayStatId coinPickupMultiplierStatId,
             SlingshotConfig slingshotConfig,
+            GameplaySlingshotLaunchConfig gameplaySlingshotLaunchConfig,
             PlayerSteeringConfig playerSteeringConfig,
             RunCameraConfig runCameraConfig,
             RunEndConfig runEndConfig,
@@ -43,6 +54,7 @@ namespace Game.Gameplay
             Transform preLaunchSlingshotRigPose,
             Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
+            RunPreparationUIView runPreparationView,
             RigidbodyLaunchTarget launchTarget,
             Pickup[] levelPickups,
             Collider[] playerPickupContactColliders,
@@ -51,10 +63,18 @@ namespace Game.Gameplay
             string pickupLayerName)
         {
             _gameplayStateConfig = gameplayStateConfig;
+            _runPreparationStateId = runPreparationStateId;
             _preLaunchStateId = preLaunchStateId;
             _runningStateId = runningStateId;
             _runEndedStateId = runEndedStateId;
+            _upgradeCatalog = upgradeCatalog;
+            _slingshotLaunchPowerStatId = slingshotLaunchPowerStatId;
+            _playerMaxSpeedStatId = playerMaxSpeedStatId;
+            _playerSteeringResponsivenessStatId = playerSteeringResponsivenessStatId;
+            _coinCurrencyDefinition = coinCurrencyDefinition;
+            _coinPickupMultiplierStatId = coinPickupMultiplierStatId;
             _slingshotConfig = slingshotConfig;
+            _gameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig;
             _playerSteeringConfig = playerSteeringConfig;
             _runCameraConfig = runCameraConfig;
             _runEndConfig = runEndConfig;
@@ -69,6 +89,7 @@ namespace Game.Gameplay
             _preLaunchSlingshotRigPose = preLaunchSlingshotRigPose;
             _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
+            _runPreparationView = runPreparationView;
             _launchTarget = launchTarget;
             _levelPickups = levelPickups;
             _playerPickupContactColliders = playerPickupContactColliders;

@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 696aea000c128468cb04a031ea74727d, type: 3}
   m_Name: GameplayStateConfig
   m_EditorClassIdentifier: 
-  _initialStateId: {fileID: 11400000, guid: 8220010fc093428b8882e25db2fb3d88, type: 2}
+  _initialStateId: {fileID: 11400000, guid: 2a7076ec681e4d5894f075231be29cad, type: 2}
   _allowedTransitions:
+  - {fileID: 11400000, guid: d69cd4a4450f4e05aa32cc8e77bfa562, type: 2}
   - {fileID: 11400000, guid: 88ae3e01bfd04d3cbbcb0c15a3a5644c, type: 2}
   - {fileID: 11400000, guid: f240dca0b1744ea99c7544258488b97f, type: 2}
   - {fileID: 11400000, guid: 2b7db413305d4661aba794515ee348c1, type: 2}

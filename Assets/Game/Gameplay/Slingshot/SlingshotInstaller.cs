@@ -29,7 +29,7 @@ namespace Game.Gameplay.Slingshot
             builder.Register<ITime, UnityTime>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<SlingshotController>();
-            builder.RegisterEntryPoint<SlingshotLaunchController>();
+            builder.Register<ISlingshotLaunchAppliedNotifier, ISlingshotLaunchAppliedPublisher, SlingshotLaunchController>(Lifetime.Singleton);
             builder.Register<ISlingshotBandShapeProvider, SlingshotBandShapeProvider>(Lifetime.Singleton);
 
             builder.Register<ISlingshotInputProjector, SlingshotInputProjector>(Lifetime.Singleton)

@@ -295,12 +295,12 @@ namespace Game.Gameplay.Slingshot
             CancelActivePullToCaptureIdle();
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (!_isLaunchHandoffPending)
                 return;
 
-            _pendingLaunchRequest = launchRequest;
+            _pendingLaunchRequest = launchApplied.Request;
             _isLaunchHandoffPending = false;
             _isReleaseRecoilActive = true;
             _releaseRecoilElapsed = 0f;
@@ -350,26 +350,23 @@ namespace Game.Gameplay.Slingshot
                 return false;
             }
 
-            var normalizedPower = GetNormalizedLaunchPower(pullVisual.PullDistance);
-            var launchSpeedCurveValue = Mathf.Clamp01(_config.LaunchSpeedCurve.Evaluate(normalizedPower));
-            var launchSpeed = Mathf.Lerp(_config.MinimumLaunchSpeed, _config.MaximumLaunchSpeed, launchSpeedCurveValue);
-            var launchDirection = GetLaunchDirection(pullVisual.PullOffset);
+            var pullStrength = GetPullStrength(pullVisual.PullDistance);
+            var normalizedLateralPull = GetNormalizedLateralPull(pullVisual.PullOffset);
             var finalPullPoint = GetPullPoint(pullVisual.PullDistance, pullVisual.PullOffset);
 
             launchRequest = new SlingshotLaunchRequest(
-                normalizedPower,
+                pullStrength,
                 pullVisual.PullDistance,
                 pullVisual.PullOffset,
+                normalizedLateralPull,
                 finalPullPoint,
-                launchDirection,
-                launchSpeed,
-                _geometry.LaunchFrameUp,
-                _config.LaunchUpSpeed);
+                _geometry.LaunchFrameForward,
+                _geometry.LaunchFrameUp);
 
             return true;
         }
 
-        private float GetNormalizedLaunchPower(float pullDistance)
+        private float GetPullStrength(float pullDistance)
         {
             var pullRange = _config.MaximumPullDistance - _config.MinimumPullDistance;
 
@@ -379,16 +376,14 @@ namespace Game.Gameplay.Slingshot
             return Mathf.Clamp01(Mathf.InverseLerp(_config.MinimumPullDistance, _config.MaximumPullDistance, pullDistance));
         }
 
-        private Vector3 GetLaunchDirection(float pullOffset)
+        private float GetNormalizedLateralPull(float pullOffset)
         {
-            var steering = 0f;
             var maximumSteeringOffset = GetMaximumSteeringOffset(pullOffset);
 
-            if (maximumSteeringOffset > 0.000001f)
-                steering = Mathf.Clamp(-pullOffset / maximumSteeringOffset, -1f, 1f);
+            if (maximumSteeringOffset <= 0.000001f)
+                return 0f;
 
-            return (Quaternion.AngleAxis(steering * _config.MaximumLaunchAngleDegrees, _geometry.LaunchFrameUp) * _geometry.LaunchFrameForward)
-                .normalized;
+            return Mathf.Clamp(pullOffset / maximumSteeringOffset, -1f, 1f);
         }
 
         private bool TryCreatePullVisual(Vector2 screenPosition, out SlingshotPullVisual pullVisual)

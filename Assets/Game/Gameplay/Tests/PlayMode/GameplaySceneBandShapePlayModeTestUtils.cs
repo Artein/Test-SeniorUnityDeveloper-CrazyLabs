@@ -21,12 +21,15 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
             yield break;
 
         SceneManager.LoadScene(gameplaySceneBuildIndex, LoadSceneMode.Single);
+        yield return null;
+        yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
     }
 
     public static IEnumerator ReloadGameplayScene(int gameplaySceneBuildIndex)
     {
         SceneManager.LoadScene(gameplaySceneBuildIndex, LoadSceneMode.Single);
         yield return null;
+        yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
     }
 
     public static IEnumerator WaitUntilPlayerIsHeld(GameplaySceneBandShapePlayModeTestContext context)
@@ -167,6 +170,14 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
 
         var geometry = slingshotViews[0].CreateGeometrySnapshot();
         return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
+    }
+
+    private static IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private static string SaveCameraCapture(Camera camera, string fileName)
