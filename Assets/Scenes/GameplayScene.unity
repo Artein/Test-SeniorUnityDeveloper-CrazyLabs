@@ -1810,10 +1810,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65ac48e14daf342949c51f34765c11de, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RaycastRunSurfaceContextSource
-  _probeOrigin: {fileID: 1918570524}
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.PhysicsRunSurfaceContextSource
+  _supportCollider: {fileID: 200501558}
   _runProgressFrameSource: {fileID: 2200000002}
-  _probeDistance: 2.5
+  _supportProbeDistance: 0.08
   _surfaceMask:
     serializedVersion: 2
     m_Bits: 819

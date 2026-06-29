@@ -36,7 +36,7 @@ public sealed class GameplaySceneCompositionTests
         var runCameraSource = FindSingleInScene<RigidbodyRunCameraSource>(activeScene, "RigidbodyRunCameraSource");
         var contactNotifier = FindSingleInScene<RigidbodyContactNotifier>(activeScene, "RigidbodyContactNotifier");
         var runProgressFrameSource = FindSingleInScene<RunProgressFrameSource>(activeScene, "RunProgressFrameSource");
-        var runSurfaceContextSource = FindSingleInScene<RaycastRunSurfaceContextSource>(activeScene, "RaycastRunSurfaceContextSource");
+        var runSurfaceContextSource = FindSingleInScene<PhysicsRunSurfaceContextSource>(activeScene, "PhysicsRunSurfaceContextSource");
         var characterPresentationView = FindSingleInScene<CharacterPresentationView>(activeScene, "CharacterPresentationView");
         var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, "Run Camera Rig");
@@ -173,6 +173,8 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
+        Assert.That(runSurfaceContextSource.SupportColliderForTests, Is.SameAs(targetCollider));
+        Assert.That(runSurfaceContextSource.SupportProbeDistanceForTests, Is.LessThanOrEqualTo(0.25f));
         Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);

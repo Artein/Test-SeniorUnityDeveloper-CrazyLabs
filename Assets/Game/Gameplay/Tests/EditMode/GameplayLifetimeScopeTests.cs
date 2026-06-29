@@ -182,7 +182,7 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
-        var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<RaycastRunSurfaceContextSource>();
+        var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
         var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
 
         scope.SetReferencesForTests(gameplayStateConfig, preLaunch, running, runEnded, slingshotConfig, playerSteeringConfig, runCameraConfig,
@@ -279,7 +279,7 @@ public sealed class GameplayLifetimeScopeTests
         public RunEndConfig RunEndConfig { get; }
         public RigidbodyRunCameraSource RunCameraSource { get; }
         public RunProgressFrameSource RunProgressFrameSource { get; }
-        public RaycastRunSurfaceContextSource RunSurfaceContextSource { get; }
+        public PhysicsRunSurfaceContextSource RunSurfaceContextSource { get; }
         public RigidbodyContactNotifier ContactNotifier { get; }
         public TransformRunCameraAnchor RunCameraAnchor { get; }
         public CinemachineRunCameraRig RunCameraRig { get; }
@@ -294,7 +294,7 @@ public sealed class GameplayLifetimeScopeTests
             RunEndConfig runEndConfig,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
-            RaycastRunSurfaceContextSource runSurfaceContextSource,
+            PhysicsRunSurfaceContextSource runSurfaceContextSource,
             RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,

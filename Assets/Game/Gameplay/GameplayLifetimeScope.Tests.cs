@@ -17,7 +17,7 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
-        internal RaycastRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
+        internal PhysicsRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
@@ -31,7 +31,7 @@ namespace Game.Gameplay
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
-            RaycastRunSurfaceContextSource runSurfaceContextSource,
+            PhysicsRunSurfaceContextSource runSurfaceContextSource,
             RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,

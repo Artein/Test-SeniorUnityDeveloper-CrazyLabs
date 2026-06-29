@@ -25,7 +25,7 @@ namespace Game.Gameplay
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
-        [SerializeField] private RaycastRunSurfaceContextSource _runSurfaceContextSource;
+        [SerializeField] private PhysicsRunSurfaceContextSource _runSurfaceContextSource;
         [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
