@@ -113,6 +113,36 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void ResetForRunPreparation_RecoilOrLaunchHandoff_ForcesInactiveIdleAndClearsInput()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        var finalPullPoint = new Vector3(0.5f, 0f, -1f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(75f, 10f));
+        SlingshotLaunchRequest launchRequest = default;
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        _observations.Clear();
+
+        ((ISlingshotRunPreparationReset)controller).ResetForRunPreparation();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "input-disable", "target-hold", "target-position", "view-inactive-idle" }));
+        Assert.That(_input.ActiveHandleCount, Is.Zero);
+        Assert.That(_launchTarget.HoldCallCount, Is.EqualTo(2));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(_view.Geometry.RestPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, _view.Geometry.RestPoint);
+
+        _observations.Clear();
+        _input.Press(1, new Vector2(50f, 20f));
+
+        Assert.That(_observations, Is.Empty);
+    }
+
+    [Test]
     public void Dispose_WithActiveHandle_UnsubscribesAndDisposesHandleWithoutDrivingView()
     {
         var controller = CreateInitializedController();

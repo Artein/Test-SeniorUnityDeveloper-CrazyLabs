@@ -14,6 +14,7 @@ namespace Game.Gameplay
     public sealed class GameplayFlowController : IInitializable, IDisposable, IRunPreparationContinueCommand
     {
         private readonly ISlingshotCapture _slingshotCapture;
+        private readonly ISlingshotRunPreparationReset _slingshotRunPreparationReset;
         private readonly ISlingshotLaunchNotifier _slingshotLaunchNotifier;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly IGameplaySlingshotLauncher _slingshotLauncher;
@@ -29,6 +30,7 @@ namespace Game.Gameplay
 
         public GameplayFlowController(
             ISlingshotCapture slingshotCapture,
+            ISlingshotRunPreparationReset slingshotRunPreparationReset,
             ISlingshotLaunchNotifier slingshotLaunchNotifier,
             IGameplayStateService gameplayStateService,
             IGameplaySlingshotLauncher slingshotLauncher,
@@ -40,6 +42,9 @@ namespace Game.Gameplay
             GameplayStateId runningStateId)
         {
             _slingshotCapture = slingshotCapture ?? throw new ArgumentNullException(nameof(slingshotCapture));
+
+            _slingshotRunPreparationReset = slingshotRunPreparationReset
+                                            ?? throw new ArgumentNullException(nameof(slingshotRunPreparationReset));
             _slingshotLaunchNotifier = slingshotLaunchNotifier ?? throw new ArgumentNullException(nameof(slingshotLaunchNotifier));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _slingshotLauncher = slingshotLauncher ?? throw new ArgumentNullException(nameof(slingshotLauncher));
@@ -87,6 +92,12 @@ namespace Game.Gameplay
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
 
+            if (_gameplayStateService.IsCurrent(_runPreparationStateId))
+            {
+                ResetForRunPreparation();
+                return;
+            }
+
             if (_gameplayStateService.IsCurrent(_preLaunchStateId))
             {
                 _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
@@ -114,8 +125,17 @@ namespace Game.Gameplay
             if (_isDisposed)
                 return;
 
-            if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            if (ReferenceEquals(nextStateId, _runPreparationStateId))
+            {
+                ResetForRunPreparation();
+                return;
+            }
+
+            if (ReferenceEquals(nextStateId, _preLaunchStateId)
+                && !ReferenceEquals(previousStateId, _runPreparationStateId))
+            {
                 _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
+            }
         }
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
@@ -129,8 +149,11 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (ReferenceEquals(previousStateId, _preLaunchStateId))
+            if (ReferenceEquals(previousStateId, _preLaunchStateId)
+                && !ReferenceEquals(nextStateId, _runPreparationStateId))
+            {
                 _slingshotCapture.DisableCapture();
+            }
         }
 
         private void OnSlingshotLaunchRequested(SlingshotLaunchRequest launchRequest)
@@ -143,6 +166,12 @@ namespace Game.Gameplay
 
             if (_gameplayStateService.TryTransitionTo(_runningStateId))
                 _slingshotLauncher.Launch(launchRequest);
+        }
+
+        private void ResetForRunPreparation()
+        {
+            _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
+            _slingshotRunPreparationReset.ResetForRunPreparation();
         }
     }
 }

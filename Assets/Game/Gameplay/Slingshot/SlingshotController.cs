@@ -19,7 +19,18 @@ namespace Game.Gameplay.Slingshot
         void DisableCapture();
     }
 
-    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotCapture, ISlingshotLaunchNotifier
+    public interface ISlingshotRunPreparationReset
+    {
+        void ResetForRunPreparation();
+    }
+
+    public sealed partial class SlingshotController :
+        IInitializable,
+        ITickable,
+        IDisposable,
+        ISlingshotCapture,
+        ISlingshotRunPreparationReset,
+        ISlingshotLaunchNotifier
     {
         private readonly IUnityInput _unityInput;
         private readonly ISlingshotView _view;
@@ -190,6 +201,25 @@ namespace Game.Gameplay.Slingshot
             {
                 DisposeInputHandle();
             }
+        }
+
+        void ISlingshotRunPreparationReset.ResetForRunPreparation()
+        {
+            ThrowIfCaptureCallInvalid();
+
+            _geometry = _view.CreateGeometrySnapshot();
+            _hasActivePointer = false;
+            _isCaptureEnabled = false;
+            _isLaunchHandoffPending = false;
+            _isReleaseRecoilActive = false;
+            _hasLastValidActiveBandShape = false;
+            _isCurrentPullBandShapeValid = false;
+            _pendingLaunchRequest = default;
+            _releaseRecoilElapsed = 0f;
+            DisposeInputHandle();
+            _launchTarget.Hold();
+            SetHeldTargetToRest();
+            _view.ShowInactiveIdle(CreateHeldRestBandShape());
         }
 
         private void ValidateConfig()

@@ -154,8 +154,8 @@ public sealed class RunPreparationFlowTests
         GameplayStateId preLaunchStateId,
         GameplayStateId runningStateId)
     {
-        var controller = new GameplayFlowController(capture, notifier, stateService, launcher, snapshotFactory, snapshotStore,
-            new SilentPreLaunchRigPoseResetter(), runPreparationStateId, preLaunchStateId, runningStateId);
+        var controller = new GameplayFlowController(capture, new SilentSlingshotRunPreparationReset(), notifier, stateService, launcher,
+            snapshotFactory, snapshotStore, new SilentPreLaunchRigPoseResetter(), runPreparationStateId, preLaunchStateId, runningStateId);
         ((IInitializable)controller).Initialize();
         _observations.Clear();
         return controller;
@@ -302,6 +302,13 @@ public sealed class RunPreparationFlowTests
         {
             DisableCallCount += 1;
             _observations.Add("capture-disable");
+        }
+    }
+
+    private sealed class SilentSlingshotRunPreparationReset : ISlingshotRunPreparationReset
+    {
+        public void ResetForRunPreparation()
+        {
         }
     }
 

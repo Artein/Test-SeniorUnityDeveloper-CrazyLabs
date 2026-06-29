@@ -155,6 +155,7 @@ public sealed class GameplayLifetimeScopeTests
         var unityInput = container.Resolve<IUnityInput>();
         var gameplayStateService = container.Resolve<IGameplayStateService>();
         var slingshotNotifier = container.Resolve<ISlingshotLaunchNotifier>();
+        var slingshotRunPreparationReset = container.Resolve<ISlingshotRunPreparationReset>();
         var slingshotLauncher = container.Resolve<IGameplaySlingshotLauncher>();
         var gameplaySlingshotLaunchConfig = container.Resolve<IGameplaySlingshotLaunchConfig>();
         var launchImpulseCalculator = container.Resolve<SlingshotLaunchImpulseCalculator>();
@@ -204,6 +205,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
+        Assert.That(slingshotRunPreparationReset, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
         Assert.That(gameplaySlingshotLaunchConfig, Is.SameAs(fixture.GameplaySlingshotLaunchConfig));
         Assert.That(launchImpulseCalculator, Is.Not.Null);
