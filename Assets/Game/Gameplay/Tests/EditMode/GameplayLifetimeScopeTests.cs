@@ -60,6 +60,9 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Run Camera Anchor")
                 .And.Message.Contains("Run Camera Rig")
                 .And.Message.Contains("Input Camera")
+                .And.Message.Contains("Slingshot Rig Transform")
+                .And.Message.Contains("Pre-Launch Slingshot Rig Pose")
+                .And.Message.Contains("Pre-Launch Launch Target Pose")
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Launch Target"));
     }
@@ -91,6 +94,8 @@ public sealed class GameplayLifetimeScopeTests
         var launchTarget = container.Resolve<ILaunchTarget>();
         var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
         var silhouetteSource = container.Resolve<ILaunchTargetSilhouetteSource>();
+        var launchTargetPreLaunchReset = container.Resolve<ILaunchTargetPreLaunchReset>();
+        var preLaunchRigPoseResetter = container.Resolve<IPreLaunchRigPoseResetter>();
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runCameraConfig = container.Resolve<IRunCameraConfig>();
@@ -116,6 +121,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(launchTargetPreLaunchReset, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(preLaunchRigPoseResetter, Is.Not.Null);
         Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
@@ -142,11 +149,8 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchToRunning = CreateTransition(preLaunch, running);
         var runningToRunEnded = CreateTransition(running, runEnded);
         var runEndedToPreLaunch = CreateTransition(runEnded, preLaunch);
-        var gameplayStateConfig = CreateGameplayStateConfig(
-            preLaunch,
-            preLaunchToRunning,
-            runningToRunEnded,
-            runEndedToPreLaunch);
+
+        var gameplayStateConfig = CreateGameplayStateConfig(preLaunch, preLaunchToRunning, runningToRunEnded, runEndedToPreLaunch);
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
         var playerSteeringConfig = Track(ScriptableObject.CreateInstance<PlayerSteeringConfig>());
         var runCameraConfig = Track(ScriptableObject.CreateInstance<RunCameraConfig>());
@@ -154,6 +158,9 @@ public sealed class GameplayLifetimeScopeTests
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
         var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
+        var slingshotRig = CreateGameObject("Slingshot Rig").transform;
+        var preLaunchSlingshotRigPose = CreateGameObject("Pre-Launch Slingshot Rig Pose").transform;
+        var preLaunchLaunchTargetPose = CreateGameObject("Pre-Launch Launch Target Pose").transform;
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
         var runCameraAnchor = CreateGameObject("Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
         var runCameraRig = CreateGameObject("Run Camera Rig").AddComponent<CinemachineRunCameraRig>();
@@ -161,37 +168,12 @@ public sealed class GameplayLifetimeScopeTests
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
 
-        scope.SetReferencesForTests(
-            gameplayStateConfig,
-            preLaunch,
-            running,
-            runEnded,
-            slingshotConfig,
-            playerSteeringConfig,
-            runCameraConfig,
-            runEndConfig,
-            playerSteeringTarget,
-            runCameraSource,
-            runProgressFrameSource,
-            contactNotifier,
-            runCameraAnchor,
-            runCameraRig,
-            camera,
-            slingshotView,
-            launchTarget);
+        scope.SetReferencesForTests(gameplayStateConfig, preLaunch, running, runEnded, slingshotConfig, playerSteeringConfig, runCameraConfig,
+            runEndConfig, playerSteeringTarget, runCameraSource, runProgressFrameSource, contactNotifier, runCameraAnchor, runCameraRig, camera,
+            slingshotRig, preLaunchSlingshotRigPose, preLaunchLaunchTargetPose, slingshotView, launchTarget);
 
-        return new ValidScopeFixture(
-            scope,
-            preLaunch,
-            launchTarget,
-            playerSteeringTarget,
-            runCameraConfig,
-            runEndConfig,
-            runCameraSource,
-            runProgressFrameSource,
-            contactNotifier,
-            runCameraAnchor,
-            runCameraRig);
+        return new ValidScopeFixture(scope, preLaunch, launchTarget, playerSteeringTarget, runCameraConfig, runEndConfig, runCameraSource,
+            runProgressFrameSource, contactNotifier, runCameraAnchor, runCameraRig);
     }
 
     private SlingshotView CreateSlingshotView(SlingshotConfig config)
@@ -212,7 +194,6 @@ public sealed class GameplayLifetimeScopeTests
         launchFrame.rotation = Quaternion.identity;
 
         view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, pullHintObject, touchIndicatorObject, config);
-
         return view;
     }
 
@@ -232,7 +213,6 @@ public sealed class GameplayLifetimeScopeTests
         runCameraSource = rigidbody.gameObject.AddComponent<RigidbodyRunCameraSource>();
         runCameraSource.SetRigidbodyForTests(rigidbody);
         contactNotifier = rigidbody.gameObject.AddComponent<RigidbodyContactNotifier>();
-
         return launchTarget;
     }
 
@@ -240,7 +220,6 @@ public sealed class GameplayLifetimeScopeTests
     {
         var stateId = Track(ScriptableObject.CreateInstance<GameplayStateId>());
         stateId.name = stateName;
-
         return stateId;
     }
 
@@ -248,7 +227,6 @@ public sealed class GameplayLifetimeScopeTests
     {
         var transition = Track(ScriptableObject.CreateInstance<GameplayStateTransition>());
         transition.SetStateIdsForTests(fromStateId, toStateId);
-
         return transition;
     }
 
@@ -258,7 +236,6 @@ public sealed class GameplayLifetimeScopeTests
     {
         var config = Track(ScriptableObject.CreateInstance<GameplayStateConfig>());
         config.SetValuesForTests(initialStateId, transitions);
-
         return config;
     }
 
@@ -271,7 +248,6 @@ public sealed class GameplayLifetimeScopeTests
         where T : UnityEngine.Object
     {
         _objects.Add(value);
-
         return value;
     }
 

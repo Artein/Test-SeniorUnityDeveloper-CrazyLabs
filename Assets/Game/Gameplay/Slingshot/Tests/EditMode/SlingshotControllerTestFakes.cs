@@ -100,8 +100,9 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
     {
         private readonly List<string> _observations;
 
-        public SlingshotGeometrySnapshot Geometry { get; }
+        public SlingshotGeometrySnapshot Geometry { get; set; }
         public float VisibleBandRadius { get; set; } = 0.02f;
+        public int GeometrySnapshotCount { get; private set; }
         public SlingshotBandShape LastBandShape { get; private set; }
         public SlingshotPullVisual LastActivePullVisual { get; private set; }
         public List<SlingshotPullVisual> ActivePullVisuals { get; } = new();
@@ -121,6 +122,7 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
 
         public SlingshotGeometrySnapshot CreateGeometrySnapshot()
         {
+            GeometrySnapshotCount += 1;
             return Geometry;
         }
 

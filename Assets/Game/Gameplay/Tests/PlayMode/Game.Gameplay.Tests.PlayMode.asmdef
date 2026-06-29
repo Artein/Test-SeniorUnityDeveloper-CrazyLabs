@@ -3,6 +3,7 @@
   "rootNamespace": "",
   "references": [
     "Game.Gameplay",
+    "Game.Gameplay.GameplayState",
     "Game.Gameplay.Slingshot",
     "Game.Foundation.Input",
     "Unity.Cinemachine",

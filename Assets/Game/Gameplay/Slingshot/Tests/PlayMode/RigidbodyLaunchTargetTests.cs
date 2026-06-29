@@ -107,8 +107,73 @@ public sealed class RigidbodyLaunchTargetTests
         AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
     }
 
+    [Test]
+    public void ResetToPreLaunchPose_DriftedTarget_RestoresPoseSetsHeldBaselineAndClearsVelocity()
+    {
+        _rigidbody.isKinematic = false;
+        _rigidbody.constraints = RigidbodyConstraints.FreezePositionX;
+        _rigidbody.linearVelocity = new Vector3(3f, 4f, 5f);
+        _rigidbody.angularVelocity = new Vector3(1f, 2f, 3f);
+        _rigidbody.position = new Vector3(-2f, 1f, 0.5f);
+        _rigidbody.rotation = Quaternion.Euler(15f, -30f, 5f);
+        var preLaunchPosition = new Vector3(2f, 3f, 4f);
+        var preLaunchRotation = Quaternion.Euler(0f, 35f, 0f);
+
+        ((ILaunchTargetPreLaunchReset)_target).ResetToPreLaunchPose(preLaunchPosition, preLaunchRotation);
+
+        Assert.That(_rigidbody.isKinematic, Is.True);
+        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionX));
+        Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.position, Is.EqualTo(preLaunchPosition));
+        AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+    }
+
+    [Test]
+    public void SetHeldPosition_AfterPreLaunchPoseReset_MovesBandCenterAndPreservesResetRotation()
+    {
+        var preLaunchPosition = new Vector3(2f, 3f, 4f);
+        var preLaunchRotation = Quaternion.Euler(0f, 35f, 0f);
+        var heldPosition = new Vector3(4f, 3f, 2f);
+        ((ILaunchTargetPreLaunchReset)_target).ResetToPreLaunchPose(preLaunchPosition, preLaunchRotation);
+
+        ((IHeldLaunchTarget)_target).SetHeldPosition(heldPosition);
+
+        AssertPositionEquals(heldPosition, _bandCenter.position);
+        AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+    }
+
+    [UnityTest]
+    public IEnumerator ResetToPreLaunchPose_AfterLaunch_RestoresOriginalLaunchBaselineForNextLaunch()
+    {
+        _rigidbody.isKinematic = false;
+        _rigidbody.constraints = RigidbodyConstraints.FreezePositionY;
+        ((ILaunchTarget)_target).Hold();
+        ((ILaunchTarget)_target).Launch(Vector3.forward);
+        yield return new WaitForFixedUpdate();
+        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionY | PostLaunchStabilizationConstraints));
+
+        ((ILaunchTargetPreLaunchReset)_target).ResetToPreLaunchPose(Vector3.one, Quaternion.Euler(0f, 25f, 0f));
+        ((ILaunchTarget)_target).Launch(new Vector3(2f, 0f, 0f));
+        yield return new WaitForFixedUpdate();
+
+        Assert.That(_rigidbody.isKinematic, Is.False);
+        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionY | PostLaunchStabilizationConstraints));
+        Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 0f)));
+    }
+
     private void AssertConstraintIsNotSet(RigidbodyConstraints constraint)
     {
         Assert.That(_rigidbody.constraints & constraint, Is.EqualTo(RigidbodyConstraints.None));
+    }
+
+    private void AssertRotationEquals(Quaternion expectedRotation, Quaternion actualRotation)
+    {
+        Assert.That(Quaternion.Angle(expectedRotation, actualRotation), Is.EqualTo(0f).Within(0.0001f));
+    }
+
+    private void AssertPositionEquals(Vector3 expectedPosition, Vector3 actualPosition)
+    {
+        Assert.That(Vector3.Distance(expectedPosition, actualPosition), Is.EqualTo(0f).Within(0.0001f));
     }
 }

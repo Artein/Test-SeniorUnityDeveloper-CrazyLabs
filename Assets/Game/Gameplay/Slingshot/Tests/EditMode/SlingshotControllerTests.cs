@@ -80,6 +80,31 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void EnableCapture_AfterViewGeometryChanges_RefreshesGeometryBeforeHeldTargetAlignment()
+    {
+        var controller = CreateController();
+        ((IInitializable)controller).Initialize();
+
+        var refreshedGeometry = new SlingshotGeometrySnapshot(
+            leftAnchorPosition: new Vector3(4f, 0f, 3f),
+            rightAnchorPosition: new Vector3(6f, 0f, 3f),
+            restPoint: new Vector3(5f, 0f, 3f),
+            launchFrameRight: Vector3.right,
+            launchFrameForward: Vector3.forward,
+            launchFrameUp: Vector3.up);
+        _view.Geometry = refreshedGeometry;
+        _observations.Clear();
+
+        ((ISlingshotCapture)controller).EnableCapture();
+
+        Assert.That(_view.GeometrySnapshotCount, Is.EqualTo(2));
+        Assert.That(_heldLaunchTarget.HeldPositions[^1], Is.EqualTo(refreshedGeometry.RestPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, refreshedGeometry.RestPoint);
+
+        ((IDisposable)controller).Dispose();
+    }
+
+    [Test]
     public void DisableCapture_WhenEnabled_CancelsPullAndDisablesInputAfterInactiveIdle()
     {
         using var controller = CreateInitializedController();

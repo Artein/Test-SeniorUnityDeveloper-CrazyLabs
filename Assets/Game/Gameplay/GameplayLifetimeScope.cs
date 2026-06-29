@@ -28,6 +28,9 @@ namespace Game.Gameplay
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
         [SerializeField] private Camera _inputCamera;
+        [SerializeField] private Transform _slingshotRig;
+        [SerializeField] private Transform _preLaunchSlingshotRigPose;
+        [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
 
@@ -45,13 +48,17 @@ namespace Game.Gameplay
             new UnityInputInstaller().Install(builder);
             new GameplayStateInstaller(_gameplayStateConfig).Install(builder);
 
-            builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget);
+            builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
+                .As<ILaunchTargetPreLaunchReset>();
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
+
+            builder.RegisterInstance<IPreLaunchRigPoseResetter>(
+                new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
 
             new SlingshotInstaller(_slingshotConfig, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_preLaunchStateId, _runningStateId).Install(builder);
@@ -149,6 +156,15 @@ namespace Game.Gameplay
 
             if (_inputCamera == null)
                 yield return "GameplayLifetimeScope requires an Input Camera reference.";
+
+            if (_slingshotRig == null)
+                yield return "GameplayLifetimeScope requires a Slingshot Rig Transform reference.";
+
+            if (_preLaunchSlingshotRigPose == null)
+                yield return "GameplayLifetimeScope requires a Pre-Launch Slingshot Rig Pose reference.";
+
+            if (_preLaunchLaunchTargetPose == null)
+                yield return "GameplayLifetimeScope requires a Pre-Launch Launch Target Pose reference.";
 
             if (_slingshotView == null)
                 yield return "GameplayLifetimeScope requires a Slingshot View reference.";

@@ -135,6 +135,7 @@ namespace Game.Gameplay.Slingshot
             if (_isCaptureEnabled)
                 return;
 
+            _geometry = _view.CreateGeometrySnapshot();
             _hasActivePointer = false;
             _isLaunchHandoffPending = false;
             _isReleaseRecoilActive = false;
