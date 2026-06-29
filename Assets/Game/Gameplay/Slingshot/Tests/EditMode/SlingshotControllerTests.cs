@@ -225,6 +225,45 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
+    public void PointerPressed_WorldToScreenProjectionFailureAfterPullPlaneProjection_RestoresHeldTargetAndDoesNotStartPull()
+    {
+        using var controller = CreateInitializedController();
+        var screenPosition = new Vector2(50f, 20f);
+        var pullPoint = new Vector3(0.5f, 0f, -0.5f);
+        _projector.SetScreenToWorld(screenPosition, pullPoint);
+        _observations.Clear();
+        _heldLaunchTarget.HeldPositions.Clear();
+
+        _input.Press(1, screenPosition);
+
+        Assert.That(_view.ActivePullVisuals, Is.Empty);
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "target-position" }));
+        Assert.That(_heldLaunchTarget.HeldPositions, Is.EqualTo(new[] { pullPoint, _view.Geometry.RestPoint }));
+        Assert.That(_bandShapeProvider.Queries, Is.Empty);
+    }
+
+    [Test]
+    public void PointerPressed_BandShapeSolveFailureBeforeAnyValidShape_RestoresHeldTargetAndDoesNotStartPull()
+    {
+        using var controller = CreateInitializedController();
+        var screenPosition = new Vector2(50f, 20f);
+        var pullPoint = new Vector3(0.5f, 0f, -0.5f);
+        _projector.SetScreenToWorld(screenPosition, pullPoint);
+        _projector.SetWorldToScreen(pullPoint, new Vector2(65f, 8f));
+        _bandShapeProvider.ShouldFail = true;
+        _observations.Clear();
+        _heldLaunchTarget.HeldPositions.Clear();
+
+        _input.Press(1, screenPosition);
+
+        Assert.That(_view.ActivePullVisuals, Is.Empty);
+        Assert.That(_observations, Is.EqualTo(new[] { "target-position", "band-shape", "target-position" }));
+        Assert.That(_heldLaunchTarget.HeldPositions, Is.EqualTo(new[] { pullPoint, _view.Geometry.RestPoint }));
+        Assert.That(_bandShapeProvider.Queries, Has.Count.EqualTo(1));
+        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(pullPoint));
+    }
+
+    [Test]
     public void PointerEvents_SecondPointerWhileActive_Ignored()
     {
         using var controller = CreateInitializedController();

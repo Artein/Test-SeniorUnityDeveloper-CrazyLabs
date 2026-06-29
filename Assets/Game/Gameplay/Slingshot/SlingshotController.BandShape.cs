@@ -65,7 +65,7 @@ namespace Game.Gameplay.Slingshot
 
             if (!IsBandShapeVisibleAtPullOffset(pullDistance, 0f))
             {
-                _heldLaunchTarget.SetHeldPosition(GetPullPoint(pullDistance, pullOffset));
+                PoseHeldTargetForPullSolve(GetPullPoint(pullDistance, pullOffset));
                 return pullOffset;
             }
 
@@ -88,14 +88,14 @@ namespace Game.Gameplay.Slingshot
             }
 
             var visiblePullOffset = pullOffsetSign * minimumVisibleMagnitude;
-            _heldLaunchTarget.SetHeldPosition(GetPullPoint(pullDistance, visiblePullOffset));
+            PoseHeldTargetForPullSolve(GetPullPoint(pullDistance, visiblePullOffset));
             return visiblePullOffset;
         }
 
         private bool IsBandShapeVisibleAtPullOffset(float pullDistance, float pullOffset)
         {
             var pullPoint = GetPullPoint(pullDistance, pullOffset);
-            _heldLaunchTarget.SetHeldPosition(pullPoint);
+            PoseHeldTargetForPullSolve(pullPoint);
 
             if (ShouldUseSimpleBandShape(pullPoint))
             {
@@ -326,7 +326,7 @@ namespace Game.Gameplay.Slingshot
 
         private void SetHeldTargetToRest()
         {
-            _heldLaunchTarget.SetHeldPosition(_geometry.RestPoint);
+            SetCommittedHeldTargetPosition(_geometry.RestPoint);
         }
     }
 }
