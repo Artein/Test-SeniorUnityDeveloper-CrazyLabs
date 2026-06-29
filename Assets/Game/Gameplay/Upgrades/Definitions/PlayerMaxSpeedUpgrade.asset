@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 645054a2a984541738f98dd083b73ef4, type: 3}
+  m_Name: PlayerMaxSpeedUpgrade
+  m_EditorClassIdentifier: 
+  _stableId: player-max-speed
+  _displayName: Player Max Speed
+  _shortDisplayName: SPEED
+  _description: Increases the maximum run speed used by player movement tuning.
+  _icon: {fileID: 21300000, guid: 2b4e6de7c1f54df7a50208e235f76b22, type: 3}
+  _targetStatId: {fileID: 11400000, guid: 20d331fb50d5496a805d470fde4382ea, type: 2}
+  _maxLevel: 25
+  _costProgression:
+    _minimumValue: 80
+    _maximumValue: 4500
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0.6
+        outSlope: 0.6
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.5
+        value: 0.3
+        inSlope: 1.4
+        outSlope: 1.4
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1.4
+        outSlope: 1.4
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    _roundingMode: 3
+    _stepSize: 5
+    _exactOverrides: []
+  _effectProgression:
+    _minimumValue: 1
+    _maximumValue: 1.8
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    _roundingMode: 0
+    _stepSize: 0
+    _exactOverrides: []
+  _operationType: 2
+  _valueFormat: 2
+  _displayDecimalPlaces: 1

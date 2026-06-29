@@ -26,18 +26,6 @@ namespace Game.Gameplay.Slingshot
             if (!config.MaximumLateralPull.IsFinitePositive())
                 yield return $"Slingshot {nameof(config.MaximumLateralPull)} must be a finite positive value.";
 
-            if (!config.MaximumLaunchAngleDegrees.IsFinitePositive())
-                yield return $"Slingshot {nameof(config.MaximumLaunchAngleDegrees)} must be a finite positive value.";
-
-            if (!config.MinimumLaunchSpeed.IsFinitePositive())
-                yield return $"Slingshot {nameof(config.MinimumLaunchSpeed)} must be a finite positive value.";
-
-            if (!config.MaximumLaunchSpeed.IsFinitePositive())
-                yield return $"Slingshot {nameof(config.MaximumLaunchSpeed)} must be a finite positive value.";
-
-            if (!config.LaunchUpSpeed.IsFinitePositive())
-                yield return $"Slingshot {nameof(config.LaunchUpSpeed)} must be a finite positive value.";
-
             if (!math.isfinite(config.BandContactPadding) || config.BandContactPadding < 0f)
                 yield return $"Slingshot {nameof(config.BandContactPadding)} must be a finite non-negative value.";
 
@@ -55,12 +43,6 @@ namespace Game.Gameplay.Slingshot
 
             if (config.MaximumPullDistance < config.MinimumPullDistance)
                 yield return "Slingshot maximum pull distance must be greater than or equal to minimum pull distance.";
-
-            if (config.MaximumLaunchSpeed < config.MinimumLaunchSpeed)
-                yield return "Slingshot maximum launch speed must be greater than or equal to minimum launch speed.";
-
-            if (config.LaunchSpeedCurve is not { length: > 0 })
-                yield return "Slingshot launch speed curve must contain at least one key.";
 
             if (config.BandRecoilCurve is not { length: > 0 })
                 yield return "Slingshot Band recoil curve must contain at least one key.";

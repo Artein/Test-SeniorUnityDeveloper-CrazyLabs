@@ -24,11 +24,17 @@ namespace Game.Gameplay.Slingshot
         void ResetToPreLaunchPose(Vector3 position, Quaternion rotation);
     }
 
+    internal interface ILaunchTargetBandOcclusionSource
+    {
+        bool IsBandPointHiddenFrom(Ray ray, float maxDistance);
+    }
+
     public sealed partial class RigidbodyLaunchTarget : MonoBehaviour,
         ILaunchTarget,
         IHeldLaunchTarget,
         ILaunchTargetPreLaunchReset,
-        ILaunchTargetSilhouetteSource
+        ILaunchTargetSilhouetteSource,
+        ILaunchTargetBandOcclusionSource
     {
         private const RigidbodyConstraints PostLaunchStabilizationConstraints =
             RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
@@ -37,7 +43,7 @@ namespace Game.Gameplay.Slingshot
         [SerializeField] private Collider _bandContactCollider;
         [SerializeField] private Transform _bandCenter;
 
-        private readonly LaunchFrameValidator _launchFrameValidator = new LaunchFrameValidator();
+        private readonly LaunchFrameValidator _launchFrameValidator = new();
         private bool _isHeld;
         private bool _hasPreviousState;
         private bool _previousIsKinematic;
@@ -121,6 +127,16 @@ namespace Game.Gameplay.Slingshot
 
             sampleCount = query.SampleCount;
             return true;
+        }
+
+        bool ILaunchTargetBandOcclusionSource.IsBandPointHiddenFrom(Ray ray, float maxDistance)
+        {
+            ThrowIfInvalidReferences();
+
+            if (!_bandContactCollider.enabled || maxDistance <= 0.0001f)
+                return false;
+
+            return _bandContactCollider.Raycast(ray, out _, maxDistance);
         }
 
         private void OnValidate()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Foundation.Time;
 using Game.Gameplay;
 using Game.Gameplay.CharacterPresentation;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
@@ -228,7 +229,7 @@ public sealed class CharacterPresentationPresenterTests
     [Test]
     public void Tick_PreLaunch_ResetsAcceptedRunResult()
     {
-        _runResultNotifier.Raise(new RunResult(RunEndReason.Finished, 1f, 5f, Vector3.zero, 3f));
+        _runResultNotifier.Raise(CreateSuccessfulRunResult());
         _stateService.ChangeTo(_preLaunchStateId);
 
         ((ITickable)_presenter).Tick();
@@ -240,7 +241,7 @@ public sealed class CharacterPresentationPresenterTests
     [Test]
     public void RunResultAccepted_SuccessfulResult_IsPassedToClassifierUntilPreLaunch()
     {
-        _runResultNotifier.Raise(new RunResult(RunEndReason.Finished, 1f, 5f, Vector3.zero, 3f));
+        _runResultNotifier.Raise(CreateSuccessfulRunResult());
 
         ((ITickable)_presenter).Tick();
 
@@ -252,7 +253,7 @@ public sealed class CharacterPresentationPresenterTests
     public void Dispose_AfterInitialize_UnsubscribesFromRunResultNotifier()
     {
         ((IDisposable)_presenter).Dispose();
-        _runResultNotifier.Raise(new RunResult(RunEndReason.Finished, 1f, 5f, Vector3.zero, 3f));
+        _runResultNotifier.Raise(CreateSuccessfulRunResult());
 
         ((ITickable)_presenter).Tick();
 
@@ -274,6 +275,17 @@ public sealed class CharacterPresentationPresenterTests
             _clock,
             _preLaunchStateId,
             _runningStateId);
+    }
+
+    private RunResult CreateSuccessfulRunResult()
+    {
+        return new RunResult(
+            RunEndReason.Finished,
+            1f,
+            5f,
+            Vector3.zero,
+            3f,
+            new RunCurrencySnapshot(Array.Empty<RunCurrencyAmount>()));
     }
 
     private RunProgressFrameSnapshot CreateSnapshot()

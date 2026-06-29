@@ -87,14 +87,14 @@ namespace Game.Gameplay
             _isRunCameraActive = false;
         }
 
-        private void OnSlingshotLaunchApplied(SlingshotLaunchRequest launchRequest)
+        private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
                 return;
 
             _hasLaunchApplied = true;
-            _cameraUp = GetValidUpDirection(launchRequest.LaunchUpDirection);
-            PrimeYawFromLaunch(launchRequest);
+            _cameraUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
+            PrimeYawFromLaunch(launchApplied);
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
                 ActivateRunCamera();
@@ -182,9 +182,9 @@ namespace Game.Gameplay
             return Quaternion.Slerp(_anchor.Rotation, targetYaw, t);
         }
 
-        private void PrimeYawFromLaunch(SlingshotLaunchRequest launchRequest)
+        private void PrimeYawFromLaunch(SlingshotLaunchAppliedEvent launchApplied)
         {
-            var planarLaunchDirection = Vector3.ProjectOnPlane(launchRequest.LaunchDirection, _cameraUp);
+            var planarLaunchDirection = Vector3.ProjectOnPlane(launchApplied.LaunchDirection, _cameraUp);
 
             if (planarLaunchDirection.IsFinite() && planarLaunchDirection.sqrMagnitude > 0.000001f)
                 _lastValidYaw = Quaternion.LookRotation(planarLaunchDirection.normalized, _cameraUp);

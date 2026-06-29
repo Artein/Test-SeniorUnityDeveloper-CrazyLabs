@@ -21,6 +21,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
     {
         yield return LoadGameplayScene();
         var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
         yield return WaitUntilPlayerIsHeld(activeScene);
 
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -45,6 +46,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -84,6 +86,7 @@ public sealed class GameplaySceneNaturalBandShapeTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -128,7 +131,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -155,7 +160,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -176,7 +183,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -221,7 +230,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -245,6 +256,13 @@ public sealed class GameplaySceneNaturalBandShapeTests
             var observedGameplaySeconds = 0f;
             var observedFrameCount = 0;
             var maximumObservedGameplaySeconds = context.SlingshotConfig.BandRecoilDuration + 0.75f;
+            var observedRestBandClear = false;
+            var lastObservedFrame = -1;
+            var lastRestBandClear = false;
+            var lastVisibleBandMatchesRest = false;
+            var lastDistanceFromRestBand = 0f;
+            var lastTargetCenter = string.Empty;
+            var lastBandOffsets = string.Empty;
             const int maximumObservedFrames = 180;
 
             for (var frameIndex = 0; frameIndex < maximumObservedFrames; frameIndex += 1)
@@ -255,13 +273,29 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
                 var recoilBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
 
-                var isRestBandClear = IsBandShapeClearOfCollider(restBandPositions, context.BandLineRenderer, context.TargetCollider);
+                var isRestBandClear = IsBandShapeClearOfCollider(
+                    restBandPositions,
+                    context.BandLineRenderer,
+                    context.TargetCollider);
                 var visibleRawTwoSpanCenterPoint = GetRawTwoSpanCenterPoint(recoilBandPositions);
+
                 var visibleBandMatchesRawTwoSpan =
                     DoesBandShapeMatchRawTwoSpan(recoilBandPositions, context.Geometry, visibleRawTwoSpanCenterPoint, 0.01f);
                 var visibleBandMatchesRest = DoesBandShapeMatchRawTwoSpan(recoilBandPositions, context.Geometry, context.Geometry.RestPoint, 0.01f);
+                observedRestBandClear |= isRestBandClear;
 
                 Assert.That(recoilBandPositions, Has.Length.GreaterThan(3));
+
+                lastObservedFrame = frameIndex;
+                lastRestBandClear = isRestBandClear;
+                lastVisibleBandMatchesRest = visibleBandMatchesRest;
+
+                lastDistanceFromRestBand = GetMaximumDistanceFromRawTwoSpan(
+                    recoilBandPositions,
+                    context.Geometry,
+                    context.Geometry.RestPoint);
+                lastTargetCenter = DescribePoint(context.TargetCollider.bounds.center, context.Geometry);
+                lastBandOffsets = DescribeBandOffsets(recoilBandPositions, context.Geometry);
 
                 if (visibleBandMatchesRest)
                 {
@@ -333,10 +367,21 @@ public sealed class GameplaySceneNaturalBandShapeTests
             }
 
             Assert.That(
+                observedRestBandClear,
+                Is.True,
+                "Expected the launched Target to clear the detached rest Band Shape within the observed recoil frames. "
+                + $"lastFrame={lastObservedFrame} restBandClear={lastRestBandClear} "
+                + $"matchesRest={lastVisibleBandMatchesRest} maxDistanceFromRest={lastDistanceFromRestBand:0.###} "
+                + $"targetCenter={lastTargetCenter} {lastBandOffsets}");
+
+            Assert.That(
                 observedRestBandDetach,
                 Is.True,
-                "Expected maximum launch recoil to detach to the rest Band Shape within the observed recoil window. "
-                + $"Observed {observedGameplaySeconds:0.###} gameplay seconds across {observedFrameCount} frames.");
+                "Expected maximum launch recoil to detach to the rest Band Shape after the rest Band Shape cleared. "
+                + $"Observed {observedGameplaySeconds:0.###} gameplay seconds across {observedFrameCount} frames. "
+                + $"lastFrame={lastObservedFrame} restBandClear={lastRestBandClear} "
+                + $"matchesRest={lastVisibleBandMatchesRest} maxDistanceFromRest={lastDistanceFromRestBand:0.###} "
+                + $"targetCenter={lastTargetCenter} {lastBandOffsets}");
         }
         finally
         {
@@ -352,7 +397,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -375,7 +422,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -393,6 +442,31 @@ public sealed class GameplaySceneNaturalBandShapeTests
     }
 
     [UnityTest]
+    public IEnumerator given_GameplayScene_when_EditorMousePullsToMaximumSideDistance_then_BandPathStaysClearAndOrdered()
+    {
+        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Maximum Side Pull Mouse");
+
+        try
+        {
+            yield return LoadGameplayScene();
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
+            yield return WaitUntilPlayerIsHeld(context);
+            yield return SendMouse(mouse, context.PressScreenPosition, true);
+
+            yield return AssertMaximumSidePullBandShape(context, mouse, 1f, "Right Maximum Side Pull");
+            yield return AssertMaximumSidePullBandShape(context, mouse, -1f, "Left Maximum Side Pull");
+
+            yield return SendMouse(mouse, context.PressScreenPosition, false);
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
+    }
+
+    [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsSideways_then_PulledWrapStaysAlignedWithBandCenter()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Band Center Wrap Mouse");
@@ -400,7 +474,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -425,7 +501,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -450,7 +528,9 @@ public sealed class GameplaySceneNaturalBandShapeTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -463,6 +543,45 @@ public sealed class GameplaySceneNaturalBandShapeTests
         {
             InputSystem.RemoveDevice(mouse);
         }
+    }
+
+    private IEnumerator AssertMaximumSidePullBandShape(
+        GameplaySceneContext context,
+        Mouse mouse,
+        float lateralSign,
+        string phase)
+    {
+        var pullOffset = context.SlingshotConfig.MaximumLateralPull * lateralSign;
+
+        var pullWorldPosition = context.Geometry.RestPoint
+                                + (context.Geometry.LaunchFrameRight * pullOffset)
+                                - (context.Geometry.LaunchFrameForward * context.SlingshotConfig.MaximumPullDistance);
+        var pullScreenPosition = GetScreenPosition(context.InputCamera, pullWorldPosition);
+        yield return SendMouse(mouse, pullScreenPosition, true);
+
+        var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
+        Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
+
+        AssertBandShapeDoesNotMatchRawTwoSpan(activeBandPositions, context.Geometry, phase);
+
+        AssertTargetColliderWithinRenderedAnchorSpan(
+            context.TargetCollider,
+            context.BandCenter.transform.position,
+            context.BandLineRenderer,
+            context.Geometry,
+            phase);
+        AssertBandCenterlineWithinAnchorSpan(activeBandPositions, context.Geometry, phase);
+
+        AssertAnchorSideHalfStaysOnPulledSide(
+            activeBandPositions,
+            context.BandLineRenderer,
+            context.BandCenter.transform.position,
+            context.Geometry,
+            pullOffset,
+            phase);
+        AssertBandPathOffsetsAreMonotonic(activeBandPositions, context.BandLineRenderer, context.Geometry, phase);
+        AssertBandPathHasNoSharpFolds(activeBandPositions, context.Geometry, phase);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, phase);
     }
 
     private IEnumerator AssertBandPathDoesNotBacktrackAcrossTarget(
@@ -705,6 +824,16 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
             yield return null;
         }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(GameplaySceneContext context)

@@ -27,6 +27,7 @@ public sealed class GameplaySceneCompositionTests
     {
         yield return LoadGameplayScene();
         var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
         yield return WaitUntilPlayerIsHeld(activeScene);
 
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
@@ -256,6 +257,7 @@ public sealed class GameplaySceneCompositionTests
     {
         yield return LoadGameplayScene();
         var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
         yield return WaitUntilPlayerIsHeld(activeScene);
 
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
@@ -279,8 +281,8 @@ public sealed class GameplaySceneCompositionTests
         playerRigidbody.rotation = playerRigidbody.transform.rotation;
 
         Assert.That(stateService.TryTransitionTo(lifetimeScope.RunEndedStateIdForTests), Is.True);
-        Assert.That(stateService.TryTransitionTo(lifetimeScope.PreLaunchStateIdForTests), Is.True);
-        yield return null;
+        Assert.That(stateService.TryTransitionTo(lifetimeScope.RunPreparationStateIdForTests), Is.True);
+        yield return ContinueToPreLaunch(activeScene);
 
         var geometry = slingshotView.CreateGeometrySnapshot();
 
@@ -306,6 +308,7 @@ public sealed class GameplaySceneCompositionTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
@@ -344,8 +347,8 @@ public sealed class GameplaySceneCompositionTests
                 DisturbLaunchedPlayerPose(playerRigidbody, scenarioIndex);
 
                 Assert.That(stateService.TryTransitionTo(lifetimeScope.RunEndedStateIdForTests), Is.True);
-                Assert.That(stateService.TryTransitionTo(lifetimeScope.PreLaunchStateIdForTests), Is.True);
-                yield return null;
+                Assert.That(stateService.TryTransitionTo(lifetimeScope.RunPreparationStateIdForTests), Is.True);
+                yield return ContinueToPreLaunch(activeScene);
 
                 AssertPreLaunchRigPoseRestored(
                     slingshotView,
@@ -388,6 +391,7 @@ public sealed class GameplaySceneCompositionTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
@@ -456,6 +460,7 @@ public sealed class GameplaySceneCompositionTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -496,6 +501,7 @@ public sealed class GameplaySceneCompositionTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -538,6 +544,7 @@ public sealed class GameplaySceneCompositionTests
         {
             yield return LoadGameplayScene();
             var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
             yield return WaitUntilPlayerIsHeld(activeScene);
 
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -647,6 +654,14 @@ public sealed class GameplaySceneCompositionTests
         }
 
         Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)
@@ -814,6 +829,7 @@ public sealed class GameplaySceneCompositionTests
     {
         yield return LoadGameplayScene();
         var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
         yield return WaitUntilPlayerIsHeld(activeScene);
 
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");

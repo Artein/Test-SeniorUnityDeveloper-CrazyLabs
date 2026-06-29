@@ -3,11 +3,16 @@
   "rootNamespace": "",
   "references": [
     "Game.Gameplay",
+    "Game.Gameplay.Economy",
     "Game.Gameplay.GameplayState",
+    "Game.Gameplay.Pickups",
     "Game.Gameplay.Slingshot",
+    "Game.Gameplay.Upgrades",
     "Game.Foundation.Input",
     "Unity.Cinemachine",
+    "UnityEngine.UI",
     "Unity.InputSystem",
+    "Unity.TextMeshPro",
     "VContainer"
   ],
   "optionalUnityReferences": [

@@ -109,12 +109,14 @@ namespace Game.Gameplay.Slingshot
             UpdateCurrent();
         }
 
-        private void OnLaunchApplied(SlingshotLaunchRequest request)
+        private void OnLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
+            var request = launchApplied.Request;
+
             ClearActivePull();
             _hasLaunchPush = true;
             _launchPushElapsedSeconds = 0f;
-            _normalizedLaunchPower = request.NormalizedPower;
+            _normalizedLaunchPower = request.PullStrength;
 
             _normalizedLaunchOffset =
                 _pullOffsetNormalizer.Normalize(_geometrySnapshotSource.CurrentGeometry, request.PullDistance, request.PullOffset);

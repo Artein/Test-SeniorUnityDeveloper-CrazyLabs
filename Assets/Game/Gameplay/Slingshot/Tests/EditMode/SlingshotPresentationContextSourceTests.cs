@@ -97,15 +97,7 @@ public sealed class SlingshotPresentationContextSourceTests
     {
         _activePullNotifier.Change(new SlingshotActivePullContext(0.2f, -0.75f));
 
-        var launchRequest = new SlingshotLaunchRequest(
-            normalizedPower: 0.8f, 
-            FullLateralPullDistance(), 
-            pullOffset: 1f, 
-            finalPullPoint: new Vector3(1f, 0f, -1f), 
-            launchDirection: Vector3.forward, 
-            launchSpeed: 10f,
-            launchUpDirection: Vector3.up, 
-            launchUpSpeed: 1f);
+        var launchRequest = CreateLaunchRequest();
 
         _launchAppliedNotifier.Apply(launchRequest);
 
@@ -121,8 +113,7 @@ public sealed class SlingshotPresentationContextSourceTests
     [Test]
     public void Tick_WhileLaunchPushActive_AdvancesElapsedWithInjectedTime()
     {
-        _launchAppliedNotifier.Apply(new SlingshotLaunchRequest(0.8f, FullLateralPullDistance(), 1f, new Vector3(1f, 0f, -1f), Vector3.forward,
-            10f, Vector3.up, 1f));
+        _launchAppliedNotifier.Apply(CreateLaunchRequest());
 
         ((ITickable)_source).Tick();
 
@@ -135,8 +126,7 @@ public sealed class SlingshotPresentationContextSourceTests
     {
         _activePullNotifier.Change(new SlingshotActivePullContext(0.4f, -0.25f));
 
-        _launchAppliedNotifier.Apply(new SlingshotLaunchRequest(0.8f, FullLateralPullDistance(), 1f, new Vector3(1f, 0f, -1f), Vector3.forward,
-            10f, Vector3.up, 1f));
+        _launchAppliedNotifier.Apply(CreateLaunchRequest());
         _activePullNotifier.Change(new SlingshotActivePullContext(0.4f, -0.25f));
 
         _captureLifecycleNotifier.Disable();
@@ -154,8 +144,7 @@ public sealed class SlingshotPresentationContextSourceTests
     {
         _activePullNotifier.Change(new SlingshotActivePullContext(0.4f, -0.25f));
 
-        _launchAppliedNotifier.Apply(new SlingshotLaunchRequest(0.8f, FullLateralPullDistance(), 1f, new Vector3(1f, 0f, -1f), Vector3.forward,
-            10f, Vector3.up, 1f));
+        _launchAppliedNotifier.Apply(CreateLaunchRequest());
 
         _captureLifecycleNotifier.Enable();
 
@@ -172,6 +161,18 @@ public sealed class SlingshotPresentationContextSourceTests
     {
         return new SlingshotPresentationContextSource(_activePullNotifier, _captureLifecycleNotifier, _launchAppliedNotifier, _geometrySnapshotSource,
             _pullOffsetNormalizer, _clock);
+    }
+
+    private SlingshotLaunchRequest CreateLaunchRequest()
+    {
+        return new SlingshotLaunchRequest(
+            0.8f,
+            FullLateralPullDistance(),
+            1f,
+            1f,
+            new Vector3(1f, 0f, -1f),
+            Vector3.forward,
+            Vector3.up);
     }
 
     private float FullLateralPullDistance()

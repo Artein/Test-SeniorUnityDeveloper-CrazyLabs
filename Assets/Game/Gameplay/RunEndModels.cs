@@ -1,3 +1,5 @@
+using System;
+using Game.Gameplay.Economy;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -28,13 +30,15 @@ namespace Game.Gameplay
         public float DistanceTravelled { get; }
         public Vector3 FinalPosition { get; }
         public float FinalSpeed { get; }
+        public RunCurrencySnapshot CurrencySnapshot { get; }
 
         public RunResult(
             RunEndReason reason,
             float elapsedTime,
             float distanceTravelled,
             Vector3 finalPosition,
-            float finalSpeed)
+            float finalSpeed,
+            RunCurrencySnapshot currencySnapshot)
         {
             Reason = reason;
             IsSuccess = reason == RunEndReason.Finished;
@@ -42,6 +46,7 @@ namespace Game.Gameplay
             DistanceTravelled = Mathf.Max(0f, distanceTravelled);
             FinalPosition = finalPosition;
             FinalSpeed = Mathf.Max(0f, finalSpeed);
+            CurrencySnapshot = currencySnapshot ?? throw new ArgumentNullException(nameof(currencySnapshot));
         }
 
         public override string ToString()
