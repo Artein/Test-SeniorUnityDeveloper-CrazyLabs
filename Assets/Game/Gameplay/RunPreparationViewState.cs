@@ -12,7 +12,7 @@ namespace Game.Gameplay
         public string CoinBalanceText { get; }
         public Sprite CurrencyIcon { get; }
         public IReadOnlyList<RunPreparationUpgradeViewState> Upgrades { get; }
-        
+
         public RunPreparationViewState(
             bool isVisible,
             int coinBalance,
@@ -39,16 +39,14 @@ namespace Game.Gameplay
         public int OwnedLevel { get; }
         public int MaxLevel { get; }
         public string OfferLevelText { get; }
-        public string CurrentEffectText { get; }
-        public string NextEffectText { get; }
-        public string EffectPreviewText { get; }
+        public string OfferEffectText { get; }
         public int? NextCost { get; }
         public string NextCostText { get; }
         public bool CanBuy { get; }
         public bool IsMaxed { get; }
         public string StatusText { get; }
         public string ButtonText { get; }
-        
+
         public RunPreparationUpgradeViewState(
             UpgradeDefinition definition,
             string stableId,
@@ -59,9 +57,7 @@ namespace Game.Gameplay
             int ownedLevel,
             int maxLevel,
             string offerLevelText,
-            string currentEffectText,
-            string nextEffectText,
-            string effectPreviewText,
+            string offerEffectText,
             int? nextCost,
             string nextCostText,
             bool canBuy,
@@ -78,9 +74,7 @@ namespace Game.Gameplay
             OwnedLevel = ownedLevel;
             MaxLevel = maxLevel;
             OfferLevelText = offerLevelText ?? string.Empty;
-            CurrentEffectText = currentEffectText ?? string.Empty;
-            NextEffectText = nextEffectText ?? string.Empty;
-            EffectPreviewText = effectPreviewText ?? string.Empty;
+            OfferEffectText = offerEffectText ?? string.Empty;
             NextCost = nextCost;
             NextCostText = nextCostText ?? string.Empty;
             CanBuy = canBuy;

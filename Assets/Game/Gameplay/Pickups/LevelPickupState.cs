@@ -8,6 +8,7 @@ namespace Game.Gameplay.Pickups
     {
         bool TryConsume(Pickup pickup);
         void ResetForLevelSession();
+        bool IsAvailable(Pickup pickup);
     }
 
     public sealed class LevelPickupState : ILevelPickupState
@@ -37,7 +38,7 @@ namespace Game.Gameplay.Pickups
             ResetForLevelSession();
         }
 
-        public bool IsAvailable(Pickup pickup)
+        bool ILevelPickupState.IsAvailable(Pickup pickup)
         {
             return pickup != null && _availablePickups.Contains(pickup);
         }

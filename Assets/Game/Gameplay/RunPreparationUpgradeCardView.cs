@@ -22,7 +22,7 @@ namespace Game.Gameplay
         private UpgradeDefinition _definition;
 
         private GameObject RootObject => _root != null ? _root : gameObject;
-        
+
         public event Action<UpgradeDefinition> BuyRequested;
 
         private void Awake()
@@ -56,12 +56,16 @@ namespace Game.Gameplay
             _icon.name = "Upgrade Icon - " + state.StableId;
             _icon.sprite = state.Icon;
             _icon.enabled = state.Icon != null;
+            _nameText.name = "Upgrade Name Label";
             _nameText.text = state.CardTitle;
+            _levelText.name = "Upgrade Level Label";
             _levelText.text = state.OfferLevelText;
-            _effectText.text = state.EffectPreviewText;
+            _effectText.name = "Upgrade Effect Label";
+            _effectText.text = state.OfferEffectText;
             RenderButtonCost(state);
             _buyButton.name = "Buy Button - " + state.StableId;
             _buyButton.interactable = state.CanBuy;
+            _buyButtonActionLabel.name = "Upgrade Button Action Label";
             _buyButtonActionLabel.text = state.ButtonText;
         }
 

@@ -188,7 +188,7 @@ public sealed class GameplayLifetimeScopeTests
         var upgradePreviewService = container.Resolve<UpgradePreviewService>();
         var upgradePurchaseService = container.Resolve<UpgradePurchaseService>();
         var levelPickupStateService = container.Resolve<ILevelPickupState>();
-        var levelPickupState = container.Resolve<LevelPickupState>();
+        var levelPickupState = container.Resolve<ILevelPickupState>();
         var pickupCollectionNotifier = container.Resolve<IPickupCollectionNotifier>();
         var runCameraAnchor = container.Resolve<IRunCameraAnchor>();
         var runCameraRig = container.Resolve<IRunCameraRig>();

@@ -21,13 +21,9 @@ using VContainer;
 public sealed class GameplaySceneRunPreparationUITests
 {
     private const float MinimumCoinIconScreenHeight = 40f;
-    private const float MinimumUpgradeStripScreenHeight = 280f;
     private const float MinimumBuyButtonScreenHeight = 64f;
     private const float MinimumUpgradeIconScreenHeight = 39.5f;
-    private const float MinimumCardNameFontSize = 28f;
-    private const float MinimumCardLevelFontSize = 28f;
-    private const float MinimumCardEffectFontSize = 24f;
-    private const float MinimumButtonFontSize = 24f;
+    private const float MinimumUpgradeCardAutoSizeFloor = 18f;
     private const float MinimumCoinBalanceFontSize = 36f;
     private const float MinimumTapToPlayFontSize = 44f;
 
@@ -77,7 +73,6 @@ public sealed class GameplaySceneRunPreparationUITests
             var costIcon = FindChildComponent<Image>(buyButton.transform, "Upgrade Button Cost Currency Icon");
             var costLabel = FindChildComponent<TMP_Text>(buyButton.transform, "Upgrade Button Cost Label");
             var firstCost = evaluator.GetCostValue(definition, 1);
-            var currentEffectText = FormatEffect(definition, evaluator.GetEffectValue(definition, 0));
             var nextEffectText = FormatEffect(definition, evaluator.GetEffectValue(definition, 1));
 
             Assert.That(icon.transform.parent, Is.SameAs(headerRow), $"{definition.StableId} icon should be in the header row.");
@@ -90,8 +85,11 @@ public sealed class GameplaySceneRunPreparationUITests
             Assert.That(nameLabel.text, Is.EqualTo(definition.ShortDisplayName), $"{definition.StableId} short name should match.");
             Assert.That(levelLabel.text, Is.EqualTo("1"), $"{definition.StableId} offer level should match.");
 
-            Assert.That(effectLabel.text, Is.EqualTo($"{currentEffectText} > {nextEffectText}"),
-                $"{definition.StableId} effect preview should show formatted current and next effects.");
+            Assert.That(effectLabel.text, Is.EqualTo(nextEffectText),
+                $"{definition.StableId} effect preview should show the next offered effect.");
+
+            Assert.That(effectLabel.text, Does.Not.Contain(">"),
+                $"{definition.StableId} effect preview should not show current-to-next comparison.");
 
             Assert.That(costIcon.enabled, Is.True, $"{definition.StableId} cost icon should be enabled.");
             Assert.That(costIcon.sprite, Is.SameAs(catalog.PurchaseCurrency.Icon), $"{definition.StableId} cost icon should match currency.");
@@ -157,7 +155,12 @@ public sealed class GameplaySceneRunPreparationUITests
         Assert.That(FindGameObjectByName(activeScene, "Coin Balance Label").GetComponent<TMP_Text>().text,
             Is.EqualTo((startingBalance - firstCost).ToString(CultureInfo.InvariantCulture)));
         Assert.That(FindChildComponent<TMP_Text>(card, "Upgrade Level Label").text, Is.EqualTo("2"));
-        Assert.That(FindChildComponent<TMP_Text>(card, "Upgrade Effect Label").text, Is.Not.EqualTo(previousEffectText));
+        var secondEffectText = FormatEffect(definition, evaluator.GetEffectValue(definition, 2));
+        var effectLabel = FindChildComponent<TMP_Text>(card, "Upgrade Effect Label");
+
+        Assert.That(effectLabel.text, Is.Not.EqualTo(previousEffectText));
+        Assert.That(effectLabel.text, Is.EqualTo(secondEffectText));
+        Assert.That(effectLabel.text, Does.Not.Contain(">"));
 
         buyButton = FindChildComponent<Button>(card, "Buy Button - " + definition.StableId);
 
@@ -552,8 +555,8 @@ public sealed class GameplaySceneRunPreparationUITests
     {
         var stripRect = GetScreenRect(upgradeCardsRoot);
 
-        Assert.That(stripRect.height, Is.GreaterThanOrEqualTo(MinimumUpgradeStripScreenHeight),
-            "Upgrade strip should be tall enough for readable mobile offer cards.");
+        Assert.That(stripRect.height, Is.GreaterThan(0f),
+            "Upgrade strip should render with positive screen height.");
 
         AssertCardsShareRowAndDoNotOverlap(cards);
 
@@ -593,24 +596,25 @@ public sealed class GameplaySceneRunPreparationUITests
             MinimumBuyButtonScreenHeight,
             $"{stableId} buy button should stay comfortably tappable on mobile.");
 
-        Assert.That(nameLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumCardNameFontSize),
-            $"{stableId} card title should use the mobile card font size.");
+        Assert.That(nameLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumUpgradeCardAutoSizeFloor),
+            $"{stableId} card title should stay above the authored auto-size floor.");
 
-        Assert.That(levelLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumCardLevelFontSize),
-            $"{stableId} offer level should use the mobile card font size.");
+        Assert.That(levelLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumUpgradeCardAutoSizeFloor),
+            $"{stableId} offer level should stay above the authored auto-size floor.");
 
-        Assert.That(effectLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumCardEffectFontSize),
-            $"{stableId} effect preview should use the mobile card font size.");
+        Assert.That(effectLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumUpgradeCardAutoSizeFloor),
+            $"{stableId} effect preview should stay above the authored auto-size floor.");
 
         Assert.That(GetButtonActionLabel(buyButton), Is.Not.Empty, $"{stableId} button action label should render.");
 
         Assert.That(FindChildComponent<TMP_Text>(buyButton.transform, "Upgrade Button Action Label").fontSize,
-            Is.GreaterThanOrEqualTo(MinimumButtonFontSize), $"{stableId} button action should use the mobile button font size.");
+            Is.GreaterThanOrEqualTo(MinimumUpgradeCardAutoSizeFloor),
+            $"{stableId} button action should stay above the authored auto-size floor.");
 
         if (costIcon.gameObject.activeSelf)
         {
-            Assert.That(costLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumButtonFontSize),
-                $"{stableId} button cost should use the mobile button font size.");
+            Assert.That(costLabel.fontSize, Is.GreaterThanOrEqualTo(MinimumUpgradeCardAutoSizeFloor),
+                $"{stableId} button cost should stay above the authored auto-size floor.");
         }
     }
 

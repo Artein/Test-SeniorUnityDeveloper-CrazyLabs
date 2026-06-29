@@ -82,9 +82,7 @@ public sealed class RunPreparationPresenterTests
         Assert.That(state.Upgrades[0].OwnedLevel, Is.EqualTo(0));
         Assert.That(state.Upgrades[0].MaxLevel, Is.EqualTo(2));
         Assert.That(state.Upgrades[0].OfferLevelText, Is.EqualTo("1"));
-        Assert.That(state.Upgrades[0].CurrentEffectText, Is.EqualTo("x1.0"));
-        Assert.That(state.Upgrades[0].NextEffectText, Is.EqualTo("x1.2"));
-        Assert.That(state.Upgrades[0].EffectPreviewText, Is.EqualTo("x1.0 > x1.2"));
+        Assert.That(state.Upgrades[0].OfferEffectText, Is.EqualTo("x1.2"));
         Assert.That(state.Upgrades[0].NextCost, Is.EqualTo(100));
         Assert.That(state.Upgrades[0].NextCostText, Is.EqualTo("100"));
         Assert.That(state.Upgrades[0].CanBuy, Is.True);
@@ -116,9 +114,7 @@ public sealed class RunPreparationPresenterTests
         var upgrade = view.RenderedStates[^1].Upgrades[0];
         Assert.That(upgrade.OwnedLevel, Is.EqualTo(1));
         Assert.That(upgrade.OfferLevelText, Is.EqualTo("2"));
-        Assert.That(upgrade.CurrentEffectText, Is.EqualTo("x1.2"));
-        Assert.That(upgrade.NextEffectText, Is.EqualTo("x1.4"));
-        Assert.That(upgrade.EffectPreviewText, Is.EqualTo("x1.2 > x1.4"));
+        Assert.That(upgrade.OfferEffectText, Is.EqualTo("x1.4"));
         Assert.That(upgrade.NextCost, Is.EqualTo(200));
         Assert.That(upgrade.NextCostText, Is.EqualTo("200"));
         Assert.That(upgrade.CanBuy, Is.False);
@@ -176,9 +172,7 @@ public sealed class RunPreparationPresenterTests
         Assert.That(upgrade.OfferLevelText, Is.EqualTo("MAX"));
         Assert.That(upgrade.IsMaxed, Is.True);
         Assert.That(upgrade.CanBuy, Is.False);
-        Assert.That(upgrade.CurrentEffectText, Is.EqualTo("x1.4"));
-        Assert.That(upgrade.NextEffectText, Is.EqualTo(string.Empty));
-        Assert.That(upgrade.EffectPreviewText, Is.EqualTo("x1.4"));
+        Assert.That(upgrade.OfferEffectText, Is.EqualTo("x1.4"));
         Assert.That(upgrade.NextCost, Is.Null);
         Assert.That(upgrade.NextCostText, Is.EqualTo(string.Empty));
         Assert.That(upgrade.ButtonText, Is.EqualTo("MAX"));

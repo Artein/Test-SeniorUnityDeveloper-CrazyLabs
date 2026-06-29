@@ -31,7 +31,7 @@ public sealed class PickupSceneCompositionTests
         var configuredPickups = lifetimeScope.LevelPickupsForTests.ToArray();
         var playerContactColliders = lifetimeScope.PlayerPickupContactCollidersForTests.ToArray();
         var levelPickupStateService = lifetimeScope.Container.Resolve<ILevelPickupState>();
-        var levelPickupState = lifetimeScope.Container.Resolve<LevelPickupState>();
+        var levelPickupState = lifetimeScope.Container.Resolve<ILevelPickupState>();
         var currencyStorage = lifetimeScope.Container.Resolve<ICurrencyStorage>();
         var runCurrencyAccumulator = lifetimeScope.Container.Resolve<IRunCurrencyAccumulator>();
         var pickupCurrencyGrantResolver = lifetimeScope.Container.Resolve<IPickupCurrencyGrantResolver>();

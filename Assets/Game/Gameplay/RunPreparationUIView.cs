@@ -24,9 +24,12 @@ namespace Game.Gameplay
             ValidateSerializedReferences();
 
             RootObject.SetActive(state.IsVisible);
+            _coinBalanceIcon.name = "Coin Balance Icon";
             _coinBalanceIcon.sprite = state.CurrencyIcon;
             _coinBalanceIcon.enabled = state.CurrencyIcon != null;
+            _coinBalanceText.name = "Coin Balance Label";
             _coinBalanceText.text = state.CoinBalanceText;
+            _continueTouchAreaButton.name = "Run Preparation Continue Touch Area";
             RenderCards(state.Upgrades);
         }
 

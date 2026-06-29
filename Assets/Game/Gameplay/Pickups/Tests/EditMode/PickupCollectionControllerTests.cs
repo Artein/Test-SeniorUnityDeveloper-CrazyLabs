@@ -141,7 +141,7 @@ public sealed class PickupCollectionControllerTests
     public void TriggerEntered_AcceptedPickup_ConsumesStateBeforeGrantingStorage()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
-        LevelPickupState observedState = null;
+        ILevelPickupState observedState = null;
 
         var currencyStorage = new RecordingCurrencyStorage
         {
@@ -367,13 +367,13 @@ public sealed class PickupCollectionControllerTests
     private readonly struct ControllerFixture
     {
         public PickupCollectionController Controller { get; }
-        public LevelPickupState LevelPickupState { get; }
+        public ILevelPickupState LevelPickupState { get; }
         public ICurrencyStorage CurrencyStorage { get; }
         public IRunCurrencyAccumulator RunCurrencyAccumulator { get; }
 
         public ControllerFixture(
             PickupCollectionController controller,
-            LevelPickupState levelPickupState,
+            ILevelPickupState levelPickupState,
             ICurrencyStorage currencyStorage,
             IRunCurrencyAccumulator runCurrencyAccumulator)
         {

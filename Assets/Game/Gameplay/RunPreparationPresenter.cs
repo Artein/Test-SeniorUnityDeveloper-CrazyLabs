@@ -132,9 +132,7 @@ namespace Game.Gameplay
         {
             var definition = preview.Definition;
             var canBuy = preview.State == UpgradePreviewState.Available && preview.IsAffordable;
-            var currentEffectText = FormatEffect(definition, preview.CurrentEffect);
-            var nextEffectText = preview.NextEffect.HasValue ? FormatEffect(definition, preview.NextEffect.Value) : string.Empty;
-            var effectPreviewText = FormatEffectPreviewText(currentEffectText, nextEffectText);
+            var offerEffectText = FormatOfferEffectText(definition, preview);
 
             return new RunPreparationUpgradeViewState(
                 definition,
@@ -146,9 +144,7 @@ namespace Game.Gameplay
                 preview.CurrentLevel,
                 preview.MaxLevel,
                 FormatOfferLevelText(preview),
-                currentEffectText,
-                nextEffectText,
-                effectPreviewText,
+                offerEffectText,
                 preview.NextCost,
                 preview.NextCost.HasValue ? preview.NextCost.Value.ToString(CultureInfo.InvariantCulture) : string.Empty,
                 canBuy,
@@ -157,15 +153,11 @@ namespace Game.Gameplay
                 preview.IsMaxed ? "MAX" : "UPGRADE");
         }
 
-        private string FormatEffectPreviewText(string currentEffectText, string nextEffectText)
+        private string FormatOfferEffectText(UpgradeDefinition definition, UpgradePreview preview)
         {
-            if (string.IsNullOrEmpty(nextEffectText))
-                return currentEffectText;
+            var offerEffect = preview.NextEffect ?? preview.CurrentEffect;
 
-            if (string.IsNullOrEmpty(currentEffectText))
-                return nextEffectText;
-
-            return currentEffectText + " > " + nextEffectText;
+            return FormatEffect(definition, offerEffect);
         }
 
         private string FormatOfferLevelText(UpgradePreview preview)

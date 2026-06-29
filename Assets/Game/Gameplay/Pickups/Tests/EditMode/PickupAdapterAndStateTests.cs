@@ -79,7 +79,7 @@ public sealed class PickupAdapterAndStateTests
     public void TryConsume_AvailablePickup_SucceedsOnlyOnce()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new[] { pickup });
 
         var firstConsume = state.TryConsume(pickup);
         var secondConsume = state.TryConsume(pickup);
@@ -93,7 +93,7 @@ public sealed class PickupAdapterAndStateTests
     public void ResetForLevelSession_ConsumedPickup_RestoresAvailabilityAndEnablesRoot()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new[] { pickup });
         state.TryConsume(pickup);
         pickup.SetAvailable(false);
 

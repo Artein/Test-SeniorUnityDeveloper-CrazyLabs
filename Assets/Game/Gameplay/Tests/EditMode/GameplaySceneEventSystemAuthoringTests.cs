@@ -24,7 +24,7 @@ public sealed class GameplaySceneEventSystemAuthoringTests
         var eventSystems = FindSceneComponents<EventSystem>(scene).ToArray();
 
         Assert.That(eventSystems, Has.Length.EqualTo(1));
-        Assert.That(eventSystems[0].gameObject.name, Is.EqualTo("Gameplay EventSystem"));
+        Assert.That(eventSystems[0].gameObject.name, Is.EqualTo("EventSystem"));
 
         var eventSystem = eventSystems[0];
         var inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
