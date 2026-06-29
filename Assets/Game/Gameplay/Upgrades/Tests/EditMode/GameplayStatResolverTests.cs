@@ -182,6 +182,36 @@ public sealed class GameplayStatResolverTests
         Assert.That(firstValue, Is.EqualTo(secondValue).Within(0.0001f));
     }
 
+    [Test]
+    public void Resolve_RepeatedCalls_DoNotAllocateManagedMemoryAfterWarmup()
+    {
+        var statId = CreateStat("PlayerMaxSpeed");
+
+        var source = new FakeModifierSource(
+            new GameplayStatModifier(statId, GameplayStatModifierOperation.FlatAdd, 2f),
+            new GameplayStatModifier(statId, GameplayStatModifierOperation.AdditivePercent, 0.5f),
+            new GameplayStatModifier(statId, GameplayStatModifierOperation.MultiplicativeFactor, 2f),
+            new GameplayStatModifier(statId, GameplayStatModifierOperation.ClampMin, 20f),
+            new GameplayStatModifier(statId, GameplayStatModifierOperation.ClampMax, 40f));
+        var resolver = new GameplayStatResolver(new IGameplayStatModifierSource[] { source });
+
+        _ = resolver.Resolve(statId, 10f);
+
+        var allocatedBytesBefore = GC.GetAllocatedBytesForCurrentThread();
+
+        var value = 0f;
+
+        for (var iteration = 0; iteration < 32; iteration++)
+        {
+            value = resolver.Resolve(statId, 10f);
+        }
+
+        var allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBytesBefore;
+
+        Assert.That(value, Is.EqualTo(36f).Within(0.0001f));
+        Assert.That(allocatedBytes, Is.Zero);
+    }
+
     private RunModifierSnapshotFactory CreateSnapshotFactory(
         UpgradeCatalog catalog,
         IUpgradeProgressStorage progressStorage)

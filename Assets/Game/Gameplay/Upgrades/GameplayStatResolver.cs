@@ -5,7 +5,7 @@ namespace Game.Gameplay.Upgrades
 {
     public sealed class GameplayStatResolver
     {
-        private readonly IReadOnlyList<IGameplayStatModifierSource> _modifierSources;
+        private readonly IGameplayStatModifierSource[] _modifierSources;
 
         public GameplayStatResolver(IReadOnlyList<IGameplayStatModifierSource> modifierSources)
         {
@@ -41,9 +41,20 @@ namespace Game.Gameplay.Upgrades
 
         private float ApplyFlatAdd(GameplayStatId statId, float value)
         {
-            foreach (var modifier in EnumerateMatchingModifiers(statId, GameplayStatModifierOperation.FlatAdd))
+            for (var sourceIndex = 0; sourceIndex < _modifierSources.Length; sourceIndex++)
             {
-                value += modifier.Value;
+                var modifiers = _modifierSources[sourceIndex].Modifiers;
+
+                if (modifiers == null)
+                    continue;
+
+                for (var modifierIndex = 0; modifierIndex < modifiers.Count; modifierIndex++)
+                {
+                    var modifier = modifiers[modifierIndex];
+
+                    if (IsMatchingModifier(modifier, statId, GameplayStatModifierOperation.FlatAdd))
+                        value += modifier.Value;
+                }
             }
 
             return value;
@@ -53,9 +64,20 @@ namespace Game.Gameplay.Upgrades
         {
             var additivePercent = 0f;
 
-            foreach (var modifier in EnumerateMatchingModifiers(statId, GameplayStatModifierOperation.AdditivePercent))
+            for (var sourceIndex = 0; sourceIndex < _modifierSources.Length; sourceIndex++)
             {
-                additivePercent += modifier.Value;
+                var modifiers = _modifierSources[sourceIndex].Modifiers;
+
+                if (modifiers == null)
+                    continue;
+
+                for (var modifierIndex = 0; modifierIndex < modifiers.Count; modifierIndex++)
+                {
+                    var modifier = modifiers[modifierIndex];
+
+                    if (IsMatchingModifier(modifier, statId, GameplayStatModifierOperation.AdditivePercent))
+                        additivePercent += modifier.Value;
+                }
             }
 
             return value * (1f + additivePercent);
@@ -63,9 +85,20 @@ namespace Game.Gameplay.Upgrades
 
         private float ApplyMultiplicativeFactor(GameplayStatId statId, float value)
         {
-            foreach (var modifier in EnumerateMatchingModifiers(statId, GameplayStatModifierOperation.MultiplicativeFactor))
+            for (var sourceIndex = 0; sourceIndex < _modifierSources.Length; sourceIndex++)
             {
-                value *= modifier.Value;
+                var modifiers = _modifierSources[sourceIndex].Modifiers;
+
+                if (modifiers == null)
+                    continue;
+
+                for (var modifierIndex = 0; modifierIndex < modifiers.Count; modifierIndex++)
+                {
+                    var modifier = modifiers[modifierIndex];
+
+                    if (IsMatchingModifier(modifier, statId, GameplayStatModifierOperation.MultiplicativeFactor))
+                        value *= modifier.Value;
+                }
             }
 
             return value;
@@ -73,9 +106,20 @@ namespace Game.Gameplay.Upgrades
 
         private float ApplyClampMin(GameplayStatId statId, float value)
         {
-            foreach (var modifier in EnumerateMatchingModifiers(statId, GameplayStatModifierOperation.ClampMin))
+            for (var sourceIndex = 0; sourceIndex < _modifierSources.Length; sourceIndex++)
             {
-                value = Math.Max(value, modifier.Value);
+                var modifiers = _modifierSources[sourceIndex].Modifiers;
+
+                if (modifiers == null)
+                    continue;
+
+                for (var modifierIndex = 0; modifierIndex < modifiers.Count; modifierIndex++)
+                {
+                    var modifier = modifiers[modifierIndex];
+
+                    if (IsMatchingModifier(modifier, statId, GameplayStatModifierOperation.ClampMin))
+                        value = Math.Max(value, modifier.Value);
+                }
             }
 
             return value;
@@ -83,31 +127,31 @@ namespace Game.Gameplay.Upgrades
 
         private float ApplyClampMax(GameplayStatId statId, float value)
         {
-            foreach (var modifier in EnumerateMatchingModifiers(statId, GameplayStatModifierOperation.ClampMax))
+            for (var sourceIndex = 0; sourceIndex < _modifierSources.Length; sourceIndex++)
             {
-                value = Math.Min(value, modifier.Value);
+                var modifiers = _modifierSources[sourceIndex].Modifiers;
+
+                if (modifiers == null)
+                    continue;
+
+                for (var modifierIndex = 0; modifierIndex < modifiers.Count; modifierIndex++)
+                {
+                    var modifier = modifiers[modifierIndex];
+
+                    if (IsMatchingModifier(modifier, statId, GameplayStatModifierOperation.ClampMax))
+                        value = Math.Min(value, modifier.Value);
+                }
             }
 
             return value;
         }
 
-        private IEnumerable<GameplayStatModifier> EnumerateMatchingModifiers(
+        private bool IsMatchingModifier(
+            GameplayStatModifier modifier,
             GameplayStatId statId,
             GameplayStatModifierOperation operation)
         {
-            foreach (var modifierSource in _modifierSources)
-            {
-                var modifiers = modifierSource.Modifiers;
-
-                if (modifiers == null)
-                    continue;
-
-                foreach (var modifier in modifiers)
-                {
-                    if (modifier.Operation == operation && MatchesStatId(modifier.StatId, statId))
-                        yield return modifier;
-                }
-            }
+            return modifier.Operation == operation && MatchesStatId(modifier.StatId, statId);
         }
 
         private bool MatchesStatId(GameplayStatId candidate, GameplayStatId requested)
