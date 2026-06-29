@@ -1,0 +1,17 @@
+{
+  "name": "Game.Gameplay.Upgrades",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay.Economy",
+    "Unity.Mathematics"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

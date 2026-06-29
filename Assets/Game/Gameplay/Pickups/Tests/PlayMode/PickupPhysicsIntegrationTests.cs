@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using NUnit.Framework;
 using UnityEngine;
@@ -20,7 +21,7 @@ public sealed class PickupPhysicsIntegrationTests
     private GameplayStateId _preLaunchStateId;
     private GameplayStateId _runningStateId;
     private FakeGameplayStateService _stateService;
-    private ResourceDefinition _coins;
+    private CurrencyDefinition _coins;
 
     [SetUp]
     public void OnSetUp()
@@ -28,7 +29,7 @@ public sealed class PickupPhysicsIntegrationTests
         _preLaunchStateId = CreateStateId("Pre-Launch");
         _runningStateId = CreateStateId("Running");
         _stateService = new FakeGameplayStateService(_runningStateId);
-        _coins = Track(ScriptableObject.CreateInstance<ResourceDefinition>());
+        _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
 
         Assert.That(GetRequiredLayer(PlayerLayerName), Is.GreaterThanOrEqualTo(0));
@@ -65,10 +66,31 @@ public sealed class PickupPhysicsIntegrationTests
         player.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
-        Assert.That(controllerFixture.ResourceStorage.GetAmount(_coins), Is.EqualTo(3));
-        Assert.That(controllerFixture.RunResourceAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
+        Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.EqualTo(3));
+        Assert.That(controllerFixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
         Assert.That(controllerFixture.LevelPickupState.IsAvailable(pickup), Is.False);
         Assert.That(pickup.gameObject.activeSelf, Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator given_RunningStateAndResolvedPickupGrant_when_PlayerEntersPickupTrigger_then_FinalGrantIsRecorded()
+    {
+        var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
+        var resolver = new FixedPickupCurrencyGrantResolver(4);
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, resolver);
+        PickupCollectedEventArgs? observedEvent = null;
+        controllerFixture.Controller.PickupCollected += pickupEvent => observedEvent = pickupEvent;
+        Initialize(controllerFixture.Controller);
+        var player = CreatePlayerContact("Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
+
+        player.Rigidbody.MovePosition(Vector3.zero);
+        yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
+
+        Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.EqualTo(4));
+        Assert.That(controllerFixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(4));
+        Assert.That(observedEvent.HasValue, Is.True);
+        Assert.That(observedEvent.Value.BaseAmount, Is.EqualTo(3));
+        Assert.That(observedEvent.Value.FinalAmount, Is.EqualTo(4));
     }
 
     [UnityTest]
@@ -83,8 +105,8 @@ public sealed class PickupPhysicsIntegrationTests
         player.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
-        Assert.That(controllerFixture.ResourceStorage.GetAmount(_coins), Is.Zero);
-        Assert.That(controllerFixture.RunResourceAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
+        Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
+        Assert.That(controllerFixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
         Assert.That(controllerFixture.LevelPickupState.IsAvailable(pickup), Is.True);
         Assert.That(pickup.gameObject.activeSelf, Is.True);
     }
@@ -104,8 +126,8 @@ public sealed class PickupPhysicsIntegrationTests
         playerChild.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
-        Assert.That(controllerFixture.ResourceStorage.GetAmount(_coins), Is.Zero);
-        Assert.That(controllerFixture.RunResourceAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
+        Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
+        Assert.That(controllerFixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
         Assert.That(controllerFixture.LevelPickupState.IsAvailable(pickup), Is.True);
         Assert.That(pickup.gameObject.activeSelf, Is.True);
     }
@@ -125,8 +147,8 @@ public sealed class PickupPhysicsIntegrationTests
         secondPlayer.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
-        Assert.That(controllerFixture.ResourceStorage.GetAmount(_coins), Is.EqualTo(3));
-        Assert.That(controllerFixture.RunResourceAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
+        Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.EqualTo(3));
+        Assert.That(controllerFixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
         Assert.That(controllerFixture.LevelPickupState.IsAvailable(pickup), Is.False);
         Assert.That(pickup.gameObject.activeSelf, Is.False);
     }
@@ -152,13 +174,25 @@ public sealed class PickupPhysicsIntegrationTests
         }
     }
 
-    private ControllerFixture CreateControllerFixture(IReadOnlyList<Pickup> pickups)
+    private ControllerFixture CreateControllerFixture(
+        IReadOnlyList<Pickup> pickups,
+        IPickupCurrencyGrantResolver pickupCurrencyGrantResolver = null)
     {
         var levelPickupState = new LevelPickupState(pickups);
-        var storage = new ResourceStorage();
-        var accumulator = new RunResourceAccumulator();
+        var storage = new CurrencyStorage();
+        var accumulator = new RunCurrencyAccumulator();
+        var resolver = pickupCurrencyGrantResolver ?? new FixedPickupCurrencyGrantResolver();
 
-        var controller = new PickupCollectionController(pickups, levelPickupState, storage, accumulator, _stateService, _runningStateId, PlayerTag);
+        var controller = new PickupCollectionController(
+            pickups,
+            levelPickupState,
+            storage,
+            accumulator,
+            resolver,
+            _stateService,
+            _runningStateId,
+            _preLaunchStateId,
+            PlayerTag);
         _disposables.Add(controller);
 
         return new ControllerFixture(controller, levelPickupState, storage, accumulator);
@@ -193,10 +227,10 @@ public sealed class PickupPhysicsIntegrationTests
         return new PlayerContact(gameObject, rigidbody);
     }
 
-    private PickupDefinition CreatePickupDefinition(ResourceDefinition resourceDefinition, int amount)
+    private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
     {
         var definition = Track(ScriptableObject.CreateInstance<PickupDefinition>());
-        definition.SetValuesForTests(resourceDefinition, amount);
+        definition.SetValuesForTests(currencyDefinition, amount);
         return definition;
     }
 
@@ -270,23 +304,46 @@ public sealed class PickupPhysicsIntegrationTests
         }
     }
 
+    private sealed class FixedPickupCurrencyGrantResolver : IPickupCurrencyGrantResolver
+    {
+        private readonly int? _fixedFinalAmount;
+
+        public FixedPickupCurrencyGrantResolver(int? fixedFinalAmount = null)
+        {
+            _fixedFinalAmount = fixedFinalAmount;
+        }
+
+        public PickupCurrencyGrantResolution Resolve(CurrencyGrant baseCurrencyGrant)
+        {
+            var finalAmount = _fixedFinalAmount ?? baseCurrencyGrant.Amount;
+
+            return new PickupCurrencyGrantResolution(
+                baseCurrencyGrant,
+                new CurrencyGrant(baseCurrencyGrant.CurrencyDefinition, finalAmount));
+        }
+
+        public void Reset()
+        {
+        }
+    }
+
     private readonly struct ControllerFixture
     {
         public PickupCollectionController Controller { get; }
         public LevelPickupState LevelPickupState { get; }
-        public IResourceStorage ResourceStorage { get; }
-        public IRunResourceAccumulator RunResourceAccumulator { get; }
+        public ICurrencyStorage CurrencyStorage { get; }
+        public IRunCurrencyAccumulator RunCurrencyAccumulator { get; }
 
         public ControllerFixture(
             PickupCollectionController controller,
             LevelPickupState levelPickupState,
-            IResourceStorage resourceStorage,
-            IRunResourceAccumulator runResourceAccumulator)
+            ICurrencyStorage currencyStorage,
+            IRunCurrencyAccumulator runCurrencyAccumulator)
         {
             Controller = controller;
             LevelPickupState = levelPickupState;
-            ResourceStorage = resourceStorage;
-            RunResourceAccumulator = runResourceAccumulator;
+            CurrencyStorage = currencyStorage;
+            RunCurrencyAccumulator = runCurrencyAccumulator;
         }
     }
 }

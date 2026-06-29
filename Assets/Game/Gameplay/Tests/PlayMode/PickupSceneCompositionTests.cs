@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using Game.Gameplay;
+using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using NUnit.Framework;
 using UnityEngine;
@@ -17,7 +18,7 @@ public sealed class PickupSceneCompositionTests
     private const string PlayerTag = "Player";
 
     [UnityTest]
-    public IEnumerator given_GameplayScene_when_Loaded_then_PickupResourceCompositionIsReady()
+    public IEnumerator given_GameplayScene_when_Loaded_then_PickupCurrencyCompositionIsReady()
     {
         SceneManager.LoadScene(GameplaySceneBuildIndex, LoadSceneMode.Single);
         yield return null;
@@ -31,8 +32,9 @@ public sealed class PickupSceneCompositionTests
         var playerContactColliders = lifetimeScope.PlayerPickupContactCollidersForTests.ToArray();
         var levelPickupStateService = lifetimeScope.Container.Resolve<ILevelPickupState>();
         var levelPickupState = lifetimeScope.Container.Resolve<LevelPickupState>();
-        var resourceStorage = lifetimeScope.Container.Resolve<IResourceStorage>();
-        var runResourceAccumulator = lifetimeScope.Container.Resolve<IRunResourceAccumulator>();
+        var currencyStorage = lifetimeScope.Container.Resolve<ICurrencyStorage>();
+        var runCurrencyAccumulator = lifetimeScope.Container.Resolve<IRunCurrencyAccumulator>();
+        var pickupCurrencyGrantResolver = lifetimeScope.Container.Resolve<IPickupCurrencyGrantResolver>();
         var pickupCollectionNotifier = lifetimeScope.Container.Resolve<IPickupCollectionNotifier>();
 
         Assert.That(scene.buildIndex, Is.EqualTo(GameplaySceneBuildIndex));
@@ -42,8 +44,9 @@ public sealed class PickupSceneCompositionTests
         Assert.That(playerContactColliders, Has.Length.EqualTo(1));
         Assert.That(levelPickupStateService, Is.SameAs(levelPickupState));
         Assert.That(levelPickupState, Is.Not.Null);
-        Assert.That(resourceStorage, Is.Not.Null);
-        Assert.That(runResourceAccumulator, Is.Not.Null);
+        Assert.That(currencyStorage, Is.Not.Null);
+        Assert.That(runCurrencyAccumulator, Is.Not.Null);
+        Assert.That(pickupCurrencyGrantResolver, Is.Not.Null);
         Assert.That(pickupCollectionNotifier, Is.Not.Null);
 
         foreach (var configuredPickup in configuredPickups)
@@ -57,7 +60,7 @@ public sealed class PickupSceneCompositionTests
 
         AssertPickupAuthoring(regularCoinPickup, pickupLayer, 1);
         AssertPickupAuthoring(bigCoinPickup, pickupLayer, 5);
-        Assert.That(regularCoinPickup.Definition.ResourceDefinition, Is.SameAs(bigCoinPickup.Definition.ResourceDefinition));
+        Assert.That(regularCoinPickup.Definition.CurrencyDefinition, Is.SameAs(bigCoinPickup.Definition.CurrencyDefinition));
 
         var playerContactCollider = playerContactColliders[0];
         Assert.That(playerContactCollider.gameObject.layer, Is.EqualTo(playerLayer));
@@ -84,7 +87,7 @@ public sealed class PickupSceneCompositionTests
         Assert.That(pickup.gameObject.layer, Is.EqualTo(pickupLayer), pickup.name);
         Assert.That(pickup.Definition, Is.Not.Null, pickup.name);
         Assert.That(pickup.Definition.Amount, Is.EqualTo(expectedAmount), pickup.name);
-        Assert.That(pickup.Definition.ResourceDefinition, Is.Not.Null, pickup.name);
+        Assert.That(pickup.Definition.CurrencyDefinition, Is.Not.Null, pickup.name);
         Assert.That(colliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
 
         pickup.Definition.Validate();

@@ -41,7 +41,7 @@ public sealed class RunProgressServiceTests
     {
         _motionSource.Position = new Vector3(10f, 3f, -4f);
 
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(new Vector3(1f, 0f, 0f)));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(new Vector3(1f, 0f, 0f)));
 
         Assert.That(_service.HasValidSnapshot, Is.True);
         Assert.That(_service.Snapshot.Origin, Is.EqualTo(_motionSource.Position));
@@ -82,24 +82,31 @@ public sealed class RunProgressServiceTests
     public void LaunchRequestDirection_DoesNotDefineProgressAxis()
     {
         _motionSource.Position = Vector3.zero;
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.right));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.right));
 
         _service.SamplePosition(new Vector3(5f, 0f, 8f));
 
         Assert.That(_service.MaximumForwardProgress, Is.EqualTo(8f).Within(0.0001f));
     }
 
-    private SlingshotLaunchRequest CreateLaunchRequest(Vector3 launchDirection)
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 launchDirection)
     {
-        return new SlingshotLaunchRequest(
+        var normalizedLaunchDirection = launchDirection.normalized;
+
+        var request = new SlingshotLaunchRequest(
             1f,
             1f,
             0f,
+            0f,
             Vector3.zero,
-            launchDirection.normalized,
-            10f,
-            Vector3.up,
-            1f);
+            Vector3.forward,
+            Vector3.up);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            normalizedLaunchDirection * 10f,
+            normalizedLaunchDirection,
+            Vector3.up);
     }
 
     private sealed class FakeRunProgressFrameSource : IRunProgressFrameSource
@@ -121,11 +128,11 @@ public sealed class RunProgressServiceTests
 
     private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
-        public void Apply(SlingshotLaunchRequest request)
+        public void Apply(SlingshotLaunchAppliedEvent launchApplied)
         {
-            LaunchApplied?.Invoke(request);
+            LaunchApplied?.Invoke(launchApplied);
         }
     }
 }
