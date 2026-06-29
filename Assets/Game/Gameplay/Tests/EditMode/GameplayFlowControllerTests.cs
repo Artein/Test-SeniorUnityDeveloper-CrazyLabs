@@ -184,7 +184,48 @@ public sealed class GameplayFlowControllerTests
 
         Assert.That(capture.EnableCallCount, Is.EqualTo(1));
         Assert.That(capture.DisableCallCount, Is.Zero);
-        Assert.That(_observations, Is.EqualTo(new[] { "capture-enable" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "prelaunch-reset", "capture-enable" }));
+    }
+
+    [Test]
+    public void Initialize_CurrentPreLaunch_ResetsPreLaunchRigBeforeCapture()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(preLaunch, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+        var resetter = new FakePreLaunchRigPoseResetter(_observations);
+
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running,
+            clearObservationsAfterInitialize: false, resetter);
+
+        Assert.That(resetter.ResetCallCount, Is.EqualTo(1));
+        Assert.That(_observations, Is.EqualTo(new[] { "prelaunch-reset", "capture-enable" }));
+    }
+
+    [Test]
+    public void Initialize_CurrentRunPreparation_ResetsSceneAndLeavesCaptureDisabled()
+    {
+        var runPreparation = CreateStateId("Run Preparation");
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(runPreparation, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+        var resetter = new FakePreLaunchRigPoseResetter(_observations);
+        var slingshotReset = new FakeSlingshotRunPreparationReset(_observations);
+
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running,
+            clearObservationsAfterInitialize: false, resetter, runPreparation, slingshotReset);
+
+        Assert.That(resetter.ResetCallCount, Is.EqualTo(1));
+        Assert.That(slingshotReset.ResetCallCount, Is.EqualTo(1));
+        Assert.That(capture.EnableCallCount, Is.Zero);
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(_observations, Is.EqualTo(new[] { "prelaunch-reset", "slingshot-run-prep-reset" }));
     }
 
     [Test]
@@ -218,7 +259,85 @@ public sealed class GameplayFlowControllerTests
 
         Assert.That(capture.EnableCallCount, Is.EqualTo(1));
         Assert.That(capture.DisableCallCount, Is.Zero);
-        Assert.That(_observations, Is.EqualTo(new[] { "capture-enable" }));
+        Assert.That(_observations, Is.EqualTo(new[] { "prelaunch-reset", "capture-enable" }));
+    }
+
+    [Test]
+    public void GameplayStateChanged_ExternalObserverSubscribedBeforeController_ObserverRunsAfterPreLaunchReset()
+    {
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(running, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+        var resetter = new FakePreLaunchRigPoseResetter(_observations);
+
+        stateService.GameplayStateChanged += (_, _) =>
+            _observations.Add(resetter.ResetCallCount > 0 ? "changed-after-reset" : "changed-before-reset");
+
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running,
+            clearObservationsAfterInitialize: true, resetter);
+
+        stateService.ChangeTo(preLaunch);
+
+        Assert.That(_observations, Is.EqualTo(new[] { "prelaunch-reset", "changed-after-reset", "capture-enable" }));
+    }
+
+    [Test]
+    public void GameplayStateChanging_EnteringRunPreparation_ResetsBeforeChangedObservers()
+    {
+        var runPreparation = CreateStateId("Run Preparation");
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(preLaunch, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+        var resetter = new FakePreLaunchRigPoseResetter(_observations);
+        var slingshotReset = new FakeSlingshotRunPreparationReset(_observations);
+
+        stateService.GameplayStateChanged += (_, _) =>
+            _observations.Add(slingshotReset.ResetCallCount > 0 ? "changed-after-runprep-reset" : "changed-before-runprep-reset");
+
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running,
+            clearObservationsAfterInitialize: true, resetter, runPreparation, slingshotReset);
+
+        stateService.ChangeTo(runPreparation);
+
+        Assert.That(_observations, Is.EqualTo(new[]
+        {
+            "prelaunch-reset",
+            "slingshot-run-prep-reset",
+            "changed-after-runprep-reset"
+        }));
+    }
+
+    [Test]
+    public void TryContinue_RunPreparationToPreLaunch_EnablesCaptureWithoutSecondReset()
+    {
+        var runPreparation = CreateStateId("Run Preparation");
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(runPreparation, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+        var resetter = new FakePreLaunchRigPoseResetter(_observations);
+        var slingshotReset = new FakeSlingshotRunPreparationReset(_observations);
+
+        using var controller = CreateInitializedController(capture, notifier, stateService, launcher, preLaunch, running,
+            clearObservationsAfterInitialize: true, resetter, runPreparation, slingshotReset);
+        var command = (IRunPreparationContinueCommand)controller;
+
+        var accepted = command.TryContinue();
+
+        Assert.That(accepted, Is.True);
+        Assert.That(capture.EnableCallCount, Is.EqualTo(1));
+        Assert.That(capture.DisableCallCount, Is.Zero);
+        Assert.That(resetter.ResetCallCount, Is.EqualTo(1));
+        Assert.That(slingshotReset.ResetCallCount, Is.EqualTo(1));
+        Assert.That(_observations, Is.EqualTo(new[] { "transition", "capture-enable" }));
     }
 
     [Test]
@@ -266,11 +385,13 @@ public sealed class GameplayFlowControllerTests
         var running = CreateStateId("Running");
         var builder = new ContainerBuilder();
         builder.RegisterInstance(new FakeSlingshotCapture(_observations)).As<ISlingshotCapture>();
+        builder.RegisterInstance(new FakeSlingshotRunPreparationReset(_observations)).As<ISlingshotRunPreparationReset>();
         builder.RegisterInstance(new FakeSlingshotLaunchNotifier()).As<ISlingshotLaunchNotifier>();
         builder.RegisterInstance(new FakeGameplayStateService(preLaunch, _observations)).As<IGameplayStateService>();
         builder.RegisterInstance(new FakeGameplaySlingshotLauncher(_observations)).As<IGameplaySlingshotLauncher>();
         builder.RegisterInstance(new FakeRunModifierSnapshotFactory()).As<IRunModifierSnapshotFactory>();
         builder.RegisterInstance(new FakeRunModifierSnapshotStore()).As<IRunModifierSnapshotStore>();
+        builder.RegisterInstance(new FakePreLaunchRigPoseResetter(_observations)).As<IPreLaunchRigPoseResetter>();
         var installer = new GameplayFlowInstaller(runPreparation, preLaunch, running);
 
         installer.Install(builder);
@@ -290,12 +411,18 @@ public sealed class GameplayFlowControllerTests
         IGameplaySlingshotLauncher launcher,
         GameplayStateId preLaunchStateId,
         GameplayStateId runningStateId,
-        bool clearObservationsAfterInitialize = true)
+        bool clearObservationsAfterInitialize = true,
+        FakePreLaunchRigPoseResetter preLaunchRigPoseResetter = null,
+        GameplayStateId runPreparationStateId = null,
+        FakeSlingshotRunPreparationReset slingshotRunPreparationReset = null)
     {
-        var runPreparationStateId = CreateStateId("Run Preparation");
+        preLaunchRigPoseResetter ??= new FakePreLaunchRigPoseResetter(_observations);
+        slingshotRunPreparationReset ??= new FakeSlingshotRunPreparationReset(_observations);
+        runPreparationStateId ??= CreateStateId("Run Preparation");
 
-        var controller = new GameplayFlowController(capture, notifier, stateService, launcher, new FakeRunModifierSnapshotFactory(),
-            new FakeRunModifierSnapshotStore(), runPreparationStateId, preLaunchStateId, runningStateId);
+        var controller = new GameplayFlowController(capture, slingshotRunPreparationReset, notifier, stateService, launcher,
+            new FakeRunModifierSnapshotFactory(), new FakeRunModifierSnapshotStore(), preLaunchRigPoseResetter,
+            runPreparationStateId, preLaunchStateId, runningStateId);
         ((IInitializable)controller).Initialize();
 
         if (clearObservationsAfterInitialize)
@@ -430,6 +557,42 @@ public sealed class GameplayFlowControllerTests
         {
             DisableCallCount += 1;
             _observations.Add("capture-disable");
+        }
+    }
+
+    private sealed class FakeSlingshotRunPreparationReset : ISlingshotRunPreparationReset
+    {
+        private readonly List<string> _observations;
+
+        public int ResetCallCount { get; private set; }
+
+        public FakeSlingshotRunPreparationReset(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public void ResetForRunPreparation()
+        {
+            ResetCallCount += 1;
+            _observations.Add("slingshot-run-prep-reset");
+        }
+    }
+
+    private sealed class FakePreLaunchRigPoseResetter : IPreLaunchRigPoseResetter
+    {
+        private readonly List<string> _observations;
+
+        public int ResetCallCount { get; private set; }
+
+        public FakePreLaunchRigPoseResetter(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public void ResetToPreLaunchRigPose()
+        {
+            ResetCallCount += 1;
+            _observations.Add("prelaunch-reset");
         }
     }
 

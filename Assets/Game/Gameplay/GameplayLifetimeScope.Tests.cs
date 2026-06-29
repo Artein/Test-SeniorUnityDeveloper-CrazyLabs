@@ -14,6 +14,10 @@ namespace Game.Gameplay
 {
     public sealed partial class GameplayLifetimeScope
     {
+        internal GameplayStateId PreLaunchStateIdForTests => _preLaunchStateId;
+        internal GameplayStateId RunPreparationStateIdForTests => _runPreparationStateId;
+        internal GameplayStateId RunningStateIdForTests => _runningStateId;
+        internal GameplayStateId RunEndedStateIdForTests => _runEndedStateId;
         internal PlayerSteeringConfig PlayerSteeringConfigForTests => _playerSteeringConfig;
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
@@ -46,6 +50,9 @@ namespace Game.Gameplay
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,
             Camera inputCamera,
+            Transform slingshotRig,
+            Transform preLaunchSlingshotRigPose,
+            Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
             RunPreparationUIView runPreparationView,
             RigidbodyLaunchTarget launchTarget,
@@ -78,6 +85,9 @@ namespace Game.Gameplay
             _runCameraAnchor = runCameraAnchor;
             _runCameraRig = runCameraRig;
             _inputCamera = inputCamera;
+            _slingshotRig = slingshotRig;
+            _preLaunchSlingshotRigPose = preLaunchSlingshotRigPose;
+            _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
             _runPreparationView = runPreparationView;
             _launchTarget = launchTarget;

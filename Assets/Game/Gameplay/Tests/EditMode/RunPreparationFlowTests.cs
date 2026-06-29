@@ -154,8 +154,8 @@ public sealed class RunPreparationFlowTests
         GameplayStateId preLaunchStateId,
         GameplayStateId runningStateId)
     {
-        var controller = new GameplayFlowController(capture, notifier, stateService, launcher, snapshotFactory, snapshotStore, runPreparationStateId,
-            preLaunchStateId, runningStateId);
+        var controller = new GameplayFlowController(capture, new SilentSlingshotRunPreparationReset(), notifier, stateService, launcher,
+            snapshotFactory, snapshotStore, new SilentPreLaunchRigPoseResetter(), runPreparationStateId, preLaunchStateId, runningStateId);
         ((IInitializable)controller).Initialize();
         _observations.Clear();
         return controller;
@@ -305,6 +305,13 @@ public sealed class RunPreparationFlowTests
         }
     }
 
+    private sealed class SilentSlingshotRunPreparationReset : ISlingshotRunPreparationReset
+    {
+        public void ResetForRunPreparation()
+        {
+        }
+    }
+
     private sealed class FakeGameplaySlingshotLauncher : IGameplaySlingshotLauncher
     {
         private readonly List<string> _observations;
@@ -320,6 +327,13 @@ public sealed class RunPreparationFlowTests
         {
             LaunchRequests.Add(request);
             _observations.Add("launch");
+        }
+    }
+
+    private sealed class SilentPreLaunchRigPoseResetter : IPreLaunchRigPoseResetter
+    {
+        public void ResetToPreLaunchRigPose()
+        {
         }
     }
 }

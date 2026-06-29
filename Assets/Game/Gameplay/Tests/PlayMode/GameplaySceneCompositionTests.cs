@@ -2,10 +2,13 @@ using System;
 using System.Collections;
 using System.Linq;
 using Game.Gameplay;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using VContainer;
@@ -52,10 +55,14 @@ public sealed class GameplaySceneCompositionTests
         var targetCollider = GetSingleTargetCollider(launchTarget);
         var geometry = slingshotView.CreateGeometrySnapshot();
         var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+        var preLaunchRigPoseRoot = FindGameObjectByName(activeScene, "Pre-Launch Rig Pose");
+        var preLaunchSlingshotRigPose = FindGameObjectByName(activeScene, "Pre-Launch Slingshot Rig Pose");
+        var preLaunchLaunchTargetPose = FindGameObjectByName(activeScene, "Pre-Launch Launch Target Pose");
         var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
+        var preLaunchRigPoseResetter = lifetimeScope.Container.Resolve<IPreLaunchRigPoseResetter>();
         var resolvedPlayerSteeringTarget = lifetimeScope.Container.Resolve<IPlayerSteeringTarget>();
         var playerSteeringConfig = lifetimeScope.Container.Resolve<IPlayerSteeringConfig>();
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
@@ -68,6 +75,7 @@ public sealed class GameplaySceneCompositionTests
         var resolvedRunEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
         var resolvedRunCameraAnchor = lifetimeScope.Container.Resolve<IRunCameraAnchor>();
         var resolvedRunCameraRig = lifetimeScope.Container.Resolve<IRunCameraRig>();
+        var resolvedLaunchTargetPreLaunchReset = lifetimeScope.Container.Resolve<ILaunchTargetPreLaunchReset>();
         var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
         var assignedPlayerSteeringConfigs = GetAssignedPlayerSteeringConfigs(activeScene);
         var assignedRunCameraConfigs = GetAssignedRunCameraConfigs(activeScene);
@@ -116,6 +124,9 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(decollider.Decollision.ObstacleLayers.value, Is.EqualTo((1 << cameraTerrainLayer) | (1 << cameraObstacleLayer)));
         Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
         Assert.That(bandLineRenderer, Is.Not.Null);
+        Assert.That(preLaunchRigPoseRoot, Is.Not.Null);
+        Assert.That(preLaunchSlingshotRigPose.transform.IsChildOf(preLaunchRigPoseRoot.transform), Is.True);
+        Assert.That(preLaunchLaunchTargetPose.transform.IsChildOf(preLaunchRigPoseRoot.transform), Is.True);
         Assert.That(bandLineRenderer.sharedMaterial, Is.Not.Null);
         Assert.That(bandLineRenderer.positionCount, Is.GreaterThanOrEqualTo(3));
         Assert.That(geometry.LeftAnchorPosition.x, Is.LessThan(geometry.RightAnchorPosition.x));
@@ -124,6 +135,8 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(runCameraSource.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
         Assert.That(playerSteeringTarget.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
         Assert.That(contactNotifier.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
+        Assert.That(preLaunchRigPoseResetter, Is.Not.Null);
+        Assert.That(resolvedLaunchTargetPreLaunchReset, Is.SameAs(launchTarget));
         Assert.That(resolvedPlayerSteeringTarget, Is.SameAs(playerSteeringTarget));
         Assert.That(resolvedRunCameraSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
@@ -167,6 +180,9 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
         Assert.That(bandCenter.transform.position.y, Is.EqualTo(geometry.RestPoint.y).Within(0.01f));
         Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.01f));
+
+        Assert.That(Quaternion.Angle(preLaunchLaunchTargetPose.transform.rotation, playerRigidbody.transform.rotation),
+            Is.EqualTo(0f).Within(0.01f));
         Assert.That(playerRigidbody.transform.position.x, Is.EqualTo(0f).Within(0.01f));
         Assert.That(playerRigidbody.transform.position.y, Is.EqualTo(0f).Within(0.01f));
         Assert.That(playerRigidbody.transform.position.z, Is.EqualTo(0.311f).Within(0.01f));
@@ -174,6 +190,119 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(pullHint.activeInHierarchy, Is.True);
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(touchIndicator.activeSelf, Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator given_GameplayScene_when_ReturnsToPrelaunchInSameSession_then_PreLaunchRigPoseIsRestored()
+    {
+        yield return LoadGameplayScene();
+        var activeScene = SceneManager.GetActiveScene();
+        yield return ContinueToPreLaunch(activeScene);
+        yield return WaitUntilPlayerIsHeld(activeScene);
+
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+        var preLaunchSlingshotRigPose = FindGameObjectByName(activeScene, "Pre-Launch Slingshot Rig Pose");
+        var preLaunchLaunchTargetPose = FindGameObjectByName(activeScene, "Pre-Launch Launch Target Pose");
+        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
+        var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+        var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
+
+        Assert.That(stateService.TryTransitionTo(lifetimeScope.RunningStateIdForTests), Is.True);
+        slingshotView.transform.SetPositionAndRotation(new Vector3(1f, 0.25f, 0.5f), Quaternion.Euler(0f, 15f, 0f));
+        playerRigidbody.isKinematic = false;
+        playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        playerRigidbody.linearVelocity = new Vector3(3f, 0f, 2f);
+        playerRigidbody.angularVelocity = new Vector3(1f, 2f, 3f);
+        playerRigidbody.transform.SetPositionAndRotation(new Vector3(4f, 2f, -3f), Quaternion.Euler(10f, 80f, 25f));
+        playerRigidbody.position = playerRigidbody.transform.position;
+        playerRigidbody.rotation = playerRigidbody.transform.rotation;
+
+        Assert.That(stateService.TryTransitionTo(lifetimeScope.RunEndedStateIdForTests), Is.True);
+        Assert.That(stateService.TryTransitionTo(lifetimeScope.RunPreparationStateIdForTests), Is.True);
+        yield return ContinueToPreLaunch(activeScene);
+
+        var geometry = slingshotView.CreateGeometrySnapshot();
+
+        Assert.That(slingshotView.transform.position, Is.EqualTo(preLaunchSlingshotRigPose.transform.position));
+
+        Assert.That(Quaternion.Angle(preLaunchSlingshotRigPose.transform.rotation, slingshotView.transform.rotation),
+            Is.EqualTo(0f).Within(0.0001f));
+
+        Assert.That(Quaternion.Angle(preLaunchLaunchTargetPose.transform.rotation, playerRigidbody.rotation),
+            Is.EqualTo(0f).Within(0.0001f));
+        AssertPlayerIsHeld(playerRigidbody);
+        Assert.That(playerRigidbody.constraints, Is.EqualTo(RigidbodyConstraints.None));
+        Assert.That(Vector3.Distance(bandCenter.transform.position, geometry.RestPoint), Is.LessThan(0.01f));
+        AssertBandLineCenterEqualsRest(bandLineRenderer, geometry);
+    }
+
+    [UnityTest]
+    public IEnumerator given_GameplayScene_when_RepeatedLaunchRestartsInSameSession_then_PreLaunchRigPoseRemainsCentered()
+    {
+        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Restart Alignment Mouse");
+
+        try
+        {
+            yield return LoadGameplayScene();
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            yield return WaitUntilPlayerIsHeld(activeScene);
+
+            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
+            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
+            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+            var preLaunchLaunchTargetPose = FindGameObjectByName(activeScene, "Pre-Launch Launch Target Pose");
+
+            var launchScenarios = new[]
+            {
+                new Vector2(0f, 0.45f),
+                new Vector2(0.75f, 1.25f),
+                new Vector2(-0.75f, 1.25f),
+                new Vector2(0.25f, 1.75f)
+            };
+
+            for (var scenarioIndex = 0; scenarioIndex < launchScenarios.Length; scenarioIndex += 1)
+            {
+                var geometry = slingshotView.CreateGeometrySnapshot();
+                var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
+
+                var pullWorldPosition = geometry.RestPoint
+                                        + (geometry.LaunchFrameRight * launchScenarios[scenarioIndex].x)
+                                        - (geometry.LaunchFrameForward * launchScenarios[scenarioIndex].y);
+                var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
+
+                yield return SendMouse(mouse, pressScreenPosition, true);
+                yield return SendMouse(mouse, releaseScreenPosition, true);
+                yield return SendMouse(mouse, releaseScreenPosition, false);
+                yield return WaitUntilPlayerLaunches(playerRigidbody);
+
+                DisturbLaunchedPlayerPose(playerRigidbody, scenarioIndex);
+
+                Assert.That(stateService.TryTransitionTo(lifetimeScope.RunEndedStateIdForTests), Is.True);
+                Assert.That(stateService.TryTransitionTo(lifetimeScope.RunPreparationStateIdForTests), Is.True);
+                yield return ContinueToPreLaunch(activeScene);
+
+                AssertPreLaunchRigPoseRestored(
+                    slingshotView,
+                    bandLineRenderer,
+                    playerRigidbody,
+                    bandCenter.transform,
+                    preLaunchLaunchTargetPose.transform,
+                    $"restart scenario {scenarioIndex}");
+            }
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
     }
 
     [UnityTest]
@@ -384,4 +513,95 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(pole.transform.position.y, Is.LessThan(anchorPosition.y), poleName);
     }
 
+    private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)
+    {
+        var screenPosition = camera.WorldToScreenPoint(worldPosition);
+
+        Assert.That(screenPosition.z, Is.GreaterThan(0f));
+        return new Vector2(screenPosition.x, screenPosition.y);
+    }
+
+    private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
+    {
+        QueueMouse(mouse, screenPosition, isPressed);
+        yield break;
+    }
+
+    private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
+    {
+        mouse.MakeCurrent();
+
+        var mouseState = new MouseState
+        {
+            position = screenPosition
+        }.WithButton(MouseButton.Left, isPressed);
+
+        InputSystem.QueueStateEvent(mouse, mouseState);
+        InputSystem.Update();
+    }
+
+    private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)
+    {
+        for (var frameIndex = 0; frameIndex < 60; frameIndex += 1)
+        {
+            if (!playerRigidbody.isKinematic && playerRigidbody.linearVelocity.sqrMagnitude > 0.0001f)
+                yield break;
+
+            yield return null;
+        }
+
+        Assert.Fail("Expected Slingshot pull release to launch the Player.");
+    }
+
+    private void AssertPlayerIsHeld(Rigidbody playerRigidbody)
+    {
+        Assert.That(playerRigidbody.isKinematic, Is.True);
+        Assert.That(playerRigidbody.linearVelocity.sqrMagnitude, Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(playerRigidbody.angularVelocity.sqrMagnitude, Is.EqualTo(0f).Within(0.0001f));
+    }
+
+    private void DisturbLaunchedPlayerPose(Rigidbody playerRigidbody, int scenarioIndex)
+    {
+        var position = new Vector3(2f + scenarioIndex, 0.75f + (scenarioIndex * 0.25f), -1f - scenarioIndex);
+        var rotation = Quaternion.Euler(25f + (scenarioIndex * 7f), 45f + (scenarioIndex * 13f), 15f + (scenarioIndex * 5f));
+
+        playerRigidbody.constraints = RigidbodyConstraints.FreezeAll;
+        playerRigidbody.linearVelocity = new Vector3(3f + scenarioIndex, 0.5f, 2f);
+        playerRigidbody.angularVelocity = new Vector3(1f, 2f + scenarioIndex, 3f);
+        playerRigidbody.transform.SetPositionAndRotation(position, rotation);
+        playerRigidbody.position = position;
+        playerRigidbody.rotation = rotation;
+    }
+
+    private void AssertPreLaunchRigPoseRestored(
+        SlingshotView slingshotView,
+        LineRenderer bandLineRenderer,
+        Rigidbody playerRigidbody,
+        Transform bandCenter,
+        Transform preLaunchLaunchTargetPose,
+        string assertionScope)
+    {
+        var geometry = slingshotView.CreateGeometrySnapshot();
+
+        Assert.That(Quaternion.Angle(preLaunchLaunchTargetPose.rotation, playerRigidbody.rotation),
+            Is.EqualTo(0f).Within(0.0001f),
+            assertionScope);
+        AssertPlayerIsHeld(playerRigidbody);
+        Assert.That(playerRigidbody.constraints, Is.EqualTo(RigidbodyConstraints.None), assertionScope);
+        Assert.That(Vector3.Distance(bandCenter.position, geometry.RestPoint), Is.LessThan(0.01f), assertionScope);
+        AssertBandLineCenterEqualsRest(bandLineRenderer, geometry);
+    }
+
+    private void AssertBandLineCenterEqualsRest(LineRenderer bandLineRenderer, SlingshotGeometrySnapshot geometry)
+    {
+        Assert.That(bandLineRenderer.positionCount, Is.GreaterThanOrEqualTo(3));
+
+        var middleIndex = (bandLineRenderer.positionCount - 1) / 2;
+
+        Assert.That(Vector3.Distance(bandLineRenderer.GetPosition(middleIndex), geometry.RestPoint), Is.LessThan(0.01f));
+        Assert.That(Vector3.Distance(bandLineRenderer.GetPosition(0), geometry.LeftAnchorPosition), Is.LessThan(0.01f));
+
+        Assert.That(Vector3.Distance(bandLineRenderer.GetPosition(bandLineRenderer.positionCount - 1), geometry.RightAnchorPosition),
+            Is.LessThan(0.01f));
+    }
 }

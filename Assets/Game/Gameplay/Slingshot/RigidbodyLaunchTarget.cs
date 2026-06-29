@@ -1,5 +1,6 @@
 using System;
 using Game.Utils.Mathematics;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Game.Gameplay.Slingshot
@@ -18,7 +19,22 @@ namespace Game.Gameplay.Slingshot
         void SetHeldPosition(Vector3 heldPosition);
     }
 
-    public sealed partial class RigidbodyLaunchTarget : MonoBehaviour, ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource
+    public interface ILaunchTargetPreLaunchReset
+    {
+        void ResetToPreLaunchPose(Vector3 position, Quaternion rotation);
+    }
+
+    internal interface ILaunchTargetBandOcclusionSource
+    {
+        bool IsBandPointHiddenFrom(Ray ray, float maxDistance);
+    }
+
+    public sealed partial class RigidbodyLaunchTarget : MonoBehaviour,
+        ILaunchTarget,
+        IHeldLaunchTarget,
+        ILaunchTargetPreLaunchReset,
+        ILaunchTargetSilhouetteSource,
+        ILaunchTargetBandOcclusionSource
     {
         private const RigidbodyConstraints PostLaunchStabilizationConstraints =
             RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
@@ -27,8 +43,9 @@ namespace Game.Gameplay.Slingshot
         [SerializeField] private Collider _bandContactCollider;
         [SerializeField] private Transform _bandCenter;
 
-        private readonly LaunchFrameValidator _launchFrameValidator = new LaunchFrameValidator();
+        private readonly LaunchFrameValidator _launchFrameValidator = new();
         private bool _isHeld;
+        private bool _hasPreviousState;
         private bool _previousIsKinematic;
         private RigidbodyConstraints _previousConstraints;
 
@@ -38,8 +55,7 @@ namespace Game.Gameplay.Slingshot
 
             if (!_isHeld)
             {
-                _previousIsKinematic = _rigidbody.isKinematic;
-                _previousConstraints = _rigidbody.constraints;
+                CapturePreviousStateIfNeeded();
                 _isHeld = true;
             }
 
@@ -113,6 +129,16 @@ namespace Game.Gameplay.Slingshot
             return true;
         }
 
+        bool ILaunchTargetBandOcclusionSource.IsBandPointHiddenFrom(Ray ray, float maxDistance)
+        {
+            ThrowIfInvalidReferences();
+
+            if (!_bandContactCollider.enabled || maxDistance <= 0.0001f)
+                return false;
+
+            return _bandContactCollider.Raycast(ray, out _, maxDistance);
+        }
+
         private void OnValidate()
         {
             if (_rigidbody == null)
@@ -139,6 +165,36 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.angularVelocity = Vector3.zero;
         }
 
+        void ILaunchTargetPreLaunchReset.ResetToPreLaunchPose(Vector3 position, Quaternion rotation)
+        {
+            ThrowIfInvalidReferences();
+
+            if (!position.IsFinite())
+                throw new ArgumentException("Pre-Launch position must be finite.", nameof(position));
+
+            if (!IsValidRotation(rotation))
+                throw new ArgumentException("Pre-Launch rotation must be finite and non-zero.", nameof(rotation));
+
+            CapturePreviousStateIfNeeded();
+            _isHeld = true;
+            _rigidbody.isKinematic = true;
+            _rigidbody.constraints = _previousConstraints;
+            _rigidbody.transform.SetPositionAndRotation(position, rotation);
+            _rigidbody.position = position;
+            _rigidbody.rotation = rotation;
+            ClearVelocity();
+        }
+
+        private void CapturePreviousStateIfNeeded()
+        {
+            if (_hasPreviousState)
+                return;
+
+            _previousIsKinematic = _rigidbody.isKinematic;
+            _previousConstraints = _rigidbody.constraints;
+            _hasPreviousState = true;
+        }
+
         private void ThrowIfInvalidReferences()
         {
             ThrowIfMissingRigidbody();
@@ -160,6 +216,15 @@ namespace Game.Gameplay.Slingshot
         {
             if (_rigidbody == null)
                 throw new InvalidOperationException("RigidbodyLaunchTarget requires a Rigidbody reference.");
+        }
+
+        private bool IsValidRotation(Quaternion rotation)
+        {
+            return math.isfinite(rotation.x)
+                   && math.isfinite(rotation.y)
+                   && math.isfinite(rotation.z)
+                   && math.isfinite(rotation.w)
+                   && Quaternion.Dot(rotation, rotation) > 0.000001f;
         }
 
         private void ThrowIfInvalidQuery(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples)

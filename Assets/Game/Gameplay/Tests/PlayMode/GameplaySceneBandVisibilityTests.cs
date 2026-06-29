@@ -38,6 +38,12 @@ public sealed class GameplaySceneBandVisibilityTests
             yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, 0.75f, 0.35f, "Right Edge Near Held Pull");
             yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, -0.75f, 0.35f, "Left Edge Near Held Pull");
 
+            yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, context.SlingshotConfig.MaximumLateralPull,
+                context.SlingshotConfig.MaximumPullDistance, phase: "Right Maximum Side Pull");
+
+            yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, -context.SlingshotConfig.MaximumLateralPull,
+                context.SlingshotConfig.MaximumPullDistance, phase: "Left Maximum Side Pull");
+
             yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
         finally
@@ -279,6 +285,7 @@ public sealed class GameplaySceneBandVisibilityTests
     private GameplaySceneContext CreateSceneContext(Scene scene)
     {
         var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(scene, "RigidbodyLaunchTarget");
         var inputCamera = FindSingleInScene<Camera>(scene, "Input Camera");
         var bandCenter = FindGameObjectByName(scene, "Band Center");
@@ -290,6 +297,7 @@ public sealed class GameplaySceneBandVisibilityTests
             GetSingleTargetCollider(launchTarget),
             launchTarget.GetComponent<Rigidbody>(),
             bandCenter,
+            lifetimeScope.Container.Resolve<ISlingshotConfig>(),
             geometry,
             GetScreenPosition(inputCamera, geometry.RestPoint));
     }
@@ -301,6 +309,7 @@ public sealed class GameplaySceneBandVisibilityTests
         public Collider TargetCollider { get; }
         public Rigidbody PlayerRigidbody { get; }
         public GameObject BandCenter { get; }
+        public ISlingshotConfig SlingshotConfig { get; }
         public SlingshotGeometrySnapshot Geometry { get; }
         public Vector2 PressScreenPosition { get; }
 
@@ -310,6 +319,7 @@ public sealed class GameplaySceneBandVisibilityTests
             Collider targetCollider,
             Rigidbody playerRigidbody,
             GameObject bandCenter,
+            ISlingshotConfig slingshotConfig,
             SlingshotGeometrySnapshot geometry,
             Vector2 pressScreenPosition)
         {
@@ -318,6 +328,7 @@ public sealed class GameplaySceneBandVisibilityTests
             TargetCollider = targetCollider;
             PlayerRigidbody = playerRigidbody;
             BandCenter = bandCenter;
+            SlingshotConfig = slingshotConfig;
             Geometry = geometry;
             PressScreenPosition = pressScreenPosition;
         }

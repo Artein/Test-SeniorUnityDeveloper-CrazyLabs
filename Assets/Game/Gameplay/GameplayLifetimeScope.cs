@@ -40,6 +40,9 @@ namespace Game.Gameplay
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
         [SerializeField] private Camera _inputCamera;
+        [SerializeField] private Transform _slingshotRig;
+        [SerializeField] private Transform _preLaunchSlingshotRigPose;
+        [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
@@ -65,7 +68,9 @@ namespace Game.Gameplay
 
             builder.RegisterInstance<IUpgradeCatalog>(_upgradeCatalog);
             builder.RegisterInstance<IGameplaySlingshotLaunchConfig>(_gameplaySlingshotLaunchConfig);
-            builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget);
+
+            builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
+                .As<ILaunchTargetPreLaunchReset>();
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
@@ -73,6 +78,9 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
+
+            builder.RegisterInstance<IPreLaunchRigPoseResetter>(
+                new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
 
             new SlingshotInstaller(_slingshotConfig, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_runPreparationStateId, _preLaunchStateId, _runningStateId).Install(builder);
@@ -93,10 +101,11 @@ namespace Game.Gameplay
             builder.Register<UpgradePurchaseService>(Lifetime.Singleton);
             builder.Register<IRunModifierSnapshotFactory, RunModifierSnapshotFactory>(Lifetime.Singleton);
             builder.Register<IRunGameplayStatResolver, RunGameplayStatResolver>(Lifetime.Singleton);
+
             builder.Register<IPickupCurrencyGrantResolver, CoinPickupCurrencyGrantResolver>(Lifetime.Singleton)
                 .WithParameter("coinCurrencyDefinition", _coinCurrencyDefinition)
                 .WithParameter("coinPickupMultiplierStatId", _coinPickupMultiplierStatId);
-            
+
             builder.Register<SlingshotLaunchImpulseCalculator>(Lifetime.Singleton);
             builder.Register<ILaunchImpulseApplier, SlingshotLaunchImpulseApplier>(Lifetime.Singleton);
 
@@ -230,6 +239,15 @@ namespace Game.Gameplay
 
             if (_inputCamera == null)
                 yield return "GameplayLifetimeScope requires an Input Camera reference.";
+
+            if (_slingshotRig == null)
+                yield return "GameplayLifetimeScope requires a Slingshot Rig Transform reference.";
+
+            if (_preLaunchSlingshotRigPose == null)
+                yield return "GameplayLifetimeScope requires a Pre-Launch Slingshot Rig Pose reference.";
+
+            if (_preLaunchLaunchTargetPose == null)
+                yield return "GameplayLifetimeScope requires a Pre-Launch Launch Target Pose reference.";
 
             if (_slingshotView == null)
                 yield return "GameplayLifetimeScope requires a Slingshot View reference.";

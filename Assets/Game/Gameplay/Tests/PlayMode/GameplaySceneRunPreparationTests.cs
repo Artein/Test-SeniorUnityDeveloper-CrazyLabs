@@ -34,9 +34,12 @@ public sealed class GameplaySceneRunPreparationTests
             var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
             var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
 
@@ -44,6 +47,8 @@ public sealed class GameplaySceneRunPreparationTests
             yield return null;
 
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
+            Assert.That(playerRigidbody.isKinematic, Is.True);
+            Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
             Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
             Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
@@ -69,11 +74,15 @@ public sealed class GameplaySceneRunPreparationTests
             var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
             var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
+            var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
 
             Assert.That(continueCommand.TryContinue(), Is.True);
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("PreLaunchStateId"));
             Assert.That(playerRigidbody.isKinematic, Is.True);
+            Assert.That(pullHint.activeSelf, Is.True);
+            Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return PullAndReleaseSlingshot(mouse, activeScene);
             yield return WaitUntilStateName(stateService, "RunningStateId", 60);
@@ -100,6 +109,12 @@ public sealed class GameplaySceneRunPreparationTests
             var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
             var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
             var runEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
+            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
+            var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
+            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
 
             Assert.That(continueCommand.TryContinue(), Is.True);
             yield return PullAndReleaseSlingshot(mouse, activeScene);
@@ -110,7 +125,14 @@ public sealed class GameplaySceneRunPreparationTests
             yield return WaitUntilStateName(stateService, "RunEndedStateId", 60);
             yield return WaitUntilStateName(stateService, "RunPreparationStateId", 120);
 
+            var geometry = slingshotView.CreateGeometrySnapshot();
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
+            Assert.That(playerRigidbody.isKinematic, Is.True);
+            Assert.That(playerRigidbody.linearVelocity.sqrMagnitude, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(pullHint.activeSelf, Is.False);
+            Assert.That(touchIndicator.activeSelf, Is.False);
+            Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
+            Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
         }
         finally
         {

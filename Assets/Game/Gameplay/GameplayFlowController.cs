@@ -14,11 +14,13 @@ namespace Game.Gameplay
     public sealed class GameplayFlowController : IInitializable, IDisposable, IRunPreparationContinueCommand
     {
         private readonly ISlingshotCapture _slingshotCapture;
+        private readonly ISlingshotRunPreparationReset _slingshotRunPreparationReset;
         private readonly ISlingshotLaunchNotifier _slingshotLaunchNotifier;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly IGameplaySlingshotLauncher _slingshotLauncher;
         private readonly IRunModifierSnapshotFactory _snapshotFactory;
         private readonly IRunModifierSnapshotStore _snapshotStore;
+        private readonly IPreLaunchRigPoseResetter _preLaunchRigPoseResetter;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
@@ -28,19 +30,25 @@ namespace Game.Gameplay
 
         public GameplayFlowController(
             ISlingshotCapture slingshotCapture,
+            ISlingshotRunPreparationReset slingshotRunPreparationReset,
             ISlingshotLaunchNotifier slingshotLaunchNotifier,
             IGameplayStateService gameplayStateService,
             IGameplaySlingshotLauncher slingshotLauncher,
             IRunModifierSnapshotFactory snapshotFactory,
             IRunModifierSnapshotStore snapshotStore,
+            IPreLaunchRigPoseResetter preLaunchRigPoseResetter,
             GameplayStateId runPreparationStateId,
             GameplayStateId preLaunchStateId,
             GameplayStateId runningStateId)
         {
             _slingshotCapture = slingshotCapture ?? throw new ArgumentNullException(nameof(slingshotCapture));
+
+            _slingshotRunPreparationReset = slingshotRunPreparationReset
+                                            ?? throw new ArgumentNullException(nameof(slingshotRunPreparationReset));
             _slingshotLaunchNotifier = slingshotLaunchNotifier ?? throw new ArgumentNullException(nameof(slingshotLaunchNotifier));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _slingshotLauncher = slingshotLauncher ?? throw new ArgumentNullException(nameof(slingshotLauncher));
+            _preLaunchRigPoseResetter = preLaunchRigPoseResetter ?? throw new ArgumentNullException(nameof(preLaunchRigPoseResetter));
             _snapshotFactory = snapshotFactory ?? throw new ArgumentNullException(nameof(snapshotFactory));
             _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
 
@@ -80,11 +88,21 @@ namespace Game.Gameplay
                 return;
 
             _slingshotLaunchNotifier.LaunchRequested += OnSlingshotLaunchRequested;
+            _gameplayStateService.GameplayStateChanging += OnGameplayStateChanging;
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
 
+            if (_gameplayStateService.IsCurrent(_runPreparationStateId))
+            {
+                ResetForRunPreparation();
+                return;
+            }
+
             if (_gameplayStateService.IsCurrent(_preLaunchStateId))
+            {
+                _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
                 _slingshotCapture.EnableCapture();
+            }
         }
 
         void IDisposable.Dispose()
@@ -97,7 +115,26 @@ namespace Game.Gameplay
             if (_isInitialized)
             {
                 _slingshotLaunchNotifier.LaunchRequested -= OnSlingshotLaunchRequested;
+                _gameplayStateService.GameplayStateChanging -= OnGameplayStateChanging;
                 _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+            }
+        }
+
+        private void OnGameplayStateChanging(GameplayStateId nextStateId, GameplayStateId previousStateId)
+        {
+            if (_isDisposed)
+                return;
+
+            if (ReferenceEquals(nextStateId, _runPreparationStateId))
+            {
+                ResetForRunPreparation();
+                return;
+            }
+
+            if (ReferenceEquals(nextStateId, _preLaunchStateId)
+                && !ReferenceEquals(previousStateId, _runPreparationStateId))
+            {
+                _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
             }
         }
 
@@ -112,8 +149,11 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (ReferenceEquals(previousStateId, _preLaunchStateId))
+            if (ReferenceEquals(previousStateId, _preLaunchStateId)
+                && !ReferenceEquals(nextStateId, _runPreparationStateId))
+            {
                 _slingshotCapture.DisableCapture();
+            }
         }
 
         private void OnSlingshotLaunchRequested(SlingshotLaunchRequest launchRequest)
@@ -126,6 +166,12 @@ namespace Game.Gameplay
 
             if (_gameplayStateService.TryTransitionTo(_runningStateId))
                 _slingshotLauncher.Launch(launchRequest);
+        }
+
+        private void ResetForRunPreparation()
+        {
+            _preLaunchRigPoseResetter.ResetToPreLaunchRigPose();
+            _slingshotRunPreparationReset.ResetForRunPreparation();
         }
     }
 }
