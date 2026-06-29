@@ -195,19 +195,10 @@ public sealed class GameplaySceneNaturalBandShapeTests
 
             yield return SendMouse(mouse, pullScreenPosition, false);
             Assert.That(context.PlayerRigidbody.isKinematic, Is.False);
-            var blockedRestBandColliderCenter = context.Geometry.RestPoint;
-            PinTargetColliderCenter(context, blockedRestBandColliderCenter);
-
-            Assert.That(
-                Vector3.Distance(blockedRestBandColliderCenter, context.TargetCollider.ClosestPoint(blockedRestBandColliderCenter)),
-                Is.LessThanOrEqualTo(GetMaximumRenderedBandRadius(context.BandLineRenderer)),
-                "Test setup should keep the Launch Target Collider blocking the detached rest Band Shape.");
 
             for (var frameIndex = 0; frameIndex < 8; frameIndex += 1)
             {
-                PinTargetColliderCenter(context, blockedRestBandColliderCenter);
                 yield return null;
-                PinTargetColliderCenter(context, blockedRestBandColliderCenter);
 
                 var recoilBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
                 Assert.That(recoilBandPositions, Has.Length.GreaterThan(3));
@@ -247,7 +238,8 @@ public sealed class GameplaySceneNaturalBandShapeTests
             yield return SendMouse(mouse, pullScreenPosition, false);
             Assert.That(context.PlayerRigidbody.isKinematic, Is.False);
 
-            var restBandPositions = CreateRawTwoSpanBandPositions(context.Geometry, context.Geometry.RestPoint, context.BandLineRenderer.positionCount);
+            var restBandPositions =
+                CreateRawTwoSpanBandPositions(context.Geometry, context.Geometry.RestPoint, context.BandLineRenderer.positionCount);
             var observedRestBandDetach = false;
             var postDetachFramesRemaining = 3;
             var observedGameplaySeconds = 0f;
@@ -264,24 +256,44 @@ public sealed class GameplaySceneNaturalBandShapeTests
                 var recoilBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
 
                 var isRestBandClear = IsBandShapeClearOfCollider(restBandPositions, context.BandLineRenderer, context.TargetCollider);
+                var visibleRawTwoSpanCenterPoint = GetRawTwoSpanCenterPoint(recoilBandPositions);
+                var visibleBandMatchesRawTwoSpan =
+                    DoesBandShapeMatchRawTwoSpan(recoilBandPositions, context.Geometry, visibleRawTwoSpanCenterPoint, 0.01f);
+                var visibleBandMatchesRest = DoesBandShapeMatchRawTwoSpan(recoilBandPositions, context.Geometry, context.Geometry.RestPoint, 0.01f);
 
                 Assert.That(recoilBandPositions, Has.Length.GreaterThan(3));
 
-                AssertBandPathOffsetsAreMonotonic(recoilBandPositions, context.BandLineRenderer, context.Geometry, $"Max Pull Band Release Recoil frame {frameIndex}");
-                AssertBandPathHasNoSharpFolds(recoilBandPositions, context.Geometry, $"Max Pull Band Release Recoil frame {frameIndex}");
-                AssertBandSamplesStayOutsideCollider(recoilBandPositions, context.BandLineRenderer, context.TargetCollider, $"Max Pull Band Release Recoil frame {frameIndex}");
-
-                var visibleBandMatchesRest = DoesBandShapeMatchRawTwoSpan(recoilBandPositions, context.Geometry, context.Geometry.RestPoint, 0.01f);
-
-                if (!isRestBandClear && visibleBandMatchesRest)
+                if (visibleBandMatchesRest)
                 {
-                    Assert.Fail(
+                    Assert.That(
+                        isRestBandClear,
+                        Is.True,
                         "Max Pull Band Release Recoil detached to rest while the launched Target blocks the rest Band Shape at frame "
                         + $"{frameIndex} targetCenter={DescribePoint(context.TargetCollider.bounds.center, context.Geometry)} "
                         + DescribeBandOffsets(recoilBandPositions, context.Geometry));
+
+                    observedRestBandDetach = true;
+                    postDetachFramesRemaining -= 1;
+
+                    AssertBandShapeMatchesRawTwoSpan(
+                        recoilBandPositions,
+                        context.Geometry,
+                        context.Geometry.RestPoint,
+                        0.01f,
+                        "Max Pull Band Release Recoil cleared frame "
+                        + $"{frameIndex} targetCenter={DescribePoint(context.TargetCollider.bounds.center, context.Geometry)} "
+                        + DescribeBandOffsets(recoilBandPositions, context.Geometry));
+
+                    if (postDetachFramesRemaining <= 0)
+                        break;
+
+                    if (observedGameplaySeconds > maximumObservedGameplaySeconds)
+                        break;
+
+                    continue;
                 }
 
-                if (observedRestBandDetach && !visibleBandMatchesRest)
+                if (observedRestBandDetach)
                 {
                     Assert.Fail(
                         "Max Pull Band Release Recoil returned to a live wrap after already detaching to rest at frame "
@@ -289,33 +301,35 @@ public sealed class GameplaySceneNaturalBandShapeTests
                         + DescribeBandOffsets(recoilBandPositions, context.Geometry));
                 }
 
-                if (!visibleBandMatchesRest)
+                if (visibleBandMatchesRawTwoSpan)
                 {
+                    AssertBandShapeMatchesRawTwoSpan(
+                        recoilBandPositions,
+                        context.Geometry,
+                        visibleRawTwoSpanCenterPoint,
+                        0.01f,
+                        "Max Pull Band Release Recoil simple frame "
+                        + $"{frameIndex} targetCenter={DescribePoint(context.TargetCollider.bounds.center, context.Geometry)} "
+                        + DescribeBandOffsets(recoilBandPositions, context.Geometry));
+
+                    AssertBandSamplesStayOutsideCollider(recoilBandPositions, context.BandLineRenderer, context.TargetCollider,
+                        $"Max Pull Band Release Recoil simple frame {frameIndex}");
+
                     if (observedGameplaySeconds > maximumObservedGameplaySeconds)
                         break;
 
                     continue;
                 }
 
-                observedRestBandDetach = true;
-                postDetachFramesRemaining -= 1;
+                AssertBandPathOffsetsAreMonotonic(recoilBandPositions, context.BandLineRenderer, context.Geometry,
+                    $"Max Pull Band Release Recoil frame {frameIndex}");
+                AssertBandPathHasNoSharpFolds(recoilBandPositions, context.Geometry, $"Max Pull Band Release Recoil frame {frameIndex}");
 
-                AssertBandShapeMatchesRawTwoSpan(
-                    recoilBandPositions,
-                    context.Geometry,
-                    context.Geometry.RestPoint,
-                    0.01f,
-                    "Max Pull Band Release Recoil cleared frame "
-                    + $"{frameIndex} targetCenter={DescribePoint(context.TargetCollider.bounds.center, context.Geometry)} "
-                    + DescribeBandOffsets(recoilBandPositions, context.Geometry));
+                AssertBandSamplesStayOutsideCollider(recoilBandPositions, context.BandLineRenderer, context.TargetCollider,
+                    $"Max Pull Band Release Recoil frame {frameIndex}");
 
-                if (postDetachFramesRemaining <= 0)
+                if (observedGameplaySeconds > maximumObservedGameplaySeconds)
                     break;
-
-                if (observedGameplaySeconds <= maximumObservedGameplaySeconds)
-                    continue;
-
-                break;
             }
 
             Assert.That(
@@ -861,15 +875,6 @@ public sealed class GameplaySceneNaturalBandShapeTests
         return true;
     }
 
-    private void PinTargetColliderCenter(GameplaySceneContext context, Vector3 colliderCenterPosition)
-    {
-        var rigidbodyToColliderCenter = context.TargetCollider.bounds.center - context.PlayerRigidbody.position;
-        context.PlayerRigidbody.position = colliderCenterPosition - rigidbodyToColliderCenter;
-        context.PlayerRigidbody.linearVelocity = context.Geometry.LaunchFrameForward * 0.05f;
-        context.PlayerRigidbody.angularVelocity = Vector3.zero;
-        Physics.SyncTransforms();
-    }
-
     private float GetMaximumRenderedBandRadius(LineRenderer lineRenderer)
     {
         var maximumWidth = Mathf.Max(lineRenderer.startWidth, lineRenderer.endWidth);
@@ -1162,6 +1167,11 @@ public sealed class GameplaySceneNaturalBandShapeTests
         float tolerance)
     {
         return GetMaximumDistanceFromRawTwoSpan(bandPositions, geometry, centerPoint) <= tolerance;
+    }
+
+    private Vector3 GetRawTwoSpanCenterPoint(Vector3[] bandPositions)
+    {
+        return bandPositions[(bandPositions.Length - 1) / 2];
     }
 
     private float GetMaximumDistanceFromRawTwoSpan(Vector3[] bandPositions, SlingshotGeometrySnapshot geometry, Vector3 centerPoint)

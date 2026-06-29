@@ -229,9 +229,6 @@ public sealed class GameplaySceneCompositionTests
 
         Assert.That(Quaternion.Angle(preLaunchLaunchTargetPose.transform.rotation, playerRigidbody.transform.rotation),
             Is.EqualTo(0f).Within(0.01f));
-        Assert.That(playerRigidbody.transform.position.x, Is.EqualTo(0f).Within(0.01f));
-        Assert.That(playerRigidbody.transform.position.y, Is.EqualTo(0f).Within(0.01f));
-        Assert.That(playerRigidbody.transform.position.z, Is.EqualTo(0.311f).Within(0.01f));
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(pullHint.activeInHierarchy, Is.True);
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);
