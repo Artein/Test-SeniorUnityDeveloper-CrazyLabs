@@ -4,6 +4,7 @@
   "references": [
     "Game.Gameplay",
     "Game.Gameplay.GameplayState",
+    "Game.Gameplay.Pickups",
     "Game.Gameplay.Slingshot",
     "Game.Foundation.Input",
     "Unity.Cinemachine",

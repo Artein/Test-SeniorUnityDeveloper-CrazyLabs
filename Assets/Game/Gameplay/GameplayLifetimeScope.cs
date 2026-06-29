@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Foundation;
 using Game.Foundation.Input;
 using Game.Foundation.Screen;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using UnityEngine;
 using VContainer;
@@ -33,6 +35,11 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
+        [SerializeField] [TagSelector] private string _playerTag = "Player";
+        [SerializeField] private string _playerLayerName = "Player";
+        [SerializeField] private string _pickupLayerName = "Pickup";
+        [SerializeField] private Pickup[] _levelPickups = Array.Empty<Pickup>();
+        [SerializeField] private Collider[] _playerPickupContactColliders = Array.Empty<Collider>();
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -68,6 +75,13 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+            builder.Register<IResourceStorage, ResourceStorage>(Lifetime.Singleton);
+            builder.Register<IRunResourceAccumulator, RunResourceAccumulator>(Lifetime.Singleton);
+
+            builder.Register<LevelPickupState>(Lifetime.Singleton)
+                .As<ILevelPickupState>()
+                .AsSelf()
+                .WithParameter("pickups", GetLevelPickups());
 
             builder.RegisterEntryPoint<RunProgressService>();
 
@@ -82,6 +96,11 @@ namespace Game.Gameplay
                 .WithParameter("preLaunchStateId", _preLaunchStateId)
                 .WithParameter("runningStateId", _runningStateId)
                 .WithParameter("runEndedStateId", _runEndedStateId);
+
+            builder.RegisterEntryPoint<PickupCollectionController>()
+                .WithParameter("pickups", GetLevelPickups())
+                .WithParameter("runningStateId", _runningStateId)
+                .WithParameter("playerTag", _playerTag);
 
             builder.RegisterEntryPoint<LostMomentumDetector>()
                 .WithParameter(_runningStateId);
@@ -171,6 +190,31 @@ namespace Game.Gameplay
 
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
+
+            foreach (var error in GetPickupSetupValidationErrors())
+                yield return error;
+        }
+
+        private IReadOnlyList<Pickup> GetLevelPickups()
+        {
+            return _levelPickups ?? Array.Empty<Pickup>();
+        }
+
+        private IReadOnlyList<Collider> GetPlayerPickupContactColliders()
+        {
+            return _playerPickupContactColliders ?? Array.Empty<Collider>();
+        }
+
+        private IEnumerable<string> GetPickupSetupValidationErrors()
+        {
+            var validator = new PickupSetupValidator();
+
+            return validator.Validate(
+                GetLevelPickups(),
+                GetPlayerPickupContactColliders(),
+                _playerTag,
+                _playerLayerName,
+                _pickupLayerName);
         }
     }
 }

@@ -1,6 +1,9 @@
 #if UNITY_INCLUDE_TESTS
 
+using System.Collections.Generic;
+using System.Linq;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using UnityEngine;
 using VContainer;
@@ -16,6 +19,9 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
+        internal IReadOnlyList<Pickup> LevelPickupsForTests => GetLevelPickups();
+        internal IReadOnlyList<Collider> PlayerPickupContactCollidersForTests => GetPlayerPickupContactColliders();
+        internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
@@ -37,7 +43,12 @@ namespace Game.Gameplay
             Transform preLaunchSlingshotRigPose,
             Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
-            RigidbodyLaunchTarget launchTarget)
+            RigidbodyLaunchTarget launchTarget,
+            Pickup[] levelPickups,
+            Collider[] playerPickupContactColliders,
+            string playerTag,
+            string playerLayerName,
+            string pickupLayerName)
         {
             _gameplayStateConfig = gameplayStateConfig;
             _preLaunchStateId = preLaunchStateId;
@@ -59,6 +70,25 @@ namespace Game.Gameplay
             _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
             _launchTarget = launchTarget;
+            _levelPickups = levelPickups;
+            _playerPickupContactColliders = playerPickupContactColliders;
+            _playerTag = playerTag;
+            _playerLayerName = playerLayerName;
+            _pickupLayerName = pickupLayerName;
+        }
+
+        internal void SetPickupReferencesForTests(
+            Pickup[] levelPickups,
+            Collider[] playerPickupContactColliders,
+            string playerTag,
+            string playerLayerName,
+            string pickupLayerName)
+        {
+            _levelPickups = levelPickups;
+            _playerPickupContactColliders = playerPickupContactColliders;
+            _playerTag = playerTag;
+            _playerLayerName = playerLayerName;
+            _pickupLayerName = pickupLayerName;
         }
 
         internal void ValidateRequiredReferencesForTests()

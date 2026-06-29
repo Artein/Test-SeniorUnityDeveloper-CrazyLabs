@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Foundation.Input;
 using NUnit.Framework;
@@ -64,7 +65,9 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Pre-Launch Slingshot Rig Pose")
                 .And.Message.Contains("Pre-Launch Launch Target Pose")
                 .And.Message.Contains("Slingshot View")
-                .And.Message.Contains("Launch Target"));
+                .And.Message.Contains("Launch Target")
+                .And.Message.Contains("Level Pickup")
+                .And.Message.Contains("Player Pickup Contact Collider"));
     }
 
     [Test]
@@ -73,6 +76,58 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_DuplicatePickupReference_ThrowsWithDuplicatePickupMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { fixture.LevelPickup, fixture.LevelPickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            "Player",
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate Level Pickup"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_EmptyPlayerTag_ThrowsWithPlayerTagMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { fixture.LevelPickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            string.Empty,
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Player Tag"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_MissingPickupDefinition_ThrowsWithPickupDefinitionMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+        var invalidPickup = CreatePickup("Invalid Pickup", null);
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { invalidPickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            "Player",
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Pickup Definition"));
     }
 
     [Test]
@@ -107,6 +162,12 @@ public sealed class GameplayLifetimeScopeTests
         var contactNotifier = container.Resolve<IRigidbodyContactNotifier>();
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
+        var runResultNotifier = container.Resolve<IRunResultNotifier>();
+        var resourceStorage = container.Resolve<IResourceStorage>();
+        var runResourceAccumulator = container.Resolve<IRunResourceAccumulator>();
+        var levelPickupStateService = container.Resolve<ILevelPickupState>();
+        var levelPickupState = container.Resolve<LevelPickupState>();
+        var pickupCollectionNotifier = container.Resolve<IPickupCollectionNotifier>();
         var runCameraAnchor = container.Resolve<IRunCameraAnchor>();
         var runCameraRig = container.Resolve<IRunCameraRig>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
@@ -115,7 +176,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(7));
+        Assert.That(initializables.Count, Is.EqualTo(8));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -135,6 +196,12 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
+        Assert.That(runResultNotifier, Is.Not.Null);
+        Assert.That(resourceStorage, Is.Not.Null);
+        Assert.That(runResourceAccumulator, Is.Not.Null);
+        Assert.That(levelPickupStateService, Is.SameAs(levelPickupState));
+        Assert.That(levelPickupState.IsAvailable(fixture.LevelPickup), Is.True);
+        Assert.That(pickupCollectionNotifier, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.SameAs(fixture.RunCameraAnchor));
         Assert.That(runCameraRig, Is.SameAs(fixture.RunCameraRig));
         Assert.That(bandShapeProvider, Is.Not.Null);
@@ -150,7 +217,11 @@ public sealed class GameplayLifetimeScopeTests
         var runningToRunEnded = CreateTransition(running, runEnded);
         var runEndedToPreLaunch = CreateTransition(runEnded, preLaunch);
 
-        var gameplayStateConfig = CreateGameplayStateConfig(preLaunch, preLaunchToRunning, runningToRunEnded, runEndedToPreLaunch);
+        var gameplayStateConfig = CreateGameplayStateConfig(
+            preLaunch,
+            preLaunchToRunning,
+            runningToRunEnded,
+            runEndedToPreLaunch);
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
         var playerSteeringConfig = Track(ScriptableObject.CreateInstance<PlayerSteeringConfig>());
         var runCameraConfig = Track(ScriptableObject.CreateInstance<RunCameraConfig>());
@@ -167,13 +238,55 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
+        var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
+        playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
+        playerPickupContactCollider.gameObject.tag = "Player";
+        var resourceDefinition = Track(ScriptableObject.CreateInstance<ResourceDefinition>());
+        resourceDefinition.name = "Coins";
+        var pickupDefinition = CreatePickupDefinition(resourceDefinition, 1);
+        var levelPickup = CreatePickup("Level Pickup", pickupDefinition);
 
-        scope.SetReferencesForTests(gameplayStateConfig, preLaunch, running, runEnded, slingshotConfig, playerSteeringConfig, runCameraConfig,
-            runEndConfig, playerSteeringTarget, runCameraSource, runProgressFrameSource, contactNotifier, runCameraAnchor, runCameraRig, camera,
-            slingshotRig, preLaunchSlingshotRigPose, preLaunchLaunchTargetPose, slingshotView, launchTarget);
+        scope.SetReferencesForTests(
+            gameplayStateConfig,
+            preLaunch,
+            running,
+            runEnded,
+            slingshotConfig,
+            playerSteeringConfig,
+            runCameraConfig,
+            runEndConfig,
+            playerSteeringTarget,
+            runCameraSource,
+            runProgressFrameSource,
+            contactNotifier,
+            runCameraAnchor,
+            runCameraRig,
+            camera,
+            slingshotRig,
+            preLaunchSlingshotRigPose,
+            preLaunchLaunchTargetPose,
+            slingshotView,
+            launchTarget,
+            new[] { levelPickup },
+            new[] { playerPickupContactCollider },
+            "Player",
+            "Player",
+            "Pickup");
 
-        return new ValidScopeFixture(scope, preLaunch, launchTarget, playerSteeringTarget, runCameraConfig, runEndConfig, runCameraSource,
-            runProgressFrameSource, contactNotifier, runCameraAnchor, runCameraRig);
+        return new ValidScopeFixture(
+            scope,
+            preLaunch,
+            launchTarget,
+            levelPickup,
+            playerPickupContactCollider,
+            playerSteeringTarget,
+            runCameraConfig,
+            runEndConfig,
+            runCameraSource,
+            runProgressFrameSource,
+            contactNotifier,
+            runCameraAnchor,
+            runCameraRig);
     }
 
     private SlingshotView CreateSlingshotView(SlingshotConfig config)
@@ -197,6 +310,23 @@ public sealed class GameplayLifetimeScopeTests
         return view;
     }
 
+    private PickupDefinition CreatePickupDefinition(ResourceDefinition resourceDefinition, int amount)
+    {
+        var definition = Track(ScriptableObject.CreateInstance<PickupDefinition>());
+        definition.SetValuesForTests(resourceDefinition, amount);
+        return definition;
+    }
+
+    private Pickup CreatePickup(string objectName, PickupDefinition definition)
+    {
+        var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
+        pickup.SetDefinitionForTests(definition);
+        var collider = pickup.gameObject.AddComponent<SphereCollider>();
+        collider.isTrigger = true;
+        collider.gameObject.layer = GetRequiredLayer("Pickup");
+        return pickup;
+    }
+
     private RigidbodyLaunchTarget CreateLaunchTarget(
         out RigidbodyPlayerSteeringTarget playerSteeringTarget,
         out RigidbodyRunCameraSource runCameraSource,
@@ -214,6 +344,13 @@ public sealed class GameplayLifetimeScopeTests
         runCameraSource.SetRigidbodyForTests(rigidbody);
         contactNotifier = rigidbody.gameObject.AddComponent<RigidbodyContactNotifier>();
         return launchTarget;
+    }
+
+    private int GetRequiredLayer(string layerName)
+    {
+        var layer = LayerMask.NameToLayer(layerName);
+        Assert.That(layer, Is.GreaterThanOrEqualTo(0), $"Unity layer '{layerName}' must exist for gameplay tests.");
+        return layer;
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -256,6 +393,8 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayLifetimeScope Scope { get; }
         public GameplayStateId PreLaunchStateId { get; }
         public RigidbodyLaunchTarget LaunchTarget { get; }
+        public Pickup LevelPickup { get; }
+        public Collider PlayerPickupContactCollider { get; }
         public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; }
         public RunCameraConfig RunCameraConfig { get; }
         public RunEndConfig RunEndConfig { get; }
@@ -269,6 +408,8 @@ public sealed class GameplayLifetimeScopeTests
             GameplayLifetimeScope scope,
             GameplayStateId preLaunchStateId,
             RigidbodyLaunchTarget launchTarget,
+            Pickup levelPickup,
+            Collider playerPickupContactCollider,
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
             RunCameraConfig runCameraConfig,
             RunEndConfig runEndConfig,
@@ -281,6 +422,8 @@ public sealed class GameplayLifetimeScopeTests
             Scope = scope;
             PreLaunchStateId = preLaunchStateId;
             LaunchTarget = launchTarget;
+            LevelPickup = levelPickup;
+            PlayerPickupContactCollider = playerPickupContactCollider;
             PlayerSteeringTarget = playerSteeringTarget;
             RunCameraConfig = runCameraConfig;
             RunEndConfig = runEndConfig;
