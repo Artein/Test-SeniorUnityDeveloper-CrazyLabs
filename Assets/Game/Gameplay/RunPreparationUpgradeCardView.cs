@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Game.Gameplay
 {
-    public sealed class RunPreparationUpgradeCardView : MonoBehaviour
+    public sealed partial class RunPreparationUpgradeCardView : MonoBehaviour
     {
         [SerializeField] private GameObject _root;
         [SerializeField] private Image _icon;

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 namespace Game.Gameplay
 {
-    public sealed class RunPreparationUIView : MonoBehaviour, IRunPreparationView
+    public sealed partial class RunPreparationUIView : MonoBehaviour, IRunPreparationView
     {
         [SerializeField] private GameObject _root;
         [SerializeField] private Image _coinBalanceIcon;

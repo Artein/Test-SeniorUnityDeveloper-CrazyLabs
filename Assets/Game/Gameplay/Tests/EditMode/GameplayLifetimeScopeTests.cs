@@ -8,8 +8,10 @@ using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using Game.Foundation.Input;
 using NUnit.Framework;
+using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 using VContainer;
 using VContainer.Internal;
 using VContainer.Unity;
@@ -271,7 +273,7 @@ public sealed class GameplayLifetimeScopeTests
         var runEndConfig = Track(ScriptableObject.CreateInstance<RunEndConfig>());
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
-        var runPreparationView = CreateGameObject("Run Preparation View").AddComponent<RunPreparationUIView>();
+        var runPreparationView = CreateRunPreparationView();
         var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
         var runCameraAnchor = CreateGameObject("Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
@@ -364,6 +366,56 @@ public sealed class GameplayLifetimeScopeTests
         return view;
     }
 
+    private RunPreparationUIView CreateRunPreparationView()
+    {
+        var viewObject = CreateGameObject("Run Preparation View");
+        viewObject.SetActive(false);
+
+        var view = viewObject.AddComponent<RunPreparationUIView>();
+        var coinBalanceIcon = CreateChildImage(viewObject.transform, "Coin Balance Icon");
+        var coinBalanceText = CreateChildText(viewObject.transform, "Coin Balance Label");
+        var continueTouchAreaButton = CreateChildButton(viewObject.transform, "Run Preparation Continue Touch Area");
+        var upgradeCard = CreateRunPreparationUpgradeCard(viewObject.transform);
+
+        view.SetReferencesForTests(
+            viewObject,
+            coinBalanceIcon,
+            coinBalanceText,
+            continueTouchAreaButton,
+            new[] { upgradeCard });
+
+        viewObject.SetActive(true);
+
+        return view;
+    }
+
+    private RunPreparationUpgradeCardView CreateRunPreparationUpgradeCard(Transform parent)
+    {
+        var cardObject = CreateChildGameObject(parent, "Run Preparation Upgrade Card");
+        var card = cardObject.AddComponent<RunPreparationUpgradeCardView>();
+        var icon = CreateChildImage(cardObject.transform, "Upgrade Icon");
+        var nameText = CreateChildText(cardObject.transform, "Upgrade Name Label");
+        var levelText = CreateChildText(cardObject.transform, "Upgrade Level Label");
+        var effectText = CreateChildText(cardObject.transform, "Upgrade Effect Label");
+        var buyButton = CreateChildButton(cardObject.transform, "Buy Button");
+        var buyButtonActionLabel = CreateChildText(buyButton.transform, "Upgrade Button Action Label");
+        var buyButtonCostIcon = CreateChildImage(buyButton.transform, "Upgrade Button Cost Currency Icon");
+        var buyButtonCostText = CreateChildText(buyButton.transform, "Upgrade Button Cost Label");
+
+        card.SetReferencesForTests(
+            cardObject,
+            icon,
+            nameText,
+            levelText,
+            effectText,
+            buyButton,
+            buyButtonActionLabel,
+            buyButtonCostIcon,
+            buyButtonCostText);
+
+        return card;
+    }
+
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
     {
         var definition = Track(ScriptableObject.CreateInstance<PickupDefinition>());
@@ -444,6 +496,34 @@ public sealed class GameplayLifetimeScopeTests
     private GameObject CreateGameObject(string objectName)
     {
         return Track(new GameObject(objectName));
+    }
+
+    private GameObject CreateChildGameObject(Transform parent, string objectName)
+    {
+        var gameObject = Track(new GameObject(objectName, typeof(RectTransform)));
+        gameObject.transform.SetParent(parent, false);
+
+        return gameObject;
+    }
+
+    private Image CreateChildImage(Transform parent, string objectName)
+    {
+        return CreateChildGameObject(parent, objectName).AddComponent<Image>();
+    }
+
+    private TMP_Text CreateChildText(Transform parent, string objectName)
+    {
+        return CreateChildGameObject(parent, objectName).AddComponent<TextMeshProUGUI>();
+    }
+
+    private Button CreateChildButton(Transform parent, string objectName)
+    {
+        var buttonObject = CreateChildGameObject(parent, objectName);
+        var targetGraphic = buttonObject.AddComponent<Image>();
+        var button = buttonObject.AddComponent<Button>();
+        button.targetGraphic = targetGraphic;
+
+        return button;
     }
 
     private T Track<T>(T value)
