@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Reflection;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Foundation.Input;
+using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -34,6 +36,8 @@ public sealed class GameplaySceneCompositionTests
         var runCameraSource = FindSingleInScene<RigidbodyRunCameraSource>(activeScene, "RigidbodyRunCameraSource");
         var contactNotifier = FindSingleInScene<RigidbodyContactNotifier>(activeScene, "RigidbodyContactNotifier");
         var runProgressFrameSource = FindSingleInScene<RunProgressFrameSource>(activeScene, "RunProgressFrameSource");
+        var runSurfaceContextSource = FindSingleInScene<RaycastRunSurfaceContextSource>(activeScene, "RaycastRunSurfaceContextSource");
+        var characterPresentationView = FindSingleInScene<CharacterPresentationView>(activeScene, "CharacterPresentationView");
         var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, "Run Camera Rig");
         var mainCamera = FindSingleInScene<Camera>(activeScene, "Main Camera");
@@ -55,6 +59,12 @@ public sealed class GameplaySceneCompositionTests
         var targetCollider = GetSingleTargetCollider(launchTarget);
         var geometry = slingshotView.CreateGeometrySnapshot();
         var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+        var launchTargetColliderRoot = FindGameObjectByName(activeScene, "LaunchTargetColliderRoot");
+        var characterVisualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
+        var ladybugCharacter = FindGameObjectByName(activeScene, "LadybugCharacter");
+        var characterAnimator = ladybugCharacter.GetComponent<Animator>();
+
+        var characterAnimationEventReceiver = ladybugCharacter.GetComponent<CharacterAnimationEventReceiver>();
         var preLaunchRigPoseRoot = FindGameObjectByName(activeScene, "Pre-Launch Rig Pose");
         var preLaunchSlingshotRigPose = FindGameObjectByName(activeScene, "Pre-Launch Slingshot Rig Pose");
         var preLaunchLaunchTargetPose = FindGameObjectByName(activeScene, "Pre-Launch Launch Target Pose");
@@ -68,10 +78,14 @@ public sealed class GameplaySceneCompositionTests
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
         var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
         var resolvedRunProgressFrameSource = lifetimeScope.Container.Resolve<IRunProgressFrameSource>();
+        var resolvedRunSurfaceContextSource = lifetimeScope.Container.Resolve<IRunSurfaceContextSource>();
         var resolvedContactNotifier = lifetimeScope.Container.Resolve<IRigidbodyContactNotifier>();
         var resolvedRunEndConfig = lifetimeScope.Container.Resolve<IRunEndConfig>();
         var resolvedRunProgressService = lifetimeScope.Container.Resolve<IRunProgressService>();
         var resolvedRunContactClassifier = lifetimeScope.Container.Resolve<IRunContactClassifier>();
+        var resolvedCharacterPresentationView = lifetimeScope.Container.Resolve<ICharacterPresentationView>();
+        var resolvedCharacterPresentationTuning = lifetimeScope.Container.Resolve<ICharacterPresentationTuning>();
+        var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
         var resolvedRunEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
         var resolvedRunCameraAnchor = lifetimeScope.Container.Resolve<IRunCameraAnchor>();
         var resolvedRunCameraRig = lifetimeScope.Container.Resolve<IRunCameraRig>();
@@ -101,6 +115,8 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(runCameraSource, Is.Not.Null);
         Assert.That(contactNotifier, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.Not.Null);
+        Assert.That(runSurfaceContextSource, Is.Not.Null);
+        Assert.That(characterPresentationView, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.Not.Null);
         Assert.That(runCameraRig, Is.Not.Null);
         Assert.That(brain, Is.Not.Null);
@@ -141,10 +157,14 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(resolvedRunCameraSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunProgressFrameSource, Is.SameAs(runProgressFrameSource));
+        Assert.That(resolvedRunSurfaceContextSource, Is.SameAs(runSurfaceContextSource));
         Assert.That(resolvedContactNotifier, Is.SameAs(contactNotifier));
         Assert.That(resolvedRunEndConfig, Is.SameAs(assignedRunEndConfigs[0]));
         Assert.That(resolvedRunProgressService, Is.Not.Null);
         Assert.That(resolvedRunContactClassifier, Is.Not.Null);
+        Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
         Assert.That(resolvedRunEndCandidateReceiver, Is.Not.Null);
         Assert.That(resolvedRunCameraAnchor, Is.SameAs(runCameraAnchor));
         Assert.That(resolvedRunCameraRig, Is.SameAs(runCameraRig));
@@ -152,6 +172,32 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(((IRunMotionSource)runCameraSource).Position, Is.EqualTo(playerRigidbody.position));
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
+        Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
+        Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
+        Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
+        Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);
+        Assert.That(characterVisualAnchor.transform.IsChildOf(launchTarget.transform), Is.True);
+        Assert.That(ladybugCharacter.transform.IsChildOf(characterVisualAnchor.transform), Is.True);
+        Assert.That(characterPresentationView.transform, Is.SameAs(ladybugCharacter.transform));
+        Assert.That(characterAnimator, Is.Not.Null);
+        Assert.That(characterAnimator.runtimeAnimatorController, Is.Not.Null);
+        Assert.That(characterAnimator.avatar, Is.Not.Null);
+        Assert.That(characterAnimator.applyRootMotion, Is.False);
+        Assert.That(characterAnimationEventReceiver, Is.Not.Null);
+        Assert.That(characterAnimationEventReceiver.transform, Is.SameAs(characterAnimator.transform));
+
+        Assert.That(
+            characterAnimationEventReceiver.GetType().GetMethod(
+                "StepOnGround",
+                BindingFlags.Instance | BindingFlags.Public,
+                binder: null,
+                types: Type.EmptyTypes,
+                modifiers: null),
+            Is.Not.Null);
+        Assert.That(ladybugCharacter.GetComponentsInChildren<Collider>(true), Is.Empty);
+        Assert.That(ladybugCharacter.GetComponentsInChildren<Rigidbody>(true), Is.Empty);
+        Assert.That(ladybugCharacter.GetComponentsInChildren<Joint>(true), Is.Empty);
+        Assert.That(ladybugCharacter.GetComponentsInChildren<CharacterController>(true), Is.Empty);
         Assert.That(bandShapeSolved, Is.True);
         Assert.That(bandShapePointCount, Is.EqualTo(bandShapeProvider.BandShapePointCount));
         Assert.That(bandShapePointCount, Is.GreaterThan(3));
@@ -271,6 +317,7 @@ public sealed class GameplaySceneCompositionTests
             {
                 var geometry = slingshotView.CreateGeometrySnapshot();
                 var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
+
                 var pullWorldPosition = geometry.RestPoint
                                         + (geometry.LaunchFrameRight * launchScenarios[scenarioIndex].x)
                                         - (geometry.LaunchFrameForward * launchScenarios[scenarioIndex].y);
@@ -352,13 +399,7 @@ public sealed class GameplaySceneCompositionTests
                                     + (geometry.LaunchFrameRight * 0.35f)
                                     - (geometry.LaunchFrameForward * 1.25f);
             var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-            var expectedPullPoint = GetExpectedClampedPullPoint(
-                slingshotInputProjector,
-                releaseScreenPosition,
-                geometry,
-                slingshotConfig);
-
+            var expectedPullPoint = GetExpectedClampedPullPoint(slingshotInputProjector, releaseScreenPosition, geometry, slingshotConfig);
             var pointerPressedCount = 0;
             var unityInput = lifetimeScope.Container.Resolve<IUnityInput>();
             unityInput.PointerPressed += _ => pointerPressedCount += 1;
@@ -544,7 +585,6 @@ public sealed class GameplaySceneCompositionTests
             yield break;
 
         SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
-        yield break;
     }
 
     private bool CanReuseGameplayScene(Scene scene)
@@ -786,11 +826,7 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(slingshotInputProjector.TryProjectScreenToPullPlane(screenPosition, geometry, out var rawPullPoint), Is.True);
 
         var delta = rawPullPoint - geometry.RestPoint;
-
-        var pullDistance = Mathf.Clamp(
-            -Vector3.Dot(delta, geometry.LaunchFrameForward),
-            0f,
-            slingshotConfig.MaximumPullDistance);
+        var pullDistance = Mathf.Clamp(-Vector3.Dot(delta, geometry.LaunchFrameForward), 0f, slingshotConfig.MaximumPullDistance);
         var pullOffset = GetClampedPullOffset(Vector3.Dot(delta, geometry.LaunchFrameRight), pullDistance, geometry, slingshotConfig);
 
         return geometry.RestPoint
@@ -807,9 +843,7 @@ public sealed class GameplaySceneCompositionTests
         var fullLateralPullDistance = Mathf.Max(0.02f, slingshotConfig.MinimumPullDistance + (slingshotConfig.BandContactPadding * 2f))
                                       + (slingshotConfig.BandContactPadding * 2f);
 
-        var lateralPullScale = fullLateralPullDistance <= 0.000001f
-            ? 1f
-            : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+        var lateralPullScale = fullLateralPullDistance <= 0.000001f ? 1f : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
 
         return Mathf.Clamp(
             rawPullOffset,
@@ -833,7 +867,6 @@ public sealed class GameplaySceneCompositionTests
         return Mathf.Min(slingshotConfig.MaximumLateralPull, maximumAnchorOffset);
     }
 
-    // TODO: Fix this
     private IEnumerator WaitFrames(int frameCount)
     {
         for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)

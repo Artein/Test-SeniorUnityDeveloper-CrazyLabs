@@ -13,7 +13,12 @@ namespace Game.Gameplay
         void SubmitCandidate(RunEndCandidate candidate);
     }
 
-    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver
+    public interface IRunResultNotifier
+    {
+        event Action<RunResult> RunResultAccepted;
+    }
+
+    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -35,6 +40,8 @@ namespace Game.Gameplay
         private bool _isAwaitingPreLaunch;
         private float _elapsedSinceLaunch;
         private float _runEndedElapsed;
+
+        public event Action<RunResult> RunResultAccepted;
 
         public RunEndFlow(
             IGameplayStateService gameplayStateService,
@@ -119,7 +126,7 @@ namespace Game.Gameplay
             ResetRunEndState();
         }
 
-        public void SubmitCandidate(RunEndCandidate candidate)
+        void IRunEndCandidateReceiver.SubmitCandidate(RunEndCandidate candidate)
         {
             if (_isDisposed
                 || _hasAcceptedResult
@@ -162,13 +169,13 @@ namespace Game.Gameplay
         private void OnCollisionEntered(RigidbodyCollisionNotification notification)
         {
             if (_contactClassifier.TryClassify(notification, out var candidate))
-                SubmitCandidate(candidate);
+                ((IRunEndCandidateReceiver)this).SubmitCandidate(candidate);
         }
 
         private void OnTriggerEntered(RigidbodyTriggerNotification notification)
         {
             if (_contactClassifier.TryClassify(notification, out var candidate))
-                SubmitCandidate(candidate);
+                ((IRunEndCandidateReceiver)this).SubmitCandidate(candidate);
         }
 
         private void ResolvePendingCandidates()
@@ -226,6 +233,7 @@ namespace Game.Gameplay
                 finalPosition,
                 finalVelocity.magnitude);
 
+            RunResultAccepted?.Invoke(result);
             Debug.Log(result.ToString());
         }
 
@@ -246,21 +254,16 @@ namespace Game.Gameplay
             _gameplayStateService.TryTransitionTo(_preLaunchStateId);
         }
 
-        private int GetPriority(RunEndReason reason)
+        private static int GetPriority(RunEndReason reason)
         {
-            switch (reason)
+            return reason switch
             {
-                case RunEndReason.Finished:
-                    return 3;
-                case RunEndReason.ObstacleHit:
-                    return 2;
-                case RunEndReason.OutOfBounds:
-                    return 1;
-                case RunEndReason.LostMomentum:
-                    return 0;
-                default:
-                    return -1;
-            }
+                RunEndReason.Finished => 3,
+                RunEndReason.ObstacleHit => 2,
+                RunEndReason.OutOfBounds => 1,
+                RunEndReason.LostMomentum => 0,
+                _ => -1
+            };
         }
 
         private void ResetRunEndState()

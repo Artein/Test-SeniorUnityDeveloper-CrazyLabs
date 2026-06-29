@@ -1,5 +1,6 @@
 #if UNITY_INCLUDE_TESTS
 
+using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using UnityEngine;
@@ -16,6 +17,7 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
+        internal RaycastRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
@@ -29,6 +31,7 @@ namespace Game.Gameplay
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
+            RaycastRunSurfaceContextSource runSurfaceContextSource,
             RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,
@@ -37,7 +40,8 @@ namespace Game.Gameplay
             Transform preLaunchSlingshotRigPose,
             Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
-            RigidbodyLaunchTarget launchTarget)
+            RigidbodyLaunchTarget launchTarget,
+            CharacterPresentationView characterPresentationView)
         {
             _gameplayStateConfig = gameplayStateConfig;
             _preLaunchStateId = preLaunchStateId;
@@ -50,6 +54,7 @@ namespace Game.Gameplay
             _playerSteeringTarget = playerSteeringTarget;
             _runCameraSource = runCameraSource;
             _runProgressFrameSource = runProgressFrameSource;
+            _runSurfaceContextSource = runSurfaceContextSource;
             _contactNotifier = contactNotifier;
             _runCameraAnchor = runCameraAnchor;
             _runCameraRig = runCameraRig;
@@ -59,6 +64,7 @@ namespace Game.Gameplay
             _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
             _launchTarget = launchTarget;
+            _characterPresentationView = characterPresentationView;
         }
 
         internal void ValidateRequiredReferencesForTests()

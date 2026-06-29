@@ -7,6 +7,7 @@
     "Game.Gameplay.Slingshot",
     "Game.Foundation.Input",
     "Game.Utils.Mathematics",
+    "SaintsField.Runtime",
     "Unity.Cinemachine",
     "VContainer"
   ],

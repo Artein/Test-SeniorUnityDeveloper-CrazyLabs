@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Game.Foundation.Input;
 using Game.Foundation.Screen;
+using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using UnityEngine;
@@ -24,6 +25,7 @@ namespace Game.Gameplay
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
+        [SerializeField] private RaycastRunSurfaceContextSource _runSurfaceContextSource;
         [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
@@ -33,6 +35,7 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
+        [SerializeField] private CharacterPresentationView _characterPresentationView;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -53,9 +56,11 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
+            builder.RegisterInstance<IRunSurfaceContextSource>(_runSurfaceContextSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
+            builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
                 new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
@@ -68,6 +73,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+            builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<RunProgressService>();
 
@@ -82,6 +88,10 @@ namespace Game.Gameplay
                 .WithParameter("preLaunchStateId", _preLaunchStateId)
                 .WithParameter("runningStateId", _runningStateId)
                 .WithParameter("runEndedStateId", _runEndedStateId);
+
+            builder.RegisterEntryPoint<CharacterPresentationPresenter>()
+                .WithParameter("preLaunchStateId", _preLaunchStateId)
+                .WithParameter("runningStateId", _runningStateId);
 
             builder.RegisterEntryPoint<LostMomentumDetector>()
                 .WithParameter(_runningStateId);
@@ -145,6 +155,9 @@ namespace Game.Gameplay
             if (_runProgressFrameSource == null)
                 yield return "GameplayLifetimeScope requires a Run Progress Frame Source reference.";
 
+            if (_runSurfaceContextSource == null)
+                yield return "GameplayLifetimeScope requires a Run Surface Context Source reference.";
+
             if (_contactNotifier == null)
                 yield return "GameplayLifetimeScope requires a Rigidbody Contact Notifier reference.";
 
@@ -171,6 +184,9 @@ namespace Game.Gameplay
 
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
+
+            if (_characterPresentationView == null)
+                yield return "GameplayLifetimeScope requires a Character Presentation View reference.";
         }
     }
 }
