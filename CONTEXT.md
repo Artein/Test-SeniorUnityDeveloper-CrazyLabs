@@ -12,6 +12,34 @@ _Avoid_: Launcher, rope input
 A gameplay attempt that begins with **Launch** and ends by crash, lost momentum, or reaching the level end.
 _Avoid_: Session, attempt
 
+**Run Course**:
+The authored downhill playable path for one **Run**.
+_Avoid_: Scene, level, map
+
+**Run Course Section**:
+A contiguous authored part of a **Run Course** with a clear surface profile and gameplay purpose.
+_Avoid_: Chunk, prefab piece
+
+**Run Course Beat**:
+A high-level pacing segment of a **Run Course** made from one or more **Run Course Sections**.
+_Avoid_: Zone, stage, chapter
+
+**Target Run Duration**:
+The expected time from **Launch** to **Run Finish** for a competent player taking the main playable line.
+_Avoid_: Speedrun time, retry time, completionist time
+
+**Target First Completion Run Count**:
+The expected number of **Runs** before a player reaches **Run Finish** for the first time after using upgrades.
+_Avoid_: Session count, level count, retry count
+
+**Run Progression Band**:
+A distance range of a **Run Course** used to tune expected reach, coin availability, and upgrade-stage pressure.
+_Avoid_: Zone, stage, checkpoint, difficulty tier
+
+**Soft Containment**:
+**Run Surface** shaping that usually redirects the **Launch Target** back into the **Run Course** without making escape impossible.
+_Avoid_: Wall, boundary, guard rail
+
 **Run End Reason**:
 The single cause that ended a **Run**.
 _Avoid_: Game over type, fail reason, death reason
@@ -109,6 +137,10 @@ _Avoid_: Idle camera, static camera
 **Pre-Launch**:
 The phase before a **Run** begins, when the **Slingshot** can accept a **Pull**.
 _Avoid_: Waiting, ready state
+
+**Run Preparation**:
+The post-run phase where the player can review collected currency and choose upgrades before returning to **Pre-Launch**.
+_Avoid_: Pre-Launch, shop, upgrade screen
 
 **Pre-Launch Rig Pose**:
 The authored pose where the **Slingshot** and **Launch Target** are aligned before **Pre-Launch** interaction.
@@ -433,6 +465,20 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Slingshot** accepts a **Pull** during **Pre-Launch**.
 - A **Pre-Launch Rig Pose** aligns one **Slingshot** with one **Launch Target**.
 - A **Pre-Launch Rig Pose** places the held **Launch Target** so its **Band Center** aligns with the **Rest Point**.
+- A **Run Course** defines the playable path traversed during one **Run**.
+- A **Run Course** may have **Run Course Beats**.
+- A **Run Course Beat** belongs to one **Run Course**.
+- A **Run Course Beat** may have **Run Course Sections**.
+- A **Run Course** may have **Run Course Sections**.
+- A **Run Course Section** belongs to one **Run Course**.
+- A **Run Course** has one **Target Run Duration**.
+- A **Run Course** has one **Target First Completion Run Count**.
+- A **Run Course** may have **Run Progression Bands**.
+- A **Run Progression Band** belongs to one **Run Course**.
+- A **Run Progression Band** may contain **Run Course Sections**.
+- A **Run Progression Band** describes expected reach and tuning pressure, not gameplay flow state.
+- **Soft Containment** is achieved by **Run Surface** shape.
+- **Soft Containment** does not end a **Run**.
 - A **Run** is governed by one current **Gameplay State**.
 - A **Run** has one **Run Progress Frame**.
 - A **Run Progress Frame** may compute **Course Planar Speed**.
@@ -590,6 +636,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Run Camera** follows the **Launch Target** during a **Run**.
 - A **Run Camera** uses one **Run Camera Anchor** to frame the **Launch Target**.
 - A **Run Camera Anchor** is derived from the **Launch Target**.
+- **Run Preparation** happens after an ended **Run** and before **Pre-Launch**.
 - A **Pre-Launch Camera** frames the **Slingshot** before a **Run**.
 - A **Run Camera** takes over from a **Pre-Launch Camera** after **Launch**.
 - A **Gameplay State Id** identifies one **Gameplay State**.
@@ -865,6 +912,8 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "Camera obstacle" is not the same concept as **Run Obstacle**; camera safety and **Run End Reason** use separate meanings.
 - Collider shape does not define **Run Contact Category**.
 - "Meaningful impact" and "hard collision" resolve to **Obstacle Impact**, not raw speed loss after contact.
+- "Chunk" describes asset or prefab packaging, while **Run Course Section** describes gameplay-design purpose.
+- "Progression zone", "upgrade zone", and "reach band" resolve to **Run Progression Band** when discussing distance-based upgrade and coin tuning.
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** when discussing appearance, animation, audio, or VFX.
 - "Character anchor", "visual anchor", and "character alignment root" resolve to **Character Visual Anchor**, not the gameplay collider transform or **Band Center**.
 - "`VisualRoot`" is not automatically the **Character Visual Anchor** if it carries the gameplay collider contract.
