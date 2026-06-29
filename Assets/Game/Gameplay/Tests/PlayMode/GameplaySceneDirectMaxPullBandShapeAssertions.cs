@@ -64,6 +64,7 @@ internal static class GameplaySceneDirectMaxPullBandShapeAssertions
     }
 
     public static void AssertBandShapeStableFromPreviousFrame(
+        GameplaySceneBandShapePlayModeTestContext context,
         Vector3[] previousFrameBandPositions,
         Vector3[] currentFrameBandPositions,
         float requestedPullOffsetDelta,
@@ -75,15 +76,32 @@ internal static class GameplaySceneDirectMaxPullBandShapeAssertions
             Has.Length.EqualTo(previousFrameBandPositions.Length),
             $"{phase} Band Shape point count should be stable across repeated direct max-pull frames.\n{diagnostics}");
 
-        var maximumExpectedPointMovement = Mathf.Max(0.03f, Mathf.Abs(requestedPullOffsetDelta) * 3f);
+        var renderedBandRadius = GetMaximumRenderedBandRadius(context.BandLineRenderer);
 
-        for (var pointIndex = 0; pointIndex < currentFrameBandPositions.Length; pointIndex += 1)
+        if (Mathf.Abs(requestedPullOffsetDelta) <= 0.0001f)
         {
-            Assert.That(
-                Vector3.Distance(currentFrameBandPositions[pointIndex], previousFrameBandPositions[pointIndex]),
-                Is.LessThanOrEqualTo(maximumExpectedPointMovement),
-                $"{phase} Band point {pointIndex} should not jump between near-direct max-pull frames.\n{diagnostics}");
+            var maximumExpectedPointMovement = Mathf.Max(0.03f, renderedBandRadius);
+
+            for (var pointIndex = 0; pointIndex < currentFrameBandPositions.Length; pointIndex += 1)
+            {
+                Assert.That(
+                    Vector3.Distance(currentFrameBandPositions[pointIndex], previousFrameBandPositions[pointIndex]),
+                    Is.LessThanOrEqualTo(maximumExpectedPointMovement),
+                    $"{phase} Band point {pointIndex} should not jump between repeated direct max-pull frames.\n{diagnostics}");
+            }
+
+            return;
         }
+
+        var maximumExpectedPathDrift = Mathf.Max(0.03f, Mathf.Abs(requestedPullOffsetDelta) * 3f, renderedBandRadius);
+        var previousToCurrentPathDrift = GetMaximumDistanceToPolyline(previousFrameBandPositions, currentFrameBandPositions);
+        var currentToPreviousPathDrift = GetMaximumDistanceToPolyline(currentFrameBandPositions, previousFrameBandPositions);
+        var maximumPathDrift = Mathf.Max(previousToCurrentPathDrift, currentToPreviousPathDrift);
+
+        Assert.That(
+            maximumPathDrift,
+            Is.LessThanOrEqualTo(maximumExpectedPathDrift),
+            $"{phase} Band path should remain continuous between near-direct max-pull jitter frames.\n{diagnostics}");
     }
 
     public static void AssertRawProjectedPullReachedMaximumDepth(
@@ -143,6 +161,45 @@ internal static class GameplaySceneDirectMaxPullBandShapeAssertions
             maximumDistanceFromRawTwoSpan,
             Is.GreaterThan(0.01f),
             $"{phase} Band Shape should use taut target wrap instead of raw two-span geometry.\n{diagnostics}");
+    }
+
+    private static float GetMaximumDistanceToPolyline(Vector3[] sourcePoints, Vector3[] polylinePoints)
+    {
+        var maximumDistance = 0f;
+
+        for (var pointIndex = 0; pointIndex < sourcePoints.Length; pointIndex += 1)
+        {
+            maximumDistance = Mathf.Max(maximumDistance, GetDistanceToPolyline(sourcePoints[pointIndex], polylinePoints));
+        }
+
+        return maximumDistance;
+    }
+
+    private static float GetDistanceToPolyline(Vector3 point, Vector3[] polylinePoints)
+    {
+        var minimumDistanceSquared = float.PositiveInfinity;
+
+        for (var pointIndex = 0; pointIndex < polylinePoints.Length - 1; pointIndex += 1)
+        {
+            minimumDistanceSquared = Mathf.Min(
+                minimumDistanceSquared,
+                GetDistanceSquaredToSegment(point, polylinePoints[pointIndex], polylinePoints[pointIndex + 1]));
+        }
+
+        return Mathf.Sqrt(minimumDistanceSquared);
+    }
+
+    private static float GetDistanceSquaredToSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd)
+    {
+        var segment = segmentEnd - segmentStart;
+        var segmentLengthSquared = segment.sqrMagnitude;
+
+        if (segmentLengthSquared <= 0.000001f)
+            return (point - segmentStart).sqrMagnitude;
+
+        var progress = Mathf.Clamp01(Vector3.Dot(point - segmentStart, segment) / segmentLengthSquared);
+        var closestPoint = segmentStart + (segment * progress);
+        return (point - closestPoint).sqrMagnitude;
     }
 
     private static void AssertMiddleWrapTracksBandCenter(

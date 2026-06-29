@@ -81,6 +81,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                 if (previousFrameBandPositions != null)
                 {
                     AssertBandShapeStableFromPreviousFrame(
+                        context,
                         previousFrameBandPositions,
                         activeBandPositions,
                         requestedPullOffset - observedPullOffsets[frameIndex - 1],
@@ -188,6 +189,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                                              - ProjectOffset(previousRawProjectedPullPoint, context.Geometry);
 
                     AssertBandShapeStableFromPreviousFrame(
+                        context,
                         previousFrameBandPositions,
                         activeBandPositions,
                         rawPullOffsetDelta,
@@ -308,6 +310,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                                                  - ProjectOffset(previousRawProjectedPullPoint, context.Geometry);
 
                         AssertBandShapeStableFromPreviousFrame(
+                            context,
                             previousFrameBandPositions,
                             activeBandPositions,
                             rawPullOffsetDelta,
@@ -322,6 +325,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                     else
                     {
                         AssertBandShapeStableFromPreviousFrame(
+                            context,
                             referenceBandPositionsByJitter[jitterIndex],
                             activeBandPositions,
                             0f,
@@ -452,6 +456,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                                                      - ProjectOffset(previousRawProjectedPullPoint, context.Geometry);
 
                             AssertBandShapeStableFromPreviousFrame(
+                                context,
                                 previousFrameBandPositions,
                                 activeBandPositions,
                                 rawPullOffsetDelta,
@@ -466,6 +471,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
                         else
                         {
                             AssertBandShapeStableFromPreviousFrame(
+                                context,
                                 referenceBandPositionsBySideAndJitter[sideIndex][jitterIndex],
                                 activeBandPositions,
                                 0f,

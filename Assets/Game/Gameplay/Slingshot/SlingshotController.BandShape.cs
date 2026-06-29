@@ -42,12 +42,17 @@ namespace Game.Gameplay.Slingshot
         private bool TryWriteBandShape(Vector3 pullPoint, Vector3[] buffer)
         {
             var shapeQuery = CreateBandShapeQuery(pullPoint);
-            var radius = GetRenderedBandSolverRadius();
-            var solved = _renderedBandShapeProvider.TryCreateRenderedBandShape(shapeQuery, radius, buffer, out var pointCount);
+            var renderedBandRadius = GetRenderedBandRadius();
+            var solved = _renderedBandShapeProvider.TryCreateRenderedBandShape(shapeQuery, renderedBandRadius, buffer, out var pointCount);
             return solved && pointCount == buffer.Length;
         }
 
-        private float GetRenderedBandSolverRadius()
+        private float GetRenderedBandRadius()
+        {
+            return _view.VisibleBandRadius;
+        }
+
+        private float GetBandTargetClearanceRadius()
         {
             return _view.VisibleBandRadius + _config.BandContactPadding;
         }
@@ -198,7 +203,7 @@ namespace Game.Gameplay.Slingshot
             }
 
             var currentDepth = GetPullDistance(recoilPullPoint);
-            var minimumClearDepth = Mathf.Max(0f, maximumDepth + _view.VisibleBandRadius + _config.BandContactPadding);
+            var minimumClearDepth = Mathf.Max(0f, maximumDepth + GetBandTargetClearanceRadius());
 
             if (currentDepth >= minimumClearDepth)
                 return recoilPullPoint;

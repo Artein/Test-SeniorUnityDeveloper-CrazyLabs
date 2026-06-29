@@ -378,7 +378,7 @@ public sealed class SlingshotControllerTests
         Assert.That(_bandShapeProvider.Queries, Has.Count.EqualTo(1));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedPullPoint));
         Assert.That(_bandShapeProvider.RenderedBandRadii, Has.Count.EqualTo(1));
-        Assert.That(_bandShapeProvider.RenderedBandRadii[^1], Is.EqualTo(_view.VisibleBandRadius + _config.BandContactPadding));
+        Assert.That(_bandShapeProvider.RenderedBandRadii[^1], Is.EqualTo(_view.VisibleBandRadius));
         Assert.That(_view.LastActivePullVisual.PullDistance, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(expectedPullPoint.x).Within(0.0001f));
         Assert.That(_view.LastActivePullVisual.PullOffset, Is.EqualTo(1f).Within(0.0001f));

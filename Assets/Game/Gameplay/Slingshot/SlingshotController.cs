@@ -488,7 +488,7 @@ namespace Game.Gameplay.Slingshot
 
         private float GetRenderedAnchorCorridorClearance()
         {
-            return GetRenderedBandSolverRadius() * 3f;
+            return GetBandTargetClearanceRadius() * 3f;
         }
 
         private float GetLateralPullScale(float pullDistance)
