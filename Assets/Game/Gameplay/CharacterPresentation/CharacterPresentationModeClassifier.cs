@@ -25,6 +25,12 @@ namespace Game.Gameplay.CharacterPresentation
                     input.AcceptedRunResultSucceeded ? CharacterPresentationMode.Victory : CharacterPresentationMode.Defeat);
             }
 
+            if (input.HasActivePull)
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.PullAnticipation);
+
+            if (input.HasLaunchPush && input.LaunchPushElapsedSeconds < Mathf.Max(0f, _tuning.LaunchPushMinimumSeconds))
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.LaunchPush);
+
             if (input.IsPreLaunch || !input.IsRunActive)
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Idle);
 

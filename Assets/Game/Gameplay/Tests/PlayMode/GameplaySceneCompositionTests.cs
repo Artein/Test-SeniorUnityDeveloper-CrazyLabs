@@ -86,6 +86,10 @@ public sealed class GameplaySceneCompositionTests
         var resolvedCharacterPresentationView = lifetimeScope.Container.Resolve<ICharacterPresentationView>();
         var resolvedCharacterPresentationTuning = lifetimeScope.Container.Resolve<ICharacterPresentationTuning>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
+        var resolvedSlingshotActivePullNotifier = lifetimeScope.Container.Resolve<ISlingshotActivePullNotifier>();
+        var resolvedSlingshotCaptureLifecycleNotifier = lifetimeScope.Container.Resolve<ISlingshotCaptureLifecycleNotifier>();
+        var resolvedSlingshotPresentationContextSource = lifetimeScope.Container.Resolve<ISlingshotPresentationContextSource>();
+        var resolvedSlingshotPullOffsetNormalizer = lifetimeScope.Container.Resolve<ISlingshotPullOffsetNormalizer>();
         var resolvedRunEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
         var resolvedRunCameraAnchor = lifetimeScope.Container.Resolve<IRunCameraAnchor>();
         var resolvedRunCameraRig = lifetimeScope.Container.Resolve<IRunCameraRig>();
@@ -165,6 +169,10 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
+        Assert.That(resolvedSlingshotActivePullNotifier, Is.Not.Null);
+        Assert.That(resolvedSlingshotCaptureLifecycleNotifier, Is.Not.Null);
+        Assert.That(resolvedSlingshotPresentationContextSource, Is.Not.Null);
+        Assert.That(resolvedSlingshotPullOffsetNormalizer, Is.Not.Null);
         Assert.That(resolvedRunEndCandidateReceiver, Is.Not.Null);
         Assert.That(resolvedRunCameraAnchor, Is.SameAs(runCameraAnchor));
         Assert.That(resolvedRunCameraRig, Is.SameAs(runCameraRig));
@@ -185,6 +193,12 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(characterAnimator.runtimeAnimatorController, Is.Not.Null);
         Assert.That(characterAnimator.avatar, Is.Not.Null);
         Assert.That(characterAnimator.applyRootMotion, Is.False);
+        AssertAnimatorParameter(characterAnimator, "PresentationMode", AnimatorControllerParameterType.Int);
+        AssertAnimatorParameter(characterAnimator, "PlaybackSpeedMultiplier", AnimatorControllerParameterType.Float);
+        AssertAnimatorParameter(characterAnimator, "NormalizedPull", AnimatorControllerParameterType.Float);
+        AssertAnimatorParameter(characterAnimator, "NormalizedLaunchPower", AnimatorControllerParameterType.Float);
+        AssertAnimatorParameter(characterAnimator, "NormalizedPullOffset", AnimatorControllerParameterType.Float);
+        AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
         Assert.That(characterAnimationEventReceiver, Is.Not.Null);
         Assert.That(characterAnimationEventReceiver.transform, Is.SameAs(characterAnimator.transform));
 
@@ -741,6 +755,14 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(contact, Is.Not.Null, placeholder.name);
         Assert.That(contact.Category, Is.EqualTo(expectedCategory), placeholder.name);
         Assert.That(contact.gameObject, Is.SameAs(collider.gameObject), placeholder.name);
+    }
+
+    private void AssertAnimatorParameter(Animator animator, string parameterName, AnimatorControllerParameterType parameterType)
+    {
+        Assert.That(
+            animator.parameters.Any(parameter => parameter.name == parameterName && parameter.type == parameterType),
+            Is.True,
+            $"{animator.name} Animator should contain {parameterType} parameter '{parameterName}'.");
     }
 
     private void AssertPoleFramesAnchor(GameObject pole, Transform anchor, Vector3 anchorPosition, string poleName)

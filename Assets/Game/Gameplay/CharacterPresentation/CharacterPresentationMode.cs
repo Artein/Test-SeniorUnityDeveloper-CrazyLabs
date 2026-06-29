@@ -3,10 +3,12 @@ namespace Game.Gameplay.CharacterPresentation
     public enum CharacterPresentationMode
     {
         Idle = 0,
-        Slide = 1,
-        Run = 2,
-        Airborne = 3,
-        Victory = 4,
-        Defeat = 5
+        PullAnticipation = 1,
+        LaunchPush = 2,
+        Slide = 3,
+        Run = 4,
+        Airborne = 5,
+        Victory = 6,
+        Defeat = 7
     }
 }

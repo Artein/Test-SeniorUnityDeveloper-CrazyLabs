@@ -134,6 +134,77 @@ _Avoid_: Orchestrator, state controller
 The designer-tweakable presentation workflow around a valid **Launch**.
 _Avoid_: Launch logic, state transition
 
+**Launch Push**:
+The early character-presentation interval after a valid **Launch** is applied, while the **Launch Target** is still visually being pushed away from
+the **Slingshot** before normal grounded or airborne locomotion presentation takes over.
+_Avoid_: Slingshot push phase, band phase, launch one-shot
+
+**Pull Anticipation**:
+The character-presentation interval while an **Active Pull** holds the **Launch Target** before **Pull Release**.
+_Avoid_: Dragged, held, slingshot pull mode
+
+**Normalized Pull**:
+The normalized strength of the current **Active Pull**.
+_Avoid_: Launch time, animation progress, elapsed time
+
+**Normalized Launch Power**:
+The normalized strength of the accepted **Launch**, captured from the final **Pull Release**.
+_Avoid_: Launch time, animation progress, elapsed time
+
+**Normalized Pull Offset**:
+The signed normalized lateral offset of the current **Active Pull**.
+_Avoid_: Raw Pull Offset, world-space offset, steering force
+
+`0` means centered, `-1` means fully clamped to the current effective left pull limit, and `1` means fully clamped to the current effective right pull
+limit. The denominator is the effective side-specific pull limit from current slingshot geometry/config at the current pull depth, not raw
+`MaximumLateralPull` alone.
+
+**Normalized Launch Offset**:
+The signed normalized lateral offset of the accepted **Launch**, captured from the final **Pull Release**.
+_Avoid_: Raw Pull Offset, world-space offset, steering force
+
+`0` means centered, `-1` means fully clamped to the effective left pull limit at release, and `1` means fully clamped to the effective right pull
+limit at release.
+
+**Slingshot Pull Offset Normalizer**:
+The slingshot-owned calculation that maps raw **Pull Offset** and **Pull** depth through current slingshot geometry/config into signed normalized
+lateral pull values.
+_Avoid_: character offset normalizer, Animator offset normalizer, presentation-only offset math
+
+**Slingshot Presentation Context Source**:
+The slingshot-owned read-only source of presentation-facing facts for **Pull Anticipation** and **Launch Push** after slingshot validation.
+_Avoid_: Input state, slingshot view state, gameplay state service
+
+**Slingshot Presentation Context**:
+The immutable current read model exposed by **Slingshot Presentation Context Source** to **Character Presentation Presenter**.
+_Avoid_: mutable slingshot state, animator frame, launch request
+
+First-slice fields are `HasActivePull`, `NormalizedPull`, `NormalizedPullOffset`, `HasLaunchPush`, `LaunchPushElapsedSeconds`,
+`NormalizedLaunchPower`, and `NormalizedLaunchOffset`.
+
+**Slingshot Active Pull Notifier**:
+The slingshot-owned event source that publishes validated **Active Pull** changes and clear events after input projection, pull clamping, and
+slingshot validation.
+_Avoid_: pointer input stream, slingshot view state, touch indicator state
+
+First-slice shape is C# events on a notifier interface: `ActivePullChanged` with **Slingshot Active Pull Context** and `ActivePullCleared` without
+payload. This is not a `UnityEvent`, global event bus, or **Slingshot View** call.
+
+First-slice event invocation uses the project `InvokeSafely` extension.
+
+**Slingshot Capture Lifecycle Notifier**:
+The slingshot-owned event source that publishes capture enabled/disabled lifecycle edges after the **Slingshot** has changed capture readiness.
+_Avoid_: gameplay state observer, pre-launch state poller, reset guess
+
+First-slice events are `CaptureEnabled` and `CaptureDisabled` without payload.
+
+**Slingshot Active Pull Context**:
+The small value payload published by **Slingshot Active Pull Notifier** for one validated **Active Pull** update.
+_Avoid_: SlingshotPullVisual, band shape payload, touch indicator payload
+
+First-slice fields are **Normalized Pull** and **Normalized Pull Offset**. Raw pull distance or raw **Pull Offset** may be retained only for
+diagnostics; **Band Shape** and **Touch Indicator** data are not part of this context.
+
 **Unity Input**:
 The shared adapter that turns Unity input sources into project input concepts.
 _Avoid_: Touch manager, input singleton
@@ -274,7 +345,12 @@ project-specific Animator wiring, presentation tuning, scene alignment, or gamep
 The current appearance mode selected for a **Character** from gameplay and motion context.
 _Avoid_: Gameplay State, physics state, Animator state
 
-First-slice values: `Idle`, `Slide`, `Run`, `Airborne`, `Victory`, `Defeat`.
+First-slice values: `Idle`, `PullAnticipation`, `LaunchPush`, `Slide`, `Run`, `Airborne`, `Victory`, `Defeat`.
+`PullAnticipation` and `LaunchPush` map to dedicated Animator Controller states or blend trees selected by `PresentationMode`; they are not Animator
+triggers and do not route through `Slide` or `Run`.
+First-slice transitions into `PullAnticipation` and `LaunchPush` do not wait for Animator clip exit time. `PullAnticipation` may enter from any
+eligible mode through a short or immediate transition, `LaunchPush` enters immediately after an accepted **Launch**, and `LaunchPush` hands off to
+locomotion through a short fixed transition after classification allows locomotion. Slide/run transition smoothing remains locomotion-specific.
 
 **Character Presentation Mode Classifier**:
 The plain C# decision logic that selects one **Character Presentation Mode** from gameplay, motion, and **Run Surface Context** facts.
@@ -284,8 +360,8 @@ In the first slice, the classifier accepts `CharacterPresentationClassificationI
 Diagnostic logging may observe mode changes and explain them, but diagnostic reasons are not part of the classification result, **Character
 Presentation Frame**, view, or Animator contract.
 
-First-slice classification priority: terminal victory, terminal defeat, pre-launch idle, run-active airborne after ungrounded debounce, run-active
-slide, run-active run, fallback idle.
+First-slice classification priority: terminal victory, terminal defeat, pull anticipation, launch push, pre-launch idle, run-active airborne after
+ungrounded debounce, run-active slide, run-active run, fallback idle.
 
 First-slice slide/run switching uses hysteresis and a minimum locomotion mode duration so near-flat slopes and noisy contact normals do not flip the
 **Character Presentation Mode** every few frames.
@@ -304,10 +380,10 @@ classification picks `Slide`, `Run`, or fallback `Idle` on that tick. There is n
 The immutable fact bundle supplied to a **Character Presentation Mode Classifier** for one classification.
 _Avoid_: Animator parameter payload, view frame, long argument list
 
-First-slice payload: `CharacterPresentationMode CurrentMode`, `float CurrentModeElapsedSeconds`, `float UngroundedElapsedSeconds`, `IsPreLaunch`,
-`IsRunActive`, `HasRunEnded`, `HasFinished`, `RunSurfaceContext SurfaceContext`, `float CoursePlanarSpeed`, `float CourseForwardSpeed`, and
-`Vector3 LinearVelocity`. The presenter translates gameplay state into these presentation-facing facts; raw `GameplayStateId` is not part of the
-classification input.
+First-slice payload: `CharacterPresentationMode CurrentMode`, `float CurrentModeElapsedSeconds`, `float UngroundedElapsedSeconds`, `HasActivePull`,
+`HasLaunchPush`, `float LaunchPushElapsedSeconds`, `IsPreLaunch`, `IsRunActive`, `HasRunEnded`, `HasFinished`,
+`RunSurfaceContext SurfaceContext`, `float CoursePlanarSpeed`, `float CourseForwardSpeed`, and `Vector3 LinearVelocity`. The presenter translates
+gameplay state and slingshot presentation context into these presentation-facing facts; raw `GameplayStateId` is not part of the classification input.
 `HasRunEnded` comes from gameplay lifecycle context. `HasFinished` is true only when `HasRunEnded` is true, the presenter has an accepted
 current-run **Run Result**, and that result is successful; no accepted result means no `Victory`.
 
@@ -361,6 +437,7 @@ _Avoid_: Character config, gameplay tuning, abilities config
 
 First-slice locomotion tuning includes slide enter/exit downhill thresholds, run enter/exit speed thresholds, minimum locomotion mode duration, and
 `AirborneEnterDelaySeconds`.
+Launch-presentation tuning includes `LaunchPushMinimumSeconds`, which gates when normal locomotion may resume after **Launch Push** starts.
 First-slice playback tuning includes separate run and slide reference speeds plus minimum and maximum playback speed multipliers.
 In the first slice, tuning is exposed through `ICharacterPresentationTuning` from the same prefab-owned `CharacterPresentationView` MonoBehaviour
 that also implements `ICharacterPresentationView`; the presenter depends on the two read-only contracts, not on a separate config asset.
@@ -490,10 +567,23 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Character** has one current **Character Presentation Mode**.
 - A **Character Presentation Mode** is derived from gameplay and motion context.
 - A **Character Presentation Mode** is not a **Gameplay State**.
+- **Pull Anticipation** is represented as a **Character Presentation Mode**.
+- **Launch Push** is represented as a **Character Presentation Mode**.
+- **Pull Anticipation** maps to a dedicated Animator Controller state or blend tree.
+- **Launch Push** maps to a dedicated Animator Controller state or blend tree.
+- **Pull Anticipation** and **Launch Push** are selected through `PresentationMode`, not through Animator triggers.
+- **Pull Anticipation** and **Launch Push** do not route through `Slide` or `Run`.
+- **Pull Anticipation** may enter from any eligible **Character Presentation Mode** without waiting for Animator clip exit time.
+- **Launch Push** enters immediately after an accepted **Launch** without waiting for Animator clip exit time.
+- **Launch Push** hands off to locomotion through a short fixed Animator transition after classification allows locomotion.
+- Slide/run Animator transition smoothing remains locomotion-specific.
 - A **Character Presentation Mode Classifier** selects one **Character Presentation Mode**.
 - A **Character Presentation Mode Classifier** consumes one **Character Presentation Classification Input**.
 - A **Character Presentation Mode Classifier** returns one **Character Presentation Classification Result**.
-- A **Character Presentation Mode Classifier** gives terminal modes priority over pre-launch and locomotion modes.
+- A **Character Presentation Mode Classifier** gives terminal modes priority over **Pull Anticipation**, **Launch Push**, pre-launch, and locomotion
+  modes.
+- A **Character Presentation Mode Classifier** gives **Pull Anticipation** priority over **Launch Push** and locomotion modes.
+- A **Character Presentation Mode Classifier** gives **Launch Push** priority over locomotion modes until its handoff guard is satisfied.
 - A **Character Presentation Mode Classifier** gives pre-launch idle priority over stale motion facts.
 - A **Character Presentation Mode Classifier** evaluates grounded locomotion only while a run is active.
 - A **Character Presentation Mode Classifier** debounces `Airborne` entry through ungrounded elapsed time.
@@ -505,6 +595,11 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Character Presentation Mode Classifier** does not consume `IGameplayStateService`.
 - A **Character Presentation Mode Classifier** does not consume `GameplayStateId`.
 - A **Character Presentation Classification Input** contains presentation-facing lifecycle facts.
+- A **Character Presentation Classification Input** contains **Pull Anticipation** and **Launch Push** facts from **Slingshot Presentation Context
+  Source**.
+- A **Character Presentation Classification Input** uses **Active Pull** presence and **Launch Push** presence/timing for mode selection.
+- A **Character Presentation Classification Input** does not use **Normalized Pull**, **Normalized Launch Power**, **Normalized Pull Offset**, or
+  **Normalized Launch Offset** for first-slice mode selection.
 - A **Character Presentation Classification Input** contains current **Character Presentation Mode** and elapsed mode time.
 - A **Character Presentation Classification Input** contains ungrounded elapsed time for airborne debounce.
 - A **Character Presentation Classification Input** contains **Course Planar Speed** for playback scaling.
@@ -519,7 +614,24 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Character Presentation Frame** does not include raw or normalized movement speed in the first slice.
 - A **Character Presentation Frame** does not include `IsAirborneGrace` in the first slice.
 - A **Character Presentation Frame** may include **Playback Speed Multiplier**.
+- A **Character Presentation Frame** may include **Normalized Pull**, **Normalized Launch Power**, **Normalized Pull Offset**, and
+  **Normalized Launch Offset** for slingshot-driven character presentation.
+- A **Character Presentation Frame** zeros inactive slingshot-driven presentation values.
+- During **Pull Anticipation**, a **Character Presentation Frame** may carry **Normalized Pull** and **Normalized Pull Offset** while
+  **Normalized Launch Power** and **Normalized Launch Offset** are zero.
+- During **Launch Push**, a **Character Presentation Frame** may carry **Normalized Launch Power** and **Normalized Launch Offset** while
+  **Normalized Pull** and **Normalized Pull Offset** are zero.
+- Outside **Pull Anticipation** and **Launch Push**, a **Character Presentation Frame** carries zero values for **Normalized Pull**,
+  **Normalized Launch Power**, **Normalized Pull Offset**, and **Normalized Launch Offset**.
+- A **Character Presentation View** consumes slingshot-driven presentation values from **Character Presentation Frame**.
+- A **Character Presentation View** does not read **Slingshot Presentation Context Source** directly.
 - **Playback Speed Multiplier** is an Animator parameter in the first slice.
+- **Normalized Pull** is a distinct Animator float parameter in the first slice.
+- **Normalized Launch Power** is a distinct Animator float parameter in the first slice.
+- **Normalized Pull Offset** is a distinct Animator float parameter in the first slice.
+- **Normalized Launch Offset** is a distinct Animator float parameter in the first slice.
+- **Normalized Pull**, **Normalized Launch Power**, **Normalized Pull Offset**, and **Normalized Launch Offset** are not collapsed into generic
+  slingshot strength or offset Animator parameters in the first slice.
 - **Playback Speed Multiplier** does not use global `Animator.speed` in the first slice.
 - **Playback Speed Multiplier** is computed by the **Character Presentation Presenter** from **Course Planar Speed** and current mode reference speed.
 - **Playback Speed Multiplier** keeps locomotion scaling while airborne grace preserves `Slide` or `Run`.
@@ -578,7 +690,8 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Character Presentation View** does not receive **Run End Reason** in the first slice.
 - A **Character Presentation View** does not receive **Run Result** in the first slice.
 - A **Character Presentation View** does not receive raw **Run Surface Context** slope facts in the first slice.
-- A **Character Presentation View** may serialize Animator parameter references for `PresentationMode` and `PlaybackSpeedMultiplier`.
+- A **Character Presentation View** may serialize Animator parameter references for `PresentationMode`, `PlaybackSpeedMultiplier`,
+  `NormalizedPull`, `NormalizedLaunchPower`, `NormalizedPullOffset`, and `NormalizedLaunchOffset`.
 - A **Character Presentation View** does not serialize concrete Animator state references in the first slice.
 - A **Character Presentation View** does not receive landing cues in the first slice.
 - A **Character Presentation View** does not own gameplay or physics orchestration.
@@ -596,6 +709,101 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Gameplay State Transition** identifies one allowed change between two **Gameplay States**.
 - **Gameplay Flow** changes the current **Gameplay State**.
 - A **Launch Sequence** presents a valid **Launch**.
+- A **Launch Sequence** may include **Launch Push**.
+- **Launch Push** is separate from **Band Release Recoil**.
+- **Launch Push** affects **Character Presentation** and does not decide launch physics.
+- **Launch Push** lifetime is independent from **Band Release Recoil** lifetime.
+- **Launch Push** starts from the applied **Launch** edge and should not stretch or cut itself based on **Band Release Recoil** clearance.
+- **Normalized Launch Power** may tune **Launch Push** animation intensity, but it is not the **Launch Push** exit condition.
+- `LaunchPushMinimumSeconds` may gate when normal locomotion can resume after **Launch Push** starts.
+- An **Active Pull** may drive **Pull Anticipation**.
+- **Pull Anticipation** affects **Character Presentation** and does not decide pull geometry or launch physics.
+- **Normalized Pull** may tune **Pull Anticipation** animation intensity, but it is not an animation timeline.
+- **Pull Anticipation** and **Launch Push** facts should come from slingshot-owned lifecycle/presentation context after slingshot validation.
+- **Pull Anticipation** should not be inferred from raw **Pointer Input**.
+- **Pull Anticipation** should not be inferred from **Slingshot View** state.
+- A **Slingshot Active Pull Notifier** publishes validated **Active Pull** changes and active-pull clear events.
+- A **Slingshot Active Pull Notifier** publishes **Slingshot Active Pull Context** on active-pull changes.
+- **Slingshot Active Pull Notifier** publishing means raising C# events on the notifier interface.
+- **Slingshot Active Pull Notifier** events are raised through the project `InvokeSafely` extension.
+- A **Slingshot Active Pull Notifier** may be implemented by `SlingshotController` in the first slice.
+- A **Slingshot Capture Lifecycle Notifier** publishes capture readiness/reset edges, not active-pull values.
+- A **Slingshot Capture Lifecycle Notifier** is separate from **Slingshot Active Pull Notifier** even if both are implemented by the same slingshot
+  component in the first slice.
+- A **Slingshot Capture Lifecycle Notifier** publishes first-slice `CaptureEnabled` and `CaptureDisabled` events without payload.
+- `CaptureEnabled` is emitted after capture setup is committed, including geometry refresh, target hold/rest alignment, and capture idle view update.
+- `CaptureDisabled` is emitted exactly once when capture becomes disabled, including disable paths that return early because launch handoff or release
+  recoil is pending.
+- Capture lifecycle events are not emitted for no-op same-state capture calls.
+- **Slingshot Active Pull Context** contains normalized pull presentation facts, not slingshot view geometry.
+- **Slingshot Active Pull Context** does not include **Band Shape** or **Touch Indicator** screen position.
+- `SlingshotPullVisual` remains a slingshot view payload.
+- A valid **Pull Release** that becomes an accepted **Launch** keeps **Pull Anticipation** context visible until **Launch Push** starts.
+- An invalid, weak, forward-only, or canceled **Pull Release** clears **Pull Anticipation** context immediately.
+- `LaunchApplied` is the handoff edge that clears live **Active Pull** context and starts **Launch Push** context.
+- `CancelActivePullToCaptureIdle()` raises `ActivePullCleared` through `InvokeSafely` when a live validated **Active Pull** stops because of invalid
+  pull visual, invalid band shape, weak release, or pointer cancellation.
+- A valid **Pull Release** that becomes an accepted **Launch** does not raise `ActivePullCleared` immediately; **Capture Disabled** clears live pull
+  context before `LaunchApplied` starts **Launch Push**.
+- Ignored pointer input without a live **Active Pull** does not raise `ActivePullCleared`.
+- A **Slingshot Presentation Context Source** consumes **Slingshot Active Pull Notifier** events for live **Active Pull** facts.
+- A **Slingshot Presentation Context Source** may consume `SlingshotLaunchRequest` at the `LaunchApplied` edge for accepted **Launch** facts in the
+  first slice.
+- `SlingshotLaunchRequest` is mapped into presentation facts by **Slingshot Presentation Context Source**; it is not exposed to **Character
+  Presentation Presenter** or **Character Presentation View**.
+- A **Slingshot Presentation Context Source** provides **Pull Anticipation** and **Launch Push** facts to **Character Presentation Presenter**.
+- A **Slingshot Presentation Context Source** exposes current facts as one immutable **Slingshot Presentation Context** value.
+- A **Slingshot Presentation Context** contains `HasActivePull`, `NormalizedPull`, `NormalizedPullOffset`, `HasLaunchPush`,
+  `LaunchPushElapsedSeconds`, `NormalizedLaunchPower`, and `NormalizedLaunchOffset`.
+- A **Slingshot Presentation Context Source** zeroes inactive pull and launch channels before exposing **Slingshot Presentation Context**.
+- A **Character Presentation Presenter** may copy **Slingshot Presentation Context** facts into **Character Presentation Classification Input** and
+  **Character Presentation Frame** without stale-value checks.
+- A **Slingshot Presentation Context Source** exposes **Normalized Pull** for live **Active Pull** intensity and **Normalized Launch Power** for frozen
+  accepted **Launch** intensity.
+- A **Slingshot Presentation Context Source** exposes **Normalized Pull Offset** for live **Active Pull** lateral intent and **Normalized Launch Offset**
+  for frozen accepted **Launch** lateral intent.
+- **Normalized Pull Offset** and **Normalized Launch Offset** use the effective side-specific allowed pull offset, including slingshot geometry limits
+  and depth-based lateral ramp.
+- **Normalized Pull Offset** and **Normalized Launch Offset** do not use raw `MaximumLateralPull` as their only denominator.
+- A **Slingshot Pull Offset Normalizer** owns the shared slingshot-side calculation for **Normalized Pull Offset** and **Normalized Launch Offset**.
+- A **Slingshot Pull Offset Normalizer** belongs to **Slingshot** language, not **Character Presentation** language.
+- `SlingshotController` may use **Slingshot Pull Offset Normalizer** for pull clamping and **Slingshot Active Pull Context**.
+- A **Slingshot Presentation Context Source** may use **Slingshot Pull Offset Normalizer** when mapping `SlingshotLaunchRequest` into frozen
+  **Launch Push** presentation facts.
+- A **Slingshot Presentation Context Source** exposes **Launch Push** presence and launch-push elapsed time for the current accepted **Launch**.
+- A **Slingshot Presentation Context Source** owns the `LaunchPushElapsedSeconds` timer.
+- `LaunchPushElapsedSeconds` starts at `0f` on `LaunchApplied`, increments through injected `ITime` while `HasLaunchPush` is true, and resets on
+  `CaptureEnabled`.
+- A **Character Presentation Presenter** reads `LaunchPushElapsedSeconds` from **Slingshot Presentation Context Source**; it does not increment that
+  timer itself.
+- A **Slingshot Presentation Context Source** does not decide whether the selected **Character Presentation Mode** is still `LaunchPush`.
+- **Launch Push** presence is reset by pre-launch recapture or new-run lifecycle reset, not by **Band Release Recoil** completion.
+- A **Slingshot Presentation Context Source** consumes **Slingshot Capture Lifecycle Notifier** events to reset latched pull/launch presentation context.
+- A **Slingshot Presentation Context Source** should not inject gameplay state ids just to reset slingshot-owned presentation context.
+- **Capture Enabled** clears live **Active Pull** context and latched **Launch Push** context after the slingshot rig has been reset/recaptured.
+- **Capture Disabled** clears live **Active Pull** context but does not end **Launch Push** by itself.
+- `SlingshotInstaller` registers slingshot-owned runtime services and notifier interfaces.
+- `SlingshotController` is the first-slice implementation behind `ISlingshotCapture`, `ISlingshotLaunchNotifier`, `ISlingshotActivePullNotifier`,
+  and `ISlingshotCaptureLifecycleNotifier`.
+- `SlingshotPresentationContextSource` is registered as a slingshot-owned entry point/singleton exposed through
+  `ISlingshotPresentationContextSource`, and implements VContainer `IInitializable`, `ITickable`, and `IDisposable`.
+- `SlingshotPullOffsetNormalizer` is registered as a singleton pure service exposed through `ISlingshotPullOffsetNormalizer`.
+- `GameplayLifetimeScope` should not gain scene serialized references for pure slingshot presentation services.
+- Slingshot presentation source tests use focused EditMode fakes for slingshot notifiers and `ITime`.
+- Composition tests resolve the new slingshot interfaces from the container and verify controller-backed notifier interfaces come from the same
+  logical slingshot source.
+- A **Slingshot Presentation Context Source** does not select **Character Presentation Mode** directly.
+- Terminal **Character Presentation Mode** values outrank **Pull Anticipation**, **Launch Push**, and locomotion modes.
+- **Pull Anticipation** outranks **Launch Push** and locomotion modes while a validated **Active Pull** is present.
+- **Launch Push** outranks locomotion modes until its minimum handoff guard allows normal presentation to resume.
+- **Character Presentation Mode Classifier** regression tests prove **Pull Anticipation** beats downhill `Slide`, **Launch Push** beats downhill
+  `Slide` and flat-forward `Run` before `LaunchPushMinimumSeconds`, normal locomotion resumes after that guard, and terminal modes still outrank
+  slingshot modes.
+- **Character Presentation Presenter** regression tests prove it reads **Slingshot Presentation Context Source**, forwards pull/launch-push facts into
+  **Character Presentation Classification Input**, and copies normalized pull/launch values into **Character Presentation Frame**.
+- **Slingshot Presentation Context Source** regression tests prove `LaunchApplied` starts **Launch Push** at elapsed `0f`, ticks elapsed time through
+  injected `ITime`, `CaptureEnabled` resets pull and launch-push context, and `CaptureDisabled` clears live pull without clearing the launch-push
+  latch.
 - **Unity Input** produces **Pointer Input**.
 - A **Slingshot** consumes **Pointer Input** during **Pre-Launch**.
 - A **Pull** belongs to one active **Slingshot**.
@@ -772,7 +980,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 > **Domain expert:** "No — while grace preserves `Slide` or `Run`, it still uses that locomotion mode's playback scaling. Switch to `1f` only when the selected mode is actually `Airborne`."
 
 > **Dev:** "Should the first-slice character view expose SaintsField `AnimatorState` fields?"
-> **Domain expert:** "No — use SaintsField `AnimatorParam` fields for `PresentationMode` and `PlaybackSpeedMultiplier` only. The Animator Controller owns states and transitions."
+> **Domain expert:** "No — use SaintsField `AnimatorParam` fields for frame-owned Animator parameters. The Animator Controller owns states and transitions."
 
 > **Dev:** "Can a Ladybug slide or run clip move the **Launch Target** through root motion?"
 > **Domain expert:** "No — the Rigidbody owns world movement. The Animator is visual-only: disable `Animator.applyRootMotion`, keep clips in-place for gameplay movement, and let authored offsets affect only the visual child hierarchy."
@@ -874,7 +1082,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "`ModelRoot`", "mesh root", "avatar root", and imported-model alignment root resolve to **Character Model Root**, not **Character Visual Anchor** or the `LadybugCharacter` prefab root.
 - The `LadybugCharacter` prefab root is the stable presentation contract root; imported model local offsets belong under **Character Model Root**.
 - "Slide", "run", "airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance or animation, not to **Gameplay State**.
-- "Held" resolves to `Idle` when discussing first-slice **Character Presentation Mode**.
+- "Held" resolves to `Idle` when no **Active Pull** is changing the character presentation; live pulled presentation resolves to **Pull Anticipation**.
 - "Character config", "Ladybug config", and slide/run threshold data resolve to **Character Presentation Tuning** when discussing presentation-only values.
 - "`ICharacterPresentationView`" and "`ICharacterPresentationTuning`" are separate read-only contracts; in the first slice both can resolve to the same passive `CharacterPresentationView` MonoBehaviour instance.
 - "CharacterRunContactClassifier" and character-specific contact classification resolve to **Run Surface Context** plus **Character Presentation Mode** selection, not to **RunContactClassifier**.
@@ -888,6 +1096,36 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "Latest Run Result" means current-run accepted result only, not the last terminal result globally.
 - "`GroundSlopeDegrees`", "`ForwardSlopeDegrees`", and raw slope parameters resolve to **Run Surface Context** or classifier diagnostics, not first-slice **Character Presentation Frame** or Animator parameters.
 - "Downhill slope" in first-slice **Run Surface Context** resolves to `ForwardDownhillDegrees`, not generic surface tilt or sideways bank angle.
+- "Slingshot push phase" resolves to **Launch Push**, not **Band Release Recoil** or a gameplay state.
+- "Pull animation", "dragged animation", and "held while dragging" resolve to **Pull Anticipation**, not **Pull Hint** or **Touch Indicator**.
+- "Slingshot presentation source", "pull presentation source", and "launch push source" resolve to **Slingshot Presentation Context Source**.
+- "`SlingshotPresentationContext`" and "`SlingshotPresentationContextSource.Current`" resolve to **Slingshot Presentation Context**.
+- "`ISlingshotActivePullNotifier`", "active-pull notifier", and "pull context notifier" resolve to **Slingshot Active Pull Notifier**.
+- "publish", "published", and "publishing" in slingshot notifier context resolve to raising C# events, not `UnityEvent`, a global event bus, or a
+  view call.
+- "`ISlingshotCaptureLifecycleNotifier`", "capture lifecycle notifier", "slingshot reset notifier", and "recapture notifier" resolve to
+  **Slingshot Capture Lifecycle Notifier**.
+- "`ISlingshotPresentationContextSource`" resolves to **Slingshot Presentation Context Source**.
+- "`ISlingshotPullOffsetNormalizer`" resolves to **Slingshot Pull Offset Normalizer**.
+- "`SlingshotActivePullContext`", "active-pull context payload", and "pull presentation payload" resolve to **Slingshot Active Pull Context**.
+- `SlingshotPullVisual` resolves to a slingshot visual payload, not **Slingshot Active Pull Context**.
+- `ISlingshotView.ShowActivePull` resolves to slingshot visuals only, not the source of **Pull Anticipation** context for character presentation.
+- "`SlingshotLaunchRequest`" resolves to the accepted **Launch** payload that **Slingshot Presentation Context Source** may map into frozen **Launch
+  Push** presentation facts.
+- "Launch presentation payload" is not a separate first-slice term unless `SlingshotLaunchRequest` creates real coupling pressure.
+- "`LaunchApplied`" resolves to the character-presentation handoff edge from **Pull Anticipation** to **Launch Push** for an accepted **Launch**.
+- "Normalized pull progress" resolves to **Normalized Pull** during **Active Pull** and **Normalized Launch Power** after **Launch**; neither term means elapsed animation time.
+- "`NormalizedPower`" on `SlingshotLaunchRequest` resolves to **Normalized Launch Power** in presentation language.
+- "`NormalizedPull`" on `SlingshotPullVisual` resolves to **Normalized Pull** in presentation language.
+- "`NormalizedPullOffset`" resolves to **Normalized Pull Offset** in presentation language.
+- "`NormalizedLaunchOffset`" resolves to **Normalized Launch Offset** in presentation language.
+- "lateral offset normalizer" and "normalized lateral offset calculation" resolve to **Slingshot Pull Offset Normalizer**.
+- Raw `PullOffset` resolves to slingshot geometry units and must be normalized before it is used as first-slice character presentation data.
+- "`SlingshotStrength`" and "`SlingshotOffset`" are too generic for first-slice Animator parameters; use the distinct normalized pull and launch
+  parameter names.
+- "`LaunchPushDurationSeconds`" resolves to `LaunchPushMinimumSeconds` when discussing a minimum handoff guard for **Launch Push**.
+- "`IsLaunchPushActive`" is too close to selected-mode language; use `HasLaunchPush` for classifier input that means a current accepted **Launch** has
+  launch-push context available.
 - "`Steer`" resolves to gameplay control language; use **Lateral Lean** only for visual left/right character presentation.
 - "`IsGrounded`", "`VerticalSpeed`", and raw airborne physics values resolve to classifier inputs, not first-slice **Character Presentation Frame** values.
 - "`MoveSpeed`", "`MoveSpeed01`", raw meters-per-second speed, and normalized speed resolve to presenter diagnostics or future feature-specific presentation terms, not first-slice **Character Presentation Frame** values.
@@ -904,10 +1142,11 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "`AnimatorState`" fields and state-name dropdowns are not first-slice **Character Presentation View** data; add them only if code-driven `CrossFade`/`Play` or explicit state validation becomes a requirement.
 - "Classifier input" resolves to **Character Presentation Classification Input**, not `CharacterPresentationModeInput`.
 - "`GameplayStateId`" is not part of **Character Presentation Classification Input**; the presenter maps gameplay state into presentation-facing lifecycle facts first.
-- "Character presentation lifecycle source" is not needed in the first slice; `CharacterPresentationPresenter` may map `IGameplayStateService` and configured state ids directly.
+- "Character presentation lifecycle source" is not needed for generic gameplay-state mapping in the first slice; `CharacterPresentationPresenter` may map `IGameplayStateService` and configured state ids directly. Slingshot-owned pull/launch presentation facts are a separate source because they require slingshot validation, not raw gameplay state ids.
 - "Classifier result" resolves to **Character Presentation Classification Result**, whose first-slice payload is `CharacterPresentationMode Mode`.
 - "Classifier reason", "mode decision reason", and "why did mode change" resolve to optional diagnostics, not first-slice classification result data passed to the view or Animator.
-- "Classification priority" resolves to terminal modes before pre-launch before run-active locomotion, not to Animator transition priority.
+- "Classification priority" resolves to terminal modes before **Pull Anticipation**, then **Launch Push**, then locomotion modes, not to Animator
+  transition priority.
 - "Slide/run threshold" resolves to hysteresis enter/exit thresholds plus minimum locomotion mode duration, not a single raw slope check.
 - "`Airborne` entry" resolves to presentation debounce using `UngroundedElapsedSeconds` and `AirborneEnterDelaySeconds`, not a one-frame missing-ground probe.
 - "`Airborne` exit" resolves to immediate grounded reclassification, not a first-slice `Landing` mode or cue.

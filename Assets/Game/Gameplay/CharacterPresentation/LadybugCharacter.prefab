@@ -167,12 +167,17 @@ MonoBehaviour:
   _animator: {fileID: 8986264095524748893}
   _modeParameterName: PresentationMode
   _playbackSpeedParameterName: PlaybackSpeedMultiplier
+  _normalizedPullParameterName: NormalizedPull
+  _normalizedLaunchPowerParameterName: NormalizedLaunchPower
+  _normalizedPullOffsetParameterName: NormalizedPullOffset
+  _normalizedLaunchOffsetParameterName: NormalizedLaunchOffset
   _airborneDelaySeconds: 0.12
   _slideEnterDownhillDegrees: 6
   _slideExitDownhillDegrees: 3
   _runFlatMaximumAbsSlopeDegrees: 4
   _runMinimumForwardSpeed: 0.5
   _minimumLocomotionModeDuration: 0.15
+  _launchPushMinimumSeconds: 0.25
   _slideReferenceSpeed: 8
   _runReferenceSpeed: 8
   _minimumPlaybackSpeedMultiplier: 0.5

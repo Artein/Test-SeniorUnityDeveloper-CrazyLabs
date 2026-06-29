@@ -19,7 +19,8 @@ namespace Game.Gameplay.Slingshot
         void DisableCapture();
     }
 
-    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotCapture, ISlingshotLaunchNotifier
+    public sealed partial class SlingshotController : IInitializable, ITickable, IDisposable, ISlingshotCapture, ISlingshotLaunchNotifier,
+        ISlingshotActivePullNotifier, ISlingshotCaptureLifecycleNotifier, ISlingshotGeometrySnapshotSource
     {
         private readonly IUnityInput _unityInput;
         private readonly ISlingshotView _view;
@@ -28,6 +29,7 @@ namespace Game.Gameplay.Slingshot
         private readonly IHeldLaunchTarget _heldLaunchTarget;
         private readonly ISlingshotBandShapeProvider _bandShapeProvider;
         private readonly ISlingshotBandShapeDepthProvider _bandShapeDepthProvider;
+        private readonly ISlingshotPullOffsetNormalizer _pullOffsetNormalizer;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly ITime _clock;
         private readonly ISlingshotConfig _config;
@@ -49,9 +51,16 @@ namespace Game.Gameplay.Slingshot
         private bool _isCurrentPullBandShapeValid;
         private bool _isLaunchHandoffPending;
         private bool _isReleaseRecoilActive;
+        private bool _hasActivePullPresentation;
         private int _activePointerId;
 
         public event Action<SlingshotLaunchRequest> LaunchRequested;
+        public event Action<SlingshotActivePullContext> ActivePullChanged;
+        public event Action ActivePullCleared;
+        public event Action CaptureEnabled;
+        public event Action CaptureDisabled;
+
+        public SlingshotGeometrySnapshot CurrentGeometry => _geometry;
 
         public SlingshotController(
             IUnityInput unityInput,
@@ -60,6 +69,7 @@ namespace Game.Gameplay.Slingshot
             ILaunchTarget launchTarget,
             IHeldLaunchTarget heldLaunchTarget,
             ISlingshotBandShapeProvider bandShapeProvider,
+            ISlingshotPullOffsetNormalizer pullOffsetNormalizer,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             ITime clock,
             ISlingshotConfig config)
@@ -75,6 +85,7 @@ namespace Game.Gameplay.Slingshot
                                       ?? throw new ArgumentException(
                                           "Slingshot Band Shape provider must support silhouette depth spans.",
                                           nameof(bandShapeProvider));
+            _pullOffsetNormalizer = pullOffsetNormalizer ?? throw new ArgumentNullException(nameof(pullOffsetNormalizer));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -125,6 +136,7 @@ namespace Game.Gameplay.Slingshot
             _isCaptureEnabled = false;
             _isLaunchHandoffPending = false;
             _isReleaseRecoilActive = false;
+            _hasActivePullPresentation = false;
             DisposeInputHandle();
         }
 
@@ -146,6 +158,8 @@ namespace Game.Gameplay.Slingshot
             _launchTarget.Hold();
             SetHeldTargetToRest();
             _view.ShowCaptureIdle(CreateHeldRestBandShape());
+            _hasActivePullPresentation = false;
+            CaptureEnabled?.InvokeSafely();
         }
 
         void ISlingshotCapture.DisableCapture()
@@ -157,6 +171,7 @@ namespace Game.Gameplay.Slingshot
 
             _hasActivePointer = false;
             _isCaptureEnabled = false;
+            _hasActivePullPresentation = false;
 
             try
             {
@@ -169,6 +184,7 @@ namespace Game.Gameplay.Slingshot
             finally
             {
                 DisposeInputHandle();
+                CaptureDisabled?.InvokeSafely();
             }
         }
 
@@ -220,6 +236,7 @@ namespace Game.Gameplay.Slingshot
             _activePointerId = pointerInput.PointerId;
             _hasActivePointer = true;
             _view.ShowActivePull(pullVisual);
+            PublishActivePull(pullVisual);
         }
 
         private void OnInputPointerMoved(PointerInput pointerInput)
@@ -234,6 +251,7 @@ namespace Game.Gameplay.Slingshot
             }
 
             _view.ShowActivePull(pullVisual);
+            PublishActivePull(pullVisual);
         }
 
         private void OnInputPointerReleased(PointerInput pointerInput)
@@ -316,10 +334,14 @@ namespace Game.Gameplay.Slingshot
             _isCurrentPullBandShapeValid = false;
 
             if (!_isCaptureEnabled)
+            {
+                ClearActivePullPresentationIfNeeded();
                 return;
+            }
 
             SetHeldTargetToRest();
             _view.ShowCaptureIdle(CreateHeldRestBandShape());
+            ClearActivePullPresentationIfNeeded();
         }
 
         private bool TryCreateLaunchRequest(SlingshotPullVisual pullVisual, out SlingshotLaunchRequest launchRequest)
@@ -336,15 +358,8 @@ namespace Game.Gameplay.Slingshot
             var launchDirection = GetLaunchDirection(pullVisual.PullOffset);
             var finalPullPoint = GetPullPoint(pullVisual.PullDistance, pullVisual.PullOffset);
 
-            launchRequest = new SlingshotLaunchRequest(
-                normalizedPower,
-                pullVisual.PullDistance,
-                pullVisual.PullOffset,
-                finalPullPoint,
-                launchDirection,
-                launchSpeed,
-                _geometry.LaunchFrameUp,
-                _config.LaunchUpSpeed);
+            launchRequest = new SlingshotLaunchRequest(normalizedPower, pullVisual.PullDistance, pullVisual.PullOffset, finalPullPoint,
+                launchDirection, launchSpeed, _geometry.LaunchFrameUp, _config.LaunchUpSpeed);
 
             return true;
         }
@@ -380,14 +395,8 @@ namespace Game.Gameplay.Slingshot
             }
 
             var delta = rawPullPoint - _geometry.RestPoint;
-
-            var pullDistance = Mathf.Clamp(
-                -Vector3.Dot(delta, _geometry.LaunchFrameForward),
-                0f,
-                _config.MaximumPullDistance);
-
+            var pullDistance = Mathf.Clamp(-Vector3.Dot(delta, _geometry.LaunchFrameForward), 0f, _config.MaximumPullDistance);
             var pullOffset = ClampPullOffset(Vector3.Dot(delta, _geometry.LaunchFrameRight), pullDistance);
-
             var clampedPullPoint = GetPullPoint(pullDistance, pullOffset);
 
             if (!_inputProjector.TryProjectWorldToScreen(clampedPullPoint, out var touchIndicatorScreenPosition))
@@ -408,15 +417,29 @@ namespace Game.Gameplay.Slingshot
             }
 
             var shape = new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
-            pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull);
+            var normalizedPullOffset = _pullOffsetNormalizer.Normalize(_geometry, pullDistance, pullOffset);
+            pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull, normalizedPullOffset);
             return true;
+        }
+
+        private void PublishActivePull(SlingshotPullVisual pullVisual)
+        {
+            _hasActivePullPresentation = true;
+            ActivePullChanged?.InvokeSafely(new SlingshotActivePullContext(pullVisual.NormalizedPull, pullVisual.NormalizedPullOffset));
+        }
+
+        private void ClearActivePullPresentationIfNeeded()
+        {
+            if (!_hasActivePullPresentation)
+                return;
+
+            _hasActivePullPresentation = false;
+            ActivePullCleared?.InvokeSafely();
         }
 
         private Vector3 GetPullPoint(float pullDistance, float pullOffset)
         {
-            return _geometry.RestPoint
-                   + (_geometry.LaunchFrameRight * pullOffset)
-                   - (_geometry.LaunchFrameForward * pullDistance);
+            return _geometry.RestPoint + (_geometry.LaunchFrameRight * pullOffset) - (_geometry.LaunchFrameForward * pullDistance);
         }
 
         private float ClampPullOffset(float rawPullOffset, float pullDistance)
@@ -432,11 +455,7 @@ namespace Game.Gameplay.Slingshot
         private float GetLateralPullScale(float pullDistance)
         {
             var fullLateralPullDistance = GetFullLateralPullDistance();
-
-            if (fullLateralPullDistance <= 0.000001f)
-                return 1f;
-
-            return Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+            return fullLateralPullDistance <= 0.000001f ? 1f : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
         }
 
         private float GetFullLateralPullDistance()

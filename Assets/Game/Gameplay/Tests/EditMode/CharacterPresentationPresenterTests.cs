@@ -4,6 +4,7 @@ using Game.Foundation.Time;
 using Game.Gameplay;
 using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -18,6 +19,7 @@ public sealed class CharacterPresentationPresenterTests
     private FakeRunMotionSource _motionSource;
     private FakeRunProgressService _progressService;
     private FakeRunSurfaceContextSource _surfaceContextSource;
+    private FakeSlingshotPresentationContextSource _slingshotPresentationContextSource;
     private FakeRunResultNotifier _runResultNotifier;
     private FakeCharacterPresentationModeClassifier _classifier;
     private FakeCharacterPresentationView _view;
@@ -48,6 +50,7 @@ public sealed class CharacterPresentationPresenterTests
         {
             Current = new RunSurfaceContext(true, Vector3.up, 12f)
         };
+        _slingshotPresentationContextSource = new FakeSlingshotPresentationContextSource();
         _runResultNotifier = new FakeRunResultNotifier();
 
         _classifier = new FakeCharacterPresentationModeClassifier
@@ -72,6 +75,97 @@ public sealed class CharacterPresentationPresenterTests
         }
 
         _objects.Clear();
+    }
+
+    [Test]
+    public void Tick_SlingshotContext_ForwardsModeSelectionFactsToClassifier()
+    {
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.4f,
+            normalizedPullOffset: -0.25f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0.12f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasActivePull, Is.True);
+        Assert.That(_classifier.LastInput.HasLaunchPush, Is.True);
+        Assert.That(_classifier.LastInput.LaunchPushElapsedSeconds, Is.EqualTo(0.12f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_PullAnticipation_CopiesPullValuesAndZerosLaunchValues()
+    {
+        _classifier.NextMode = CharacterPresentationMode.PullAnticipation;
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.4f,
+            normalizedPullOffset: -0.25f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0.12f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+
+        var frame = _view.AppliedFrames[0];
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.PullAnticipation));
+        Assert.That(frame.NormalizedPull, Is.EqualTo(0.4f).Within(0.0001f));
+        Assert.That(frame.NormalizedPullOffset, Is.EqualTo(-0.25f).Within(0.0001f));
+        Assert.That(frame.NormalizedLaunchPower, Is.Zero);
+        Assert.That(frame.NormalizedLaunchOffset, Is.Zero);
+    }
+
+    [Test]
+    public void Tick_LaunchPush_CopiesLaunchValuesAndZerosPullValues()
+    {
+        _classifier.NextMode = CharacterPresentationMode.LaunchPush;
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.4f,
+            normalizedPullOffset: -0.25f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0.12f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+
+        var frame = _view.AppliedFrames[0];
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.LaunchPush));
+        Assert.That(frame.NormalizedPull, Is.Zero);
+        Assert.That(frame.NormalizedPullOffset, Is.Zero);
+        Assert.That(frame.NormalizedLaunchPower, Is.EqualTo(0.8f).Within(0.0001f));
+        Assert.That(frame.NormalizedLaunchOffset, Is.EqualTo(0.5f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_NonSlingshotMode_ZerosPullAndLaunchValues()
+    {
+        _classifier.NextMode = CharacterPresentationMode.Run;
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.4f,
+            normalizedPullOffset: -0.25f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0.12f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+
+        var frame = _view.AppliedFrames[0];
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.Run));
+        Assert.That(frame.NormalizedPull, Is.Zero);
+        Assert.That(frame.NormalizedPullOffset, Is.Zero);
+        Assert.That(frame.NormalizedLaunchPower, Is.Zero);
+        Assert.That(frame.NormalizedLaunchOffset, Is.Zero);
     }
 
     [Test]
@@ -172,6 +266,7 @@ public sealed class CharacterPresentationPresenterTests
             _motionSource,
             _progressService,
             _surfaceContextSource,
+            _slingshotPresentationContextSource,
             _runResultNotifier,
             _classifier,
             _view,
@@ -262,6 +357,11 @@ public sealed class CharacterPresentationPresenterTests
         public RunSurfaceContext Current { get; set; }
     }
 
+    private sealed class FakeSlingshotPresentationContextSource : ISlingshotPresentationContextSource
+    {
+        public SlingshotPresentationContext Current { get; set; }
+    }
+
     private sealed class FakeRunResultNotifier : IRunResultNotifier
     {
         public event Action<RunResult> RunResultAccepted;
@@ -302,6 +402,7 @@ public sealed class CharacterPresentationPresenterTests
         public float RunFlatMaximumAbsSlopeDegrees { get; set; } = 4f;
         public float RunMinimumForwardSpeed { get; set; } = 0.5f;
         public float MinimumLocomotionModeDuration { get; set; } = 0.15f;
+        public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float RunReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;

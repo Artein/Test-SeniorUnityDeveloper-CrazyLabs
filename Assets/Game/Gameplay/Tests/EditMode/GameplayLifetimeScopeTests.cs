@@ -91,6 +91,10 @@ public sealed class GameplayLifetimeScopeTests
         var gameplayStateService = container.Resolve<IGameplayStateService>();
         var slingshotNotifier = container.Resolve<ISlingshotLaunchNotifier>();
         var slingshotLauncher = container.Resolve<ISlingshotLauncher>();
+        var slingshotActivePullNotifier = container.Resolve<ISlingshotActivePullNotifier>();
+        var slingshotCaptureLifecycleNotifier = container.Resolve<ISlingshotCaptureLifecycleNotifier>();
+        var slingshotPresentationContextSource = container.Resolve<ISlingshotPresentationContextSource>();
+        var slingshotPullOffsetNormalizer = container.Resolve<ISlingshotPullOffsetNormalizer>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var tickables = container.Resolve<ContainerLocal<IReadOnlyList<ITickable>>>().Value;
         var fixedTickables = container.Resolve<ContainerLocal<IReadOnlyList<IFixedTickable>>>().Value;
@@ -124,8 +128,12 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(8));
-        Assert.That(tickables.Count, Is.EqualTo(2));
+        Assert.That(slingshotActivePullNotifier, Is.Not.Null);
+        Assert.That(slingshotCaptureLifecycleNotifier, Is.Not.Null);
+        Assert.That(slingshotPresentationContextSource, Is.Not.Null);
+        Assert.That(slingshotPullOffsetNormalizer, Is.Not.Null);
+        Assert.That(initializables.Count, Is.EqualTo(9));
+        Assert.That(tickables.Count, Is.EqualTo(3));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));

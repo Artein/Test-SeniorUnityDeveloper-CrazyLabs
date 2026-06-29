@@ -13,12 +13,25 @@ namespace Game.Gameplay.CharacterPresentation
         [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
         private string _playbackSpeedParameterName = "PlaybackSpeedMultiplier";
 
+        [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
+        private string _normalizedPullParameterName = "NormalizedPull";
+
+        [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
+        private string _normalizedLaunchPowerParameterName = "NormalizedLaunchPower";
+
+        [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
+        private string _normalizedPullOffsetParameterName = "NormalizedPullOffset";
+
+        [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
+        private string _normalizedLaunchOffsetParameterName = "NormalizedLaunchOffset";
+
         [SerializeField] private float _airborneDelaySeconds = 0.12f;
         [SerializeField] private float _slideEnterDownhillDegrees = 6f;
         [SerializeField] private float _slideExitDownhillDegrees = 3f;
         [SerializeField] private float _runFlatMaximumAbsSlopeDegrees = 4f;
         [SerializeField] private float _runMinimumForwardSpeed = 0.5f;
         [SerializeField] private float _minimumLocomotionModeDuration = 0.15f;
+        [SerializeField, Min(0f)] private float _launchPushMinimumSeconds = 0.25f;
         [SerializeField] private float _slideReferenceSpeed = 8f;
         [SerializeField] private float _runReferenceSpeed = 8f;
         [SerializeField] private float _minimumPlaybackSpeedMultiplier = 0.5f;
@@ -30,6 +43,7 @@ namespace Game.Gameplay.CharacterPresentation
         public float RunFlatMaximumAbsSlopeDegrees => Mathf.Max(0f, _runFlatMaximumAbsSlopeDegrees);
         public float RunMinimumForwardSpeed => Mathf.Max(0f, _runMinimumForwardSpeed);
         public float MinimumLocomotionModeDuration => Mathf.Max(0f, _minimumLocomotionModeDuration);
+        public float LaunchPushMinimumSeconds => Mathf.Max(0f, _launchPushMinimumSeconds);
         public float SlideReferenceSpeed => Mathf.Max(0.0001f, _slideReferenceSpeed);
         public float RunReferenceSpeed => Mathf.Max(0.0001f, _runReferenceSpeed);
         public float MinimumPlaybackSpeedMultiplier => Mathf.Max(0f, _minimumPlaybackSpeedMultiplier);
@@ -57,6 +71,10 @@ namespace Game.Gameplay.CharacterPresentation
                 frame.PlaybackSpeedMultiplier,
                 MinimumPlaybackSpeedMultiplier,
                 MaximumPlaybackSpeedMultiplier));
+            _animator.SetFloat(_normalizedPullParameterName, frame.NormalizedPull);
+            _animator.SetFloat(_normalizedLaunchPowerParameterName, frame.NormalizedLaunchPower);
+            _animator.SetFloat(_normalizedPullOffsetParameterName, frame.NormalizedPullOffset);
+            _animator.SetFloat(_normalizedLaunchOffsetParameterName, frame.NormalizedLaunchOffset);
         }
 
         private void EnsureAnimatorRootMotionDisabled()
