@@ -79,6 +79,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Pre-Launch Slingshot Rig Pose")
                 .And.Message.Contains("Pre-Launch Launch Target Pose")
                 .And.Message.Contains("Slingshot View")
+                .And.Message.Contains("Pull Hint View")
                 .And.Message.Contains("Run Preparation View")
                 .And.Message.Contains("Launch Target")
                 .And.Message.Contains("Character Presentation View")
@@ -202,6 +203,8 @@ public sealed class GameplayLifetimeScopeTests
         var runGameplayStatResolver = container.Resolve<IRunGameplayStatResolver>();
         var pickupCurrencyGrantResolver = container.Resolve<IPickupCurrencyGrantResolver>();
         var runPreparationView = container.Resolve<IRunPreparationView>();
+        var pullHintView = container.Resolve<IPullHintView>();
+        var pullHintTuning = container.Resolve<IPullHintTuning>();
         var upgradePreviewBuilder = container.Resolve<UpgradePreviewBuilder>();
         var upgradePreviewService = container.Resolve<UpgradePreviewService>();
         var upgradePurchaseService = container.Resolve<UpgradePurchaseService>();
@@ -241,8 +244,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(11));
-        Assert.That(tickables.Count, Is.EqualTo(3));
+        Assert.That(initializables.Count, Is.EqualTo(12));
+        Assert.That(tickables.Count, Is.EqualTo(4));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -273,6 +276,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runGameplayStatResolver, Is.Not.Null);
         Assert.That(pickupCurrencyGrantResolver, Is.Not.Null);
         Assert.That(runPreparationView, Is.Not.Null);
+        Assert.That(pullHintView, Is.SameAs(fixture.PullHintView));
+        Assert.That(pullHintTuning, Is.SameAs(fixture.PullHintView));
         Assert.That(upgradePreviewBuilder, Is.Not.Null);
         Assert.That(upgradePreviewService, Is.Not.Null);
         Assert.That(upgradePurchaseService, Is.Not.Null);
@@ -323,6 +328,7 @@ public sealed class GameplayLifetimeScopeTests
         var runEndConfig = Track(ScriptableObject.CreateInstance<RunEndConfig>());
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
+        var pullHintView = CreateGameObject("Pull Hint View").AddComponent<PullHintView>();
         var runPreparationView = CreateRunPreparationView();
         var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
         var slingshotRig = CreateGameObject("Slingshot Rig").transform;
@@ -378,6 +384,7 @@ public sealed class GameplayLifetimeScopeTests
             preLaunchSlingshotRigPose,
             preLaunchLaunchTargetPose,
             slingshotView,
+            pullHintView,
             runPreparationView,
             launchTarget,
             characterPresentationView,
@@ -414,6 +421,7 @@ public sealed class GameplayLifetimeScopeTests
             ContactNotifier = contactNotifier,
             RunCameraAnchor = runCameraAnchor,
             RunCameraRig = runCameraRig,
+            PullHintView = pullHintView,
             CharacterPresentationView = characterPresentationView,
             PlayerTag = playerTag
         };
@@ -427,7 +435,6 @@ public sealed class GameplayLifetimeScopeTests
         var restPoint = CreateGameObject("Rest Point").transform;
         var launchFrame = CreateGameObject("Launch Frame").transform;
         var bandLineRenderer = CreateGameObject("Band").AddComponent<LineRenderer>();
-        var pullHintObject = CreateGameObject("Pull Hint");
         var touchIndicatorObject = CreateGameObject("Touch Indicator");
 
         leftAnchor.position = new Vector3(-1f, 1f, 0f);
@@ -436,7 +443,7 @@ public sealed class GameplayLifetimeScopeTests
         launchFrame.position = restPoint.position;
         launchFrame.rotation = Quaternion.identity;
 
-        view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, pullHintObject, touchIndicatorObject, config);
+        view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, touchIndicatorObject, config);
         return view;
     }
 
@@ -613,6 +620,7 @@ public sealed class GameplayLifetimeScopeTests
         public RigidbodyContactNotifier ContactNotifier { get; set; }
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
+        public PullHintView PullHintView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
         public string PlayerTag { get; set; }
     }

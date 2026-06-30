@@ -115,6 +115,9 @@ namespace Game.Gameplay
             if (_slingshotView == null)
                 yield return "GameplayLifetimeScope requires a Slingshot View reference.";
 
+            if (_pullHintView == null)
+                yield return "GameplayLifetimeScope requires a Pull Hint View reference.";
+
             if (_runPreparationView == null)
                 yield return "GameplayLifetimeScope requires a Run Preparation View reference.";
 

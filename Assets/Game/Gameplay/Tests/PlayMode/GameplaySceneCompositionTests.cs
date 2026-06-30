@@ -15,6 +15,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
@@ -68,6 +69,19 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         var preLaunchSlingshotRigPose = FindGameObjectByName(activeScene, "Pre-Launch Slingshot Rig Pose");
         var preLaunchLaunchTargetPose = FindGameObjectByName(activeScene, "Pre-Launch Launch Target Pose");
         var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
+        var pullHintView = pullHint.GetComponent<PullHintView>();
+        var pullHintRectTransform = pullHint.GetComponent<RectTransform>();
+        var pullHintCanvasGroup = pullHint.GetComponent<CanvasGroup>();
+        var pullHintAnimator = pullHint.GetComponent<Animator>();
+        var pullHintFinger = pullHint.transform.Find("Finger");
+        var pullHintFingerRectTransform = pullHintFinger != null
+            ? pullHintFinger.GetComponent<RectTransform>()
+            : null;
+
+        var pullHintFingerImage = pullHintFinger != null
+            ? pullHintFinger.GetComponent<Image>()
+            : null;
+
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
@@ -84,6 +98,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         var resolvedRunContactClassifier = lifetimeScope.Container.Resolve<IRunContactClassifier>();
         var resolvedCharacterPresentationView = lifetimeScope.Container.Resolve<ICharacterPresentationView>();
         var resolvedCharacterPresentationTuning = lifetimeScope.Container.Resolve<ICharacterPresentationTuning>();
+        var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
+        var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
         var resolvedSlingshotActivePullNotifier = lifetimeScope.Container.Resolve<ISlingshotActivePullNotifier>();
         var resolvedSlingshotCaptureLifecycleNotifier = lifetimeScope.Container.Resolve<ISlingshotCaptureLifecycleNotifier>();
@@ -169,6 +185,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         Assert.That(resolvedRunContactClassifier, Is.Not.Null);
         Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
+        Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
         Assert.That(resolvedSlingshotActivePullNotifier, Is.Not.Null);
         Assert.That(resolvedSlingshotCaptureLifecycleNotifier, Is.Not.Null);
@@ -247,7 +265,34 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         Assert.That(Quaternion.Angle(preLaunchLaunchTargetPose.transform.rotation, playerRigidbody.transform.rotation),
             Is.EqualTo(0f).Within(0.01f));
         Assert.That(pullHint.transform.IsChildOf(canvas.transform), Is.True);
-        Assert.That(pullHint.activeInHierarchy, Is.True);
+        Assert.That(pullHintView, Is.Not.Null);
+        Assert.That(pullHintRectTransform, Is.Not.Null);
+        Assert.That(pullHintRectTransform.sizeDelta.x, Is.EqualTo(192f).Within(0.001f));
+        Assert.That(pullHintRectTransform.sizeDelta.y, Is.EqualTo(320f).Within(0.001f));
+        Assert.That(pullHintCanvasGroup, Is.Not.Null);
+        Assert.That(pullHintCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(pullHintCanvasGroup.interactable, Is.False);
+        Assert.That(pullHintCanvasGroup.blocksRaycasts, Is.False);
+        Assert.That(pullHintAnimator, Is.Not.Null);
+        Assert.That(pullHintAnimator.runtimeAnimatorController, Is.Not.Null);
+        AssertAnimatorParameter(pullHintAnimator, "PlayPullHint", AnimatorControllerParameterType.Trigger);
+        Assert.That(pullHintFinger, Is.Not.Null);
+        Assert.That(pullHintFingerRectTransform, Is.Not.Null);
+        Assert.That(pullHintFingerRectTransform.sizeDelta.x, Is.EqualTo(160f).Within(0.001f));
+        Assert.That(pullHintFingerRectTransform.sizeDelta.y, Is.EqualTo(160f).Within(0.001f));
+        Assert.That(pullHintFingerImage, Is.Not.Null);
+        Assert.That(pullHintFingerImage.sprite, Is.Not.Null);
+        Assert.That(pullHintFingerImage.raycastTarget, Is.False);
+        Assert.That(pullHint.activeSelf, Is.False);
+        resolvedPullHintView.ShowAt(Vector2.zero);
+        Assert.That(pullHint.activeSelf, Is.True);
+        Assert.That(pullHintCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(pullHintFingerRectTransform.anchoredPosition.x, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(pullHintFingerRectTransform.anchoredPosition.y, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(pullHintFingerImage.sprite, Is.Not.Null);
+        resolvedPullHintView.Hide();
+        Assert.That(pullHint.activeSelf, Is.False);
+        Assert.That(pullHintCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(touchIndicator.activeSelf, Is.False);
     }
@@ -478,7 +523,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
 
             yield return SendMouse(mouse, validPullScreenPosition, true);
 
-            Assert.That(pullHint.activeSelf, Is.True);
+            Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return SendMouse(mouse, validPullScreenPosition, false);
@@ -621,7 +666,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
             return false;
 
-        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || !pullHint.activeInHierarchy)
+        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || pullHint.activeSelf)
             return false;
 
         if (!TryFindGameObjectByName(scene, "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)

@@ -12,7 +12,6 @@ namespace Game.Gameplay.Slingshot
             Transform restPoint,
             Transform launchFrame,
             LineRenderer bandLineRenderer,
-            GameObject pullHintObject,
             GameObject touchIndicatorObject,
             SlingshotConfig gizmoConfig)
         {
@@ -21,7 +20,6 @@ namespace Game.Gameplay.Slingshot
             _restPoint = restPoint;
             _launchFrame = launchFrame;
             _bandLineRenderer = bandLineRenderer;
-            _pullHintObject = pullHintObject;
             _touchIndicatorObject = touchIndicatorObject;
             _gizmoConfig = gizmoConfig;
         }

@@ -22,7 +22,6 @@ namespace Game.Gameplay.Slingshot
         [SerializeField] private Transform _restPoint;
         [SerializeField] private Transform _launchFrame;
         [SerializeField] private LineRenderer _bandLineRenderer;
-        [SerializeField] private GameObject _pullHintObject;
         [SerializeField] private GameObject _touchIndicatorObject;
         [SerializeField] private SlingshotConfig _gizmoConfig;
         [SerializeField] private bool _drawGizmos = true;
@@ -48,21 +47,21 @@ namespace Game.Gameplay.Slingshot
         {
             ThrowIfInvalidReferences();
             ApplyBandShape(bandShape);
-            SetVisualObjects(false, false);
+            SetTouchIndicatorActive(false);
         }
 
         public void ShowCaptureIdle(SlingshotBandShape bandShape)
         {
             ThrowIfInvalidReferences();
             ApplyBandShape(bandShape);
-            SetVisualObjects(true, false);
+            SetTouchIndicatorActive(false);
         }
 
         public void ShowLoadedRelease(SlingshotBandShape bandShape)
         {
             ThrowIfInvalidReferences();
             ApplyBandShape(bandShape);
-            SetVisualObjects(false, false);
+            SetTouchIndicatorActive(false);
         }
 
         public void ShowActivePull(SlingshotPullVisual pullVisual)
@@ -70,7 +69,7 @@ namespace Game.Gameplay.Slingshot
             ThrowIfInvalidReferences();
             ApplyBandShape(pullVisual.BandShape);
             SetTouchIndicatorScreenPosition(pullVisual.TouchIndicatorScreenPosition);
-            SetVisualObjects(false, true);
+            SetTouchIndicatorActive(true);
         }
 
         private void OnValidate()
@@ -92,10 +91,9 @@ namespace Game.Gameplay.Slingshot
             }
         }
 
-        private void SetVisualObjects(bool pullHintActive, bool touchIndicatorActive)
+        private void SetTouchIndicatorActive(bool active)
         {
-            _pullHintObject.SetActive(pullHintActive);
-            _touchIndicatorObject.SetActive(touchIndicatorActive);
+            _touchIndicatorObject.SetActive(active);
         }
 
         private void SetTouchIndicatorScreenPosition(Vector2 screenPosition)
@@ -152,9 +150,6 @@ namespace Game.Gameplay.Slingshot
 
             if (_bandLineRenderer == null)
                 yield return "SlingshotView requires a Band Line Renderer reference.";
-
-            if (_pullHintObject == null)
-                yield return "SlingshotView requires a Pull Hint object reference.";
 
             if (_touchIndicatorObject == null)
                 yield return "SlingshotView requires a Touch Indicator object reference.";

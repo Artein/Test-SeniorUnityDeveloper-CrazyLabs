@@ -45,6 +45,7 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchSlingshotRigPose;
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
+        [SerializeField] private PullHintView _pullHintView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
@@ -81,6 +82,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
             builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
+            builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
@@ -92,9 +94,9 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
-            
+
             builder.RegisterInstance(_coinCurrencyDefinition).Keyed(InjectKey.CurrencyDefinition.Coin);
-            
+
             builder.RegisterInstance(_coinPickupMultiplierStatId).Keyed(InjectKey.GameplayStatId.CoinPickupMultiplier);
             builder.RegisterInstance(_slingshotLaunchPowerStatId).Keyed(InjectKey.GameplayStatId.SlingshotLaunchPower);
             builder.RegisterInstance(_playerMaxSpeedStatId).Keyed(InjectKey.GameplayStatId.PlayerMaxSpeed);
