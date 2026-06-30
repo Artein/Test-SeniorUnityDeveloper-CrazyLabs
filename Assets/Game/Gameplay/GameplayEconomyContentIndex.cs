@@ -1,7 +1,9 @@
 using System;
 using Game.Gameplay.Economy;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Upgrades;
 using JetBrains.Annotations;
+using VContainer;
 
 namespace Game.Gameplay
 {
@@ -11,9 +13,12 @@ namespace Game.Gameplay
         private readonly IUpgradeCatalog _upgradeCatalog;
         private readonly CurrencyDefinition _coinCurrencyDefinition;
 
-        public GameplayEconomyContentIndex(IUpgradeCatalog upgradeCatalog, CurrencyDefinition coinCurrencyDefinition)
+        public GameplayEconomyContentIndex(
+            IUpgradeCatalog upgradeCatalog,
+            [Key(InjectKey.CurrencyDefinition.Coin)] CurrencyDefinition coinCurrencyDefinition)
         {
             _upgradeCatalog = upgradeCatalog ?? throw new ArgumentNullException(nameof(upgradeCatalog));
+
             _coinCurrencyDefinition = coinCurrencyDefinition != null
                 ? coinCurrencyDefinition
                 : throw new ArgumentNullException(nameof(coinCurrencyDefinition));

@@ -113,9 +113,7 @@ namespace Game.Gameplay
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
             builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
 
-            builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton)
-                .WithParameter("coinCurrencyDefinition", _coinCurrencyDefinition);
-
+            builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton);
             builder.Register<EconomySaveSerializer>(Lifetime.Singleton);
             builder.Register<IEconomySaveRepository, EconomySaveRepository>(Lifetime.Singleton);
             builder.Register<EconomySaveQueue>(Lifetime.Singleton);
