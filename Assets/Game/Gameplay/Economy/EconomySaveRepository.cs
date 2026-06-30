@@ -16,32 +16,51 @@ namespace Game.Gameplay.Economy
     [UsedImplicitly]
     public sealed class EconomySaveRepository : IEconomySaveRepository
     {
-        private readonly IPersistentDataPathProvider _pathProvider;
+        private readonly string _backupPath;
+        private readonly string _directory;
+        private readonly string _primaryPath;
         private readonly EconomySaveSerializer _serializer;
         private readonly EconomySaveSettings _settings;
+        private readonly string _temporaryPath;
 
         public EconomySaveRepository(
             IPersistentDataPathProvider pathProvider,
             EconomySaveSerializer serializer,
             EconomySaveSettings settings)
         {
-            _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
+            if (pathProvider is null)
+                throw new ArgumentNullException(nameof(pathProvider));
+
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
+            _directory = pathProvider.PersistentDataPath;
+            _primaryPath = Path.Combine(_directory, _settings.PrimaryFileName);
+            _temporaryPath = Path.Combine(_directory, _settings.TemporaryFileName);
+            _backupPath = Path.Combine(_directory, _settings.BackupFileName);
         }
 
         public EconomyLoadResult Load()
         {
-            var primaryPath = GetPrimaryPath();
-            var backupPath = GetBackupPath();
+            var primaryPath = _primaryPath;
+            var backupPath = _backupPath;
             var hadLoadFailure = false;
 
             if (File.Exists(primaryPath))
             {
                 try
                 {
+                    var snapshot = LoadSnapshot(primaryPath, "primary");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.Log("[EconomyDiagnostics] Economy save loaded primary: "
+                              + $"Path='{primaryPath}', "
+                              + $"Revision={snapshot.Revision}, "
+                              + $"CurrencyBalances={snapshot.CurrencyBalances.Count}, "
+                              + $"UpgradeLevels={snapshot.UpgradeLevels.Count}");
+#endif
+
                     return new EconomyLoadResult(
-                        LoadSnapshot(primaryPath, "primary"),
+                        snapshot,
                         new EconomyPersistenceResult(
                             EconomyPersistenceStatus.LoadedPrimary,
                             "load-primary",
@@ -60,8 +79,17 @@ namespace Game.Gameplay.Economy
             {
                 try
                 {
+                    var snapshot = LoadSnapshot(backupPath, "backup");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.Log("[EconomyDiagnostics] Economy save loaded backup: "
+                              + $"Path='{backupPath}', "
+                              + $"Revision={snapshot.Revision}, "
+                              + $"CurrencyBalances={snapshot.CurrencyBalances.Count}, "
+                              + $"UpgradeLevels={snapshot.UpgradeLevels.Count}");
+#endif
+
                     return new EconomyLoadResult(
-                        LoadSnapshot(backupPath, "backup"),
+                        snapshot,
                         new EconomyPersistenceResult(
                             EconomyPersistenceStatus.LoadedBackup,
                             "load-backup",
@@ -82,6 +110,13 @@ namespace Game.Gameplay.Economy
                 ? "Economy save load failed; using default state."
                 : "No economy save found; using default state.";
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[EconomyDiagnostics] Economy save loaded defaults: "
+                      + $"PrimaryPath='{primaryPath}', "
+                      + $"BackupPath='{backupPath}', "
+                      + $"HadLoadFailure={hadLoadFailure}");
+#endif
+
             return new EconomyLoadResult(
                 CreateDefaultSnapshot(),
                 new EconomyPersistenceResult(status, "load-defaults", message, exception: null));
@@ -93,10 +128,10 @@ namespace Game.Gameplay.Economy
                 throw new ArgumentNullException(nameof(snapshot));
 
             var operation = string.IsNullOrWhiteSpace(reason) ? "save" : reason;
-            var directory = _pathProvider.PersistentDataPath;
-            var primaryPath = GetPrimaryPath();
-            var temporaryPath = GetTemporaryPath();
-            var backupPath = GetBackupPath();
+            var directory = _directory;
+            var primaryPath = _primaryPath;
+            var temporaryPath = _temporaryPath;
+            var backupPath = _backupPath;
 
             try
             {
@@ -112,6 +147,17 @@ namespace Game.Gameplay.Economy
 
                 File.Move(temporaryPath, primaryPath);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log("[EconomyDiagnostics] Economy save wrote primary: "
+                          + $"Operation='{operation}', "
+                          + $"Path='{primaryPath}', "
+                          + $"BackupPath='{backupPath}', "
+                          + $"Revision={snapshot.Revision}, "
+                          + $"CurrencyBalances={snapshot.CurrencyBalances.Count}, "
+                          + $"UpgradeLevels={snapshot.UpgradeLevels.Count}, "
+                          + $"JsonBytes={Encoding.UTF8.GetByteCount(json)}");
+#endif
+
                 return new EconomyPersistenceResult(
                     EconomyPersistenceStatus.Saved,
                     operation,
@@ -120,7 +166,9 @@ namespace Game.Gameplay.Economy
             }
             catch (Exception exception)
             {
-                Debug.LogError("Economy save write failed. " + exception.Message);
+                Debug.LogError("Economy save write failed. "
+                               + exception.Message
+                               + $" Path='{primaryPath}'");
                 DeleteTemporaryFile(temporaryPath);
 
                 return new EconomyPersistenceResult(
@@ -175,21 +223,6 @@ namespace Game.Gameplay.Economy
             {
                 Debug.LogWarning("Economy save temporary-file cleanup failed. " + exception.Message);
             }
-        }
-
-        private string GetPrimaryPath()
-        {
-            return Path.Combine(_pathProvider.PersistentDataPath, _settings.PrimaryFileName);
-        }
-
-        private string GetTemporaryPath()
-        {
-            return Path.Combine(_pathProvider.PersistentDataPath, _settings.TemporaryFileName);
-        }
-
-        private string GetBackupPath()
-        {
-            return Path.Combine(_pathProvider.PersistentDataPath, _settings.BackupFileName);
         }
     }
 }

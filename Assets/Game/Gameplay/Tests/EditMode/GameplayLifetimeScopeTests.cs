@@ -271,6 +271,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
         Assert.That(runResultNotifier, Is.Not.Null);
+        Assert.That(runResultNotifier, Is.SameAs(runEndCandidateReceiver));
         Assert.That(playerEconomyState, Is.Not.Null);
         Assert.That(currencyStorage, Is.Not.Null);
         Assert.That(economyContentIndex.IsKnownCurrencyId(fixture.CoinCurrencyDefinition.SaveId), Is.True);

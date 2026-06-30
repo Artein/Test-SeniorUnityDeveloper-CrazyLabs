@@ -25,6 +25,16 @@ namespace Game.Gameplay
                 var loadResult = _saveRepository.Load();
                 _state.ReplaceWith(loadResult.Snapshot);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log("[EconomyDiagnostics] Player economy load applied: "
+                          + $"Status={loadResult.Result.Status}, "
+                          + $"Success={loadResult.Result.IsSuccess}, "
+                          + $"Operation='{loadResult.Result.Operation}', "
+                          + $"Revision={loadResult.Snapshot.Revision}, "
+                          + $"CurrencyBalances={loadResult.Snapshot.CurrencyBalances.Count}, "
+                          + $"UpgradeLevels={loadResult.Snapshot.UpgradeLevels.Count}");
+#endif
+
                 if (!loadResult.Result.IsSuccess)
                     Debug.LogError("Economy save load failed. " + loadResult.Result.Message);
             }

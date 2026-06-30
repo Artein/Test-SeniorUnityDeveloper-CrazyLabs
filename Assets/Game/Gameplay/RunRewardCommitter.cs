@@ -54,11 +54,28 @@ namespace Game.Gameplay
             if (_isDisposed)
                 return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[EconomyDiagnostics] Run reward accepted: "
+                      + $"Reason={runResult.Reason}, "
+                      + $"CurrencySnapshot={runResult.CurrencySnapshot}");
+#endif
+
             try
             {
                 foreach (var amount in runResult.CurrencySnapshot.Amounts)
                 {
+                    var balanceBefore = _currencyStorage.GetAmount(amount.CurrencyDefinition);
                     _currencyStorage.Grant(amount.CurrencyDefinition, amount.Amount);
+                    var balanceAfter = _currencyStorage.GetAmount(amount.CurrencyDefinition);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    Debug.Log("[EconomyDiagnostics] Wallet grant applied: "
+                              + $"Currency='{amount.CurrencyDefinition.name}', "
+                              + $"SaveId='{amount.CurrencyDefinition.SaveId}', "
+                              + $"Amount={amount.Amount}, "
+                              + $"BalanceBefore={balanceBefore}, "
+                              + $"BalanceAfter={balanceAfter}");
+#endif
                 }
             }
             catch (Exception exception)
@@ -68,6 +85,14 @@ namespace Game.Gameplay
             }
 
             var result = _economyCommitter.CommitImportant("run-reward");
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[EconomyDiagnostics] Run reward save commit completed: "
+                      + $"Status={result.Status}, "
+                      + $"Success={result.IsSuccess}, "
+                      + $"Operation='{result.Operation}', "
+                      + $"Message='{result.Message}'");
+#endif
 
             if (!result.IsSuccess)
                 Debug.LogError("Run reward save commit failed. " + result.Message);

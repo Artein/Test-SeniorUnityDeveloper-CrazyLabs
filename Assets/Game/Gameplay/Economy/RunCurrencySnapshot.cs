@@ -57,5 +57,22 @@ namespace Game.Gameplay.Economy
         {
             return currencyDefinition == null ? 0 : _amountsByCurrency.GetValueOrDefault(currencyDefinition, 0);
         }
+
+        public override string ToString()
+        {
+            if (_amounts.Length == 0)
+                return "Count=0";
+
+            var entries = new string[_amounts.Length];
+
+            for (var index = 0; index < _amounts.Length; index += 1)
+            {
+                var amount = _amounts[index];
+                var currencyDefinition = amount.CurrencyDefinition;
+                entries[index] = $"{currencyDefinition.name}({currencyDefinition.SaveId})={amount.Amount}";
+            }
+
+            return $"Count={_amounts.Length}, Amounts=[{string.Join(", ", entries)}]";
+        }
     }
 }
