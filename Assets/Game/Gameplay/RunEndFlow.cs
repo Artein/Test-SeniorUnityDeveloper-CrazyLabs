@@ -263,21 +263,16 @@ namespace Game.Gameplay
             _gameplayStateService.TryTransitionTo(_restartStateId);
         }
 
-        private int GetPriority(RunEndReason reason)
+        private static int GetPriority(RunEndReason reason)
         {
-            switch (reason)
+            return reason switch
             {
-                case RunEndReason.Finished:
-                    return 3;
-                case RunEndReason.ObstacleHit:
-                    return 2;
-                case RunEndReason.OutOfBounds:
-                    return 1;
-                case RunEndReason.LostMomentum:
-                    return 0;
-                default:
-                    return -1;
-            }
+                RunEndReason.Finished => 3,
+                RunEndReason.ObstacleHit => 2,
+                RunEndReason.OutOfBounds => 1,
+                RunEndReason.LostMomentum => 0,
+                _ => -1
+            };
         }
 
         private void ResetRunEndState()

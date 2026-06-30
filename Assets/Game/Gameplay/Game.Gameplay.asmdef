@@ -11,6 +11,7 @@
     "Game.Foundation.Input",
     "Game.Utils.Invocation",
     "Game.Utils.Mathematics",
+    "SaintsField.Runtime",
     "Unity.Cinemachine",
     "Unity.InputSystem",
     "Unity.TextMeshPro",

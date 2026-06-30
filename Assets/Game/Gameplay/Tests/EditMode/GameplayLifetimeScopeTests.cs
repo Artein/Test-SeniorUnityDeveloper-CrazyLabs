@@ -7,6 +7,7 @@ using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using Game.Foundation.Input;
+using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
 using TMPro;
 using Unity.Cinemachine;
@@ -69,6 +70,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Player Steering Target")
                 .And.Message.Contains("Run Camera Source")
                 .And.Message.Contains("Run Progress Frame Source")
+                .And.Message.Contains("Run Surface Context Source")
                 .And.Message.Contains("Rigidbody Contact Notifier")
                 .And.Message.Contains("Run Camera Anchor")
                 .And.Message.Contains("Run Camera Rig")
@@ -79,6 +81,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Run Preparation View")
                 .And.Message.Contains("Launch Target")
+                .And.Message.Contains("Character Presentation View")
                 .And.Message.Contains("Level Pickup")
                 .And.Message.Contains("Player Pickup Contact Collider"));
     }
@@ -155,14 +158,20 @@ public sealed class GameplayLifetimeScopeTests
         var unityInput = container.Resolve<IUnityInput>();
         var gameplayStateService = container.Resolve<IGameplayStateService>();
         var slingshotNotifier = container.Resolve<ISlingshotLaunchNotifier>();
+        var slingshotActivePullNotifier = container.Resolve<ISlingshotActivePullNotifier>();
+        var slingshotCaptureLifecycleNotifier = container.Resolve<ISlingshotCaptureLifecycleNotifier>();
+        var slingshotPresentationContextSource = container.Resolve<ISlingshotPresentationContextSource>();
+        var slingshotPullOffsetNormalizer = container.Resolve<ISlingshotPullOffsetNormalizer>();
         var slingshotRunPreparationReset = container.Resolve<ISlingshotRunPreparationReset>();
         var slingshotLauncher = container.Resolve<IGameplaySlingshotLauncher>();
         var gameplaySlingshotLaunchConfig = container.Resolve<IGameplaySlingshotLaunchConfig>();
         var launchImpulseCalculator = container.Resolve<SlingshotLaunchImpulseCalculator>();
         var launchImpulseApplier = container.Resolve<ILaunchImpulseApplier>();
+        var launchAppliedNotifier = container.Resolve<ISlingshotLaunchAppliedNotifier>();
         var launchAppliedPublisher = container.Resolve<ISlingshotLaunchAppliedPublisher>();
         var continueCommand = container.Resolve<IRunPreparationContinueCommand>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
+        var tickables = container.Resolve<ContainerLocal<IReadOnlyList<ITickable>>>().Value;
         var fixedTickables = container.Resolve<ContainerLocal<IReadOnlyList<IFixedTickable>>>().Value;
         var lateTickables = container.Resolve<ContainerLocal<IReadOnlyList<ILateTickable>>>().Value;
         var launchTarget = container.Resolve<ILaunchTarget>();
@@ -178,6 +187,7 @@ public sealed class GameplayLifetimeScopeTests
         var runMotionSource = container.Resolve<IRunMotionSource>();
         var runProgressService = container.Resolve<IRunProgressService>();
         var runProgressFrameSource = container.Resolve<IRunProgressFrameSource>();
+        var runSurfaceContextSource = container.Resolve<IRunSurfaceContextSource>();
         var contactNotifier = container.Resolve<IRigidbodyContactNotifier>();
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
@@ -201,18 +211,27 @@ public sealed class GameplayLifetimeScopeTests
         var runCameraAnchor = container.Resolve<IRunCameraAnchor>();
         var runCameraRig = container.Resolve<IRunCameraRig>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
+        var presentationView = container.Resolve<ICharacterPresentationView>();
+        var presentationTuning = container.Resolve<ICharacterPresentationTuning>();
+        var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
         Assert.That(slingshotRunPreparationReset, Is.Not.Null);
         Assert.That(slingshotLauncher, Is.Not.Null);
+        Assert.That(slingshotActivePullNotifier, Is.Not.Null);
+        Assert.That(slingshotCaptureLifecycleNotifier, Is.Not.Null);
+        Assert.That(slingshotPresentationContextSource, Is.Not.Null);
+        Assert.That(slingshotPullOffsetNormalizer, Is.Not.Null);
         Assert.That(gameplaySlingshotLaunchConfig, Is.SameAs(fixture.GameplaySlingshotLaunchConfig));
         Assert.That(launchImpulseCalculator, Is.Not.Null);
         Assert.That(launchImpulseApplier, Is.Not.Null);
+        Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(9));
+        Assert.That(initializables.Count, Is.EqualTo(11));
+        Assert.That(tickables.Count, Is.EqualTo(3));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -229,6 +248,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runMotionSource, Is.SameAs(fixture.RunCameraSource));
         Assert.That(runProgressService, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.SameAs(fixture.RunProgressFrameSource));
+        Assert.That(runSurfaceContextSource, Is.SameAs(fixture.RunSurfaceContextSource));
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
@@ -251,6 +271,9 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runCameraAnchor, Is.SameAs(fixture.RunCameraAnchor));
         Assert.That(runCameraRig, Is.SameAs(fixture.RunCameraRig));
         Assert.That(bandShapeProvider, Is.Not.Null);
+        Assert.That(presentationView, Is.SameAs(fixture.CharacterPresentationView));
+        Assert.That(presentationTuning, Is.SameAs(fixture.CharacterPresentationView));
+        Assert.That(presentationClassifier, Is.Not.Null);
     }
 
     private ValidScopeFixture CreateValidScopeFixture()
@@ -293,6 +316,8 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
+        var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
+        var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
         var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
         playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
         playerPickupContactCollider.gameObject.tag = "Player";
@@ -323,6 +348,7 @@ public sealed class GameplayLifetimeScopeTests
             playerSteeringTarget,
             runCameraSource,
             runProgressFrameSource,
+            runSurfaceContextSource,
             contactNotifier,
             runCameraAnchor,
             runCameraRig,
@@ -333,6 +359,7 @@ public sealed class GameplayLifetimeScopeTests
             slingshotView,
             runPreparationView,
             launchTarget,
+            characterPresentationView,
             new[] { levelPickup },
             new[] { playerPickupContactCollider },
             "Player",
@@ -343,6 +370,7 @@ public sealed class GameplayLifetimeScopeTests
         {
             Scope = scope,
             RunPreparationStateId = runPreparation,
+            PreLaunchStateId = preLaunch,
             UpgradeCatalog = upgradeCatalog,
             GameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig,
             LaunchTarget = launchTarget,
@@ -353,9 +381,11 @@ public sealed class GameplayLifetimeScopeTests
             RunEndConfig = runEndConfig,
             RunCameraSource = runCameraSource,
             RunProgressFrameSource = runProgressFrameSource,
+            RunSurfaceContextSource = runSurfaceContextSource,
             ContactNotifier = contactNotifier,
             RunCameraAnchor = runCameraAnchor,
-            RunCameraRig = runCameraRig
+            RunCameraRig = runCameraRig,
+            CharacterPresentationView = characterPresentationView
         };
     }
 
@@ -547,6 +577,7 @@ public sealed class GameplayLifetimeScopeTests
     {
         public GameplayLifetimeScope Scope { get; set; }
         public GameplayStateId RunPreparationStateId { get; set; }
+        public GameplayStateId PreLaunchStateId { get; set; }
         public UpgradeCatalog UpgradeCatalog { get; set; }
         public GameplaySlingshotLaunchConfig GameplaySlingshotLaunchConfig { get; set; }
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
@@ -557,8 +588,10 @@ public sealed class GameplayLifetimeScopeTests
         public RunEndConfig RunEndConfig { get; set; }
         public RigidbodyRunCameraSource RunCameraSource { get; set; }
         public RunProgressFrameSource RunProgressFrameSource { get; set; }
+        public PhysicsRunSurfaceContextSource RunSurfaceContextSource { get; set; }
         public RigidbodyContactNotifier ContactNotifier { get; set; }
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
+        public CharacterPresentationView CharacterPresentationView { get; set; }
     }
 }

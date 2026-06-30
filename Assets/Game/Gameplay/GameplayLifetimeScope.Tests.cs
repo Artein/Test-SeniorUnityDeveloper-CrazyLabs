@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
@@ -22,6 +23,7 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
+        internal PhysicsRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
         internal IReadOnlyList<Pickup> LevelPickupsForTests => GetLevelPickups();
         internal IReadOnlyList<Collider> PlayerPickupContactCollidersForTests => GetPlayerPickupContactColliders();
         internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
@@ -46,6 +48,7 @@ namespace Game.Gameplay
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
+            PhysicsRunSurfaceContextSource runSurfaceContextSource,
             RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,
@@ -56,6 +59,7 @@ namespace Game.Gameplay
             SlingshotView slingshotView,
             RunPreparationUIView runPreparationView,
             RigidbodyLaunchTarget launchTarget,
+            CharacterPresentationView characterPresentationView,
             Pickup[] levelPickups,
             Collider[] playerPickupContactColliders,
             string playerTag,
@@ -81,6 +85,7 @@ namespace Game.Gameplay
             _playerSteeringTarget = playerSteeringTarget;
             _runCameraSource = runCameraSource;
             _runProgressFrameSource = runProgressFrameSource;
+            _runSurfaceContextSource = runSurfaceContextSource;
             _contactNotifier = contactNotifier;
             _runCameraAnchor = runCameraAnchor;
             _runCameraRig = runCameraRig;
@@ -91,6 +96,7 @@ namespace Game.Gameplay
             _slingshotView = slingshotView;
             _runPreparationView = runPreparationView;
             _launchTarget = launchTarget;
+            _characterPresentationView = characterPresentationView;
             _levelPickups = levelPickups;
             _playerPickupContactColliders = playerPickupContactColliders;
             _playerTag = playerTag;

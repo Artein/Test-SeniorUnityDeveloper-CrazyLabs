@@ -23,6 +23,7 @@ public sealed class SlingshotLaunchRequestedTests
     private FakeLaunchTarget _launchTarget;
     private FakeHeldLaunchTarget _heldLaunchTarget;
     private FakeSlingshotBandShapeProvider _bandShapeProvider;
+    private SlingshotPullOffsetNormalizer _pullOffsetNormalizer;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakeTime _clock;
 
@@ -57,6 +58,7 @@ public sealed class SlingshotLaunchRequestedTests
         _launchTarget = new FakeLaunchTarget(_observations);
         _heldLaunchTarget = new FakeHeldLaunchTarget(_observations);
         _bandShapeProvider = new FakeSlingshotBandShapeProvider(_observations);
+        _pullOffsetNormalizer = new SlingshotPullOffsetNormalizer(_config);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _clock = new FakeTime { DeltaTime = 0.1f };
         ConfigureRestBandScreenProjection();
@@ -369,18 +371,30 @@ public sealed class SlingshotLaunchRequestedTests
         using var container = builder.Build();
         var notifier = container.Resolve<ISlingshotLaunchNotifier>();
         var capture = container.Resolve<ISlingshotCapture>();
+        var activePullNotifier = container.Resolve<ISlingshotActivePullNotifier>();
+        var captureLifecycleNotifier = container.Resolve<ISlingshotCaptureLifecycleNotifier>();
+        var runPreparationReset = container.Resolve<ISlingshotRunPreparationReset>();
+        var presentationContextSource = container.Resolve<ISlingshotPresentationContextSource>();
+        var pullOffsetNormalizer = container.Resolve<ISlingshotPullOffsetNormalizer>();
         var appliedNotifier = container.Resolve<ISlingshotLaunchAppliedNotifier>();
         var appliedPublisher = container.Resolve<ISlingshotLaunchAppliedPublisher>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
+        var tickables = container.Resolve<ContainerLocal<IReadOnlyList<ITickable>>>().Value;
         UnityEngine.Object.DestroyImmediate(cameraObject);
 
         Assert.That(notifier, Is.Not.Null);
         Assert.That(capture, Is.Not.Null);
+        Assert.That(activePullNotifier, Is.Not.Null);
+        Assert.That(captureLifecycleNotifier, Is.Not.Null);
+        Assert.That(runPreparationReset, Is.Not.Null);
+        Assert.That(presentationContextSource, Is.Not.Null);
+        Assert.That(pullOffsetNormalizer, Is.Not.Null);
         Assert.That(appliedNotifier, Is.Not.Null);
         Assert.That(appliedPublisher, Is.Not.Null);
         Assert.That(bandShapeProvider, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(1));
+        Assert.That(initializables.Count, Is.EqualTo(2));
+        Assert.That(tickables.Count, Is.EqualTo(2));
     }
 
     private SlingshotLaunchRequest ReleaseAndCaptureRequest(Vector3 rawPullPoint, Vector2 touchIndicatorScreenPosition)
@@ -399,7 +413,7 @@ public sealed class SlingshotLaunchRequestedTests
     private SlingshotController CreateInitializedController()
     {
         var controller = new SlingshotController(_input, _view, _projector, _launchTarget, _heldLaunchTarget, _bandShapeProvider,
-            _launchAppliedNotifier, _clock, _config);
+            _pullOffsetNormalizer, _launchAppliedNotifier, _clock, _config);
         ((IInitializable)controller).Initialize();
         ((ISlingshotCapture)controller).EnableCapture();
         return controller;
@@ -430,12 +444,7 @@ public sealed class SlingshotLaunchRequestedTests
     private Vector3 GetClampedPullPoint(Vector3 rawPullPoint)
     {
         var delta = rawPullPoint - _view.Geometry.RestPoint;
-
-        var pullDistance = Mathf.Clamp(
-            -Vector3.Dot(delta, _view.Geometry.LaunchFrameForward),
-            0f,
-            _config.MaximumPullDistance);
-
+        var pullDistance = Mathf.Clamp(-Vector3.Dot(delta, _view.Geometry.LaunchFrameForward), 0f, _config.MaximumPullDistance);
         var anchorOffsetA = Vector3.Dot(_view.Geometry.LeftAnchorPosition - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
         var anchorOffsetB = Vector3.Dot(_view.Geometry.RightAnchorPosition - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
         var minimumAnchorOffset = Mathf.Min(anchorOffsetA, anchorOffsetB);
@@ -444,18 +453,14 @@ public sealed class SlingshotLaunchRequestedTests
         var fullLateralPullDistance = Mathf.Max(0.02f, _config.MinimumPullDistance + (_config.BandContactPadding * 2f))
                                       + (_config.BandContactPadding * 2f);
 
-        var lateralPullScale = fullLateralPullDistance <= 0.000001f
-            ? 1f
-            : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+        var lateralPullScale = fullLateralPullDistance <= 0.000001f ? 1f : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
 
         var pullOffset = Mathf.Clamp(
             Vector3.Dot(delta, _view.Geometry.LaunchFrameRight),
             Mathf.Max(-_config.MaximumLateralPull, minimumAnchorOffset) * lateralPullScale,
             Mathf.Min(_config.MaximumLateralPull, maximumAnchorOffset) * lateralPullScale);
 
-        return _view.Geometry.RestPoint
-               + (_view.Geometry.LaunchFrameRight * pullOffset)
-               - (_view.Geometry.LaunchFrameForward * pullDistance);
+        return _view.Geometry.RestPoint + (_view.Geometry.LaunchFrameRight * pullOffset) - (_view.Geometry.LaunchFrameForward * pullDistance);
     }
 
     private void ConfigureRestBandScreenProjection()
@@ -499,9 +504,9 @@ public sealed class SlingshotLaunchRequestedTests
     {
         Assert.That(shape.Points.Count, Is.EqualTo(expectedPoints.Length));
 
-        for (var pointIndex = 0; pointIndex < expectedPoints.Length; pointIndex += 1)
+        for (var i = 0; i < expectedPoints.Length; i += 1)
         {
-            Assert.That(shape.Points[pointIndex], Is.EqualTo(expectedPoints[pointIndex]));
+            Assert.That(shape.Points[i], Is.EqualTo(expectedPoints[i]));
         }
     }
 

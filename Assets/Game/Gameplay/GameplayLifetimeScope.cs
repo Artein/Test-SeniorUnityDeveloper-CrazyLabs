@@ -4,6 +4,7 @@ using System.Linq;
 using Game.Foundation;
 using Game.Foundation.Input;
 using Game.Foundation.Screen;
+using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
@@ -36,6 +37,7 @@ namespace Game.Gameplay
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
+        [SerializeField] private PhysicsRunSurfaceContextSource _runSurfaceContextSource;
         [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
@@ -46,6 +48,7 @@ namespace Game.Gameplay
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
+        [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] [TagSelector] private string _playerTag = "Player";
         [SerializeField] private string _playerLayerName = "Player";
         [SerializeField] private string _pickupLayerName = "Pickup";
@@ -74,9 +77,11 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
+            builder.RegisterInstance<IRunSurfaceContextSource>(_runSurfaceContextSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
+            builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
@@ -90,6 +95,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+            builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
             builder.Register<ICurrencyStorage, CurrencyStorage>(Lifetime.Singleton);
             builder.Register<IRunCurrencyAccumulator, RunCurrencyAccumulator>(Lifetime.Singleton);
             builder.Register<IUpgradeProgressStorage, UpgradeProgressStorage>(Lifetime.Singleton);
@@ -132,6 +138,10 @@ namespace Game.Gameplay
                 .WithParameter("restartStateId", _runPreparationStateId)
                 .WithParameter("runningStateId", _runningStateId)
                 .WithParameter("runEndedStateId", _runEndedStateId);
+
+            builder.RegisterEntryPoint<CharacterPresentationPresenter>()
+                .WithParameter("preLaunchStateId", _preLaunchStateId)
+                .WithParameter("runningStateId", _runningStateId);
 
             builder.RegisterEntryPoint<PickupCollectionController>()
                 .WithParameter("pickups", GetLevelPickups())
@@ -228,6 +238,9 @@ namespace Game.Gameplay
             if (_runProgressFrameSource == null)
                 yield return "GameplayLifetimeScope requires a Run Progress Frame Source reference.";
 
+            if (_runSurfaceContextSource == null)
+                yield return "GameplayLifetimeScope requires a Run Surface Context Source reference.";
+
             if (_contactNotifier == null)
                 yield return "GameplayLifetimeScope requires a Rigidbody Contact Notifier reference.";
 
@@ -257,6 +270,9 @@ namespace Game.Gameplay
 
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
+
+            if (_characterPresentationView == null)
+                yield return "GameplayLifetimeScope requires a Character Presentation View reference.";
 
             foreach (var error in GetPickupSetupValidationErrors())
                 yield return error;

@@ -99,6 +99,57 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
+    public void FixedTick_AcceptedResult_NotifiesRunResultOnce()
+    {
+        ActivateRun();
+        var acceptedResults = new List<RunResult>();
+        ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
+        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(acceptedResults, Has.Count.EqualTo(1));
+        Assert.That(acceptedResults[0].Reason, Is.EqualTo(RunEndReason.Finished));
+        Assert.That(acceptedResults[0].IsSuccess, Is.True);
+    }
+
+    [Test]
+    public void FixedTick_InvalidProgressSnapshot_DoesNotNotifyRunResult()
+    {
+        ActivateRun();
+        _progressService.HasValidSnapshot = false;
+        _progressService.SnapshotError = "bad frame";
+        var acceptedResults = new List<RunResult>();
+        ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
+        LogAssert.Expect(LogType.Error, new Regex("Run End Flow skipped Run Result.*bad frame"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(acceptedResults, Is.Empty);
+    }
+
+    [Test]
+    public void FixedTick_UnsubscribedRunResultHandler_IsNotNotified()
+    {
+        ActivateRun();
+        var notificationCount = 0;
+        Action<RunResult> handler = _ => notificationCount += 1;
+        ((IRunResultNotifier)_flow).RunResultAccepted += handler;
+        ((IRunResultNotifier)_flow).RunResultAccepted -= handler;
+
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(notificationCount, Is.EqualTo(0));
+    }
+
+    [Test]
     public void FixedTick_FinishCandidate_PublishesRunResultWithCurrencySnapshot()
     {
         ActivateRun();
