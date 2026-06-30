@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Game.Foundation;
 using Game.Foundation.Input;
+using Game.Foundation.Persistence;
 using Game.Foundation.Screen;
 using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;

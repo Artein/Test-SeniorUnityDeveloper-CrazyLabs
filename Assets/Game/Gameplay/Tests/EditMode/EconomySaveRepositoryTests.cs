@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using Game.Foundation.Persistence;
 using Game.Gameplay.Economy;
 using NUnit.Framework;
 using UnityEngine;

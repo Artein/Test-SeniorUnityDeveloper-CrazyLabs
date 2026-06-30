@@ -1,16 +1,24 @@
 {
-  "name": "Game.Gameplay.Economy",
+  "name": "Game.Foundation.Tests.EditMode",
   "rootNamespace": "",
   "references": [
-    "Game.Foundation"
+    "Game.Foundation",
+    "VContainer"
   ],
-  "includePlatforms": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [],
   "autoReferenced": true,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

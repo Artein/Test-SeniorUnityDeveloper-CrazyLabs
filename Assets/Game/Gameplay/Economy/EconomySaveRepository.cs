@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Text;
+using Game.Foundation.Persistence;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Game.Gameplay.Economy
@@ -11,11 +13,7 @@ namespace Game.Gameplay.Economy
         EconomyPersistenceResult Save(PlayerEconomySnapshot snapshot, string reason);
     }
 
-    public interface IPersistentDataPathProvider
-    {
-        string PersistentDataPath { get; }
-    }
-
+    [UsedImplicitly]
     public sealed class EconomySaveRepository : IEconomySaveRepository
     {
         private readonly IPersistentDataPathProvider _pathProvider;
