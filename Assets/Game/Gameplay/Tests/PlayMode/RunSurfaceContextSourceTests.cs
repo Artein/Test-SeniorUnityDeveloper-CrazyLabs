@@ -1,14 +1,12 @@
 using System.Collections.Generic;
 using Game.Gameplay;
+using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
-public sealed class RunSurfaceContextSourceTests
+public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: Use editor asset provider with serialized values instead of hardcoding
-    private readonly int _surfaceLayer = 8;
-
     private readonly List<GameObject> _createdObjects = new();
 
     [TearDown]
@@ -79,7 +77,12 @@ public sealed class RunSurfaceContextSourceTests
 
         var source = sourceObject.AddComponent<PhysicsRunSurfaceContextSource>();
         var supportCollider = CreateSupportCollider(sourceObject.transform, supportCenterY);
-        source.SetReferencesForTests(supportCollider, sourceObject.GetComponent<RunProgressFrameSource>(), supportProbeDistance, 1 << _surfaceLayer);
+
+        source.SetReferencesForTests(
+            supportCollider,
+            sourceObject.GetComponent<RunProgressFrameSource>(),
+            supportProbeDistance,
+            TestAssets.RunSurfaceLayerMask.value);
         return source;
     }
 
@@ -99,11 +102,18 @@ public sealed class RunSurfaceContextSourceTests
     private GameObject CreateSurface(float topY, Quaternion rotation)
     {
         var surface = CreateGameObject("Surface");
-        surface.layer = _surfaceLayer;
+        surface.layer = GetSingleLayer(TestAssets.RunSurfaceLayerMask, "Run Surface");
         surface.transform.SetPositionAndRotation(new Vector3(0f, topY, 0f) - (rotation * Vector3.up * 0.05f), rotation);
         surface.transform.localScale = new Vector3(8f, 0.1f, 8f);
         surface.AddComponent<BoxCollider>();
         return surface;
+    }
+
+    private int GetSingleLayer(LayerMask layerMask, string description)
+    {
+        Assert.That(layerMask.value, Is.Not.EqualTo(0), description);
+        Assert.That(layerMask.value & (layerMask.value - 1), Is.Zero, description);
+        return Mathf.RoundToInt(Mathf.Log(layerMask.value, 2f));
     }
 
     private GameObject CreateGameObject(string name)

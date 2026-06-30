@@ -24,7 +24,7 @@ This slice should not introduce Band Contact Points or Band Wrap yet. It establi
 - [x] The existing Launch Target adapter implements held positioning while remaining a shallow Unity adapter.
 - [x] Held positioning fails fast when called before the target is held.
 - [x] Held positioning uses immediate pose assignment suitable for same-frame visual follow-up work.
-- [x] Held positioning preserves Launch Target rotation and leaves a clear TODO at the Launch Target boundary for future orientation behavior.
+- [x] Held positioning preserves Launch Target rotation and keeps future orientation behavior behind an explicit Launch Target contract boundary.
 - [x] Active Pull updates move the held Launch Target to the clamped Pull Point.
 - [x] Active Pull target positioning happens after Pull projection/clamping and before later Band visual calculation hooks.
 - [x] Forward-only Pull keeps the held Launch Target at Rest Point.

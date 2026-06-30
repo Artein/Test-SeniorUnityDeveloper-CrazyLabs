@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Tests.Common;
 using Game.Foundation.Input;
 using NUnit.Framework;
 using Unity.Cinemachine;
@@ -14,11 +15,8 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneSlingshotInputTests
+public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: We should load scene via SceneRefernce + EditorAssetProvider instead of scene build index
-    private readonly int _gameplaySceneBuildIndex = 0;
-
     [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsSlingshot_then_PlayerLaunches()
     {
@@ -125,9 +123,7 @@ public sealed class GameplaySceneSlingshotInputTests
             Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return SendMouse(mouse, validPullScreenPosition, false);
-            yield return WaitFrames(10);
-
-            AssertPlayerIsHeld(playerRigidbody);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
         }
         finally
         {
@@ -165,9 +161,8 @@ public sealed class GameplaySceneSlingshotInputTests
             Assert.That(touchIndicator.activeSelf, Is.True);
 
             yield return SendMouse(mouse, weakPullScreenPosition, false);
-            yield return WaitFrames(10);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
 
-            AssertPlayerIsHeld(playerRigidbody);
             Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
             Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
             Assert.That(touchIndicator.activeSelf, Is.False);
@@ -210,9 +205,7 @@ public sealed class GameplaySceneSlingshotInputTests
             Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
 
             yield return SendMouse(mouse, forwardPullScreenPosition, false);
-            yield return WaitFrames(10);
-
-            AssertPlayerIsHeld(playerRigidbody);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
         }
         finally
         {
@@ -247,13 +240,13 @@ public sealed class GameplaySceneSlingshotInputTests
         if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
             yield break;
 
-        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
         yield break;
     }
 
     private bool CanReuseGameplayScene(Scene scene)
     {
-        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+        if (!scene.IsValid() || scene.path != TestAssets.GameplaySceneRef.Path)
             return false;
 
         var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
@@ -466,13 +459,15 @@ public sealed class GameplaySceneSlingshotInputTests
         return Mathf.Min(slingshotConfig.MaximumLateralPull, maximumAnchorOffset);
     }
 
-    // TODO: Fix this
-    private IEnumerator WaitFrames(int frameCount)
+    private IEnumerator AssertPlayerRemainsHeld(Rigidbody playerRigidbody, int frameCount)
     {
         for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
         {
+            AssertPlayerIsHeld(playerRigidbody);
             yield return null;
         }
+
+        AssertPlayerIsHeld(playerRigidbody);
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)

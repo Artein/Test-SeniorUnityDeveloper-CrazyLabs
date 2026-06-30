@@ -172,21 +172,27 @@ namespace Game.Gameplay.Slingshot
             return widthAxis.sqrMagnitude > minimumMagnitude ? widthAxis.normalized : _geometry.LaunchFrameUp;
         }
 
-        // TODO: Fix this method
         private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
         {
             var recoilPullPoint = GetReleaseRecoilPullPoint(progress, out var wasDepthClamped);
-
-            if (wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint))
-                return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
-
-            if (TryUpdateTautActiveBandShape(recoilPullPoint)
-                || (!wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint)))
-            {
-                return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
-            }
+            TryUpdateReleaseRecoilBandShape(recoilPullPoint, wasDepthClamped);
 
             return new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
+        }
+
+        private bool TryUpdateReleaseRecoilBandShape(Vector3 recoilPullPoint, bool wasDepthClamped)
+        {
+            if (wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint))
+                return true;
+
+            if (TryUpdateTautActiveBandShape(recoilPullPoint))
+                return true;
+
+            if (!wasDepthClamped && TryUpdateClearSimpleReleaseRecoilBandShape(recoilPullPoint))
+                return true;
+
+            // Keep the last valid active shape if recoil cannot solve a clear intermediate shape.
+            return false;
         }
 
         private Vector3 GetReleaseRecoilPullPoint(float progress, out bool wasDepthClamped)

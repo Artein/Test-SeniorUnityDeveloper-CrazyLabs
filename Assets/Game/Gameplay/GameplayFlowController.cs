@@ -2,6 +2,7 @@ using System;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -37,9 +38,9 @@ namespace Game.Gameplay
             IRunModifierSnapshotFactory snapshotFactory,
             IRunModifierSnapshotStore snapshotStore,
             IPreLaunchRigPoseResetter preLaunchRigPoseResetter,
-            GameplayStateId runPreparationStateId,
-            GameplayStateId preLaunchStateId,
-            GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId runPreparationStateId,
+            [Key(InjectKey.GameplayStateId.PreLaunch)] GameplayStateId preLaunchStateId,
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
         {
             _slingshotCapture = slingshotCapture ?? throw new ArgumentNullException(nameof(slingshotCapture));
 

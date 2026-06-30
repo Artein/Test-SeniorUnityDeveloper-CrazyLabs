@@ -3,6 +3,7 @@ using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using UnityEngine;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay.CharacterPresentation
@@ -41,8 +42,8 @@ namespace Game.Gameplay.CharacterPresentation
             ICharacterPresentationView view,
             ICharacterPresentationTuning tuning,
             ITime clock,
-            GameplayStateId preLaunchStateId,
-            GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.PreLaunch)] GameplayStateId preLaunchStateId,
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));

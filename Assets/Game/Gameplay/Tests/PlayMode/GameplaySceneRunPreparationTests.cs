@@ -8,6 +8,7 @@ using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
@@ -18,10 +19,8 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneRunPreparationTests
+public sealed class GameplaySceneRunPreparationTests : BaseGameplayTestAssetsFixture
 {
-    private readonly int _gameplaySceneBuildIndex = 0;
-
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_StartsInRunPreparationWithSlingshotCaptureDisabled()
     {
@@ -241,7 +240,7 @@ public sealed class GameplaySceneRunPreparationTests
 
     private IEnumerator LoadGameplayScene()
     {
-        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
         yield return null;
     }
 

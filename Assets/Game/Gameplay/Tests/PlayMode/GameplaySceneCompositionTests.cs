@@ -5,6 +5,7 @@ using System.Reflection;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Tests.Common;
 using Game.Foundation.Input;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
@@ -18,11 +19,8 @@ using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneCompositionTests
+public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: We should load scene via SceneRefernce + EditorAssetProvider instead of scene build index
-    private readonly int _gameplaySceneBuildIndex = 0;
-
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_SlingshotPrelaunchCompositionIsReady()
     {
@@ -116,8 +114,10 @@ public sealed class GameplaySceneCompositionTests
         var assignedRunCameraConfigs = GetAssignedRunCameraConfigs(activeScene);
         var assignedRunEndConfigs = GetAssignedRunEndConfigs(activeScene);
         var assignedRunProgressFrameSources = GetAssignedRunProgressFrameSources(activeScene);
-        var cameraTerrainLayer = LayerMask.NameToLayer("CameraTerrain");
-        var cameraObstacleLayer = LayerMask.NameToLayer("CameraObstacle");
+        var cameraTerrainLayerMask = TestAssets.CameraTerrainLayerMask;
+        var cameraObstacleLayerMask = TestAssets.CameraObstacleLayerMask;
+        var cameraTerrainLayer = GetSingleLayer(cameraTerrainLayerMask, "Camera Terrain");
+        var cameraObstacleLayer = GetSingleLayer(cameraObstacleLayerMask, "Camera Obstacle");
         var bandShapeOutput = new Vector3[bandShapeProvider.BandShapePointCount];
 
         var bandShapeSolved = bandShapeProvider.TryCreateBandShape(new SlingshotBandShapeQuery(
@@ -131,7 +131,7 @@ public sealed class GameplaySceneCompositionTests
             bandShapeOutput,
             out var bandShapePointCount);
 
-        Assert.That(activeScene.buildIndex, Is.EqualTo(_gameplaySceneBuildIndex));
+        Assert.That(activeScene.path, Is.EqualTo(TestAssets.GameplaySceneRef.Path));
         Assert.That(lifetimeScope, Is.Not.Null);
         Assert.That(runCameraSource, Is.Not.Null);
         Assert.That(contactNotifier, Is.Not.Null);
@@ -156,9 +156,9 @@ public sealed class GameplaySceneCompositionTests
         Assert.That(surfaceContact, Is.Not.Null);
         Assert.That(surfaceContact.Category, Is.EqualTo(RunContactCategory.Surface));
         Assert.That(decollider.TerrainResolution.Enabled, Is.True);
-        Assert.That(decollider.TerrainResolution.TerrainLayers.value, Is.EqualTo(1 << cameraTerrainLayer));
+        Assert.That(decollider.TerrainResolution.TerrainLayers.value, Is.EqualTo(cameraTerrainLayerMask.value));
         Assert.That(decollider.Decollision.Enabled, Is.True);
-        Assert.That(decollider.Decollision.ObstacleLayers.value, Is.EqualTo((1 << cameraTerrainLayer) | (1 << cameraObstacleLayer)));
+        Assert.That(decollider.Decollision.ObstacleLayers.value, Is.EqualTo(cameraTerrainLayerMask.value | cameraObstacleLayerMask.value));
         Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
         Assert.That(bandLineRenderer, Is.Not.Null);
         Assert.That(preLaunchRigPoseRoot, Is.Not.Null);
@@ -527,9 +527,7 @@ public sealed class GameplaySceneCompositionTests
             Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return SendMouse(mouse, validPullScreenPosition, false);
-            yield return WaitFrames(10);
-
-            AssertPlayerIsHeld(playerRigidbody);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
         }
         finally
         {
@@ -567,9 +565,8 @@ public sealed class GameplaySceneCompositionTests
             Assert.That(touchIndicator.activeSelf, Is.True);
 
             yield return SendMouse(mouse, weakPullScreenPosition, false);
-            yield return WaitFrames(10);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
 
-            AssertPlayerIsHeld(playerRigidbody);
             Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
             Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
             Assert.That(touchIndicator.activeSelf, Is.False);
@@ -612,9 +609,7 @@ public sealed class GameplaySceneCompositionTests
             Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
 
             yield return SendMouse(mouse, forwardPullScreenPosition, false);
-            yield return WaitFrames(10);
-
-            AssertPlayerIsHeld(playerRigidbody);
+            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
         }
         finally
         {
@@ -649,12 +644,12 @@ public sealed class GameplaySceneCompositionTests
         if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
             yield break;
 
-        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
     }
 
     private bool CanReuseGameplayScene(Scene scene)
     {
-        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+        if (!scene.IsValid() || scene.path != TestAssets.GameplaySceneRef.Path)
             return false;
 
         var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
@@ -949,12 +944,22 @@ public sealed class GameplaySceneCompositionTests
         return Mathf.Min(slingshotConfig.MaximumLateralPull, maximumAnchorOffset);
     }
 
-    private IEnumerator WaitFrames(int frameCount)
+    private int GetSingleLayer(LayerMask layerMask, string description)
+    {
+        Assert.That(layerMask.value, Is.Not.EqualTo(0), description);
+        Assert.That(layerMask.value & (layerMask.value - 1), Is.Zero, description);
+        return Mathf.RoundToInt(Mathf.Log(layerMask.value, 2f));
+    }
+
+    private IEnumerator AssertPlayerRemainsHeld(Rigidbody playerRigidbody, int frameCount)
     {
         for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
         {
+            AssertPlayerIsHeld(playerRigidbody);
             yield return null;
         }
+
+        AssertPlayerIsHeld(playerRigidbody);
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)

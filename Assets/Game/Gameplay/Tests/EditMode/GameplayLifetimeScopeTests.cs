@@ -217,6 +217,17 @@ public sealed class GameplayLifetimeScopeTests
         var presentationView = container.Resolve<ICharacterPresentationView>();
         var presentationTuning = container.Resolve<ICharacterPresentationTuning>();
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
+        var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
+        var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
+        var resolvedRunningState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.Running);
+        var resolvedRunEndedState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunEnded);
+        var resolvedCoinCurrencyDefinition = container.Resolve<CurrencyDefinition>(InjectKey.CurrencyDefinition.Coin);
+        var resolvedCoinPickupMultiplierStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.CoinPickupMultiplier);
+        var resolvedSlingshotLaunchPowerStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.SlingshotLaunchPower);
+        var resolvedPlayerMaxSpeedStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerMaxSpeed);
+        var resolvedPlayerSteeringResponsivenessStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
+        var resolvedLevelPickups = container.Resolve<IReadOnlyList<Pickup>>(InjectKey.Pickups.LevelPickups);
+        var resolvedPlayerTag = container.Resolve<string>(InjectKey.Tags.Player);
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
@@ -279,6 +290,17 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(presentationView, Is.SameAs(fixture.CharacterPresentationView));
         Assert.That(presentationTuning, Is.SameAs(fixture.CharacterPresentationView));
         Assert.That(presentationClassifier, Is.Not.Null);
+        Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
+        Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
+        Assert.That(resolvedRunningState, Is.SameAs(fixture.RunningStateId));
+        Assert.That(resolvedRunEndedState, Is.SameAs(fixture.RunEndedStateId));
+        Assert.That(resolvedCoinCurrencyDefinition, Is.SameAs(fixture.CoinCurrencyDefinition));
+        Assert.That(resolvedCoinPickupMultiplierStat, Is.SameAs(fixture.CoinPickupMultiplierStatId));
+        Assert.That(resolvedSlingshotLaunchPowerStat, Is.SameAs(fixture.SlingshotLaunchPowerStatId));
+        Assert.That(resolvedPlayerMaxSpeedStat, Is.SameAs(fixture.PlayerMaxSpeedStatId));
+        Assert.That(resolvedPlayerSteeringResponsivenessStat, Is.SameAs(fixture.PlayerSteeringResponsivenessStatId));
+        Assert.That(resolvedLevelPickups, Is.SameAs(fixture.LevelPickups));
+        Assert.That(resolvedPlayerTag, Is.EqualTo(fixture.PlayerTag));
     }
 
     private ValidScopeFixture CreateValidScopeFixture()
@@ -293,11 +315,7 @@ public sealed class GameplayLifetimeScopeTests
         var runningToRunEnded = CreateTransition(running, runEnded);
         var runEndedToRunPreparation = CreateTransition(runEnded, runPreparation);
 
-        var gameplayStateConfig = CreateGameplayStateConfig(
-            runPreparation,
-            runPreparationToPreLaunch,
-            preLaunchToRunning,
-            runningToRunEnded,
+        var gameplayStateConfig = CreateGameplayStateConfig(runPreparation, runPreparationToPreLaunch, preLaunchToRunning, runningToRunEnded,
             runEndedToRunPreparation);
         var slingshotLaunchPowerStatId = CreateStatId("slingshot_launch_power");
         var playerMaxSpeedStatId = CreateStatId("player_max_speed");
@@ -333,6 +351,9 @@ public sealed class GameplayLifetimeScopeTests
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
         var pickupDefinition = CreatePickupDefinition(currencyDefinition, 1);
         var levelPickup = CreatePickup("Level Pickup", pickupDefinition);
+        var levelPickups = new[] { levelPickup };
+        var playerPickupContactColliders = new[] { playerPickupContactCollider };
+        var playerTag = "Player";
 
         scope.SetReferencesForTests(
             gameplayStateConfig,
@@ -367,9 +388,9 @@ public sealed class GameplayLifetimeScopeTests
             runPreparationView,
             launchTarget,
             characterPresentationView,
-            new[] { levelPickup },
-            new[] { playerPickupContactCollider },
-            "Player",
+            levelPickups,
+            playerPickupContactColliders,
+            playerTag,
             "Player",
             "Pickup");
 
@@ -378,10 +399,18 @@ public sealed class GameplayLifetimeScopeTests
             Scope = scope,
             RunPreparationStateId = runPreparation,
             PreLaunchStateId = preLaunch,
+            RunningStateId = running,
+            RunEndedStateId = runEnded,
+            SlingshotLaunchPowerStatId = slingshotLaunchPowerStatId,
+            PlayerMaxSpeedStatId = playerMaxSpeedStatId,
+            PlayerSteeringResponsivenessStatId = playerSteeringResponsivenessStatId,
+            CoinCurrencyDefinition = currencyDefinition,
+            CoinPickupMultiplierStatId = coinPickupMultiplierStatId,
             UpgradeCatalog = upgradeCatalog,
             GameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig,
             LaunchTarget = launchTarget,
             LevelPickup = levelPickup,
+            LevelPickups = levelPickups,
             PlayerPickupContactCollider = playerPickupContactCollider,
             PlayerSteeringTarget = playerSteeringTarget,
             RunCameraConfig = runCameraConfig,
@@ -393,7 +422,8 @@ public sealed class GameplayLifetimeScopeTests
             RunCameraAnchor = runCameraAnchor,
             RunCameraRig = runCameraRig,
             PullHintView = pullHintView,
-            CharacterPresentationView = characterPresentationView
+            CharacterPresentationView = characterPresentationView,
+            PlayerTag = playerTag
         };
     }
 
@@ -421,22 +451,13 @@ public sealed class GameplayLifetimeScopeTests
     {
         var viewObject = CreateGameObject("Run Preparation View");
         viewObject.SetActive(false);
-
         var view = viewObject.AddComponent<RunPreparationUIView>();
         var coinBalanceIcon = CreateChildImage(viewObject.transform, "Coin Balance Icon");
         var coinBalanceText = CreateChildText(viewObject.transform, "Coin Balance Label");
         var continueTouchAreaButton = CreateChildButton(viewObject.transform, "Run Preparation Continue Touch Area");
         var upgradeCard = CreateRunPreparationUpgradeCard(viewObject.transform);
-
-        view.SetReferencesForTests(
-            viewObject,
-            coinBalanceIcon,
-            coinBalanceText,
-            continueTouchAreaButton,
-            new[] { upgradeCard });
-
+        view.SetReferencesForTests(viewObject, coinBalanceIcon, coinBalanceText, continueTouchAreaButton, new[] { upgradeCard });
         viewObject.SetActive(true);
-
         return view;
     }
 
@@ -453,15 +474,7 @@ public sealed class GameplayLifetimeScopeTests
         var buyButtonCostIcon = CreateChildImage(buyButton.transform, "Upgrade Button Cost Currency Icon");
         var buyButtonCostText = CreateChildText(buyButton.transform, "Upgrade Button Cost Label");
 
-        card.SetReferencesForTests(
-            cardObject,
-            icon,
-            nameText,
-            levelText,
-            effectText,
-            buyButton,
-            buyButtonActionLabel,
-            buyButtonCostIcon,
+        card.SetReferencesForTests(cardObject, icon, nameText, levelText, effectText, buyButton, buyButtonActionLabel, buyButtonCostIcon,
             buyButtonCostText);
 
         return card;
@@ -585,10 +598,18 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayLifetimeScope Scope { get; set; }
         public GameplayStateId RunPreparationStateId { get; set; }
         public GameplayStateId PreLaunchStateId { get; set; }
+        public GameplayStateId RunningStateId { get; set; }
+        public GameplayStateId RunEndedStateId { get; set; }
+        public GameplayStatId SlingshotLaunchPowerStatId { get; set; }
+        public GameplayStatId PlayerMaxSpeedStatId { get; set; }
+        public GameplayStatId PlayerSteeringResponsivenessStatId { get; set; }
+        public CurrencyDefinition CoinCurrencyDefinition { get; set; }
+        public GameplayStatId CoinPickupMultiplierStatId { get; set; }
         public UpgradeCatalog UpgradeCatalog { get; set; }
         public GameplaySlingshotLaunchConfig GameplaySlingshotLaunchConfig { get; set; }
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
         public Pickup LevelPickup { get; set; }
+        public IReadOnlyList<Pickup> LevelPickups { get; set; }
         public Collider PlayerPickupContactCollider { get; set; }
         public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; set; }
         public RunCameraConfig RunCameraConfig { get; set; }
@@ -601,5 +622,6 @@ public sealed class GameplayLifetimeScopeTests
         public CinemachineRunCameraRig RunCameraRig { get; set; }
         public PullHintView PullHintView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
+        public string PlayerTag { get; set; }
     }
 }
