@@ -6,7 +6,6 @@ using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
-using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using TMPro;
@@ -19,7 +18,7 @@ using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayModeFixture
 {
     private const float MinimumCoinIconScreenHeight = 40f;
     private const float MinimumBuyButtonScreenHeight = 64f;
@@ -305,8 +304,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
 
     private IEnumerator LoadGameplayScene()
     {
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
+        yield return LoadGameplaySceneWithIsolatedSaves();
     }
 
     private IEnumerator ReturnToRunPreparationWithBalance(Scene scene, int balance)
@@ -479,17 +477,6 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
             .ToArray();
     }
 
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
     private T FindChildComponent<T>(Transform root, string objectName)
         where T : Component
     {
@@ -656,35 +643,6 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
         var topRight = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
 
         return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
-    }
-
-    private GameObject FindGameObjectByName(Scene scene, string objectName)
-    {
-        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
-            return gameObject;
-
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
-    }
-
-    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject result)
-    {
-        foreach (var rootGameObject in scene.GetRootGameObjects())
-        {
-            var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
-
-            foreach (var childTransform in transforms)
-            {
-                if (childTransform.name == objectName)
-                {
-                    result = childTransform.gameObject;
-                    return true;
-                }
-            }
-        }
-
-        result = null;
-        return false;
     }
 
     private string GetButtonActionLabel(Button button)
