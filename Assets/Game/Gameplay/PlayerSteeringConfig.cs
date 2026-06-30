@@ -9,6 +9,7 @@ namespace Game.Gameplay
         float SteeringResponseRate { get; }
         float MaximumTurnDegreesPerSecond { get; }
         float MinimumSteerSpeed { get; }
+        float MaximumPlanarSpeed { get; }
     }
 
     [CreateAssetMenu(
@@ -21,11 +22,13 @@ namespace Game.Gameplay
         [SerializeField, Min(0f)] private float _steeringResponseRate = 8f;
         [SerializeField, Min(0f)] private float _maximumTurnDegreesPerSecond = 120f;
         [SerializeField, Min(0f)] private float _minimumSteerSpeed = 0.25f;
+        [SerializeField, Min(0f)] private float _maximumPlanarSpeed = 10f;
 
         public float SteeringDeadzone => _steeringDeadzone;
         public float SteeringSensitivity => _steeringSensitivity;
         public float SteeringResponseRate => _steeringResponseRate;
         public float MaximumTurnDegreesPerSecond => _maximumTurnDegreesPerSecond;
         public float MinimumSteerSpeed => _minimumSteerSpeed;
+        public float MaximumPlanarSpeed => _maximumPlanarSpeed;
     }
 }

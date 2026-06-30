@@ -12,6 +12,7 @@ namespace Game.Gameplay.Slingshot
             _currentActiveBandShapeBuffer = _firstActiveBandShapeBuffer;
             _inactiveActiveBandShapeBuffer = _secondActiveBandShapeBuffer;
             _restBandShapeBuffer = new Vector3[pointCount];
+            _visibilityBandShapeBuffer = new Vector3[pointCount];
             FillBandShapeBuffer(_restBandShapeBuffer, _geometry.RestPoint);
         }
 
@@ -35,16 +36,143 @@ namespace Game.Gameplay.Slingshot
 
             (_currentActiveBandShapeBuffer, _inactiveActiveBandShapeBuffer) = (_inactiveActiveBandShapeBuffer, _currentActiveBandShapeBuffer);
             _hasLastValidActiveBandShape = true;
-
             return true;
         }
 
         private bool TryWriteBandShape(Vector3 pullPoint, Vector3[] buffer)
         {
-            var solved = _bandShapeProvider.TryCreateBandShape(CreateBandShapeQuery(pullPoint), buffer, out var pointCount);
+            var shapeQuery = CreateBandShapeQuery(pullPoint);
+            var renderedBandRadius = GetRenderedBandRadius();
+            var solved = _renderedBandShapeProvider.TryCreateRenderedBandShape(shapeQuery, renderedBandRadius, buffer, out var pointCount);
             return solved && pointCount == buffer.Length;
         }
 
+        private float GetRenderedBandRadius()
+        {
+            return _view.VisibleBandRadius;
+        }
+
+        private float GetBandTargetClearanceRadius()
+        {
+            return _view.VisibleBandRadius + _config.BandContactPadding;
+        }
+
+        private float ClampPullOffsetToVisibleBandShape(float pullDistance, float pullOffset)
+        {
+            if (_bandVisibilityRayProvider is null || _launchTargetBandOcclusionSource is null || Mathf.Abs(pullOffset) <= 0.0001f ||
+                IsBandShapeVisibleAtPullOffset(pullDistance, pullOffset))
+                return pullOffset;
+
+            if (!IsBandShapeVisibleAtPullOffset(pullDistance, 0f))
+            {
+                PoseHeldTargetForPullSolve(GetPullPoint(pullDistance, pullOffset));
+                return pullOffset;
+            }
+
+            var pullOffsetSign = Mathf.Sign(pullOffset);
+            var minimumVisibleMagnitude = 0f;
+            var maximumHiddenMagnitude = Mathf.Abs(pullOffset);
+
+            for (var iteration = 0; iteration < 8; iteration += 1)
+            {
+                var candidateMagnitude = (minimumVisibleMagnitude + maximumHiddenMagnitude) * 0.5f;
+                var candidatePullOffset = pullOffsetSign * candidateMagnitude;
+
+                if (IsBandShapeVisibleAtPullOffset(pullDistance, candidatePullOffset))
+                {
+                    minimumVisibleMagnitude = candidateMagnitude;
+                    continue;
+                }
+
+                maximumHiddenMagnitude = candidateMagnitude;
+            }
+
+            var visiblePullOffset = pullOffsetSign * minimumVisibleMagnitude;
+            PoseHeldTargetForPullSolve(GetPullPoint(pullDistance, visiblePullOffset));
+            return visiblePullOffset;
+        }
+
+        private bool IsBandShapeVisibleAtPullOffset(float pullDistance, float pullOffset)
+        {
+            var pullPoint = GetPullPoint(pullDistance, pullOffset);
+            PoseHeldTargetForPullSolve(pullPoint);
+
+            if (ShouldUseSimpleBandShape(pullPoint))
+            {
+                FillSimpleBandShapeBuffer(_visibilityBandShapeBuffer, pullPoint);
+            }
+            else if (!TryWriteBandShape(pullPoint, _visibilityBandShapeBuffer))
+            {
+                return false;
+            }
+
+            return IsBandShapeVisibleFromCamera(_visibilityBandShapeBuffer);
+        }
+
+        private bool IsBandShapeVisibleFromCamera(Vector3[] bandShapePoints)
+        {
+            const int segmentSampleCount = 24;
+            const float raycastPadding = 0.002f;
+            var visibleBandRadius = _view.VisibleBandRadius;
+
+            for (var pointIndex = 0; pointIndex < bandShapePoints.Length - 1; pointIndex += 1)
+            {
+                var segmentStart = bandShapePoints[pointIndex];
+                var segmentEnd = bandShapePoints[pointIndex + 1];
+
+                for (var sampleIndex = 0; sampleIndex <= segmentSampleCount; sampleIndex += 1)
+                {
+                    var progress = (float)sampleIndex / segmentSampleCount;
+                    var samplePoint = Vector3.Lerp(segmentStart, segmentEnd, progress);
+
+                    if (!_bandVisibilityRayProvider.TryCreateRayToWorldPoint(samplePoint, out var centerRay, out var centerDistance))
+                        return false;
+
+                    if (!IsBandVisibilityRayClear(centerRay, centerDistance, raycastPadding))
+                        return false;
+
+                    if (visibleBandRadius <= 0.0001f)
+                        continue;
+
+                    var widthAxis = GetCameraFacingBandWidthAxis(segmentStart, segmentEnd, centerRay.direction);
+
+                    if (!IsBandRenderPointVisibleFromCamera(samplePoint + (widthAxis * visibleBandRadius), raycastPadding)
+                        || !IsBandRenderPointVisibleFromCamera(samplePoint - (widthAxis * visibleBandRadius), raycastPadding))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsBandRenderPointVisibleFromCamera(Vector3 renderPoint, float raycastPadding)
+        {
+            return _bandVisibilityRayProvider.TryCreateRayToWorldPoint(renderPoint, out var ray, out var distance)
+                   && IsBandVisibilityRayClear(ray, distance, raycastPadding);
+        }
+
+        private bool IsBandVisibilityRayClear(Ray ray, float distance, float raycastPadding)
+        {
+            var occlusionDistance = distance - raycastPadding;
+            return occlusionDistance <= 0f || !_launchTargetBandOcclusionSource.IsBandPointHiddenFrom(ray, occlusionDistance);
+        }
+
+        private Vector3 GetCameraFacingBandWidthAxis(Vector3 segmentStart, Vector3 segmentEnd, Vector3 viewDirection)
+        {
+            const float minimumMagnitude = 0.000001f;
+            var segmentDirection = segmentEnd - segmentStart;
+
+            if (segmentDirection.sqrMagnitude <= minimumMagnitude || viewDirection.sqrMagnitude <= minimumMagnitude)
+                return _geometry.LaunchFrameUp;
+
+            var widthAxis = Vector3.Cross(viewDirection.normalized, segmentDirection.normalized);
+
+            return widthAxis.sqrMagnitude > minimumMagnitude ? widthAxis.normalized : _geometry.LaunchFrameUp;
+        }
+
+        // TODO: Fix this method
         private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
         {
             var recoilPullPoint = GetReleaseRecoilPullPoint(progress, out var wasDepthClamped);
@@ -75,7 +203,7 @@ namespace Game.Gameplay.Slingshot
             }
 
             var currentDepth = GetPullDistance(recoilPullPoint);
-            var minimumClearDepth = Mathf.Max(0f, maximumDepth + _view.VisibleBandRadius + _config.BandContactPadding);
+            var minimumClearDepth = Mathf.Max(0f, maximumDepth + GetBandTargetClearanceRadius());
 
             if (currentDepth >= minimumClearDepth)
                 return recoilPullPoint;
@@ -198,7 +326,7 @@ namespace Game.Gameplay.Slingshot
 
         private void SetHeldTargetToRest()
         {
-            _heldLaunchTarget.SetHeldPosition(_geometry.RestPoint);
+            SetCommittedHeldTargetPosition(_geometry.RestPoint);
         }
     }
 }

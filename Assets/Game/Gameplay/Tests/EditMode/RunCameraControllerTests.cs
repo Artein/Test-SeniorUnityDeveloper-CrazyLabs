@@ -30,17 +30,20 @@ public sealed class RunCameraControllerTests
         _runningStateId = CreateStateId("Running");
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
+
         _source = new FakeRunCameraSource
         {
             Position = new Vector3(1f, 0f, 2f),
             LinearVelocity = Vector3.forward * 10f
         };
+
         _anchor = new FakeRunCameraAnchor
         {
             Position = Vector3.zero,
             Rotation = Quaternion.identity
         };
         _rig = new FakeRunCameraRig();
+
         _config = new FakeRunCameraConfig
         {
             AnchorOffset = new Vector3(0f, 1.5f, 0f),
@@ -51,6 +54,7 @@ public sealed class RunCameraControllerTests
             RunCameraInactivePriority = 0,
             RunCameraActivePriority = 20
         };
+
         _clock = new FakeTime
         {
             DeltaTime = 0.1f,
@@ -96,7 +100,7 @@ public sealed class RunCameraControllerTests
     {
         _stateService.ChangeTo(_runningStateId);
 
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.forward, Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
 
         Assert.That(_rig.PreLaunchCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
         Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
@@ -105,7 +109,7 @@ public sealed class RunCameraControllerTests
     [Test]
     public void LaunchAppliedOutsideRunning_ActivatesWhenRunningIsReached()
     {
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.forward, Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
 
         Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
 
@@ -131,7 +135,7 @@ public sealed class RunCameraControllerTests
         ActivateRunCamera();
         var activationCallCount = _rig.SetCameraPrioritiesCallCount;
 
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.forward, Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
         _stateService.ChangeTo(_runningStateId);
 
         Assert.That(_rig.SetCameraPrioritiesCallCount, Is.EqualTo(activationCallCount));
@@ -211,21 +215,29 @@ public sealed class RunCameraControllerTests
     private void ActivateRunCamera()
     {
         _stateService.ChangeTo(_runningStateId);
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.forward, Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
         Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
     }
 
-    private SlingshotLaunchRequest CreateLaunchRequest(Vector3 launchDirection, Vector3 upDirection)
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 launchDirection, Vector3 upDirection)
     {
-        return new SlingshotLaunchRequest(
+        var normalizedLaunchDirection = launchDirection.normalized;
+        var normalizedUpDirection = upDirection.normalized;
+
+        var request = new SlingshotLaunchRequest(
             1f,
             1f,
             0f,
+            0f,
             Vector3.zero,
-            launchDirection.normalized,
-            10f,
-            upDirection.normalized,
-            0f);
+            normalizedLaunchDirection,
+            normalizedUpDirection);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            normalizedLaunchDirection * 10f,
+            normalizedLaunchDirection,
+            normalizedUpDirection);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -276,11 +288,11 @@ public sealed class RunCameraControllerTests
 
     private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
-        public void Apply(SlingshotLaunchRequest launchRequest)
+        public void Apply(SlingshotLaunchAppliedEvent launchApplied)
         {
-            LaunchApplied?.Invoke(launchRequest);
+            LaunchApplied?.Invoke(launchApplied);
         }
     }
 

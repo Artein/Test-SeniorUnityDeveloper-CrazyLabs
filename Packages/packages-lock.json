@@ -236,6 +236,13 @@
       "dependencies": {},
       "hash": "6e6972730ce316fab2408f20e7a160aec070e48b"
     },
+    "today.comes.saintsfield": {
+      "version": "https://github.com/TylerTemp/SaintsField.git#5.21.0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "b0475479fd67118d6348021cedc1b7642b2f2201"
+    },
     "com.unity.modules.ai": {
       "version": "1.0.0",
       "depth": 1,

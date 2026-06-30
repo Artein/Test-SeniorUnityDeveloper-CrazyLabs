@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using VContainer;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneBandVisibilityTests
@@ -22,7 +24,9 @@ public sealed class GameplaySceneBandVisibilityTests
         try
         {
             yield return LoadGameplayScene();
-            var context = CreateSceneContext(SceneManager.GetActiveScene());
+            var activeScene = SceneManager.GetActiveScene();
+            yield return ContinueToPreLaunch(activeScene);
+            var context = CreateSceneContext(activeScene);
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
@@ -33,6 +37,12 @@ public sealed class GameplaySceneBandVisibilityTests
             yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, -0.45f, 0.2f, "Left Shallow Side Pull");
             yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, 0.75f, 0.35f, "Right Edge Near Held Pull");
             yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, -0.75f, 0.35f, "Left Edge Near Held Pull");
+
+            yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, context.SlingshotConfig.MaximumLateralPull,
+                context.SlingshotConfig.MaximumPullDistance, phase: "Right Maximum Side Pull");
+
+            yield return AssertBandCenterlineIsVisibleFromGameplayCamera(context, mouse, -context.SlingshotConfig.MaximumLateralPull,
+                context.SlingshotConfig.MaximumPullDistance, phase: "Left Maximum Side Pull");
 
             yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
@@ -58,13 +68,8 @@ public sealed class GameplaySceneBandVisibilityTests
         var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
-        AssertBandCenterlineVisibleFromCamera(
-            activeBandPositions,
-            context.InputCamera,
-            context.TargetCollider,
-            context.Geometry,
-            context.BandCenter.transform.position,
-            phase);
+        AssertBandCenterlineVisibleFromCamera(activeBandPositions, context.InputCamera, context.TargetCollider, context.Geometry,
+            context.BandCenter.transform.position, phase);
     }
 
     private IEnumerator LoadGameplayScene()
@@ -73,7 +78,6 @@ public sealed class GameplaySceneBandVisibilityTests
             yield break;
 
         SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
-        yield break;
     }
 
     private bool CanReuseGameplayScene(Scene scene)
@@ -110,6 +114,14 @@ public sealed class GameplaySceneBandVisibilityTests
         }
 
         Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private IEnumerator ContinueToPreLaunch(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+        continueCommand.TryContinue();
+        yield return null;
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)
@@ -273,6 +285,7 @@ public sealed class GameplaySceneBandVisibilityTests
     private GameplaySceneContext CreateSceneContext(Scene scene)
     {
         var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(scene, "RigidbodyLaunchTarget");
         var inputCamera = FindSingleInScene<Camera>(scene, "Input Camera");
         var bandCenter = FindGameObjectByName(scene, "Band Center");
@@ -284,6 +297,7 @@ public sealed class GameplaySceneBandVisibilityTests
             GetSingleTargetCollider(launchTarget),
             launchTarget.GetComponent<Rigidbody>(),
             bandCenter,
+            lifetimeScope.Container.Resolve<ISlingshotConfig>(),
             geometry,
             GetScreenPosition(inputCamera, geometry.RestPoint));
     }
@@ -295,6 +309,7 @@ public sealed class GameplaySceneBandVisibilityTests
         public Collider TargetCollider { get; }
         public Rigidbody PlayerRigidbody { get; }
         public GameObject BandCenter { get; }
+        public ISlingshotConfig SlingshotConfig { get; }
         public SlingshotGeometrySnapshot Geometry { get; }
         public Vector2 PressScreenPosition { get; }
 
@@ -304,6 +319,7 @@ public sealed class GameplaySceneBandVisibilityTests
             Collider targetCollider,
             Rigidbody playerRigidbody,
             GameObject bandCenter,
+            ISlingshotConfig slingshotConfig,
             SlingshotGeometrySnapshot geometry,
             Vector2 pressScreenPosition)
         {
@@ -312,6 +328,7 @@ public sealed class GameplaySceneBandVisibilityTests
             TargetCollider = targetCollider;
             PlayerRigidbody = playerRigidbody;
             BandCenter = bandCenter;
+            SlingshotConfig = slingshotConfig;
             Geometry = geometry;
             PressScreenPosition = pressScreenPosition;
         }

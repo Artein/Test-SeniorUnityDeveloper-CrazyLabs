@@ -1,0 +1,26 @@
+{
+  "name": "Game.Gameplay.Pickups.Tests.EditMode",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay.Economy",
+    "Game.Gameplay.Pickups",
+    "Game.Gameplay.GameplayState",
+    "VContainer"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

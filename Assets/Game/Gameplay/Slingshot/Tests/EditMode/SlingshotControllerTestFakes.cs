@@ -13,11 +13,6 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public float MinimumPullDistance { get; set; }
         public float MaximumPullDistance { get; set; }
         public float MaximumLateralPull { get; set; }
-        public float MaximumLaunchAngleDegrees { get; set; }
-        public float MinimumLaunchSpeed { get; set; }
-        public float MaximumLaunchSpeed { get; set; }
-        public AnimationCurve LaunchSpeedCurve { get; set; }
-        public float LaunchUpSpeed { get; set; }
         public float BandContactPadding { get; set; }
         public int BandSilhouetteSampleCount { get; set; }
         public int BandWrapSampleCount { get; set; }
@@ -196,7 +191,11 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         }
     }
 
-    internal sealed class FakeSlingshotBandShapeProvider : ISlingshotBandShapeProvider, ISlingshotBandShapeDepthProvider
+    internal sealed class FakeSlingshotBandShapeProvider :
+        ISlingshotBandShapeProvider,
+        ISlingshotBandShapeDepthProvider,
+        ISlingshotBandShapeOffsetProvider,
+        ISlingshotRenderedBandShapeProvider
     {
         private readonly List<string> _observations;
 
@@ -205,16 +204,21 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         public List<SlingshotBandShapeQuery> Queries { get; } = new();
         public List<SlingshotBandShapeQuery> ClearanceQueries { get; } = new();
         public List<SlingshotBandShapeQuery> DepthSpanQueries { get; } = new();
+        public List<SlingshotBandShapeQuery> OffsetSpanQueries { get; } = new();
         public List<Vector3[]> ClearanceBandShapes { get; } = new();
         public List<float> ClearanceRadii { get; } = new();
+        public List<float> RenderedBandRadii { get; } = new();
         public Queue<bool> ClearanceResults { get; } = new();
         public bool ShouldFail { get; set; }
         public bool ShouldFailActivePullOnly { get; set; }
         public bool ShouldFailClearance { get; set; }
         public bool ShouldFailDepthSpan { get; set; }
+        public bool ShouldFailOffsetSpan { get; set; } = true;
         public bool IsBandShapeClear { get; set; } = true;
         public float SilhouetteMinimumDepth { get; set; } = -0.25f;
         public float SilhouetteMaximumDepth { get; set; } = -0.1f;
+        public float SilhouetteMinimumOffsetFromPullPoint { get; set; }
+        public float SilhouetteMaximumOffsetFromPullPoint { get; set; }
 
         public Vector3[] ShapePoints { get; set; } =
         {
@@ -235,6 +239,21 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
         }
 
         public bool TryCreateBandShape(SlingshotBandShapeQuery query, Vector3[] outputPoints, out int pointCount)
+        {
+            return TryWriteShape(query, outputPoints, out pointCount);
+        }
+
+        public bool TryCreateRenderedBandShape(
+            SlingshotBandShapeQuery query,
+            float renderedBandRadius,
+            Vector3[] outputPoints,
+            out int pointCount)
+        {
+            RenderedBandRadii.Add(renderedBandRadius);
+            return TryWriteShape(query, outputPoints, out pointCount);
+        }
+
+        private bool TryWriteShape(SlingshotBandShapeQuery query, Vector3[] outputPoints, out int pointCount)
         {
             Queries.Add(query);
             _observations.Add("band-shape");
@@ -311,15 +330,36 @@ namespace Game.Gameplay.Slingshot.Tests.EditMode
             maximumDepth = SilhouetteMaximumDepth;
             return true;
         }
+
+        public bool TryGetSilhouetteOffsetSpan(SlingshotBandShapeQuery query, out float minimumOffset, out float maximumOffset)
+        {
+            OffsetSpanQueries.Add(query);
+
+            if (ShouldFailOffsetSpan)
+            {
+                minimumOffset = 0f;
+                maximumOffset = 0f;
+                return false;
+            }
+
+            var pullOffset = Vector3.Dot(query.PullPoint - query.RestPoint, query.LaunchFrameRight);
+            minimumOffset = pullOffset + SilhouetteMinimumOffsetFromPullPoint;
+            maximumOffset = pullOffset + SilhouetteMaximumOffsetFromPullPoint;
+            return true;
+        }
     }
 
     internal sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
         public void Apply(SlingshotLaunchRequest request)
         {
-            LaunchApplied?.InvokeSafely(request);
+            LaunchApplied?.InvokeSafely(new SlingshotLaunchAppliedEvent(
+                request,
+                Vector3.forward,
+                Vector3.forward,
+                Vector3.up));
         }
     }
 

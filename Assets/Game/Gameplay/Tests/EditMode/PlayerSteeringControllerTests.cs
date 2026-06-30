@@ -6,6 +6,7 @@ using Game.Foundation.Time;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -13,8 +14,7 @@ using VContainer.Unity;
 // ReSharper disable once CheckNamespace
 public sealed class PlayerSteeringControllerTests
 {
-    private const float DefaultPlanarSpeed = 10f;
-    private const float DefaultVerticalSpeed = 2f;
+    private const float DefaultPlanarSpeed = 10f, DefaultVerticalSpeed = 2f;
 
     private readonly List<UnityEngine.Object> _objects = new();
     private FakeUnityInput _input;
@@ -22,10 +22,13 @@ public sealed class PlayerSteeringControllerTests
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakePlayerSteeringTarget _steeringTarget;
     private FakePlayerSteeringConfig _config;
+    private FakeRunGameplayStatResolver _statResolver;
     private FakeTime _clock;
     private FakeScreen _screen;
     private GameplayStateId _preLaunchStateId;
     private GameplayStateId _runningStateId;
+    private GameplayStatId _playerMaxSpeedStatId;
+    private GameplayStatId _playerSteeringResponsivenessStatId;
     private PlayerSteeringController _controller;
 
     [SetUp]
@@ -33,9 +36,12 @@ public sealed class PlayerSteeringControllerTests
     {
         _preLaunchStateId = CreateStateId("PreLaunch");
         _runningStateId = CreateStateId("Running");
+        _playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
+        _playerSteeringResponsivenessStatId = CreateStatId("PlayerSteeringResponsiveness");
         _input = new FakeUnityInput();
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
+        _statResolver = new FakeRunGameplayStatResolver();
 
         _steeringTarget = new FakePlayerSteeringTarget
         {
@@ -49,7 +55,8 @@ public sealed class PlayerSteeringControllerTests
             SteeringSensitivity = 1f,
             SteeringResponseRate = 100f,
             MaximumTurnDegreesPerSecond = 90f,
-            MinimumSteerSpeed = 0.25f
+            MinimumSteerSpeed = 0.25f,
+            MaximumPlanarSpeed = DefaultPlanarSpeed
         };
 
         _clock = new FakeTime
@@ -89,6 +96,7 @@ public sealed class PlayerSteeringControllerTests
 
         Assert.That(_input.ActiveHandleCount, Is.Zero);
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        Assert.That(_statResolver.ResolveRequests, Is.Empty);
     }
 
     [Test]
@@ -96,7 +104,7 @@ public sealed class PlayerSteeringControllerTests
     {
         _stateService.ChangeTo(_runningStateId);
 
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up));
 
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
@@ -140,6 +148,46 @@ public sealed class PlayerSteeringControllerTests
     }
 
     [Test]
+    public void FixedTick_NeutralMovementStats_ResolvesBaseValuesAndPreservesMovement()
+    {
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(1000f, 100f));
+        ((IFixedTickable)_controller).FixedTick();
+
+        AssertResolved(_playerMaxSpeedStatId, DefaultPlanarSpeed);
+        AssertResolved(_playerSteeringResponsivenessStatId, 100f);
+        AssertPlanarAndVerticalSpeedPreserved(_steeringTarget.LinearVelocity);
+    }
+
+    [Test]
+    public void FixedTick_PlayerMaxSpeedModifier_ClampsPlanarSpeed()
+    {
+        _statResolver.SetResolvedValue(_playerMaxSpeedStatId, 5f);
+        ActivateSteering();
+
+        ((IFixedTickable)_controller).FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 5f);
+    }
+
+    [Test]
+    public void FixedTick_PlayerSteeringResponsivenessModifier_IncreasesSteeringResponse()
+    {
+        _config.SteeringResponseRate = 5f;
+        _statResolver.SetResolvedValue(_playerSteeringResponsivenessStatId, 20f);
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(1000f, 100f));
+        ((IFixedTickable)_controller).FixedTick();
+
+        AssertResolved(_playerSteeringResponsivenessStatId, 5f);
+        Assert.That(_steeringTarget.LinearVelocity.x, Is.GreaterThan(0.1f));
+        AssertPlanarAndVerticalSpeedPreserved(_steeringTarget.LinearVelocity);
+    }
+
+    [Test]
     public void FixedTick_CenterDeadzoneTouch_DoesNotChangeVelocity()
     {
         ActivateSteering();
@@ -148,9 +196,7 @@ public sealed class PlayerSteeringControllerTests
         _input.Press(1, new Vector2(525f, 100f));
         ((IFixedTickable)_controller).FixedTick();
 
-        Assert.That(_steeringTarget.LinearVelocity.x, Is.EqualTo(initialVelocity.x).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(initialVelocity.y).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.z, Is.EqualTo(initialVelocity.z).Within(0.0001f));
+        AssertVectorEqual(_steeringTarget.LinearVelocity, initialVelocity);
     }
 
     [Test]
@@ -165,9 +211,7 @@ public sealed class PlayerSteeringControllerTests
         _input.Release(1, new Vector2(1000f, 100f));
         ((IFixedTickable)_controller).FixedTick();
 
-        Assert.That(_steeringTarget.LinearVelocity.x, Is.EqualTo(steeredVelocity.x).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(steeredVelocity.y).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.z, Is.EqualTo(steeredVelocity.z).Within(0.0001f));
+        AssertVectorEqual(_steeringTarget.LinearVelocity, steeredVelocity);
     }
 
     [Test]
@@ -182,9 +226,7 @@ public sealed class PlayerSteeringControllerTests
         _input.Cancel(1, new Vector2(0f, 100f));
         ((IFixedTickable)_controller).FixedTick();
 
-        Assert.That(_steeringTarget.LinearVelocity.x, Is.EqualTo(steeredVelocity.x).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(steeredVelocity.y).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.z, Is.EqualTo(steeredVelocity.z).Within(0.0001f));
+        AssertVectorEqual(_steeringTarget.LinearVelocity, steeredVelocity);
     }
 
     [Test]
@@ -198,9 +240,7 @@ public sealed class PlayerSteeringControllerTests
         _input.Release(2, new Vector2(1000f, 100f));
         ((IFixedTickable)_controller).FixedTick();
 
-        Assert.That(_steeringTarget.LinearVelocity.x, Is.EqualTo(initialVelocity.x).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(initialVelocity.y).Within(0.0001f));
-        Assert.That(_steeringTarget.LinearVelocity.z, Is.EqualTo(initialVelocity.z).Within(0.0001f));
+        AssertVectorEqual(_steeringTarget.LinearVelocity, initialVelocity);
     }
 
     private PlayerSteeringController CreateController()
@@ -211,29 +251,37 @@ public sealed class PlayerSteeringControllerTests
             _launchAppliedNotifier,
             _steeringTarget,
             _config,
+            _statResolver,
             _clock,
             _screen,
-            _runningStateId);
+            _runningStateId,
+            _playerMaxSpeedStatId,
+            _playerSteeringResponsivenessStatId);
     }
 
     private void ActivateSteering()
     {
         _stateService.ChangeTo(_runningStateId);
-        _launchAppliedNotifier.Apply(CreateLaunchRequest(Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
 
-    private SlingshotLaunchRequest CreateLaunchRequest(Vector3 upDirection)
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 upDirection)
     {
-        return new SlingshotLaunchRequest(
+        var request = new SlingshotLaunchRequest(
             1f,
             1f,
             0f,
+            0f,
             Vector3.zero,
             Vector3.forward,
-            DefaultPlanarSpeed,
-            upDirection,
-            DefaultVerticalSpeed);
+            Vector3.up);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            Vector3.forward * DefaultPlanarSpeed + upDirection.normalized * DefaultVerticalSpeed,
+            Vector3.forward,
+            upDirection.normalized);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -245,10 +293,40 @@ public sealed class PlayerSteeringControllerTests
         return stateId;
     }
 
+    private GameplayStatId CreateStatId(string id)
+    {
+        var statId = ScriptableObject.CreateInstance<GameplayStatId>();
+        statId.SetValuesForTests(id);
+        _objects.Add(statId);
+
+        return statId;
+    }
+
+    private void AssertResolved(GameplayStatId statId, float baseValue)
+    {
+        Assert.That(
+            _statResolver.ResolveRequests.Exists(request =>
+                ReferenceEquals(request.StatId, statId) &&
+                Mathf.Abs(request.BaseValue - baseValue) <= 0.0001f),
+            Is.True);
+    }
+
     private void AssertPlanarAndVerticalSpeedPreserved(Vector3 velocity)
     {
         Assert.That(velocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
-        Assert.That(new Vector3(velocity.x, 0f, velocity.z).magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(0.0001f));
+        AssertPlanarSpeed(velocity, DefaultPlanarSpeed);
+    }
+
+    private void AssertPlanarSpeed(Vector3 velocity, float expectedPlanarSpeed)
+    {
+        Assert.That(new Vector3(velocity.x, 0f, velocity.z).magnitude, Is.EqualTo(expectedPlanarSpeed).Within(0.0001f));
+    }
+
+    private void AssertVectorEqual(Vector3 actual, Vector3 expected)
+    {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
     }
 
     private sealed class FakeUnityInput : IUnityInput
@@ -342,11 +420,11 @@ public sealed class PlayerSteeringControllerTests
 
     private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
     {
-        public event Action<SlingshotLaunchRequest> LaunchApplied;
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
 
-        public void Apply(SlingshotLaunchRequest launchRequest)
+        public void Apply(SlingshotLaunchAppliedEvent appliedEvent)
         {
-            LaunchApplied?.Invoke(launchRequest);
+            LaunchApplied?.Invoke(appliedEvent);
         }
     }
 
@@ -371,6 +449,37 @@ public sealed class PlayerSteeringControllerTests
         public float SteeringResponseRate { get; set; }
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
+        public float MaximumPlanarSpeed { get; set; }
+    }
+
+    private sealed class FakeRunGameplayStatResolver : IRunGameplayStatResolver
+    {
+        private readonly Dictionary<GameplayStatId, float> _resolvedValues = new();
+
+        public List<ResolveRequest> ResolveRequests { get; } = new();
+
+        public void SetResolvedValue(GameplayStatId statId, float resolvedValue)
+        {
+            _resolvedValues[statId] = resolvedValue;
+        }
+
+        public float Resolve(GameplayStatId statId, float baseValue)
+        {
+            ResolveRequests.Add(new ResolveRequest(statId, baseValue));
+            return _resolvedValues.GetValueOrDefault(statId, baseValue);
+        }
+    }
+
+    private readonly struct ResolveRequest
+    {
+        public GameplayStatId StatId { get; }
+        public float BaseValue { get; }
+
+        public ResolveRequest(GameplayStatId statId, float baseValue)
+        {
+            StatId = statId;
+            BaseValue = baseValue;
+        }
     }
 
     private sealed class FakeTime : ITime

@@ -78,21 +78,19 @@ namespace Game.Gameplay
         public float GetForwardProgress(Vector3 position)
         {
             ThrowIfInvalid();
-
-            if (!position.IsFinite())
-                return 0f;
-
-            return Vector3.Dot(position - Origin, ForwardDirection);
+            return !position.IsFinite() ? 0f : Vector3.Dot(position - Origin, ForwardDirection);
         }
 
         public float GetCoursePlanarSpeed(Vector3 linearVelocity)
         {
             ThrowIfInvalid();
+            return !linearVelocity.IsFinite() ? 0f : Vector3.ProjectOnPlane(linearVelocity, UpDirection).magnitude;
+        }
 
-            if (!linearVelocity.IsFinite())
-                return 0f;
-
-            return Vector3.ProjectOnPlane(linearVelocity, UpDirection).magnitude;
+        public float GetCourseForwardSpeed(Vector3 linearVelocity)
+        {
+            ThrowIfInvalid();
+            return !linearVelocity.IsFinite() ? 0f : Vector3.Dot(linearVelocity, ForwardDirection);
         }
 
         private static bool TryNormalize(Vector3 value, out Vector3 normalized)

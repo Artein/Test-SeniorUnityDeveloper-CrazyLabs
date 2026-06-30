@@ -27,7 +27,28 @@ namespace Game.Gameplay.Slingshot
             out float maximumDepth);
     }
 
-    public sealed class SlingshotBandShapeProvider : ISlingshotBandShapeProvider, ISlingshotBandShapeDepthProvider
+    internal interface ISlingshotBandShapeOffsetProvider
+    {
+        bool TryGetSilhouetteOffsetSpan(
+            SlingshotBandShapeQuery query,
+            out float minimumOffset,
+            out float maximumOffset);
+    }
+
+    internal interface ISlingshotRenderedBandShapeProvider
+    {
+        bool TryCreateRenderedBandShape(
+            SlingshotBandShapeQuery query,
+            float renderedBandRadius,
+            Vector3[] outputPoints,
+            out int pointCount);
+    }
+
+    public sealed class SlingshotBandShapeProvider :
+        ISlingshotBandShapeProvider,
+        ISlingshotBandShapeDepthProvider,
+        ISlingshotBandShapeOffsetProvider,
+        ISlingshotRenderedBandShapeProvider
     {
         private readonly ILaunchTargetSilhouetteSource _silhouetteSource;
         private readonly ISlingshotConfig _config;
@@ -59,6 +80,24 @@ namespace Game.Gameplay.Slingshot
 
         public bool TryCreateBandShape(SlingshotBandShapeQuery query, Vector3[] outputPoints, out int pointCount)
         {
+            return TryCreateBandShape(query, 0f, outputPoints, out pointCount);
+        }
+
+        bool ISlingshotRenderedBandShapeProvider.TryCreateRenderedBandShape(
+            SlingshotBandShapeQuery query,
+            float renderedBandRadius,
+            Vector3[] outputPoints,
+            out int pointCount)
+        {
+            return TryCreateBandShape(query, renderedBandRadius, outputPoints, out pointCount);
+        }
+
+        private bool TryCreateBandShape(
+            SlingshotBandShapeQuery query,
+            float renderedBandRadius,
+            Vector3[] outputPoints,
+            out int pointCount)
+        {
             pointCount = 0;
 
             if (outputPoints is null)
@@ -70,6 +109,9 @@ namespace Game.Gameplay.Slingshot
             if (!IsValidQuery(query))
                 throw new ArgumentException("Invalid Slingshot Band Shape query.", nameof(query));
 
+            if (!math.isfinite(renderedBandRadius) || renderedBandRadius < 0f)
+                throw new ArgumentException("Rendered Band radius must be finite and non-negative.", nameof(renderedBandRadius));
+
             if (!TryWriteSilhouetteSamplesToPullPlane(query, out var silhouetteSampleCount))
                 return false;
 
@@ -79,7 +121,7 @@ namespace Game.Gameplay.Slingshot
                 ToPullPlane(query.PullPoint, query),
                 _solverSilhouetteSamples,
                 silhouetteSampleCount,
-                _config.BandContactPadding,
+                _config.BandContactPadding + renderedBandRadius,
                 _config.BandWrapSampleCount,
                 _solverOutputPoints,
                 out var solverPointCount);
@@ -156,6 +198,33 @@ namespace Game.Gameplay.Slingshot
                 var depth = _solverSilhouetteSamples[sampleIndex].y;
                 minimumDepth = Mathf.Min(minimumDepth, depth);
                 maximumDepth = Mathf.Max(maximumDepth, depth);
+            }
+
+            return true;
+        }
+
+        bool ISlingshotBandShapeOffsetProvider.TryGetSilhouetteOffsetSpan(
+            SlingshotBandShapeQuery query,
+            out float minimumOffset,
+            out float maximumOffset)
+        {
+            minimumOffset = 0f;
+            maximumOffset = 0f;
+
+            if (!IsValidQuery(query))
+                throw new ArgumentException("Invalid Slingshot Band Shape query.", nameof(query));
+
+            if (!TryWriteSilhouetteSamplesToPullPlane(query, out var silhouetteSampleCount))
+                return false;
+
+            minimumOffset = float.PositiveInfinity;
+            maximumOffset = float.NegativeInfinity;
+
+            for (var sampleIndex = 0; sampleIndex < silhouetteSampleCount; sampleIndex += 1)
+            {
+                var offset = _solverSilhouetteSamples[sampleIndex].x;
+                minimumOffset = Mathf.Min(minimumOffset, offset);
+                maximumOffset = Mathf.Max(maximumOffset, offset);
             }
 
             return true;
