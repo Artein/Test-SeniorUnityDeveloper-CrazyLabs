@@ -17,8 +17,10 @@ public sealed class CurrencyGrantDataPathTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _gems = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _gems.name = "Gems";
+        _gems.SetSaveIdForTests("currency-gems");
     }
 
     [TearDown]
@@ -61,7 +63,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void Grant_ValidCurrencyGrant_AddsToCurrencyBalance()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         storage.Grant(_coins, 3);
         storage.Grant(_coins, 4);
@@ -72,7 +74,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void GetAmount_MissingCurrency_ReturnsZero()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         Assert.That(storage.GetAmount(_coins), Is.Zero);
     }
@@ -80,7 +82,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void TrySpend_AffordableAmount_SubtractsBalanceAndReturnsTrue()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
         storage.Grant(_coins, 7);
 
         var result = storage.TrySpend(_coins, 4);
@@ -92,7 +94,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void TrySpend_InsufficientBalance_DoesNotMutateBalanceAndReturnsFalse()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
         storage.Grant(_coins, 3);
 
         var result = storage.TrySpend(_coins, 4);
@@ -104,7 +106,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void Grant_NullCurrency_Throws()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         Assert.That(
             () => storage.Grant(null, 1),
@@ -114,7 +116,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void Grant_NonPositiveAmount_Throws()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         Assert.That(
             () => storage.Grant(_coins, 0),
@@ -124,7 +126,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void TrySpend_NullCurrency_Throws()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         Assert.That(
             () => storage.TrySpend(null, 1),
@@ -134,7 +136,7 @@ public sealed class CurrencyGrantDataPathTests
     [Test]
     public void TrySpend_NonPositiveAmount_Throws()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         Assert.That(
             () => storage.TrySpend(_coins, 0),

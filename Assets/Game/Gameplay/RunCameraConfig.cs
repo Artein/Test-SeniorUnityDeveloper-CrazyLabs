@@ -33,5 +33,12 @@ namespace Game.Gameplay
         public int PreLaunchCameraPriority => _preLaunchCameraPriority;
         public int RunCameraInactivePriority => _runCameraInactivePriority;
         public int RunCameraActivePriority => _runCameraActivePriority;
+
+        public static class Serialization
+        {
+            public const string PositionResponseRate = nameof(_positionResponseRate);
+            public const string YawResponseRate = nameof(_yawResponseRate);
+            public const string MinimumYawSpeed = nameof(_minimumYawSpeed);
+        }
     }
 }

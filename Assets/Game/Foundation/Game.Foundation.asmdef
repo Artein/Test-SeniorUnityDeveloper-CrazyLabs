@@ -1,7 +1,9 @@
 {
   "name": "Game.Foundation",
   "rootNamespace": "",
-  "references": [],
+  "references": [
+    "Game.Utils.Invocation"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

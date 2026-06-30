@@ -8,7 +8,6 @@ using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
-using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
@@ -19,7 +18,7 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneRunPreparationTests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayModeFixture
 {
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_StartsInRunPreparationWithSlingshotCaptureDisabled()
@@ -240,8 +239,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayTestAssetsFix
 
     private IEnumerator LoadGameplayScene()
     {
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
+        yield return LoadGameplaySceneWithIsolatedSaves();
     }
 
     private IEnumerator PullAndReleaseSlingshot(Mouse mouse, Scene activeScene)
@@ -290,34 +288,6 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayTestAssetsFix
         }
 
         Assert.Fail("Expected Slingshot pull release to launch the Player.");
-    }
-
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
-    private GameObject FindGameObjectByName(Scene scene, string objectName)
-    {
-        foreach (var rootGameObject in scene.GetRootGameObjects())
-        {
-            var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
-
-            foreach (var childTransform in transforms)
-            {
-                if (childTransform.name == objectName)
-                    return childTransform.gameObject;
-            }
-        }
-
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
     }
 
     private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)

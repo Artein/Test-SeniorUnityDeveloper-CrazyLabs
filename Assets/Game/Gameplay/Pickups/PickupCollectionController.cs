@@ -24,7 +24,6 @@ namespace Game.Gameplay.Pickups
     {
         private readonly IReadOnlyList<Pickup> _pickups;
         private readonly ILevelPickupState _levelPickupState;
-        private readonly ICurrencyStorage _currencyStorage;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
         private readonly IPickupCurrencyGrantResolver _pickupCurrencyGrantResolver;
         private readonly IGameplayStateService _gameplayStateService;
@@ -40,17 +39,17 @@ namespace Game.Gameplay.Pickups
         public PickupCollectionController(
             [Key(InjectKey.Pickups.LevelPickups)] IReadOnlyList<Pickup> pickups,
             ILevelPickupState levelPickupState,
-            ICurrencyStorage currencyStorage,
             IRunCurrencyAccumulator runCurrencyAccumulator,
             IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
-            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId currencyGrantResolverResetStateId,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStateId.RunPreparation)]
+            GameplayStateId currencyGrantResolverResetStateId,
             [Key(InjectKey.Tags.Player)] string playerTag)
         {
             _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
-            _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
 
             _pickupCurrencyGrantResolver = pickupCurrencyGrantResolver
@@ -129,8 +128,16 @@ namespace Game.Gameplay.Pickups
             var finalCurrencyGrant = resolution.FinalCurrencyGrant;
             var position = pickup.Position;
 
-            _currencyStorage.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
             _runCurrencyAccumulator.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log("[EconomyDiagnostics] Pickup collected into run accumulator: "
+                      + $"Pickup='{pickup.name}', "
+                      + $"Currency='{finalCurrencyGrant.CurrencyDefinition.name}', "
+                      + $"SaveId='{finalCurrencyGrant.CurrencyDefinition.SaveId}', "
+                      + $"BaseAmount={baseCurrencyGrant.Amount}, "
+                      + $"FinalAmount={finalCurrencyGrant.Amount}, "
+                      + $"Position={position}");
+#endif
             pickup.SetAvailable(false);
             PickupCollected?.InvokeSafely(new PickupCollectedEventArgs(baseCurrencyGrant, finalCurrencyGrant, position));
         }

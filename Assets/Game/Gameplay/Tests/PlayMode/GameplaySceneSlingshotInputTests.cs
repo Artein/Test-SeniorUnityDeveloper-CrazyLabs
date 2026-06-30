@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
-using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using Game.Foundation.Input;
 using NUnit.Framework;
@@ -17,7 +15,7 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayModeFixture
 {
     [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsSlingshot_then_PlayerLaunches()
@@ -239,11 +237,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFix
 
     private IEnumerator LoadGameplayScene()
     {
-        if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
-            yield break;
-
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield break;
+        yield return LoadGameplaySceneWithIsolatedSaves(CanReuseGameplayScene);
     }
 
     private bool CanReuseGameplayScene(Scene scene)
@@ -277,8 +271,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFix
 
     private IEnumerator PrepareFreshPreLaunchScene()
     {
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
+        yield return ReloadGameplaySceneWithIsolatedSaves();
 
         var activeScene = SceneManager.GetActiveScene();
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
@@ -334,52 +327,6 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFix
         var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
         continueCommand.TryContinue();
         yield return null;
-    }
-
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = FindComponentsInScene<T>(scene);
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
-    private T[] FindComponentsInScene<T>(Scene scene)
-        where T : Component
-    {
-        return scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
-    }
-
-    private GameObject FindGameObjectByName(Scene scene, string objectName)
-    {
-        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
-            return gameObject;
-
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
-    }
-
-    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject gameObject)
-    {
-        foreach (var rootGameObject in scene.GetRootGameObjects())
-        {
-            var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
-
-            foreach (var childTransform in transforms)
-            {
-                if (childTransform.name == objectName)
-                {
-                    gameObject = childTransform.gameObject;
-                    return true;
-                }
-            }
-        }
-
-        gameObject = null;
-        return false;
     }
 
     private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)

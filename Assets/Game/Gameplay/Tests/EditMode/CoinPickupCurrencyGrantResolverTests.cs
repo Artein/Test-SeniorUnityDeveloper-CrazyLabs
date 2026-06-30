@@ -97,7 +97,7 @@ public sealed class CoinPickupCurrencyGrantResolverTests
     [Test]
     public void Grant_DirectCurrencyStorageGrant_DoesNotApplyCoinPickupMultiplier()
     {
-        ICurrencyStorage storage = new CurrencyStorage();
+        ICurrencyStorage storage = new CurrencyStorage(new PlayerEconomyState());
 
         storage.Grant(_coins, 3);
 
@@ -128,6 +128,7 @@ public sealed class CoinPickupCurrencyGrantResolverTests
     {
         var currencyDefinition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         currencyDefinition.name = objectName;
+        currencyDefinition.SetSaveIdForTests("currency-" + objectName.ToLowerInvariant());
         return currencyDefinition;
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using UnityEngine;
 
@@ -129,12 +130,42 @@ namespace Game.Gameplay
 
             foreach (var error in GetPickupSetupValidationErrors())
                 yield return error;
+
+            foreach (var error in GetCurrencyDefinitionValidationErrors())
+                yield return error;
         }
 
         private IEnumerable<string> GetPickupSetupValidationErrors()
         {
             var validator = new PickupSetupValidator();
             return validator.Validate(GetLevelPickups(), GetPlayerPickupContactColliders(), _playerTag, _playerLayerName, _pickupLayerName);
+        }
+
+        private IEnumerable<string> GetCurrencyDefinitionValidationErrors()
+        {
+            var validator = new CurrencyDefinitionValidator();
+
+            foreach (var error in validator.ValidateAll(GetReferencedCurrencyDefinitions()))
+            {
+                yield return "GameplayLifetimeScope currency setup invalid: " + error.Message;
+            }
+        }
+
+        private IEnumerable<CurrencyDefinition> GetReferencedCurrencyDefinitions()
+        {
+            if (_coinCurrencyDefinition != null)
+                yield return _coinCurrencyDefinition;
+
+            if (_upgradeCatalog != null && _upgradeCatalog.PurchaseCurrency != null)
+                yield return _upgradeCatalog.PurchaseCurrency;
+
+            foreach (var pickup in GetLevelPickups())
+            {
+                if (pickup == null || pickup.Definition == null || pickup.Definition.CurrencyDefinition == null)
+                    continue;
+
+                yield return pickup.Definition.CurrencyDefinition;
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ namespace Game.Gameplay.Upgrades
         MissingDefinition = 1,
         InvalidDefinition = 2,
         MaxLevelReached = 3,
-        InsufficientCurrency = 4
+        InsufficientCurrency = 4,
+        SaveFailed = 5
     }
 }

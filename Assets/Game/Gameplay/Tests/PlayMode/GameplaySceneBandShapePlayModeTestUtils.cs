@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
-using Eflatun.SceneReference;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
@@ -16,23 +15,6 @@ using VContainer;
 // ReSharper disable once CheckNamespace
 internal static class GameplaySceneBandShapePlayModeTestUtils
 {
-    public static IEnumerator LoadGameplayScene(SceneReference gameplaySceneRef)
-    {
-        if (CanReuseGameplayScene(SceneManager.GetActiveScene(), gameplaySceneRef))
-            yield break;
-
-        SceneManager.LoadScene(gameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
-        yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
-    }
-
-    public static IEnumerator ReloadGameplayScene(SceneReference gameplaySceneRef)
-    {
-        SceneManager.LoadScene(gameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
-        yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
-    }
-
     public static IEnumerator WaitUntilPlayerIsHeld(GameplaySceneBandShapePlayModeTestContext context)
     {
         for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
@@ -148,37 +130,6 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
         {
             return $"capture failed: {exception.GetType().Name} {exception.Message}";
         }
-    }
-
-    private static bool CanReuseGameplayScene(Scene scene, SceneReference gameplaySceneRef)
-    {
-        if (!scene.IsValid() || scene.path != gameplaySceneRef.Path)
-            return false;
-
-        var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
-        var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
-
-        if (slingshotViews.Length != 1 || launchTargets.Length != 1)
-            return false;
-
-        var playerRigidbody = launchTargets[0].GetComponent<Rigidbody>();
-
-        if (playerRigidbody == null || !playerRigidbody.isKinematic)
-            return false;
-
-        if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
-            return false;
-
-        var geometry = slingshotViews[0].CreateGeometrySnapshot();
-        return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
-    }
-
-    private static IEnumerator ContinueToPreLaunch(Scene scene)
-    {
-        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
-        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
-        continueCommand.TryContinue();
-        yield return null;
     }
 
     private static string SaveCameraCapture(Camera camera, string fileName)

@@ -18,6 +18,7 @@ public sealed class GameplayStatResolverTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _icon = CreateIcon();
     }
 
@@ -44,7 +45,7 @@ public sealed class GameplayStatResolverTests
         var steeringUpgrade = CreateDefinition("steering-responsiveness", steeringResponsiveness, 10, LinearProgression(1f, 2.2f));
         var coinMultiplierUpgrade = CreateDefinition("coin-pickup-multiplier", coinPickupMultiplier, 10, LinearProgression(1f, 10f));
         var catalog = CreateCatalog(launchPowerUpgrade, playerMaxSpeedUpgrade, steeringUpgrade, coinMultiplierUpgrade);
-        var progressStorage = new UpgradeProgressStorage();
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         progressStorage.SetLevel(launchPowerUpgrade, 5);
         progressStorage.SetLevel(playerMaxSpeedUpgrade, 5);
         progressStorage.SetLevel(steeringUpgrade, 5);
@@ -66,7 +67,7 @@ public sealed class GameplayStatResolverTests
         var launchPower = CreateStat("SlingshotLaunchPower");
         var upgrade = CreateDefinition("launch-power", launchPower, 10, LinearProgression(1f, 2f));
         var catalog = CreateCatalog(upgrade);
-        var progressStorage = new UpgradeProgressStorage();
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         progressStorage.SetLevel(upgrade, 2);
         var factory = CreateSnapshotFactory(catalog, progressStorage);
 

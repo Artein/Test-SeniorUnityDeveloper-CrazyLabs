@@ -26,7 +26,7 @@ namespace Game.Gameplay.Pickups.Editor
                 .OrderBy(pickup => GetHierarchyPath(pickup.transform), StringComparer.Ordinal)
                 .ThenBy(pickup => pickup.GetInstanceID())
                 .ToArray();
-            var pickupsProperty = serializedObject.FindProperty("_levelPickups");
+            var pickupsProperty = serializedObject.FindProperty(GameplayLifetimeScope.Serialization.LevelPickups);
 
             Undo.RecordObject(scope, "Refresh Pickup References From Scene");
             serializedObject.Update();

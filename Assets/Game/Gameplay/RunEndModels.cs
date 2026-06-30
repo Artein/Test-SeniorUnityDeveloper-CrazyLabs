@@ -57,7 +57,8 @@ namespace Game.Gameplay
                    + $"ElapsedTime={ElapsedTime:0.###}, "
                    + $"DistanceTravelled={DistanceTravelled:0.###}, "
                    + $"FinalPosition={FinalPosition}, "
-                   + $"FinalSpeed={FinalSpeed:0.###}";
+                   + $"FinalSpeed={FinalSpeed:0.###}, "
+                   + $"CurrencySnapshot={CurrencySnapshot}";
         }
     }
 }

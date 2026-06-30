@@ -32,6 +32,13 @@ namespace Game.Gameplay.Upgrades
                     catalog,
                     "Upgrade catalog requires a purchase currency."));
             }
+            else if (string.IsNullOrWhiteSpace(catalog.PurchaseCurrency.SaveId))
+            {
+                errors.Add(new UpgradeValidationError(
+                    UpgradeValidationErrorCode.MissingPurchaseCurrency,
+                    catalog,
+                    "Upgrade catalog purchase currency requires a stable save id."));
+            }
 
             ValidateDefinitions(catalog, errors);
             return errors;
