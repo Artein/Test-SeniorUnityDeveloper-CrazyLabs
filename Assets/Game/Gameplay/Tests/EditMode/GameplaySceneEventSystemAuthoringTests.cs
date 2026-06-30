@@ -18,27 +18,6 @@ public sealed class GameplaySceneEventSystemAuthoringTests : BaseGameplayTestAss
     private const string LadybugHalfTubeAuthoringTypeName =
         "Game.Level.RunCourses.LadybugRooftopHalfTube.LadybugHalfTubeRunCourseAuthoring";
 
-    private static readonly string[] LadybugObstaclePrefabProperties =
-    {
-        "_obstacleAc1Prefab",
-        "_obstacleAc2Prefab",
-        "_obstacleSunroofPrefab",
-        "_obstacleSolarPanelsPrefab",
-        "_obstacleBillboardPrefab"
-    };
-
-    private static readonly string[] LadybugPropPrefabProperties =
-    {
-        "_rooftopChunk01Prefab",
-        "_rooftopChunk02Prefab",
-        "_rooftopChunk03DropPrefab",
-        "_rooftopChunk05StepPrefab",
-        "_waterTankPropPrefab",
-        "_roofExitPropPrefab",
-        "_satDishPropPrefab",
-        "_rampPropPrefab"
-    };
-
     [Test]
     public void GameplayScene_WhenAuthored_ContainsSingleInputSystemEventSystem()
     {
@@ -84,81 +63,61 @@ public sealed class GameplaySceneEventSystemAuthoringTests : BaseGameplayTestAss
     }
 
     [Test]
-    public void GameplayScene_WhenAuthored_UsesCourseOwnedLadybugLevelVisualPrefabs()
+    public void GameplayScene_WhenAuthored_UsesSerializedTerrainSectionsForLadybugRunCourse()
     {
         var scene = OpenGameplayScene();
         var authoring = FindLadybugHalfTubeAuthoring(scene);
-        var serializedObject = new SerializedObject(authoring);
         var courseRoot = GetAuthoringFeatureRoot(authoring);
+        var cameraTerrainLayer = LayerMask.NameToLayer("CameraTerrain");
 
-        for (var propertyIndex = 0; propertyIndex < LadybugObstaclePrefabProperties.Length; propertyIndex += 1)
+        Assert.That(cameraTerrainLayer, Is.GreaterThanOrEqualTo(0));
+
+        var terrainColliders = authoring.GetComponentsInChildren<TerrainCollider>(true);
+
+        Assert.That(
+            terrainColliders,
+            Has.Length.GreaterThan(0),
+            "Ladybug course must contain at least one authored terrain surface.");
+
+        foreach (var terrainCollider in terrainColliders)
         {
-            var propertyName = LadybugObstaclePrefabProperties[propertyIndex];
-            var prefab = AssertCourseOwnedPrefabVariantReference(serializedObject, propertyName, courseRoot);
-
-            AssertObstaclePrefabContract(prefab, propertyName);
-        }
-
-        for (var propertyIndex = 0; propertyIndex < LadybugPropPrefabProperties.Length; propertyIndex += 1)
-        {
-            var propertyName = LadybugPropPrefabProperties[propertyIndex];
-            var prefab = AssertCourseOwnedPrefabVariantReference(serializedObject, propertyName, courseRoot);
-
-            AssertPropPrefabContract(prefab, propertyName);
+            Assert.That(terrainCollider.transform.IsChildOf(authoring.transform), Is.True, terrainCollider.name);
+            AssertTerrainSurfaceContract(terrainCollider.gameObject, courseRoot, cameraTerrainLayer);
         }
     }
 
-    private static GameObject AssertCourseOwnedPrefabVariantReference(SerializedObject serializedObject, string propertyName, string courseRoot)
+    private static void AssertTerrainSurfaceContract(GameObject surfaceObject, string courseRoot, int cameraTerrainLayer)
     {
-        var property = serializedObject.FindProperty(propertyName);
+        var surfaceName = surfaceObject.name;
+        var terrain = surfaceObject.GetComponent<Terrain>();
+        var terrainCollider = surfaceObject.GetComponent<TerrainCollider>();
+        var runContact = surfaceObject.GetComponent<RunContact>();
 
-        Assert.That(property, Is.Not.Null, propertyName);
-        Assert.That(property.objectReferenceValue, Is.Not.Null, propertyName);
+        Assert.That(surfaceObject.layer, Is.EqualTo(cameraTerrainLayer), surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshFilter>(), Is.Null, surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshRenderer>(), Is.Null, surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshCollider>(), Is.Null, surfaceName);
+        Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(surfaceObject), Is.EqualTo(0), surfaceName);
+        Assert.That(terrain, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider.enabled, Is.True, surfaceName);
+        Assert.That(runContact, Is.Not.Null, surfaceName);
+        Assert.That(runContact.Category, Is.EqualTo(RunContactCategory.Surface), surfaceName);
+        Assert.That(terrain.terrainData, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider.terrainData, Is.SameAs(terrain.terrainData), surfaceName);
 
-        var prefabPath = AssetDatabase.GetAssetPath(property.objectReferenceValue);
-        var prefab = property.objectReferenceValue as GameObject;
-
-        Assert.That(prefabPath, Does.EndWith(".prefab").IgnoreCase, propertyName);
-        Assert.That(prefabPath, Does.StartWith(courseRoot), propertyName);
-        Assert.That(prefab, Is.Not.Null, propertyName);
-        Assert.That(PrefabUtility.GetPrefabAssetType(prefab), Is.EqualTo(PrefabAssetType.Variant), propertyName);
-
-        return prefab;
+        AssertCourseOwnedAsset(terrain.terrainData, courseRoot, surfaceName);
+        AssertCourseOwnedAsset(terrainCollider.sharedMaterial, courseRoot, surfaceName);
     }
 
-    private static void AssertObstaclePrefabContract(GameObject prefab, string description)
+    private static void AssertCourseOwnedAsset(UnityEngine.Object asset, string courseRoot, string description)
     {
-        var collider = prefab.GetComponent<BoxCollider>();
-        var runContact = prefab.GetComponent<RunContact>();
+        Assert.That(asset, Is.Not.Null, description);
 
-        Assert.That(collider, Is.Not.Null, description);
-        Assert.That(collider.enabled, Is.True, description);
-        Assert.That(collider.isTrigger, Is.False, description);
-        Assert.That(runContact, Is.Not.Null, description);
-        Assert.That(runContact.Category, Is.EqualTo(RunContactCategory.Obstacle), description);
-    }
+        var assetPath = AssetDatabase.GetAssetPath(asset);
 
-    private static void AssertPropPrefabContract(GameObject prefab, string description)
-    {
-        var activeColliders = prefab.GetComponentsInChildren<Collider>(true)
-            .Where(collider => collider.enabled)
-            .ToArray();
-        var runContacts = prefab.GetComponentsInChildren<RunContact>(true);
-
-        Assert.That(FindDirectChild(prefab.transform, "Visual"), Is.Not.Null, description);
-        Assert.That(activeColliders, Is.Empty, description);
-        Assert.That(runContacts, Is.Empty, description);
-    }
-
-    private static Transform FindDirectChild(Transform parent, string childName)
-    {
-        foreach (Transform child in parent)
-        {
-            if (child.name == childName)
-                return child;
-        }
-
-        return null;
+        Assert.That(assetPath, Does.StartWith(courseRoot), description);
+        Assert.That(assetPath, Does.Not.StartWith("Assets/Plugins/"), description);
     }
 
     private Scene OpenGameplayScene()
