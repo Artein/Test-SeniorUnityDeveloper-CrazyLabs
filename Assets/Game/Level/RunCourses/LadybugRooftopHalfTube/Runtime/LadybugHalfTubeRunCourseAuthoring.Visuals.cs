@@ -22,7 +22,6 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
         private void CreateRooftopVisualDressing(CourseSurfaceContext surfaceContext)
         {
             var dressingRoot = new GameObject("Rooftop Visual Dressing");
-
             dressingRoot.transform.SetParent(transform, false);
 
             CreateFittedVisual(
@@ -217,8 +216,10 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
         {
             var colliders = root.GetComponentsInChildren<Collider>(true);
 
-            for (var colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex += 1)
-                colliders[colliderIndex].enabled = false;
+            for (var i = 0; i < colliders.Length; i += 1)
+            {
+                colliders[i].enabled = false;
+            }
         }
 
         private void FitVisualToWorldBounds(GameObject visual, Bounds targetBounds)
@@ -262,21 +263,21 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
 
             bounds = default;
 
-            for (var rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex += 1)
+            for (var i = 0; i < renderers.Length; i += 1)
             {
-                var renderer = renderers[rendererIndex];
+                var rend = renderers[i];
 
-                if (!renderer.enabled)
+                if (!rend.enabled)
                     continue;
 
                 if (!hasBounds)
                 {
-                    bounds = renderer.bounds;
+                    bounds = rend.bounds;
                     hasBounds = true;
                     continue;
                 }
 
-                bounds.Encapsulate(renderer.bounds);
+                bounds.Encapsulate(rend.bounds);
             }
 
             return hasBounds;
@@ -284,14 +285,14 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
 
         private readonly struct ObstacleVisualDefinition
         {
+            public GameObject Prefab { get; }
+            public string Name { get; }
+
             public ObstacleVisualDefinition(GameObject prefab, string name)
             {
                 Prefab = prefab;
                 Name = name;
             }
-
-            public GameObject Prefab { get; }
-            public string Name { get; }
         }
     }
 }

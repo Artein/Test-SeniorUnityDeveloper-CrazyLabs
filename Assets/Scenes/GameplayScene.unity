@@ -1106,17 +1106,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1003457366}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1009090401 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1659836021219471733, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-  m_PrefabInstance: {fileID: 1737514269}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 676c87736b93449eab3bb61b6d898df5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay.Pickups::Game.Gameplay.Pickups.Pickup
 --- !u!1 &1088214401
 GameObject:
   m_ObjectHideFlags: 0
@@ -2017,7 +2006,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1860447972226688056, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 1860447972226688056, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2081,7 +2070,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2064843867825354015, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 2064843867825354015, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2105,7 +2094,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2403833210379733262, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 2403833210379733262, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2145,7 +2134,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2467954470727164357, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 2467954470727164357, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2185,7 +2174,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2605981704200771625, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 2605981704200771625, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2201,7 +2190,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2830935265402613986, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 2830935265402613986, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2209,7 +2198,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3031356080513381719, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 42.9
+      value: 35.8
       objectReference: {fileID: 0}
     - target: {fileID: 3031356080513381719, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -2733,7 +2722,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4785494668280479904, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 42.9
+      value: 35.8
       objectReference: {fileID: 0}
     - target: {fileID: 4785494668280479904, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -3449,7 +3438,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8190173958221386191, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 8190173958221386191, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -3501,7 +3490,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8421512286786912488, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 44.75
+      value: 34.35
       objectReference: {fileID: 0}
     - target: {fileID: 8421512286786912488, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -3553,7 +3542,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8757023091576472925, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 42.9
+      value: 35.8
       objectReference: {fileID: 0}
     - target: {fileID: 8757023091576472925, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -3657,7 +3646,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8855479881043029398, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_fontSize
-      value: 42.9
+      value: 35.8
       objectReference: {fileID: 0}
     - target: {fileID: 8855479881043029398, guid: bbd139924dcc9400f90d721a1f0a6c23, type: 3}
       propertyPath: m_TextStyleHashCode
@@ -3785,9 +3774,7 @@ MonoBehaviour:
   _playerTag: Player
   _playerLayerName: Player
   _pickupLayerName: Pickup
-  _levelPickups:
-  - {fileID: 1657989822}
-  - {fileID: 1009090401}
+  _levelPickups: []
   _playerPickupContactColliders:
   - {fileID: 200501558}
 --- !u!4 &1422486651
@@ -3894,74 +3881,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1918570524}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1657989822 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 8608336747006457972, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-  m_PrefabInstance: {fileID: 2043426509}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 676c87736b93449eab3bb61b6d898df5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay.Pickups::Game.Gameplay.Pickups.Pickup
---- !u!1001 &1737514269
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 1659836021224981653, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_Name
-      value: RegularCoinPickup
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0.18
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.65
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 3.91
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1659836021225085109, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
 --- !u!1 &1853135060
 GameObject:
   m_ObjectHideFlags: 0
@@ -4003,7 +3922,7 @@ RectTransform:
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!95 &1853135064
 Animator:
-  serializedVersion: 3
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -4016,9 +3935,35 @@ Animator:
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
-  m_WarningMessage:
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1853135065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1853135060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68fe6ac4900714060bb68cb4772d006f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.PullHintView
+  _root: {fileID: 1853135061}
+  _canvasGroup: {fileID: 1853135066}
+  _fingerRoot: {fileID: 1853135071}
+  _fingerImage: {fileID: 1853135073}
+  _animator: {fileID: 1853135064}
+  _playTriggerName: PlayPullHint
+  _initialIdleDelaySeconds: 2
+  _playbackDurationSeconds: 1.25
+  _repeatCooldownSeconds: 4
+  _screenOffset: {x: 84, y: -28}
 --- !u!225 &1853135066
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4031,28 +3976,6 @@ CanvasGroup:
   m_Interactable: 0
   m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
---- !u!114 &1853135065
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1853135060}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68fe6ac4900714060bb68cb4772d006f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.PullHintView
-  _root: {fileID: 1853135061}
-  _canvasGroup: {fileID: 1853135066}
-  _fingerRoot: {fileID: 1853135071}
-  _fingerImage: {fileID: 1853135073}
-  _animator: {fileID: 1853135064}
-  _playTriggerName: PlayPullHint
-  _initialIdleDelaySeconds: 2
-  _playbackDurationSeconds: 1.25
-  _repeatCooldownSeconds: 4
-  _screenOffset: {x: 84, y: -28}
 --- !u!1 &1853135070
 GameObject:
   m_ObjectHideFlags: 0
@@ -4108,7 +4031,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4377,63 +4300,6 @@ MonoBehaviour:
   _surfaceMask:
     serializedVersion: 2
     m_Bits: 819
---- !u!1001 &2043426509
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -2.11
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.99
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 8.38
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8608336747017702804, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-      propertyPath: m_Name
-      value: BigCoinPickup
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
 --- !u!1 &2100000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -4894,70 +4760,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunContact
   _category: 1
---- !u!1 &2400000000
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2400000001}
-  - component: {fileID: 2400000002}
-  m_Layer: 0
-  m_Name: Ladybug Rooftop Half-Tube Run Course
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2400000001
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2400000000}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2400000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2400000000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c936a29ba10f94188bb5a4bbaad235f9, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Game.Level.RunCourses.LadybugRooftopHalfTube::Game.Level.RunCourses.LadybugRooftopHalfTube.LadybugHalfTubeRunCourseAuthoring
-  _surfaceMaterial: {fileID: 2100000, guid: fd3eada32273a4a5aaa212dcb896811a, type: 2}
-  _buildOnAwake: 1
-  _cameraTerrainLayerName: CameraTerrain
-  _cameraObstacleLayerName: CameraObstacle
-  _rooftopChunk01VisualPrefab: {fileID: 100000, guid: 9b1cbaf5ef07b124bac291fcb4070946, type: 3}
-  _rooftopChunk02VisualPrefab: {fileID: 100000, guid: b2ac7117e017a9f42bd12eec6d32ff88, type: 3}
-  _rooftopChunk03DropVisualPrefab: {fileID: 100012, guid: 43af9345557ea2e4a9948f6f1bc21fe6, type: 3}
-  _rooftopChunk05StepVisualPrefab: {fileID: 100004, guid: d03bdcf419544dd42b0878667eaff8ae, type: 3}
-  _obstacleAc1VisualPrefab: {fileID: 100000, guid: 3ce7074806edbed4a8cdf2b60084d5a2, type: 3}
-  _obstacleAc2VisualPrefab: {fileID: 100000, guid: 2a762a04ac857154f9ba053b1109f4c9, type: 3}
-  _obstacleSunroofVisualPrefab: {fileID: 100000, guid: dc8b8741cfc638344a0d4dde5822af69, type: 3}
-  _obstacleSolarPanelsVisualPrefab: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
-  _obstacleBillboardVisualPrefab: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-  _obstacleWaterTankVisualPrefab: {fileID: 100000, guid: ef6a0f8a9a0d1bb4e86dc4db202211dc, type: 3}
-  _obstacleRoofExitVisualPrefab: {fileID: 100000, guid: 02881c61e02148447958969661a6b4da, type: 3}
-  _obstacleSatDishVisualPrefab: {fileID: 100000, guid: 65df4e2b09a67d748a2c16d6e87ad8db, type: 3}
-  _rampVisualPrefab: {fileID: 100000, guid: a0d8d875fe1700343b671450d4c7b251, type: 3}
-  _pickupLayerName: Pickup
-  _regularCoinPickupPrefab: {fileID: 1659836021219471733, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
-  _bigCoinPickupPrefab: {fileID: 8608336747006457972, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
 --- !u!1 &2300000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -5053,6 +4855,70 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2300000002}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2400000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2400000001}
+  - component: {fileID: 2400000002}
+  m_Layer: 0
+  m_Name: RunCourse
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2400000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2400000000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2400000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2400000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c936a29ba10f94188bb5a4bbaad235f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Level.RunCourses.LadybugRooftopHalfTube::Game.Level.RunCourses.LadybugRooftopHalfTube.LadybugHalfTubeRunCourseAuthoring
+  _pickupLayerName: Pickup
+  _regularCoinPickupPrefab: {fileID: 1659836021219471733, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
+  _bigCoinPickupPrefab: {fileID: 8608336747006457972, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
+  _rooftopChunk01VisualPrefab: {fileID: 100000, guid: 9b1cbaf5ef07b124bac291fcb4070946, type: 3}
+  _rooftopChunk02VisualPrefab: {fileID: 100000, guid: b2ac7117e017a9f42bd12eec6d32ff88, type: 3}
+  _rooftopChunk03DropVisualPrefab: {fileID: 100012, guid: 43af9345557ea2e4a9948f6f1bc21fe6, type: 3}
+  _rooftopChunk05StepVisualPrefab: {fileID: 100004, guid: d03bdcf419544dd42b0878667eaff8ae, type: 3}
+  _obstacleAc1VisualPrefab: {fileID: 100000, guid: 3ce7074806edbed4a8cdf2b60084d5a2, type: 3}
+  _obstacleAc2VisualPrefab: {fileID: 100000, guid: 2a762a04ac857154f9ba053b1109f4c9, type: 3}
+  _obstacleSunroofVisualPrefab: {fileID: 100000, guid: dc8b8741cfc638344a0d4dde5822af69, type: 3}
+  _obstacleSolarPanelsVisualPrefab: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+  _obstacleBillboardVisualPrefab: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+  _obstacleWaterTankVisualPrefab: {fileID: 100000, guid: ef6a0f8a9a0d1bb4e86dc4db202211dc, type: 3}
+  _obstacleRoofExitVisualPrefab: {fileID: 100000, guid: 02881c61e02148447958969661a6b4da, type: 3}
+  _obstacleSatDishVisualPrefab: {fileID: 100000, guid: 65df4e2b09a67d748a2c16d6e87ad8db, type: 3}
+  _rampVisualPrefab: {fileID: 100000, guid: a0d8d875fe1700343b671450d4c7b251, type: 3}
+  _surfaceMaterial: {fileID: 2100000, guid: fd3eada32273a4a5aaa212dcb896811a, type: 2}
+  _buildOnAwake: 1
+  _cameraTerrainLayerName: CameraTerrain
+  _cameraObstacleLayerName: CameraObstacle
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -5071,6 +4937,5 @@ SceneRoots:
   - {fileID: 647954913}
   - {fileID: 2200000001}
   - {fileID: 2200000101}
-  - {fileID: 2043426509}
-  - {fileID: 1737514269}
   - {fileID: 1900001001}
+  - {fileID: 2400000001}

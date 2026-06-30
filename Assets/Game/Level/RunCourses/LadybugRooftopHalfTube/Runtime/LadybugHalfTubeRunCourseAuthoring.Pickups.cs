@@ -1,12 +1,13 @@
 using System;
 using Game.Gameplay.Pickups;
+using SaintsField;
 using UnityEngine;
 
 namespace Game.Level.RunCourses.LadybugRooftopHalfTube
 {
     public sealed partial class LadybugHalfTubeRunCourseAuthoring
     {
-        [SerializeField] private string _pickupLayerName = "Pickup";
+        [SerializeField, Layer] private string _pickupLayerName = "Pickup";
         [SerializeField] private Pickup _regularCoinPickupPrefab;
         [SerializeField] private Pickup _bigCoinPickupPrefab;
 

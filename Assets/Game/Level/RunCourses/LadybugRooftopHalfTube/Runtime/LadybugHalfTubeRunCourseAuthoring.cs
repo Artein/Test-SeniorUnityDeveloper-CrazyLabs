@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Gameplay;
+using SaintsField;
 using UnityEngine;
 
 namespace Game.Level.RunCourses.LadybugRooftopHalfTube
@@ -10,8 +11,8 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
     {
         [SerializeField] private Material _surfaceMaterial;
         [SerializeField] private bool _buildOnAwake = true;
-        [SerializeField] private string _cameraTerrainLayerName = "CameraTerrain";
-        [SerializeField] private string _cameraObstacleLayerName = "CameraObstacle";
+        [SerializeField, Layer] private string _cameraTerrainLayerName = "CameraTerrain";
+        [SerializeField, Layer] private string _cameraObstacleLayerName = "CameraObstacle";
 
         private const float EarlyReachPressureSurfaceFriction = 0.138f;
         private const float CompletionGlideSurfaceFriction = 0.09f;

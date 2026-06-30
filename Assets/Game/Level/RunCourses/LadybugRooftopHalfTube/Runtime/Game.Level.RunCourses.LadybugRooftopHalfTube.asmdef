@@ -3,7 +3,8 @@
   "rootNamespace": "",
   "references": [
     "Game.Gameplay",
-    "Game.Gameplay.Pickups"
+    "Game.Gameplay.Pickups",
+    "SaintsField.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
