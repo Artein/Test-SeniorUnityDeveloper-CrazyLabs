@@ -11,19 +11,22 @@ namespace Game.Gameplay.Upgrades
         private readonly IUpgradeProgressStorage _progressStorage;
         private readonly UpgradeDefinitionEvaluator _evaluator;
         private readonly UpgradeDefinitionValidator _definitionValidator;
+        private readonly IEconomyCommitter _economyCommitter;
 
         public UpgradePurchaseService(
             IUpgradeCatalog catalog,
             ICurrencyStorage currencyStorage,
             IUpgradeProgressStorage progressStorage,
             UpgradeDefinitionEvaluator evaluator,
-            UpgradeDefinitionValidator definitionValidator)
+            UpgradeDefinitionValidator definitionValidator,
+            IEconomyCommitter economyCommitter)
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));
             _progressStorage = progressStorage ?? throw new ArgumentNullException(nameof(progressStorage));
             _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
             _definitionValidator = definitionValidator ?? throw new ArgumentNullException(nameof(definitionValidator));
+            _economyCommitter = economyCommitter ?? throw new ArgumentNullException(nameof(economyCommitter));
         }
 
         public UpgradePurchaseResult TryPurchase(UpgradeDefinition definition)
@@ -56,6 +59,13 @@ namespace Game.Gameplay.Upgrades
                     UpgradeValidationErrorCode.MissingPurchaseCurrency,
                     _catalog,
                     "Upgrade catalog requires a purchase currency."));
+            }
+            else if (string.IsNullOrWhiteSpace(_catalog.PurchaseCurrency.SaveId))
+            {
+                validationErrors.Add(new UpgradeValidationError(
+                    UpgradeValidationErrorCode.MissingPurchaseCurrency,
+                    _catalog,
+                    "Upgrade catalog purchase currency requires a stable save id."));
             }
 
             if (validationErrors.Count > 0)
@@ -95,6 +105,19 @@ namespace Game.Gameplay.Upgrades
             }
 
             _progressStorage.SetLevel(definition, nextLevel);
+            var persistenceResult = _economyCommitter.CommitImportant("upgrade-purchase");
+
+            if (!persistenceResult.IsSuccess)
+            {
+                return new UpgradePurchaseResult(
+                    UpgradePurchaseStatus.SaveFailed,
+                    definition,
+                    currentLevel,
+                    nextLevel,
+                    cost,
+                    Array.Empty<UpgradeValidationError>(),
+                    persistenceResult);
+            }
 
             return new UpgradePurchaseResult(
                 UpgradePurchaseStatus.Purchased,
@@ -102,7 +125,8 @@ namespace Game.Gameplay.Upgrades
                 currentLevel,
                 nextLevel,
                 cost,
-                Array.Empty<UpgradeValidationError>());
+                Array.Empty<UpgradeValidationError>(),
+                persistenceResult);
         }
 
         private bool ContainsDefinition(UpgradeDefinition definition)

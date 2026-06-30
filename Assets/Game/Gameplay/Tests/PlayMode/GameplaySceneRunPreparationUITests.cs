@@ -6,7 +6,6 @@ using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
-using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using TMPro;
@@ -19,7 +18,7 @@ using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayModeFixture
 {
     private const float MinimumCoinIconScreenHeight = 40f;
     private const float MinimumBuyButtonScreenHeight = 64f;
@@ -63,16 +62,19 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
             var definition = definitions[i];
             var card = cards[i];
             var headerRow = FindChildTransform(card, "Upgrade Header Row");
+            var cardBackground = card.GetComponent<Image>();
             var icon = FindChildComponent<Image>(card, "Upgrade Icon - " + definition.StableId);
             var nameLabel = FindChildComponent<TMP_Text>(card, "Upgrade Name Label");
             var levelLabel = FindChildComponent<TMP_Text>(card, "Upgrade Level Label");
             var effectLabel = FindChildComponent<TMP_Text>(card, "Upgrade Effect Label");
             var buyButton = FindChildComponent<Button>(card, "Buy Button - " + definition.StableId);
+            var buyButtonBackground = buyButton.GetComponent<Image>();
             var costIcon = FindChildComponent<Image>(buyButton.transform, "Upgrade Button Cost Currency Icon");
             var costLabel = FindChildComponent<TMP_Text>(buyButton.transform, "Upgrade Button Cost Label");
             var firstCost = evaluator.GetCostValue(definition, 1);
             var nextEffectText = FormatEffect(definition, evaluator.GetEffectValue(definition, 1));
 
+            AssertGeneratedUpgradeBackgrounds(cardBackground, buyButtonBackground, definition.StableId);
             Assert.That(icon.transform.parent, Is.SameAs(headerRow), $"{definition.StableId} icon should be in the header row.");
             Assert.That(nameLabel.transform.parent, Is.SameAs(headerRow), $"{definition.StableId} title should be in the header row.");
             Assert.That(levelLabel.transform.parent, Is.SameAs(headerRow), $"{definition.StableId} offer level should be in the header row.");
@@ -305,8 +307,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
 
     private IEnumerator LoadGameplayScene()
     {
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
+        yield return LoadGameplaySceneWithIsolatedSaves();
     }
 
     private IEnumerator ReturnToRunPreparationWithBalance(Scene scene, int balance)
@@ -479,17 +480,6 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
             .ToArray();
     }
 
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
     private T FindChildComponent<T>(Transform root, string objectName)
         where T : Component
     {
@@ -519,6 +509,30 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
 
         Assert.That(costRows.All(row => !row.gameObject.activeSelf), Is.True,
             "Cost icon and amount should live inside the upgrade button, not in a standalone card row.");
+    }
+
+    private void AssertGeneratedUpgradeBackgrounds(Image cardBackground, Image buyButtonBackground, string stableId)
+    {
+        Assert.That(cardBackground.sprite, Is.Not.Null, $"{stableId} card should have a generated background sprite.");
+        Assert.That(cardBackground.sprite.name, Is.EqualTo("UpgradeCardBackground"), $"{stableId} card should use the generated panel asset.");
+        Assert.That(cardBackground.type, Is.EqualTo(Image.Type.Sliced), $"{stableId} card background should be sliced.");
+        AssertSpriteBorder(cardBackground.sprite.border, new Vector4(8f, 8f, 8f, 8f), $"{stableId} card");
+
+        Assert.That(buyButtonBackground.sprite, Is.Not.Null, $"{stableId} buy button should have a generated background sprite.");
+
+        Assert.That(buyButtonBackground.sprite.name, Is.EqualTo("UpgradeButtonBackground"),
+            $"{stableId} buy button should use the generated button asset.");
+
+        Assert.That(buyButtonBackground.type, Is.EqualTo(Image.Type.Sliced), $"{stableId} buy button background should be sliced.");
+        AssertSpriteBorder(buyButtonBackground.sprite.border, new Vector4(8f, 8f, 8f, 8f), $"{stableId} buy button");
+    }
+
+    private void AssertSpriteBorder(Vector4 actual, Vector4 expected, string context)
+    {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.01f), $"{context} left sprite border should stay compact.");
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.01f), $"{context} bottom sprite border should stay compact.");
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.01f), $"{context} right sprite border should stay compact.");
+        Assert.That(actual.w, Is.EqualTo(expected.w).Within(0.01f), $"{context} top sprite border should stay compact.");
     }
 
     private void AssertHeaderRowOrder(RectTransform icon, RectTransform nameLabel, RectTransform levelLabel)
@@ -656,35 +670,6 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsF
         var topRight = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
 
         return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
-    }
-
-    private GameObject FindGameObjectByName(Scene scene, string objectName)
-    {
-        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
-            return gameObject;
-
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
-    }
-
-    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject result)
-    {
-        foreach (var rootGameObject in scene.GetRootGameObjects())
-        {
-            var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
-
-            foreach (var childTransform in transforms)
-            {
-                if (childTransform.name == objectName)
-                {
-                    result = childTransform.gameObject;
-                    return true;
-                }
-            }
-        }
-
-        result = null;
-        return false;
     }
 
     private string GetButtonActionLabel(Button button)

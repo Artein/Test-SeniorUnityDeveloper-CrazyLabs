@@ -1,7 +1,9 @@
 {
   "name": "Game.Gameplay.Economy",
   "rootNamespace": "",
-  "references": [],
+  "references": [
+    "Game.Foundation"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

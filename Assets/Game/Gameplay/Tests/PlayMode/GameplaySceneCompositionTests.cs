@@ -5,7 +5,6 @@ using System.Reflection;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Gameplay.Tests.Common;
 using Game.Foundation.Input;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
@@ -19,7 +18,7 @@ using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFixture
 {
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_SlingshotPrelaunchCompositionIsReady()
@@ -74,6 +73,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         var pullHintCanvasGroup = pullHint.GetComponent<CanvasGroup>();
         var pullHintAnimator = pullHint.GetComponent<Animator>();
         var pullHintFinger = pullHint.transform.Find("Finger");
+
         var pullHintFingerRectTransform = pullHintFinger != null
             ? pullHintFinger.GetComponent<RectTransform>()
             : null;
@@ -641,10 +641,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
 
     private IEnumerator LoadGameplayScene()
     {
-        if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
-            yield break;
-
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
+        yield return LoadGameplaySceneWithIsolatedSaves(CanReuseGameplayScene);
     }
 
     private bool CanReuseGameplayScene(Scene scene)
@@ -704,23 +701,6 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
         yield return null;
     }
 
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = FindComponentsInScene<T>(scene);
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
-    private T[] FindComponentsInScene<T>(Scene scene)
-        where T : Component
-    {
-        return scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
-    }
-
     private PlayerSteeringConfig[] GetAssignedPlayerSteeringConfigs(Scene scene)
     {
         return FindComponentsInScene<GameplayLifetimeScope>(scene)
@@ -755,35 +735,6 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayTestAssetsFixtur
             .Where(source => source != null)
             .Distinct()
             .ToArray();
-    }
-
-    private GameObject FindGameObjectByName(Scene scene, string objectName)
-    {
-        if (TryFindGameObjectByName(scene, objectName, out var gameObject))
-            return gameObject;
-
-        Assert.Fail($"Expected scene object '{objectName}' to exist.");
-        return null;
-    }
-
-    private bool TryFindGameObjectByName(Scene scene, string objectName, out GameObject gameObject)
-    {
-        foreach (var rootGameObject in scene.GetRootGameObjects())
-        {
-            var transforms = rootGameObject.GetComponentsInChildren<Transform>(true);
-
-            foreach (var childTransform in transforms)
-            {
-                if (childTransform.name == objectName)
-                {
-                    gameObject = childTransform.gameObject;
-                    return true;
-                }
-            }
-        }
-
-        gameObject = null;
-        return false;
     }
 
     private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)

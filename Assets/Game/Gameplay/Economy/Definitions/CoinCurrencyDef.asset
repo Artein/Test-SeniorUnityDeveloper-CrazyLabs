@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: daa6cd4dae8c4fa7a34a0326733d1098, type: 3}
   m_Name: CoinCurrencyDef
   m_EditorClassIdentifier: 
+  _saveId: currency-ca56e342366748b59c0ed798b20864f1
   _icon: {fileID: 21300000, guid: 2311f400041d43f39c32dac2cb1e23ca, type: 3}

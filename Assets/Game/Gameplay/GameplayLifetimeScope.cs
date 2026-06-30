@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game.Foundation;
+using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
+using Game.Foundation.Persistence;
 using Game.Foundation.Screen;
 using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
@@ -130,6 +132,18 @@ namespace Game.Gameplay
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
+            builder.Register<PlayerEconomyState>(Lifetime.Singleton);
+            builder.Register<EconomySaveSettings>(Lifetime.Singleton);
+            builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
+
+            builder.RegisterComponentOnNewGameObject<UnityApplicationLifecycleNotifier>(Lifetime.Singleton, "ApplicationLifecycleNotifier")
+                .As<IApplicationPauseNotifier, IApplicationFocusChangeNotifier, IApplicationQuitNotifier>();
+
+            builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton);
+            builder.Register<EconomySaveSerializer>(Lifetime.Singleton);
+            builder.Register<IEconomySaveRepository, EconomySaveRepository>(Lifetime.Singleton);
+            builder.Register<EconomySaveQueue>(Lifetime.Singleton);
+            builder.Register<IEconomyCommitter, EconomyCommitter>(Lifetime.Singleton);
             builder.Register<ICurrencyStorage, CurrencyStorage>(Lifetime.Singleton);
             builder.Register<IRunCurrencyAccumulator, RunCurrencyAccumulator>(Lifetime.Singleton);
             builder.Register<IUpgradeProgressStorage, UpgradeProgressStorage>(Lifetime.Singleton);
@@ -149,10 +163,13 @@ namespace Game.Gameplay
 
             builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton);
 
+            builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
             builder.RegisterEntryPoint<RunProgressService>();
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
             builder.RegisterEntryPoint<RunEndFlow>();
+            builder.RegisterEntryPoint<RunRewardCommitter>();
+            builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
             builder.RegisterEntryPoint<CharacterPresentationPresenter>();
             builder.RegisterEntryPoint<PickupCollectionController>();
             builder.RegisterEntryPoint<LostMomentumDetector>();
@@ -233,6 +250,11 @@ namespace Game.Gameplay
             {
                 return _lifetimeScope.GetLevelPickups();
             }
+        }
+
+        public static class Serialization
+        {
+            public const string LevelPickups = nameof(_levelPickups);
         }
     }
 }

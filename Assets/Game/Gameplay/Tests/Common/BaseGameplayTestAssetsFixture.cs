@@ -13,7 +13,7 @@ namespace Game.Gameplay.Tests.Common
         protected GameplayTestAssetsProvider TestAssets { get; private set; }
 
         [OneTimeSetUp]
-        public void OneTimeSetUpGameplayTestAssetsFixture()
+        public void OnOneTimeSetUpGameplayTestAssetsFixture()
         {
             TestAssets = GameplayTestAssetsProvider.LoadSingleFromAssetDatabase();
         }

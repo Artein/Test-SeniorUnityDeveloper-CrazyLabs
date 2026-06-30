@@ -17,6 +17,7 @@ public sealed class PickupAdapterAndStateTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _pickupDefinition = CreatePickupDefinition(_coins, 1);
     }
 

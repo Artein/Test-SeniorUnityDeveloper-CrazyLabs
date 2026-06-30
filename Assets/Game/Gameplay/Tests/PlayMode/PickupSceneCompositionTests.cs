@@ -3,7 +3,6 @@ using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
-using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,8 +10,9 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class PickupSceneCompositionTests : BaseGameplayTestAssetsFixture
+public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixture
 {
+    // TODO: Instead of hardcode — use EditorAssetsProvider + Layer/Tag attributes on fields
     private const string PlayerLayerName = "Player";
     private const string PickupLayerName = "Pickup";
     private const string PlayerTag = "Player";
@@ -20,8 +20,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayTestAssetsFixture
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_PickupCurrencyCompositionIsReady()
     {
-        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
-        yield return null;
+        yield return LoadGameplaySceneWithIsolatedSaves();
 
         var scene = SceneManager.GetActiveScene();
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
@@ -102,23 +101,6 @@ public sealed class PickupSceneCompositionTests : BaseGameplayTestAssetsFixture
             Assert.That(collider.isTrigger, Is.True, collider.name);
             Assert.That(collider.gameObject.layer, Is.EqualTo(pickupLayer), collider.name);
         }
-    }
-
-    private T FindSingleInScene<T>(Scene scene, string objectDescription)
-        where T : Component
-    {
-        var results = FindComponentsInScene<T>(scene);
-
-        Assert.That(results, Has.Length.EqualTo(1), objectDescription);
-        return results[0];
-    }
-
-    private T[] FindComponentsInScene<T>(Scene scene)
-        where T : Component
-    {
-        return scene.GetRootGameObjects()
-            .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<T>(true))
-            .ToArray();
     }
 
     private int GetRequiredLayer(string layerName)

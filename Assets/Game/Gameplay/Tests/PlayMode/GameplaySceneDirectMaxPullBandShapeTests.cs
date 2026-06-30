@@ -1,5 +1,4 @@
 using System.Collections;
-using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,7 +9,7 @@ using static GameplaySceneDirectMaxPullBandShapeAssertions;
 using static GameplaySceneBandShapePlayModeTestUtils;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestAssetsFixture
+public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayScenePlayModeFixture
 {
     [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsDirectlyToMaximumDistance_then_BandPathStaysVisibleSymmetricAndStableAcrossFrames()
@@ -19,7 +18,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestA
 
         try
         {
-            yield return LoadGameplayScene(TestAssets.GameplaySceneRef);
+            yield return LoadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
             var context = CreateSceneContext(SceneManager.GetActiveScene());
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
@@ -106,7 +105,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestA
 
         try
         {
-            yield return LoadGameplayScene(TestAssets.GameplaySceneRef);
+            yield return LoadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
             var context = CreateSceneContext(SceneManager.GetActiveScene());
             var inputProjector = new SlingshotInputProjector(context.InputCamera);
             yield return WaitUntilPlayerIsHeld(context);
@@ -208,8 +207,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestA
     }
 
     [UnityTest]
-    public IEnumerator
-        given_GameplayScene_when_DirectMaximumPullRepeatsAcrossSceneReloadsWithScreenJitter_then_BandTopologyStaysStable()
+    public IEnumerator given_GameplayScene_when_DirectMaximumPullRepeatsAcrossSceneReloadsWithScreenJitter_then_BandTopologyStaysStable()
     {
         var screenJitterPixels = new[]
         {
@@ -230,7 +228,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestA
 
             try
             {
-                yield return ReloadGameplayScene(TestAssets.GameplaySceneRef);
+                yield return ReloadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
                 var context = CreateSceneContext(SceneManager.GetActiveScene());
                 var inputProjector = new SlingshotInputProjector(context.InputCamera);
                 yield return WaitUntilPlayerIsHeld(context);
@@ -370,7 +368,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestA
 
             try
             {
-                yield return ReloadGameplayScene(TestAssets.GameplaySceneRef);
+                yield return ReloadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
                 var context = CreateSceneContext(SceneManager.GetActiveScene());
                 var inputProjector = new SlingshotInputProjector(context.InputCamera);
                 yield return WaitUntilPlayerIsHeld(context);

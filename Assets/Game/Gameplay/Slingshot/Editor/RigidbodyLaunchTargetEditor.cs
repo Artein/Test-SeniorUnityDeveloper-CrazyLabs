@@ -22,8 +22,8 @@ namespace Game.Gameplay.Slingshot.Editor
         {
             serializedObject.Update();
 
-            var collider = serializedObject.FindProperty("_bandContactCollider").objectReferenceValue as Collider;
-            var bandCenter = serializedObject.FindProperty("_bandCenter").objectReferenceValue as Transform;
+            var collider = serializedObject.FindProperty(RigidbodyLaunchTarget.Serialization.BandContactCollider).objectReferenceValue as Collider;
+            var bandCenter = serializedObject.FindProperty(RigidbodyLaunchTarget.Serialization.BandCenter).objectReferenceValue as Transform;
 
             if (collider == null || bandCenter == null)
             {
