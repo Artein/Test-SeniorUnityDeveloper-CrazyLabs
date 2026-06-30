@@ -21,7 +21,8 @@ namespace Game.Gameplay.Pickups
 
     public sealed class PickupCollectionController : IInitializable, IDisposable, IPickupCollectionNotifier
     {
-        private readonly IReadOnlyList<Pickup> _pickups;
+        private readonly ILevelPickupSource _pickupSource;
+        private readonly HashSet<Pickup> _subscribedPickups = new();
         private readonly ILevelPickupState _levelPickupState;
         private readonly ICurrencyStorage _currencyStorage;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
@@ -37,7 +38,7 @@ namespace Game.Gameplay.Pickups
         public event Action<PickupCollectedEventArgs> PickupCollected;
 
         public PickupCollectionController(
-            IReadOnlyList<Pickup> pickups,
+            ILevelPickupSource pickupSource,
             ILevelPickupState levelPickupState,
             ICurrencyStorage currencyStorage,
             IRunCurrencyAccumulator runCurrencyAccumulator,
@@ -47,7 +48,7 @@ namespace Game.Gameplay.Pickups
             GameplayStateId currencyGrantResolverResetStateId,
             string playerTag)
         {
-            _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
+            _pickupSource = pickupSource ?? throw new ArgumentNullException(nameof(pickupSource));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
             _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
@@ -75,14 +76,7 @@ namespace Game.Gameplay.Pickups
             if (_isInitialized)
                 return;
 
-            foreach (var pickup in _pickups)
-            {
-                if (pickup == null)
-                    throw new InvalidOperationException("Pickup Collection Controller cannot subscribe to a null Pickup reference.");
-
-                pickup.TriggerEntered += OnPickupTriggerEntered;
-            }
-
+            SynchronizePickupSubscriptions();
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
         }
@@ -97,7 +91,7 @@ namespace Game.Gameplay.Pickups
             if (!_isInitialized)
                 return;
 
-            foreach (var pickup in _pickups)
+            foreach (var pickup in _subscribedPickups)
             {
                 if (pickup == null)
                     continue;
@@ -136,10 +130,39 @@ namespace Game.Gameplay.Pickups
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
-            if (_isDisposed || !ReferenceEquals(nextStateId, _currencyGrantResolverResetStateId))
+            if (_isDisposed)
                 return;
 
-            _pickupCurrencyGrantResolver.Reset();
+            SynchronizePickupSubscriptions();
+
+            if (ReferenceEquals(nextStateId, _currencyGrantResolverResetStateId))
+                _pickupCurrencyGrantResolver.Reset();
+        }
+
+        private void SynchronizePickupSubscriptions()
+        {
+            var pickups = _pickupSource.GetLevelPickups();
+
+            if (pickups == null)
+                throw new InvalidOperationException("Pickup Collection Controller requires a non-null Pickup list.");
+
+            var uniquePickups = new HashSet<Pickup>(pickups.Count);
+
+            for (var pickupIndex = 0; pickupIndex < pickups.Count; pickupIndex += 1)
+            {
+                var pickup = pickups[pickupIndex];
+
+                if (pickup == null)
+                    throw new InvalidOperationException("Pickup Collection Controller cannot subscribe to a null Pickup reference.");
+
+                if (!uniquePickups.Add(pickup))
+                    throw new InvalidOperationException($"Pickup Collection Controller contains duplicate Pickup reference '{pickup.name}'.");
+
+                if (!_subscribedPickups.Add(pickup))
+                    continue;
+
+                pickup.TriggerEntered += OnPickupTriggerEntered;
+            }
         }
     }
 }

@@ -1,0 +1,17 @@
+{
+  "name": "Game.Level.RunCourses.LadybugRooftopHalfTube",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay",
+    "Game.Gameplay.Pickups"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

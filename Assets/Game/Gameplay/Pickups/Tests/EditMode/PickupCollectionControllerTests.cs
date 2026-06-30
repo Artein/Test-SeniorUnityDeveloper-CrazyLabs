@@ -212,13 +212,13 @@ public sealed class PickupCollectionControllerTests
         IRunCurrencyAccumulator runCurrencyAccumulator = null,
         IPickupCurrencyGrantResolver pickupCurrencyGrantResolver = null)
     {
-        var levelPickupState = new LevelPickupState(pickups);
+        var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(pickups));
         var storage = currencyStorage ?? new CurrencyStorage();
         var accumulator = runCurrencyAccumulator ?? new RunCurrencyAccumulator();
         var resolver = pickupCurrencyGrantResolver ?? new FakePickupCurrencyGrantResolver();
 
         var controller = new PickupCollectionController(
-            pickups,
+            new FixedLevelPickupSource(pickups),
             levelPickupState,
             storage,
             accumulator,

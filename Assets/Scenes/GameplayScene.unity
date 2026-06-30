@@ -1226,8 +1226,8 @@ Transform:
   m_GameObject: {fileID: 1088214401}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: -0}
-  m_LocalScale: {x: 10, y: 1, z: 10}
+  m_LocalPosition: {x: 0, y: 0, z: -100}
+  m_LocalScale: {x: 10, y: 1, z: 4}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -4629,7 +4629,7 @@ Transform:
   m_GameObject: {fileID: 2200000200}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 14}
+  m_LocalPosition: {x: 0, y: 0.5, z: 420}
   m_LocalScale: {x: 8, y: 2, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4696,8 +4696,8 @@ Transform:
   m_GameObject: {fileID: 2200000300}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -5, z: 7}
-  m_LocalScale: {x: 12, y: 1, z: 20}
+  m_LocalPosition: {x: 0, y: -56, z: 210}
+  m_LocalScale: {x: 22, y: 2, z: 440}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2200000101}
@@ -4763,7 +4763,7 @@ Transform:
   m_GameObject: {fileID: 2200000400}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 7}
+  m_LocalPosition: {x: 0, y: 0.5, z: -20}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4803,6 +4803,70 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunContact
   _category: 1
+--- !u!1 &2400000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2400000001}
+  - component: {fileID: 2400000002}
+  m_Layer: 0
+  m_Name: Ladybug Rooftop Half-Tube Run Course
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2400000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2400000000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2400000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2400000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c936a29ba10f94188bb5a4bbaad235f9, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Level.RunCourses.LadybugRooftopHalfTube::Game.Level.RunCourses.LadybugRooftopHalfTube.LadybugHalfTubeRunCourseAuthoring
+  _surfaceMaterial: {fileID: 2100000, guid: fd3eada32273a4a5aaa212dcb896811a, type: 2}
+  _buildOnAwake: 1
+  _cameraTerrainLayerName: CameraTerrain
+  _cameraObstacleLayerName: CameraObstacle
+  _rooftopChunk01VisualPrefab: {fileID: 100000, guid: 9b1cbaf5ef07b124bac291fcb4070946, type: 3}
+  _rooftopChunk02VisualPrefab: {fileID: 100000, guid: b2ac7117e017a9f42bd12eec6d32ff88, type: 3}
+  _rooftopChunk03DropVisualPrefab: {fileID: 100012, guid: 43af9345557ea2e4a9948f6f1bc21fe6, type: 3}
+  _rooftopChunk05StepVisualPrefab: {fileID: 100004, guid: d03bdcf419544dd42b0878667eaff8ae, type: 3}
+  _obstacleAc1VisualPrefab: {fileID: 100000, guid: 3ce7074806edbed4a8cdf2b60084d5a2, type: 3}
+  _obstacleAc2VisualPrefab: {fileID: 100000, guid: 2a762a04ac857154f9ba053b1109f4c9, type: 3}
+  _obstacleSunroofVisualPrefab: {fileID: 100000, guid: dc8b8741cfc638344a0d4dde5822af69, type: 3}
+  _obstacleSolarPanelsVisualPrefab: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+  _obstacleBillboardVisualPrefab: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+  _obstacleWaterTankVisualPrefab: {fileID: 100000, guid: ef6a0f8a9a0d1bb4e86dc4db202211dc, type: 3}
+  _obstacleRoofExitVisualPrefab: {fileID: 100000, guid: 02881c61e02148447958969661a6b4da, type: 3}
+  _obstacleSatDishVisualPrefab: {fileID: 100000, guid: 65df4e2b09a67d748a2c16d6e87ad8db, type: 3}
+  _rampVisualPrefab: {fileID: 100000, guid: a0d8d875fe1700343b671450d4c7b251, type: 3}
+  _pickupLayerName: Pickup
+  _regularCoinPickupPrefab: {fileID: 1659836021219471733, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
+  _bigCoinPickupPrefab: {fileID: 8608336747006457972, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
 --- !u!1 &2300000001
 GameObject:
   m_ObjectHideFlags: 0

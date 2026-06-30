@@ -9,7 +9,7 @@ Target tuning for the first implemented course:
 - Target first completion: after about 5-10 **Runs**, assuming the player spends collected coins on upgrades in **Run Preparation**.
 - First run expectation: the player should not normally reach **Run Finish**.
 - Estimated course length: about 420m forward progress, assuming roughly 7 m/s average speed for a competent upgraded run.
-- Initial implementation path: one continuous straight-forward course along +Z because the current **Run Progress Frame** is single-axis.
+- Initial implementation path: one continuous straight-forward course along the **Run Progress Frame** forward axis; in the current `GameplayScene` that axis is world +Z.
 - Main surface profile: banked half-tube with **Soft Containment**, not hard walls.
 
 Reference boundary:
@@ -40,16 +40,17 @@ A downhill sliding progression course needs these irreducible parts:
 3. Shape the course as a half-tube: about 10m playable width, 6m comfortable center band, and 2m banked side surface on each side.
 4. Use **Soft Containment** through banked sides; do not use hard guard rails as the primary boundary.
 5. Let excessive lateral momentum send the **Launch Target** over the lip into eventual **Run Safety Net** rather than invisible walls.
-6. A competent upgraded clear should be about 60 seconds.
-7. Early runs should usually end before the finish, mainly through **Lost Momentum** caused by insufficient reach/upgrades.
-8. Obstacles punish steering mistakes; they should not be mandatory fail gates.
-9. Coins must be front-loaded enough that failed runs still support upgrade purchases.
-10. Ramps are authored as **Run Surface**, never **Run Obstacle**.
-11. Each high-level **Run Course Beat** should be built from shorter **Run Course Sections**; target roughly 12-15 sections across the full course.
-12. Imported Ladybug assets should stay visual where possible; gameplay colliders and **Run Contact Category** authoring should live on project-owned wrappers later.
-13. Start graybox pitch around 7 degrees average, with short flatter and steeper sections for pacing.
-14. Use a wide recoverable half-tube cross-section: 6m center trough, 2m bank per side, 25-35 degree banks, and 1.0-1.4m lip height.
-15. Validate the graybox with explicit gates before adding moving obstacles, extra ramps, or final art dressing.
+6. Do not use hidden lateral clamps, invisible side walls, or forced recenter volumes to keep the **Launch Target** inside the half-tube.
+7. A competent upgraded clear should be about 60 seconds.
+8. Early runs should usually end before the finish, mainly through **Lost Momentum** caused by insufficient reach/upgrades.
+9. Obstacles punish steering mistakes; they should not be mandatory fail gates.
+10. Coins must be front-loaded enough that failed runs still support upgrade purchases.
+11. Ramps are authored as **Run Surface**, never **Run Obstacle**.
+12. Each high-level **Run Course Beat** should be built from shorter **Run Course Sections**; target roughly 12-15 sections across the full course.
+13. Imported Ladybug assets should stay visual where possible; gameplay colliders and **Run Contact Category** authoring should live on project-owned wrappers later.
+14. Start graybox pitch around 7 degrees average, with short flatter and steeper sections for pacing.
+15. Use a wide recoverable half-tube cross-section: 6m center trough, 2m bank per side, 25-35 degree banks, and 1.0-1.4m lip height.
+16. Validate the graybox with explicit gates before adding moving obstacles, extra ramps, or final art dressing.
 
 ## Sled Surfers Principles Applied To Ladybug Theme
 
@@ -71,7 +72,7 @@ Ladybug adaptation:
 
 The resolved setting is a Paris rooftop gutter/chute. Treat the half-tube itself as project-owned **Run Surface** geometry, then dress the edges and skyline with existing Ladybug rooftop assets.
 
-Useful asset vocabulary found in `Assets/Ladybug`:
+Useful asset vocabulary found in `Assets/Plugins/Ladybug`:
 - Environment: `Rooftop_Chunk_01.FBX`, `Rooftop_Chunk_02.FBX`, `Rooftop_Chunk_03_Drop.FBX`, `Rooftop_Chunk_04_Drop.FBX`, `Rooftop_Chunk_05_Step.FBX`.
 - Obstacles: `Obstacle_AC1.FBX`, `Obstacle_AC2.FBX`, `Obstacle_SunRoof.FBX`, `Obstacle_SunRoof_RunAlong.FBX`, `Obstacle_SunRoof_3L_Blocker.FBX`, `Obstacle_WaterTank.FBX`, `Obstacle_RoofExit.FBX`, `Obstacle_SatDish.FBX`, `Obstacle_Billboard.FBX`, `Obstacle_SolarPanels.FBX`, `Obstacle_Rotating_Gate_Roof.FBX`.
 - Ramp: `Ramp.FBX`.
@@ -87,6 +88,8 @@ Resolved first graybox pitch model:
 - Short acceleration beats before ramps or late-course excitement: 10-12 degrees.
 
 Pitch rules:
+- Treat section pitch values as tuning targets for the main safe line / center trough, not exact values across every bank sample.
+- Validate **ForwardDownhillDegrees** on the center trough, left bank, and right bank so side riding does not feel flat/uphill or break presentation.
 - Avoid sustained 10-12 degree slope until physics and upgrade tuning prove early runs still fail before the finish.
 - Use flatter 3-5 degree spans to create reach pressure where under-upgraded players can enter **Lost Momentum**.
 - Do not place a hard obstacle immediately after a steep acceleration beat, ramp takeoff, or ramp landing.
@@ -105,6 +108,7 @@ Cross-section rules:
 - Center trough should be wide enough for comfortable steering, obstacle reads, and recovery.
 - Side banks should be climbable and recoverable at normal speed, not treated as hard walls.
 - High lateral speed should make side riding risky enough that the **Launch Target** can crest the lip and eventually hit **Run Safety Net**.
+- Side containment must be authored through **Run Surface** geometry, not hidden lateral clamps, invisible side walls, or forced recenter volumes.
 - Coins can climb the banks to teach side riding, but the first bank coin lines should return the player to center before the next obstacle.
 - Obstacles on banks should be used mostly after the first ramp/air beat, once the player understands side recovery.
 
@@ -131,6 +135,7 @@ Use this as the initial 15-section implementation map. The meter ranges are a st
 | 15 | 390-420m | Band 5 | 5-6 degrees | Final funnel and visible **Run Finish** | No new hazards | Clean finish coins; no distraction from **Run Finish** |
 
 Section layout rules:
+- Treat the table's pitch column as the main safe-line / center-trough target for each **Run Course Section**.
 - Keep ranges continuous and non-overlapping in the first graybox.
 - Do not add a new mechanic in the same section as a required ramp, optional ramp, or first obstacle of a band.
 - Preserve at least one safe or near-safe coin line in every section where coins appear.
@@ -144,7 +149,7 @@ Validate the first implementation against these gates before expanding the layou
 | Gate | Pass Criteria | Failure Response |
 | --- | --- | --- |
 | Successful upgraded run duration | A competent upgraded run reaches **Run Finish** in about 55-65 seconds without relying on lip exploits or shortcuts | Adjust pitch, friction, or section length before adding content |
-| First-run failure expectation | A decent no-upgrade or starter-upgrade run usually reaches only about 20-30 percent of the course and still collects useful coins | Tune reach pressure, safe coin availability, and early upgrade costs with the upgrade branch |
+| First-run failure expectation | A decent no-upgrade or starter-upgrade run usually reaches Band 2, roughly 85-125m, and still collects useful coins before the required ramp | Tune reach pressure, safe coin availability, and early upgrade costs with the upgrade branch |
 | Completion progression | Player can reasonably reach **Run Finish** after about 5-10 Runs with upgrades and improving control | Rebalance upgrade effects, coin income, or reach-pressure spans |
 | Continuous safe line | Every section has at least one readable safe or near-safe traversal line | Move blockers, widen gaps, or reduce simultaneous demands |
 | Obstacle readability | First obstacle is understood before impact; later blockers have visible gaps and recovery windows | Increase sightline distance, spacing, or recovery length |
@@ -164,12 +169,18 @@ Validation rules:
 ## Early-Run Progression Intent
 
 Suggested reach targets before exact upgrade math exists:
-- Run 1: reaches roughly the first 20-30 percent if played decently; earns reliable coins.
-- Runs 2-3: reaches the first obstacle/ramp region more consistently.
+- Run 1: reaches Band 2, roughly 85-125m if played decently; earns reliable coins and usually fails before the required ramp at 170m.
+- Runs 2-3: reaches the first obstacle/ramp region more consistently, with the required ramp becoming reliable only after early upgrades.
 - Runs 4-6: reaches mid-course and learns advanced bank/ramp lines.
 - Runs 7-10: reaches the finish approach and can complete after enough upgrades and skill.
 
 This should be tuned by distance reached, average speed, and coin income. The course should not depend on an unavoidable obstacle or scripted death to stop early runs.
+
+Upgrade reach assumptions:
+- Early reliability to the required ramp should be tuned primarily around `SlingshotLaunchPower` and `PlayerMaxSpeed` upgrades.
+- `PlayerSteeringResponsiveness` should improve line control, recovery, and risk coin access, but should not be mandatory to reach the required ramp.
+- `CoinPickupMultiplier` should speed later progression, but should not be required for first ramp reach.
+- Safe Band 1 and Band 2 coins collected across failed runs must support at least one early reach-upgrade purchase path.
 
 ## Coin Placement Rules
 
@@ -195,6 +206,7 @@ Use safe baseline income plus optional risk/reward income.
 Economy rules:
 - Basic upgrades should be affordable from safe/near-safe coins collected across failed runs.
 - Risk/reward coins should speed up progression, not gate it.
+- Basic reach upgrades should be affordable without relying on risk coins or `CoinPickupMultiplier`.
 - Band 1 coin income must be reliable enough that first-run failure still feels productive.
 - Later bands may increase reward density, but should not add mandatory coin difficulty.
 - Coin values can change later with the upgrade branch; this brief fixes placement intent, not final currency numbers.
@@ -261,7 +273,7 @@ Later graybox should start with simple project-owned primitives:
 
 Current open tuning questions:
 - Exact friction and upgrade-speed tuning.
-- Exact upgrade stats that control speed, steering, drag, or momentum retention.
+- Exact early purchase curve and reach contribution for `PlayerMaxSpeed`, `SlingshotLaunchPower`, `PlayerSteeringResponsiveness`, and `CoinPickupMultiplier`.
 - Exact coin economy values per reach band.
 
 ## Run Progression Bands
@@ -278,6 +290,17 @@ Use **Run Progression Bands** to connect distance reached, coin income, and upgr
 
 The bands are not separate levels, scenes, or hard checkpoints. They are tuning ranges for expected reach and economy balance.
 
-## Next Design Decision
+## Implementation-Ready Scope
 
-The next useful decision is whether to treat this brief as implementation-ready and stop adding level-design scope before graybox work begins.
+The first graybox brief is implementation-ready. Stop adding level-design scope before graybox work begins.
+
+Implementation should now build and validate the frozen scope:
+- One continuous **Run Progress Frame**-relative half-tube **Run Course**.
+- 15 continuous **Run Course Sections** across 0-420m.
+- Static-first obstacles only.
+- One required centered tutorial ramp and one optional risk/reward ramp.
+- Safe baseline coins plus optional risk/reward coins.
+- **Run Safety Net** coverage below the course, side lips, ramp landings, and finish approach.
+- A visible **Run Finish** in the final 410-420m region.
+
+Treat friction, final coin values, and exact upgrade math as graybox/economy tuning inputs, not additional level-layout scope.

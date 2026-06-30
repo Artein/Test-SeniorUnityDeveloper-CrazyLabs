@@ -30,8 +30,8 @@ public sealed class PickupSceneCompositionTests
         var allScenePickups = FindComponentsInScene<Pickup>(scene);
         var configuredPickups = lifetimeScope.LevelPickupsForTests.ToArray();
         var playerContactColliders = lifetimeScope.PlayerPickupContactCollidersForTests.ToArray();
-        var levelPickupStateService = lifetimeScope.Container.Resolve<ILevelPickupState>();
         var levelPickupState = lifetimeScope.Container.Resolve<ILevelPickupState>();
+        var levelPickupStateSnapshot = (LevelPickupState)levelPickupState;
         var currencyStorage = lifetimeScope.Container.Resolve<ICurrencyStorage>();
         var runCurrencyAccumulator = lifetimeScope.Container.Resolve<IRunCurrencyAccumulator>();
         var pickupCurrencyGrantResolver = lifetimeScope.Container.Resolve<IPickupCurrencyGrantResolver>();
@@ -40,26 +40,31 @@ public sealed class PickupSceneCompositionTests
         Assert.That(scene.buildIndex, Is.EqualTo(GameplaySceneBuildIndex));
         Assert.That(lifetimeScope.PickupSetupValidationErrorsForTests, Is.Empty);
         Assert.That(Physics.GetIgnoreLayerCollision(playerLayer, pickupLayer), Is.False);
-        Assert.That(configuredPickups, Has.Length.EqualTo(2));
+        Assert.That(allScenePickups, Has.Length.GreaterThan(2));
+        Assert.That(configuredPickups, Has.Length.EqualTo(allScenePickups.Length));
+        Assert.That(levelPickupStateSnapshot.PickupsForTests, Has.Length.EqualTo(configuredPickups.Length));
         Assert.That(playerContactColliders, Has.Length.EqualTo(1));
-        Assert.That(levelPickupStateService, Is.SameAs(levelPickupState));
         Assert.That(levelPickupState, Is.Not.Null);
         Assert.That(currencyStorage, Is.Not.Null);
         Assert.That(runCurrencyAccumulator, Is.Not.Null);
         Assert.That(pickupCurrencyGrantResolver, Is.Not.Null);
         Assert.That(pickupCollectionNotifier, Is.Not.Null);
 
+        foreach (var scenePickup in allScenePickups)
+        {
+            Assert.That(configuredPickups, Does.Contain(scenePickup), scenePickup.name);
+        }
+
         foreach (var configuredPickup in configuredPickups)
         {
             Assert.That(allScenePickups, Does.Contain(configuredPickup));
             Assert.That(levelPickupState.IsAvailable(configuredPickup), Is.True, configuredPickup.name);
+            AssertPickupAuthoring(configuredPickup, pickupLayer);
         }
 
         var regularCoinPickup = FindConfiguredPickup(configuredPickups, 1, "regular coin pickup");
         var bigCoinPickup = FindConfiguredPickup(configuredPickups, 5, "big coin pickup");
 
-        AssertPickupAuthoring(regularCoinPickup, pickupLayer, 1);
-        AssertPickupAuthoring(bigCoinPickup, pickupLayer, 5);
         Assert.That(regularCoinPickup.Definition.CurrencyDefinition, Is.SameAs(bigCoinPickup.Definition.CurrencyDefinition));
 
         var playerContactCollider = playerContactColliders[0];
@@ -75,18 +80,18 @@ public sealed class PickupSceneCompositionTests
                                 && candidate.Definition.Amount == expectedAmount)
             .ToArray();
 
-        Assert.That(matches, Has.Length.EqualTo(1), $"Expected one configured {description} with amount {expectedAmount}.");
+        Assert.That(matches, Has.Length.GreaterThanOrEqualTo(1), $"Expected configured {description} with amount {expectedAmount}.");
         return matches[0];
     }
 
-    private void AssertPickupAuthoring(Pickup pickup, int pickupLayer, int expectedAmount)
+    private void AssertPickupAuthoring(Pickup pickup, int pickupLayer)
     {
         var colliders = pickup.GetComponentsInChildren<Collider>(true);
 
         Assert.That(pickup.gameObject.activeSelf, Is.True, pickup.name);
         Assert.That(pickup.gameObject.layer, Is.EqualTo(pickupLayer), pickup.name);
         Assert.That(pickup.Definition, Is.Not.Null, pickup.name);
-        Assert.That(pickup.Definition.Amount, Is.EqualTo(expectedAmount), pickup.name);
+        Assert.That(new[] { 1, 5 }, Does.Contain(pickup.Definition.Amount), pickup.name);
         Assert.That(pickup.Definition.CurrencyDefinition, Is.Not.Null, pickup.name);
         Assert.That(colliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
 

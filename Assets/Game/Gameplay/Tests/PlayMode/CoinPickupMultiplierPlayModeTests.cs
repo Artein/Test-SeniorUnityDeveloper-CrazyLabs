@@ -49,14 +49,14 @@ public sealed class CoinPickupMultiplierPlayModeTests
         var resetStateId = CreateStateId("Run Preparation");
         var stateService = new FakeGameplayStateService(runningStateId);
         var pickup = CreatePickup("Regular Pickup", coins, 2, Vector3.zero);
-        var levelPickupState = new LevelPickupState(new[] { pickup });
+        var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(new[] { pickup }));
         ICurrencyStorage currencyStorage = new CurrencyStorage();
         IRunCurrencyAccumulator runCurrencyAccumulator = new RunCurrencyAccumulator();
         var statResolver = new FixedRunGameplayStatResolver(1.5f);
         var grantResolver = new CoinPickupCurrencyGrantResolver(statResolver, coins, coinPickupMultiplierStatId);
 
         var controller = new PickupCollectionController(
-            new[] { pickup },
+            new FixedLevelPickupSource(new[] { pickup }),
             levelPickupState,
             currencyStorage,
             runCurrencyAccumulator,

@@ -60,8 +60,27 @@ namespace Game.Gameplay
             if (builder is null)
                 throw new ArgumentNullException(nameof(builder));
 
+            PrepareGameplaySceneComposition();
             ThrowIfInvalidReferences();
             InstallGameplay(builder);
+        }
+
+        private void PrepareGameplaySceneComposition()
+        {
+            var scene = gameObject.scene;
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                return;
+
+            var preCompositionSteps = scene.GetRootGameObjects()
+                .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<MonoBehaviour>(true))
+                .OfType<IGameplayScenePreCompositionStep>()
+                .ToArray();
+
+            for (var stepIndex = 0; stepIndex < preCompositionSteps.Length; stepIndex += 1)
+            {
+                preCompositionSteps[stepIndex].PrepareGameplaySceneComposition();
+            }
         }
 
         private void InstallGameplay(IContainerBuilder builder)
@@ -83,6 +102,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
             builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
+            builder.RegisterInstance<ILevelPickupSource>(new GameplayLifetimeScopePickupSource(this));
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
                 new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
@@ -120,8 +140,7 @@ namespace Game.Gameplay
 
             builder.Register<IRunModifierSnapshotProvider, IRunModifierSnapshotStore, RunModifierSnapshotHolder>(Lifetime.Singleton);
 
-            builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton)
-                .WithParameter("pickups", GetLevelPickups());
+            builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<RunProgressService>();
 
@@ -144,7 +163,6 @@ namespace Game.Gameplay
                 .WithParameter("runningStateId", _runningStateId);
 
             builder.RegisterEntryPoint<PickupCollectionController>()
-                .WithParameter("pickups", GetLevelPickups())
                 .WithParameter("runningStateId", _runningStateId)
                 .WithParameter("currencyGrantResolverResetStateId", _runPreparationStateId)
                 .WithParameter("playerTag", _playerTag);
@@ -280,7 +298,16 @@ namespace Game.Gameplay
 
         private IReadOnlyList<Pickup> GetLevelPickups()
         {
-            return _levelPickups ?? Array.Empty<Pickup>();
+            var pickups = new List<Pickup>();
+
+            AddPickupReferences(pickups, _levelPickups ?? Array.Empty<Pickup>());
+            AddPickupReferences(pickups, FindSceneLevelPickups());
+
+            return pickups
+                .Distinct()
+                .OrderBy(pickup => GetPickupHierarchyPath(pickup), StringComparer.Ordinal)
+                .ThenBy(pickup => pickup == null ? 0 : pickup.GetInstanceID())
+                .ToArray();
         }
 
         private IReadOnlyList<Collider> GetPlayerPickupContactColliders()
@@ -290,8 +317,93 @@ namespace Game.Gameplay
 
         private IEnumerable<string> GetPickupSetupValidationErrors()
         {
+            foreach (var error in GetSerializedLevelPickupReferenceErrors())
+            {
+                yield return error;
+            }
+
             var validator = new PickupSetupValidator();
-            return validator.Validate(GetLevelPickups(), GetPlayerPickupContactColliders(), _playerTag, _playerLayerName, _pickupLayerName);
+
+            foreach (var error in validator.Validate(
+                         GetLevelPickups(),
+                         GetPlayerPickupContactColliders(),
+                         _playerTag,
+                         _playerLayerName,
+                         _pickupLayerName))
+            {
+                yield return error;
+            }
+        }
+
+        private IEnumerable<string> GetSerializedLevelPickupReferenceErrors()
+        {
+            if (_levelPickups == null)
+                yield break;
+
+            var serializedPickups = new HashSet<Pickup>();
+
+            for (var pickupIndex = 0; pickupIndex < _levelPickups.Length; pickupIndex += 1)
+            {
+                var pickup = _levelPickups[pickupIndex];
+
+                if (pickup == null)
+                    continue;
+
+                if (!serializedPickups.Add(pickup))
+                    yield return $"GameplayLifetimeScope contains duplicate Level Pickup reference '{pickup.name}'.";
+            }
+        }
+
+        private void AddPickupReferences(ICollection<Pickup> target, IReadOnlyList<Pickup> source)
+        {
+            for (var pickupIndex = 0; pickupIndex < source.Count; pickupIndex += 1)
+            {
+                target.Add(source[pickupIndex]);
+            }
+        }
+
+        private IReadOnlyList<Pickup> FindSceneLevelPickups()
+        {
+            var scene = gameObject.scene;
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                return Array.Empty<Pickup>();
+
+            return scene.GetRootGameObjects()
+                .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<Pickup>(true))
+                .ToArray();
+        }
+
+        private string GetPickupHierarchyPath(Pickup pickup)
+        {
+            if (pickup == null)
+                return string.Empty;
+
+            var path = pickup.name;
+            var parent = pickup.transform.parent;
+
+            while (parent != null)
+            {
+                path = $"{parent.name}/{path}";
+                parent = parent.parent;
+            }
+
+            return path;
+        }
+
+        private sealed class GameplayLifetimeScopePickupSource : ILevelPickupSource
+        {
+            private readonly GameplayLifetimeScope _lifetimeScope;
+
+            public GameplayLifetimeScopePickupSource(GameplayLifetimeScope lifetimeScope)
+            {
+                _lifetimeScope = lifetimeScope ?? throw new ArgumentNullException(nameof(lifetimeScope));
+            }
+
+            public IReadOnlyList<Pickup> GetLevelPickups()
+            {
+                return _lifetimeScope.GetLevelPickups();
+            }
         }
     }
 }

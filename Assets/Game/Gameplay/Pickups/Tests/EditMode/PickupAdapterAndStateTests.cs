@@ -79,7 +79,7 @@ public sealed class PickupAdapterAndStateTests
     public void TryConsume_AvailablePickup_SucceedsOnlyOnce()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        ILevelPickupState state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new FixedLevelPickupSource(new[] { pickup }));
 
         var firstConsume = state.TryConsume(pickup);
         var secondConsume = state.TryConsume(pickup);
@@ -93,7 +93,7 @@ public sealed class PickupAdapterAndStateTests
     public void ResetForLevelSession_ConsumedPickup_RestoresAvailabilityAndEnablesRoot()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        ILevelPickupState state = new LevelPickupState(new[] { pickup });
+        ILevelPickupState state = new LevelPickupState(new FixedLevelPickupSource(new[] { pickup }));
         state.TryConsume(pickup);
         pickup.SetAvailable(false);
 
@@ -107,7 +107,7 @@ public sealed class PickupAdapterAndStateTests
     public void Constructor_NullPickupReference_Throws()
     {
         Assert.That(
-            () => new LevelPickupState(new Pickup[] { null }),
+            () => new LevelPickupState(new FixedLevelPickupSource(new Pickup[] { null })),
             Throws.TypeOf<ArgumentException>().With.Property("ParamName").EqualTo("pickups"));
     }
 
@@ -117,7 +117,7 @@ public sealed class PickupAdapterAndStateTests
         var pickup = CreatePickup("Pickup", _pickupDefinition);
 
         Assert.That(
-            () => new LevelPickupState(new[] { pickup, pickup }),
+            () => new LevelPickupState(new FixedLevelPickupSource(new[] { pickup, pickup })),
             Throws.TypeOf<ArgumentException>().With.Message.Contains("duplicate"));
     }
 
@@ -126,7 +126,7 @@ public sealed class PickupAdapterAndStateTests
     {
         var knownPickup = CreatePickup("Known Pickup", _pickupDefinition);
         var unknownPickup = CreatePickup("Unknown Pickup", _pickupDefinition);
-        var state = new LevelPickupState(new[] { knownPickup });
+        var state = new LevelPickupState(new FixedLevelPickupSource(new[] { knownPickup }));
 
         Assert.That(state.TryConsume(unknownPickup), Is.False);
     }
