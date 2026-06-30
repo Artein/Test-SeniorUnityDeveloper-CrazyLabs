@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Linq;
 using Game.Gameplay;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Tests.Common;
+using Game.Gameplay.Upgrades;
 using Game.Foundation.Input;
 using NUnit.Framework;
 using Unity.Cinemachine;
@@ -273,6 +275,39 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFix
         return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
     }
 
+    private IEnumerator PrepareFreshPreLaunchScene()
+    {
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
+        yield return null;
+
+        var activeScene = SceneManager.GetActiveScene();
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+        var gameplayStateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
+        var snapshotProvider = lifetimeScope.Container.Resolve<IRunModifierSnapshotProvider>();
+        var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+
+        Assert.That(gameplayStateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
+        Assert.That(snapshotProvider.CurrentSnapshot.Modifiers, Is.Empty);
+        Assert.That(continueCommand.TryContinue(), Is.True);
+
+        yield return null;
+
+        Assert.That(gameplayStateService.CurrentStateId.name, Is.EqualTo("PreLaunchStateId"));
+        Assert.That(snapshotProvider.CurrentSnapshot.Modifiers, Is.Empty);
+
+        yield return WaitUntilPlayerIsHeld(activeScene);
+        AssertCleanSlingshotRestState(activeScene);
+    }
+
+    private void AssertCleanSlingshotRestState(Scene scene)
+    {
+        var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
+        var bandCenter = FindGameObjectByName(scene, "Band Center");
+        var geometry = slingshotView.CreateGeometrySnapshot();
+
+        Assert.That(Vector3.Distance(bandCenter.transform.position, geometry.RestPoint), Is.LessThanOrEqualTo(0.05f));
+    }
+
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
     {
         for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
@@ -376,10 +411,8 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayTestAssetsFix
 
     private IEnumerator LaunchAndCaptureVelocity(Mouse mouse, float pullOffset, float pullDistance, Action<Vector3> captureVelocity)
     {
-        yield return LoadGameplayScene();
+        yield return PrepareFreshPreLaunchScene();
         var activeScene = SceneManager.GetActiveScene();
-        yield return ContinueToPreLaunch(activeScene);
-        yield return WaitUntilPlayerIsHeld(activeScene);
 
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
