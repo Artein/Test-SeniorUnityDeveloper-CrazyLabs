@@ -4,6 +4,7 @@ using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Utils.Invocation;
 using UnityEngine;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay.Pickups
@@ -36,14 +37,14 @@ namespace Game.Gameplay.Pickups
         public event Action<PickupCollectedEventArgs> PickupCollected;
 
         public PickupCollectionController(
-            IReadOnlyList<Pickup> pickups,
+            [Key(InjectKey.Pickups.LevelPickups)] IReadOnlyList<Pickup> pickups,
             ILevelPickupState levelPickupState,
             IRunCurrencyAccumulator runCurrencyAccumulator,
             IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
-            GameplayStateId runningStateId,
-            GameplayStateId currencyGrantResolverResetStateId,
-            string playerTag)
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId currencyGrantResolverResetStateId,
+            [Key(InjectKey.Tags.Player)] string playerTag)
         {
             _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));

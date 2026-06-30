@@ -57,6 +57,7 @@ namespace Game.Gameplay
             Transform preLaunchSlingshotRigPose,
             Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
+            PullHintView pullHintView,
             RunPreparationUIView runPreparationView,
             RigidbodyLaunchTarget launchTarget,
             CharacterPresentationView characterPresentationView,
@@ -94,6 +95,7 @@ namespace Game.Gameplay
             _preLaunchSlingshotRigPose = preLaunchSlingshotRigPose;
             _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
+            _pullHintView = pullHintView;
             _runPreparationView = runPreparationView;
             _launchTarget = launchTarget;
             _characterPresentationView = characterPresentationView;

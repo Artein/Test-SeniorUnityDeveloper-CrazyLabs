@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using Eflatun.SceneReference;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
@@ -15,19 +16,19 @@ using VContainer;
 // ReSharper disable once CheckNamespace
 internal static class GameplaySceneBandShapePlayModeTestUtils
 {
-    public static IEnumerator LoadGameplayScene(int gameplaySceneBuildIndex)
+    public static IEnumerator LoadGameplayScene(SceneReference gameplaySceneRef)
     {
-        if (CanReuseGameplayScene(SceneManager.GetActiveScene(), gameplaySceneBuildIndex))
+        if (CanReuseGameplayScene(SceneManager.GetActiveScene(), gameplaySceneRef))
             yield break;
 
-        SceneManager.LoadScene(gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(gameplaySceneRef.Path, LoadSceneMode.Single);
         yield return null;
         yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
     }
 
-    public static IEnumerator ReloadGameplayScene(int gameplaySceneBuildIndex)
+    public static IEnumerator ReloadGameplayScene(SceneReference gameplaySceneRef)
     {
-        SceneManager.LoadScene(gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(gameplaySceneRef.Path, LoadSceneMode.Single);
         yield return null;
         yield return ContinueToPreLaunch(SceneManager.GetActiveScene());
     }
@@ -149,9 +150,9 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
         }
     }
 
-    private static bool CanReuseGameplayScene(Scene scene, int gameplaySceneBuildIndex)
+    private static bool CanReuseGameplayScene(Scene scene, SceneReference gameplaySceneRef)
     {
-        if (!scene.IsValid() || scene.buildIndex != gameplaySceneBuildIndex)
+        if (!scene.IsValid() || scene.path != gameplaySceneRef.Path)
             return false;
 
         var slingshotViews = FindComponentsInScene<SlingshotView>(scene);

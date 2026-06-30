@@ -7,8 +7,6 @@ namespace Game.Gameplay.Slingshot
 {
     public interface ILaunchTarget
     {
-        // TODO - AI Note: If Slingshot feel should rotate the held target toward launch direction later,
-        // add an explicit orientation contract instead of hiding rotation inside hold or launch.
         void Hold();
         void Launch(Vector3 velocity);
     }
@@ -91,7 +89,6 @@ namespace Game.Gameplay.Slingshot
             if (!heldPosition.IsFinite())
                 throw new ArgumentException("Held position must be finite.", nameof(heldPosition));
 
-            // TODO - AI Note: If held visuals need facing, lean, or spin, add an explicit orientation contract instead of rotating here.
             var targetRotation = _rigidbody.rotation;
             var positionDelta = heldPosition - GetBandCenterPositionFromRigidbodyPose();
             var targetPosition = _rigidbody.position + positionDelta;

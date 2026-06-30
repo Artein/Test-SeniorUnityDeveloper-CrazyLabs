@@ -6,6 +6,7 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Utils.Invocation;
 using UnityEngine;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -56,9 +57,9 @@ namespace Game.Gameplay
             IRunCurrencyAccumulator runCurrencyAccumulator,
             IRunEndConfig config,
             ITime clock,
-            GameplayStateId restartStateId,
-            GameplayStateId runningStateId,
-            GameplayStateId runEndedStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId restartStateId,
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStateId.RunEnded)] GameplayStateId runEndedStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
