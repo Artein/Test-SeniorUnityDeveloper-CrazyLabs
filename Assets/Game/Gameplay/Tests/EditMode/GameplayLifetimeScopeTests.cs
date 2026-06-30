@@ -6,6 +6,7 @@ using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
+using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
@@ -194,6 +195,9 @@ public sealed class GameplayLifetimeScopeTests
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
         var runResultNotifier = container.Resolve<IRunResultNotifier>();
         var playerEconomyState = container.Resolve<PlayerEconomyState>();
+        var applicationPauseNotifier = container.Resolve<IApplicationPauseNotifier>();
+        var applicationFocusChangeNotifier = container.Resolve<IApplicationFocusChangeNotifier>();
+        var applicationQuitNotifier = container.Resolve<IApplicationQuitNotifier>();
         var currencyStorage = container.Resolve<ICurrencyStorage>();
         var economyContentIndex = container.Resolve<IPlayerEconomyContentIndex>();
         var economySaveRepository = container.Resolve<IEconomySaveRepository>();
@@ -273,6 +277,9 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runResultNotifier, Is.Not.Null);
         Assert.That(runResultNotifier, Is.SameAs(runEndCandidateReceiver));
         Assert.That(playerEconomyState, Is.Not.Null);
+        Assert.That(applicationPauseNotifier, Is.Not.Null);
+        Assert.That(applicationFocusChangeNotifier, Is.SameAs(applicationPauseNotifier));
+        Assert.That(applicationQuitNotifier, Is.SameAs(applicationPauseNotifier));
         Assert.That(currencyStorage, Is.Not.Null);
         Assert.That(economyContentIndex.IsKnownCurrencyId(fixture.CoinCurrencyDefinition.SaveId), Is.True);
         Assert.That(economySaveRepository, Is.Not.Null);

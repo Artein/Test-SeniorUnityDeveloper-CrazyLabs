@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Foundation;
+using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Persistence;
 using Game.Foundation.Screen;
@@ -113,6 +114,9 @@ namespace Game.Gameplay
             builder.Register<PlayerEconomyState>(Lifetime.Singleton);
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
             builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
+
+            builder.RegisterComponentOnNewGameObject<UnityApplicationLifecycleNotifier>(Lifetime.Singleton, "ApplicationLifecycleNotifier")
+                .As<IApplicationPauseNotifier, IApplicationFocusChangeNotifier, IApplicationQuitNotifier>();
 
             builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton);
             builder.Register<EconomySaveSerializer>(Lifetime.Singleton);

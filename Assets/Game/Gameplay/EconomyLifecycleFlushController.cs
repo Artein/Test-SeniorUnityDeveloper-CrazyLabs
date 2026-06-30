@@ -1,20 +1,32 @@
 using System;
 using Game.Gameplay.Economy;
+using Game.Foundation.ApplicationLifecycle;
 using VContainer.Unity;
-using UnityEngine;
 
 namespace Game.Gameplay
 {
-    public sealed partial class EconomyLifecycleFlushController : IInitializable, IDisposable
+    public sealed class EconomyLifecycleFlushController : IInitializable, IDisposable
     {
         private readonly IEconomyCommitter _economyCommitter;
+        private readonly IApplicationPauseNotifier _applicationPauseNotifier;
+        private readonly IApplicationFocusChangeNotifier _applicationFocusChangeNotifier;
+        private readonly IApplicationQuitNotifier _applicationQuitNotifier;
 
         private bool _isInitialized;
         private bool _isDisposed;
 
-        public EconomyLifecycleFlushController(IEconomyCommitter economyCommitter)
+        public EconomyLifecycleFlushController(
+            IEconomyCommitter economyCommitter,
+            IApplicationPauseNotifier applicationPauseNotifier,
+            IApplicationFocusChangeNotifier applicationFocusChangeNotifier,
+            IApplicationQuitNotifier applicationQuitNotifier)
         {
             _economyCommitter = economyCommitter ?? throw new ArgumentNullException(nameof(economyCommitter));
+            _applicationPauseNotifier = applicationPauseNotifier ?? throw new ArgumentNullException(nameof(applicationPauseNotifier));
+
+            _applicationFocusChangeNotifier =
+                applicationFocusChangeNotifier ?? throw new ArgumentNullException(nameof(applicationFocusChangeNotifier));
+            _applicationQuitNotifier = applicationQuitNotifier ?? throw new ArgumentNullException(nameof(applicationQuitNotifier));
         }
 
         void IInitializable.Initialize()
@@ -25,8 +37,9 @@ namespace Game.Gameplay
             if (_isInitialized)
                 return;
 
-            Application.focusChanged += OnApplicationFocusChanged;
-            Application.quitting += OnApplicationQuitting;
+            _applicationPauseNotifier.PauseChanged += OnApplicationPauseChanged;
+            _applicationFocusChangeNotifier.FocusChanged += OnApplicationFocusChanged;
+            _applicationQuitNotifier.Quitting += OnApplicationQuitting;
             _isInitialized = true;
         }
 
@@ -40,8 +53,17 @@ namespace Game.Gameplay
             if (!_isInitialized)
                 return;
 
-            Application.focusChanged -= OnApplicationFocusChanged;
-            Application.quitting -= OnApplicationQuitting;
+            _applicationPauseNotifier.PauseChanged -= OnApplicationPauseChanged;
+            _applicationFocusChangeNotifier.FocusChanged -= OnApplicationFocusChanged;
+            _applicationQuitNotifier.Quitting -= OnApplicationQuitting;
+        }
+
+        private void OnApplicationPauseChanged(bool isPaused)
+        {
+            if (!isPaused || _isDisposed)
+                return;
+
+            _economyCommitter.RequestBestEffortFlush("application-paused");
         }
 
         private void OnApplicationFocusChanged(bool hasFocus)
