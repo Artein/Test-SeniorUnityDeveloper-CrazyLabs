@@ -8,7 +8,6 @@ namespace Game.Gameplay.Slingshot
         event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
     }
 
-    // TODO - AI Note: Reformat this
     public sealed class SlingshotLaunchController : ISlingshotLaunchAppliedNotifier, ISlingshotLaunchAppliedPublisher
     {
         public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;

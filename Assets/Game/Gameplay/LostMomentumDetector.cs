@@ -2,6 +2,7 @@ using System;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -34,7 +35,7 @@ namespace Game.Gameplay
             IRunEndCandidateReceiver candidateReceiver,
             IRunEndConfig config,
             ITime clock,
-            GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));

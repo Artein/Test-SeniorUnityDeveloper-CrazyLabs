@@ -1,7 +1,9 @@
 using System;
 using Game.Gameplay.Economy;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Upgrades;
+using VContainer;
 
 namespace Game.Gameplay
 {
@@ -15,8 +17,8 @@ namespace Game.Gameplay
 
         public CoinPickupCurrencyGrantResolver(
             IRunGameplayStatResolver statResolver,
-            CurrencyDefinition coinCurrencyDefinition,
-            GameplayStatId coinPickupMultiplierStatId)
+            [Key(InjectKey.CurrencyDefinition.Coin)] CurrencyDefinition coinCurrencyDefinition,
+            [Key(InjectKey.GameplayStatId.CoinPickupMultiplier)] GameplayStatId coinPickupMultiplierStatId)
         {
             _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
 

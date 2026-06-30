@@ -4,6 +4,7 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Utils.Mathematics;
 using UnityEngine;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -35,7 +36,7 @@ namespace Game.Gameplay
             IRunCameraRig rig,
             IRunCameraConfig config,
             ITime clock,
-            GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));

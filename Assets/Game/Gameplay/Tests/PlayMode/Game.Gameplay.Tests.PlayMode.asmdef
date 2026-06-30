@@ -2,11 +2,13 @@
   "name": "Game.Gameplay.Tests.PlayMode",
   "rootNamespace": "",
   "references": [
+    "Eflatun.SceneReference",
     "Game.Gameplay",
     "Game.Gameplay.Economy",
     "Game.Gameplay.GameplayState",
     "Game.Gameplay.Pickups",
     "Game.Gameplay.Slingshot",
+    "Game.Gameplay.Tests.Common",
     "Game.Gameplay.Upgrades",
     "Game.Foundation.Input",
     "Unity.Cinemachine",

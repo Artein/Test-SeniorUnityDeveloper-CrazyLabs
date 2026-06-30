@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay.GameplayState;
+using VContainer;
 
 namespace Game.Gameplay.Pickups
 {
@@ -16,7 +18,7 @@ namespace Game.Gameplay.Pickups
         private readonly Pickup[] _pickups;
         private readonly HashSet<Pickup> _availablePickups = new();
 
-        public LevelPickupState(IReadOnlyList<Pickup> pickups)
+        public LevelPickupState([Key(InjectKey.Pickups.LevelPickups)] IReadOnlyList<Pickup> pickups)
         {
             if (pickups is null)
                 throw new ArgumentNullException(nameof(pickups));
