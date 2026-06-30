@@ -15,27 +15,29 @@ Issue 09 validates the authored Ladybug rooftop half-tube as one complete Run Co
 - Existing PlayMode coverage verifies section ranges, slopes, obstacle gaps, required ramp approach/landing, optional ramp fallback, safety net coverage, finish contact, pickup wiring, safe/risk pickup split, visual-only dressing, and camera decollider layers.
 - The safe pre-ramp pickup line before the required ramp is expected to fund an early reach-upgrade path across a small number of failed runs without requiring risk/reward pickup lines.
 - Continuous PlayMode traversal sampling verifies a buffered player capsule has one supported, obstacle-clear safe route from launch settle through the required ramp, optional-ramp center bypass, final funnel, and Run Finish.
-- Scene-level visual prefab fields are wired to Ladybug rooftop FBX assets under `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops`, while PlayMode coverage verifies those instantiated visuals remain render-only children of project-owned gameplay surfaces and blockers.
+- Scene-level visual fields are wired to course-owned prefab variants under `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs`; the variants use Ladybug rooftop FBX files as mesh sources only and assign project-owned URP/Lit materials.
 
 ## Source Asset Wiring Evidence
 
-Static scene YAML plus asset `.meta` GUID checks verify the authored visual fields use the intended Ladybug Rooftops assets:
+Static scene YAML plus asset `.meta` GUID checks verify the authored visual fields use course-owned prefab assets instead of raw Ladybug FBX assets:
 
 | Scene visual field | Source asset |
 | --- | --- |
-| `_rooftopChunk01VisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Environment/Rooftop_Chunk_01.FBX` |
-| `_rooftopChunk02VisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Environment/Rooftop_Chunk_02.FBX` |
-| `_rooftopChunk03DropVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Environment/Rooftop_Chunk_03_Drop.FBX` |
-| `_rooftopChunk05StepVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Environment/Rooftop_Chunk_05_Step.FBX` |
-| `_obstacleAc1VisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_AC1.FBX` |
-| `_obstacleAc2VisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_AC2.FBX` |
-| `_obstacleSunroofVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_SunRoof.FBX` |
-| `_obstacleSolarPanelsVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_SolarPanels.FBX` |
-| `_obstacleBillboardVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_Billboard.FBX` |
-| `_obstacleWaterTankVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_WaterTank.FBX` |
-| `_obstacleRoofExitVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_RoofExit.FBX` |
-| `_obstacleSatDishVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Obstacle_SatDish.FBX` |
-| `_rampVisualPrefab` | `Assets/Plugins/Ladybug/Content/Geometry/Levels/Rooftops/Rooftop_obstacles/Ramp.FBX` |
+| `_rooftopChunk01Prefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Rooftop_Chunk_01.prefab` |
+| `_rooftopChunk02Prefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Rooftop_Chunk_02.prefab` |
+| `_rooftopChunk03DropPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Rooftop_Chunk_03_Drop.prefab` |
+| `_rooftopChunk05StepPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Rooftop_Chunk_05_Step.prefab` |
+| `_obstacleAc1Prefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Obstacles/Obstacle_AC1.prefab` |
+| `_obstacleAc2Prefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Obstacles/Obstacle_AC2.prefab` |
+| `_obstacleSunroofPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Obstacles/Obstacle_SunRoof.prefab` |
+| `_obstacleSolarPanelsPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Obstacles/Obstacle_SolarPanels.prefab` |
+| `_obstacleBillboardPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Obstacles/Obstacle_Billboard.prefab` |
+| `_waterTankPropPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Obstacle_WaterTank.prefab` |
+| `_roofExitPropPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Obstacle_RoofExit.prefab` |
+| `_satDishPropPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Obstacle_SatDish.prefab` |
+| `_rampPropPrefab` | `Assets/Game/Level/RunCourses/LadybugRooftopHalfTube/Prefabs/Props/Ramp.prefab` |
+
+The base prefabs live in `Prefabs/Base`: `BaseLevelObstacle.prefab` owns the shared obstacle `BoxCollider` and `RunContact`, while `BaseLevelProp.prefab` remains visual-only. The material assets live in `Materials` and use `Universal Render Pipeline/Lit`.
 
 ## Manual HITL Smoke Checklist
 

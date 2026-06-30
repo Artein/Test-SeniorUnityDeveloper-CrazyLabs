@@ -315,22 +315,33 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
 
         private GameObject CreateObstacleObject(ObstacleSpec obstacle, CourseSurfaceContext surfaceContext, int cameraObstacleLayer)
         {
-            var obstacleObject = new GameObject(obstacle.Name)
-            {
-                layer = cameraObstacleLayer
-            };
-            var collider = obstacleObject.AddComponent<BoxCollider>();
-            var runContact = obstacleObject.AddComponent<RunContact>();
+            var definition = GetObstacleVisualDefinition(obstacle.VisualKind);
+            var obstacleObject = Instantiate(ResolveVisualPrefab(definition.Prefab, obstacle.Name));
+            var collider = obstacleObject.GetComponent<BoxCollider>();
+            var runContact = obstacleObject.GetComponent<RunContact>();
             var surfaceHeight = GetSurfaceHeightAtPosition(surfaceContext, obstacle.LateralPosition, obstacle.Progress);
+
+            if (collider == null)
+                throw new InvalidOperationException($"Ladybug half-tube obstacle prefab '{definition.Prefab.name}' requires a root BoxCollider.");
+
+            if (runContact == null)
+                throw new InvalidOperationException($"Ladybug half-tube obstacle prefab '{definition.Prefab.name}' requires a root RunContact.");
+
+            obstacleObject.name = obstacle.Name;
+            obstacleObject.layer = cameraObstacleLayer;
 
             obstacleObject.transform.localPosition = new Vector3(
                 obstacle.LateralPosition,
                 surfaceHeight,
                 obstacle.Progress);
+            obstacleObject.transform.localRotation = Quaternion.identity;
+            obstacleObject.transform.localScale = Vector3.one;
             collider.size = new Vector3(obstacle.Width, obstacle.Height, obstacle.Depth);
             collider.center = new Vector3(0f, obstacle.Height * 0.5f, 0f);
+            collider.enabled = true;
+            collider.isTrigger = false;
             runContact.SetCategoryForCourseAuthoring(RunContactCategory.Obstacle);
-            CreateObstacleVisual(obstacleObject.transform, collider, obstacle.VisualKind);
+            FitObstacleVisualToCollider(obstacleObject.transform, collider, definition);
 
             return obstacleObject;
         }

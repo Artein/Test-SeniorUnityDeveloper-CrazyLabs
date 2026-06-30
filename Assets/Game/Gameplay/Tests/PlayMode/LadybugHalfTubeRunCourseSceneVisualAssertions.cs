@@ -86,6 +86,7 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
 
         Assert.That(dressingRoot.transform.IsChildOf(courseRoot.transform), Is.True);
         Assert.That(renderers, Has.Length.GreaterThanOrEqualTo(8), "Rooftop dressing should read as more than isolated props.");
+        AssertRenderersUseUrpLitMaterials(dressingRoot, "Rooftop Visual Dressing");
         AssertVisualOnlyRoot(dressingRoot, cameraTerrainLayer, cameraObstacleLayer, "Rooftop Visual Dressing");
         AssertNamedDecoration(scene, dressingRoot, "Rooftop_Chunk_01 Edge Visual 030L", cameraTerrainLayer, cameraObstacleLayer);
         AssertNamedDecoration(scene, dressingRoot, "Rooftop_Chunk_02 Edge Visual 110R", cameraTerrainLayer, cameraObstacleLayer);
@@ -159,6 +160,7 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         Assert.That(visualBounds.center.x, Is.EqualTo(collider.bounds.center.x).Within(1.25f), obstacleName);
         Assert.That(visualBounds.center.z, Is.EqualTo(collider.bounds.center.z).Within(1.25f), obstacleName);
         Assert.That(visualBounds.size.y, Is.GreaterThan(0.25f), obstacleName);
+        AssertRenderersUseUrpLitMaterials(visual, $"{obstacleName} {visualName}");
         AssertVisualOnlyRoot(visual, cameraTerrainLayer, cameraObstacleLayer, visualName);
     }
 
@@ -196,6 +198,47 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         Assert.That(runContacts, Is.Empty, description);
         Assert.That(activeColliders, Is.Empty, description);
         Assert.That(cameraLayerObjects, Is.Empty, description);
+    }
+
+    private void AssertRenderersUseUrpLitMaterials(GameObject root, string description)
+    {
+        const string ExpectedShaderName = "Universal Render Pipeline/Lit";
+
+        var renderers = root.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.enabled).ToArray();
+
+        Assert.That(renderers, Has.Length.GreaterThanOrEqualTo(1), description);
+
+        for (var rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex += 1)
+        {
+            var renderer = renderers[rendererIndex];
+            var materials = renderer.sharedMaterials;
+
+            Assert.That(materials, Has.Length.GreaterThanOrEqualTo(1), $"{description}: {GetHierarchyPath(renderer.transform)}");
+
+            for (var materialIndex = 0; materialIndex < materials.Length; materialIndex += 1)
+            {
+                var material = materials[materialIndex];
+                var materialDescription = $"{description}: {GetHierarchyPath(renderer.transform)} material {materialIndex}";
+
+                Assert.That(material, Is.Not.Null, materialDescription);
+                Assert.That(material.shader, Is.Not.Null, materialDescription);
+                Assert.That(material.shader.name, Is.EqualTo(ExpectedShaderName), materialDescription);
+            }
+        }
+    }
+
+    private string GetHierarchyPath(Transform transform)
+    {
+        var path = transform.name;
+        var parent = transform.parent;
+
+        while (parent != null)
+        {
+            path = $"{parent.name}/{path}";
+            parent = parent.parent;
+        }
+
+        return path;
     }
 
     private void AssertMajorBeatReadableFromApproach(

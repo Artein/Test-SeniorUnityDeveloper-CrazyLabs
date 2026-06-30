@@ -4902,19 +4902,19 @@ MonoBehaviour:
   _pickupLayerName: Pickup
   _regularCoinPickupPrefab: {fileID: 1659836021219471733, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
   _bigCoinPickupPrefab: {fileID: 8608336747006457972, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
-  _rooftopChunk01VisualPrefab: {fileID: 100000, guid: 9b1cbaf5ef07b124bac291fcb4070946, type: 3}
-  _rooftopChunk02VisualPrefab: {fileID: 100000, guid: b2ac7117e017a9f42bd12eec6d32ff88, type: 3}
-  _rooftopChunk03DropVisualPrefab: {fileID: 100012, guid: 43af9345557ea2e4a9948f6f1bc21fe6, type: 3}
-  _rooftopChunk05StepVisualPrefab: {fileID: 100004, guid: d03bdcf419544dd42b0878667eaff8ae, type: 3}
-  _obstacleAc1VisualPrefab: {fileID: 100000, guid: 3ce7074806edbed4a8cdf2b60084d5a2, type: 3}
-  _obstacleAc2VisualPrefab: {fileID: 100000, guid: 2a762a04ac857154f9ba053b1109f4c9, type: 3}
-  _obstacleSunroofVisualPrefab: {fileID: 100000, guid: dc8b8741cfc638344a0d4dde5822af69, type: 3}
-  _obstacleSolarPanelsVisualPrefab: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
-  _obstacleBillboardVisualPrefab: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-  _obstacleWaterTankVisualPrefab: {fileID: 100000, guid: ef6a0f8a9a0d1bb4e86dc4db202211dc, type: 3}
-  _obstacleRoofExitVisualPrefab: {fileID: 100000, guid: 02881c61e02148447958969661a6b4da, type: 3}
-  _obstacleSatDishVisualPrefab: {fileID: 100000, guid: 65df4e2b09a67d748a2c16d6e87ad8db, type: 3}
-  _rampVisualPrefab: {fileID: 100000, guid: a0d8d875fe1700343b671450d4c7b251, type: 3}
+  _rooftopChunk01Prefab: {fileID: 722269096332853746, guid: 338b8d15bcea54163b4e46f1983910f4, type: 3}
+  _rooftopChunk02Prefab: {fileID: 110374340786978240, guid: 454b49293c1974194a633fed34fad001, type: 3}
+  _rooftopChunk03DropPrefab: {fileID: 2249771562342861970, guid: bcc6776ed746c4971bcf9bba09fe86cc, type: 3}
+  _rooftopChunk05StepPrefab: {fileID: 2306191740137683157, guid: d67577147cfae453abdd764a790dbe0c, type: 3}
+  _obstacleAc1Prefab: {fileID: 6748728049039035252, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
+  _obstacleAc2Prefab: {fileID: 2544528892653243450, guid: 9a9d5be6e36dc40138a33007b00d5f14, type: 3}
+  _obstacleSunroofPrefab: {fileID: 6379789933607844666, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
+  _obstacleSolarPanelsPrefab: {fileID: 1425770535978773189, guid: 8305d055df02d4c29bc79b2a6212ea74, type: 3}
+  _obstacleBillboardPrefab: {fileID: 8859465782334325976, guid: 228c524dd3efc4af694c70e53e56a895, type: 3}
+  _waterTankPropPrefab: {fileID: 8178130325508503311, guid: 2455e0c56affc4325a8e2d8d10dc75dc, type: 3}
+  _roofExitPropPrefab: {fileID: 1230113871346090530, guid: ce161ece44af04bc7b6c640f647c5244, type: 3}
+  _satDishPropPrefab: {fileID: 8364169435263792440, guid: 0d06414b7950e4a60a42704e17ad4bfd, type: 3}
+  _rampPropPrefab: {fileID: 3069389956132015277, guid: 1e432cdab531546d2a3ec6ba998c62fa, type: 3}
   _surfaceMaterial: {fileID: 2100000, guid: fd3eada32273a4a5aaa212dcb896811a, type: 2}
   _buildOnAwake: 1
   _cameraTerrainLayerName: CameraTerrain

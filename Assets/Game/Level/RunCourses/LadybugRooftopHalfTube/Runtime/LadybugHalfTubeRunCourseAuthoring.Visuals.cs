@@ -5,19 +5,19 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
 {
     public sealed partial class LadybugHalfTubeRunCourseAuthoring
     {
-        [SerializeField] private GameObject _rooftopChunk01VisualPrefab;
-        [SerializeField] private GameObject _rooftopChunk02VisualPrefab;
-        [SerializeField] private GameObject _rooftopChunk03DropVisualPrefab;
-        [SerializeField] private GameObject _rooftopChunk05StepVisualPrefab;
-        [SerializeField] private GameObject _obstacleAc1VisualPrefab;
-        [SerializeField] private GameObject _obstacleAc2VisualPrefab;
-        [SerializeField] private GameObject _obstacleSunroofVisualPrefab;
-        [SerializeField] private GameObject _obstacleSolarPanelsVisualPrefab;
-        [SerializeField] private GameObject _obstacleBillboardVisualPrefab;
-        [SerializeField] private GameObject _obstacleWaterTankVisualPrefab;
-        [SerializeField] private GameObject _obstacleRoofExitVisualPrefab;
-        [SerializeField] private GameObject _obstacleSatDishVisualPrefab;
-        [SerializeField] private GameObject _rampVisualPrefab;
+        [SerializeField] private GameObject _rooftopChunk01Prefab;
+        [SerializeField] private GameObject _rooftopChunk02Prefab;
+        [SerializeField] private GameObject _rooftopChunk03DropPrefab;
+        [SerializeField] private GameObject _rooftopChunk05StepPrefab;
+        [SerializeField] private GameObject _obstacleAc1Prefab;
+        [SerializeField] private GameObject _obstacleAc2Prefab;
+        [SerializeField] private GameObject _obstacleSunroofPrefab;
+        [SerializeField] private GameObject _obstacleSolarPanelsPrefab;
+        [SerializeField] private GameObject _obstacleBillboardPrefab;
+        [SerializeField] private GameObject _waterTankPropPrefab;
+        [SerializeField] private GameObject _roofExitPropPrefab;
+        [SerializeField] private GameObject _satDishPropPrefab;
+        [SerializeField] private GameObject _rampPropPrefab;
 
         private void CreateRooftopVisualDressing(CourseSurfaceContext surfaceContext)
         {
@@ -25,7 +25,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
             dressingRoot.transform.SetParent(transform, false);
 
             CreateFittedVisual(
-                _rooftopChunk01VisualPrefab,
+                _rooftopChunk01Prefab,
                 "Rooftop_Chunk_01 Edge Visual 030L",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, -8.4f, 30f, -0.35f),
@@ -33,7 +33,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(5f, 3.2f, 28f));
 
             CreateFittedVisual(
-                _rooftopChunk02VisualPrefab,
+                _rooftopChunk02Prefab,
                 "Rooftop_Chunk_02 Edge Visual 110R",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, 8.4f, 110f, -0.35f),
@@ -41,7 +41,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(5f, 3.2f, 30f));
 
             CreateFittedVisual(
-                _rooftopChunk03DropVisualPrefab,
+                _rooftopChunk03DropPrefab,
                 "Rooftop_Chunk_03_Drop Edge Visual 190L",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, -8.5f, 190f, -0.45f),
@@ -49,7 +49,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(5.5f, 3.6f, 30f));
 
             CreateFittedVisual(
-                _rooftopChunk05StepVisualPrefab,
+                _rooftopChunk05StepPrefab,
                 "Rooftop_Chunk_05_Step Edge Visual 330R",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, 8.5f, 330f, -0.45f),
@@ -57,7 +57,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(5.5f, 3.6f, 30f));
 
             CreateFittedVisual(
-                _obstacleWaterTankVisualPrefab,
+                _waterTankPropPrefab,
                 "Obstacle_WaterTank Rooftop Prop 300L",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, -7.3f, 300f, 0.8f),
@@ -65,7 +65,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(2.4f, 3.2f, 2.4f));
 
             CreateFittedVisual(
-                _obstacleSatDishVisualPrefab,
+                _satDishPropPrefab,
                 "Obstacle_SatDish Rooftop Prop 145R",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, 7.3f, 145f, 0.6f),
@@ -73,7 +73,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(2f, 2f, 2f));
 
             CreateFittedVisual(
-                _obstacleRoofExitVisualPrefab,
+                _roofExitPropPrefab,
                 "Obstacle_RoofExit Rooftop Prop 255R",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, 7.9f, 255f, 0.5f),
@@ -81,7 +81,7 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 new Vector3(3f, 2.4f, 3f));
 
             CreateFittedVisual(
-                _rampVisualPrefab,
+                _rampPropPrefab,
                 "Ramp Rooftop Prop 050L",
                 dressingRoot.transform,
                 CreateRooftopVisualPosition(surfaceContext, -7.6f, 50f, 0.2f),
@@ -97,21 +97,21 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
             return new Vector3(lateralPosition, surfaceHeight + verticalOffset, progress);
         }
 
-        private void CreateObstacleVisual(Transform obstacleTransform, BoxCollider gameplayCollider, ObstacleVisualKind visualKind)
+        private void FitObstacleVisualToCollider(
+            Transform obstacleTransform,
+            BoxCollider gameplayCollider,
+            ObstacleVisualDefinition definition)
         {
-            var definition = GetObstacleVisualDefinition(visualKind);
+            var visual = FindRequiredDirectChild(obstacleTransform, definition.Name);
             var targetBounds = gameplayCollider.bounds;
             var targetSize = targetBounds.size;
 
             targetSize.y = Mathf.Max(targetSize.y, 1.4f);
-
-            CreateFittedVisual(
-                definition.Prefab,
-                definition.Name,
-                obstacleTransform,
-                obstacleTransform.InverseTransformPoint(targetBounds.center),
-                Quaternion.identity,
-                targetSize);
+            visual.transform.localPosition = obstacleTransform.InverseTransformPoint(targetBounds.center);
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+            SetLayerRecursively(visual, 0);
+            FitVisualToWorldBounds(visual, new Bounds(targetBounds.center, targetSize));
         }
 
         private ObstacleVisualDefinition GetObstacleVisualDefinition(ObstacleVisualKind visualKind)
@@ -119,15 +119,15 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
             switch (visualKind)
             {
                 case ObstacleVisualKind.Ac1:
-                    return new ObstacleVisualDefinition(_obstacleAc1VisualPrefab, "Obstacle_AC1 Visual");
+                    return new ObstacleVisualDefinition(_obstacleAc1Prefab, "Obstacle_AC1 Visual");
                 case ObstacleVisualKind.Ac2:
-                    return new ObstacleVisualDefinition(_obstacleAc2VisualPrefab, "Obstacle_AC2 Visual");
+                    return new ObstacleVisualDefinition(_obstacleAc2Prefab, "Obstacle_AC2 Visual");
                 case ObstacleVisualKind.Sunroof:
-                    return new ObstacleVisualDefinition(_obstacleSunroofVisualPrefab, "Obstacle_SunRoof Visual");
+                    return new ObstacleVisualDefinition(_obstacleSunroofPrefab, "Obstacle_SunRoof Visual");
                 case ObstacleVisualKind.SolarPanels:
-                    return new ObstacleVisualDefinition(_obstacleSolarPanelsVisualPrefab, "Obstacle_SolarPanels Visual");
+                    return new ObstacleVisualDefinition(_obstacleSolarPanelsPrefab, "Obstacle_SolarPanels Visual");
                 case ObstacleVisualKind.Billboard:
-                    return new ObstacleVisualDefinition(_obstacleBillboardVisualPrefab, "Obstacle_Billboard Visual");
+                    return new ObstacleVisualDefinition(_obstacleBillboardPrefab, "Obstacle_Billboard Visual");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(visualKind), visualKind, "Unsupported Ladybug half-tube obstacle visual kind.");
             }
@@ -183,25 +183,21 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
             Vector3 targetSize)
         {
             var resolvedPrefab = ResolveVisualPrefab(prefab, wrapperName);
-            var wrapper = new GameObject(wrapperName);
+            var visualRoot = Instantiate(resolvedPrefab, parent, false);
 
-            wrapper.transform.SetParent(parent, false);
-            wrapper.transform.localPosition = localPosition;
-            wrapper.transform.localRotation = Quaternion.identity;
-            wrapper.transform.localScale = Vector3.one;
+            var fitTarget = TryFindDirectChild(visualRoot.transform, "Visual", out var visualChild)
+                ? visualChild.gameObject
+                : visualRoot;
 
-            var visual = Instantiate(resolvedPrefab, wrapper.transform, false);
+            visualRoot.name = wrapperName;
+            visualRoot.transform.localPosition = localPosition;
+            visualRoot.transform.localRotation = localRotation;
+            visualRoot.transform.localScale = Vector3.one;
 
-            visual.name = $"{wrapperName} Mesh";
-            visual.transform.localPosition = Vector3.zero;
-            visual.transform.localRotation = localRotation;
-            visual.transform.localScale = Vector3.one;
+            SetLayerRecursively(visualRoot, 0);
+            FitVisualToWorldBounds(fitTarget, new Bounds(visualRoot.transform.position, targetSize));
 
-            SetLayerRecursively(wrapper, 0);
-            DisableVisualPhysics(wrapper);
-            FitVisualToWorldBounds(visual, new Bounds(wrapper.transform.position, targetSize));
-
-            return wrapper;
+            return visualRoot;
         }
 
         private GameObject ResolveVisualPrefab(GameObject prefab, string wrapperName)
@@ -210,16 +206,6 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
                 return prefab;
 
             throw new InvalidOperationException($"Ladybug half-tube visual '{wrapperName}' requires an assigned prefab.");
-        }
-
-        private void DisableVisualPhysics(GameObject root)
-        {
-            var colliders = root.GetComponentsInChildren<Collider>(true);
-
-            for (var i = 0; i < colliders.Length; i += 1)
-            {
-                colliders[i].enabled = false;
-            }
         }
 
         private void FitVisualToWorldBounds(GameObject visual, Bounds targetBounds)
@@ -281,6 +267,31 @@ namespace Game.Level.RunCourses.LadybugRooftopHalfTube
             }
 
             return hasBounds;
+        }
+
+        private GameObject FindRequiredDirectChild(Transform parent, string childName)
+        {
+            if (TryFindDirectChild(parent, childName, out var child))
+                return child.gameObject;
+
+            throw new InvalidOperationException($"Ladybug half-tube prefab '{parent.name}' requires a direct child named '{childName}'.");
+        }
+
+        private bool TryFindDirectChild(Transform parent, string childName, out Transform child)
+        {
+            for (var childIndex = 0; childIndex < parent.childCount; childIndex += 1)
+            {
+                var currentChild = parent.GetChild(childIndex);
+
+                if (string.Equals(currentChild.name, childName, StringComparison.Ordinal))
+                {
+                    child = currentChild;
+                    return true;
+                }
+            }
+
+            child = null;
+            return false;
         }
 
         private readonly struct ObstacleVisualDefinition
