@@ -1,2 +1,10 @@
 [*.cs]
 insert_final_newline = true
+
+# Keep attributes on the same line when possible
+#resharper_csharp_place_type_attribute_on_same_line = true
+#resharper_csharp_place_method_attribute_on_same_line = true
+resharper_csharp_place_property_attribute_on_same_line = true
+resharper_csharp_place_field_attribute_on_same_line = true
+resharper_csharp_place_accessor_attribute_on_same_line = true
+resharper_csharp_place_parameter_attribute_on_same_line = true

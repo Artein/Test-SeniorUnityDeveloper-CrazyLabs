@@ -383,6 +383,7 @@ public sealed class GameplayFlowControllerTests
         var runPreparation = CreateStateId("Run Preparation");
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
+        var runEnded = CreateStateId("Run Ended");
         var builder = new ContainerBuilder();
         builder.RegisterInstance(new FakeSlingshotCapture(_observations)).As<ISlingshotCapture>();
         builder.RegisterInstance(new FakeSlingshotRunPreparationReset(_observations)).As<ISlingshotRunPreparationReset>();
@@ -392,16 +393,24 @@ public sealed class GameplayFlowControllerTests
         builder.RegisterInstance(new FakeRunModifierSnapshotFactory()).As<IRunModifierSnapshotFactory>();
         builder.RegisterInstance(new FakeRunModifierSnapshotStore()).As<IRunModifierSnapshotStore>();
         builder.RegisterInstance(new FakePreLaunchRigPoseResetter(_observations)).As<IPreLaunchRigPoseResetter>();
-        var installer = new GameplayFlowInstaller(runPreparation, preLaunch, running);
+        var installer = new GameplayFlowInstaller(runPreparation, preLaunch, running, runEnded);
 
         installer.Install(builder);
 
         using var container = builder.Build();
         var initializables = container.Resolve<ContainerLocal<IReadOnlyList<IInitializable>>>().Value;
         var continueCommand = container.Resolve<IRunPreparationContinueCommand>();
+        var resolvedRunPreparation = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
+        var resolvedPreLaunch = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
+        var resolvedRunning = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.Running);
+        var resolvedRunEnded = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunEnded);
 
         Assert.That(initializables.Count, Is.EqualTo(1));
         Assert.That(continueCommand, Is.Not.Null);
+        Assert.That(resolvedRunPreparation, Is.SameAs(runPreparation));
+        Assert.That(resolvedPreLaunch, Is.SameAs(preLaunch));
+        Assert.That(resolvedRunning, Is.SameAs(running));
+        Assert.That(resolvedRunEnded, Is.SameAs(runEnded));
     }
 
     private GameplayFlowController CreateInitializedController(

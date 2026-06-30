@@ -361,9 +361,10 @@ public sealed class SlingshotLaunchRequestedTests
         var builder = new ContainerBuilder();
         var cameraObject = new GameObject("Slingshot Test Camera");
         var camera = cameraObject.AddComponent<Camera>();
-        builder.RegisterInstance(_input).As<IUnityInput>();
+        builder.RegisterInstance<IUnityInput>(_input);
         var launchTarget = new TestLaunchTarget();
-        builder.RegisterInstance(launchTarget).As<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>();
+        builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(launchTarget);
+        builder.RegisterInstance<IPullHintView, IPullHintTuning>(new TestPullHintView());
         var installer = new SlingshotInstaller(_config, _view, camera);
 
         installer.Install(builder);
@@ -393,8 +394,8 @@ public sealed class SlingshotLaunchRequestedTests
         Assert.That(appliedNotifier, Is.Not.Null);
         Assert.That(appliedPublisher, Is.Not.Null);
         Assert.That(bandShapeProvider, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(2));
-        Assert.That(tickables.Count, Is.EqualTo(2));
+        Assert.That(initializables.Count, Is.EqualTo(3));
+        Assert.That(tickables.Count, Is.EqualTo(3));
     }
 
     private SlingshotLaunchRequest ReleaseAndCaptureRequest(Vector3 rawPullPoint, Vector2 touchIndicatorScreenPosition)
@@ -491,15 +492,6 @@ public sealed class SlingshotLaunchRequestedTests
         return points;
     }
 
-    private void AssertDirectionEquals(Vector3 actual, Vector3 expected)
-    {
-        var normalizedExpected = expected.normalized;
-        Assert.That(actual.x, Is.EqualTo(normalizedExpected.x).Within(0.0001f));
-        Assert.That(actual.y, Is.EqualTo(normalizedExpected.y).Within(0.0001f));
-        Assert.That(actual.z, Is.EqualTo(normalizedExpected.z).Within(0.0001f));
-        Assert.That(actual.magnitude, Is.EqualTo(1f).Within(0.0001f));
-    }
-
     private void AssertBandShapeEquals(SlingshotBandShape shape, params Vector3[] expectedPoints)
     {
         Assert.That(shape.Points.Count, Is.EqualTo(expectedPoints.Length));
@@ -538,6 +530,25 @@ public sealed class SlingshotLaunchRequestedTests
             outputSamples[3] = new Vector3(-0.5f, 0f, -1f);
             sampleCount = 4;
             return true;
+        }
+    }
+
+    private sealed class TestPullHintView : IPullHintView, IPullHintTuning
+    {
+        public float InitialIdleDelaySeconds => 2f;
+        public float PlaybackDurationSeconds => 1.25f;
+        public float RepeatCooldownSeconds => 4f;
+
+        public void ShowAt(Vector2 screenPosition)
+        {
+        }
+
+        public void Play()
+        {
+        }
+
+        public void Hide()
+        {
         }
     }
 }

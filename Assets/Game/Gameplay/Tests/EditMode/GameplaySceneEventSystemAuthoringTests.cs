@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -11,12 +11,8 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneEventSystemAuthoringTests
+public sealed class GameplaySceneEventSystemAuthoringTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: Utilize editor asset provider instead of hardcoding paths
-    private const string GameplaySceneName = "GameplayScene";
-    private const string InputActionsAssetPath = "Assets/InputSystem_Actions.inputactions";
-
     [Test]
     public void GameplayScene_WhenAuthored_ContainsSingleInputSystemEventSystem()
     {
@@ -32,12 +28,11 @@ public sealed class GameplaySceneEventSystemAuthoringTests
         var legacyModules = eventSystem.GetComponents<BaseInputModule>()
             .Where(module => module is not InputSystemUIInputModule)
             .ToArray();
-        var expectedActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsAssetPath);
 
         Assert.That(inputModule, Is.Not.Null);
         Assert.That(legacyModules, Is.Empty);
-        Assert.That(inputModule.actionsAsset, Is.SameAs(expectedActions));
-        Assert.That(expectedActions, Is.Not.Null);
+        Assert.That(inputModule.actionsAsset, Is.SameAs(TestAssets.InputActionsAsset));
+        Assert.That(TestAssets.InputActionsAsset, Is.Not.Null);
 
         AssertAction(inputModule.point, "Point");
         AssertAction(inputModule.leftClick, "Click");
@@ -62,20 +57,14 @@ public sealed class GameplaySceneEventSystemAuthoringTests
         Assert.That(objectsWithMissingScripts, Is.Empty);
     }
 
-    private static Scene OpenGameplayScene()
+    private Scene OpenGameplayScene()
     {
-        var scenePath = EditorBuildSettings.scenes
-            .Where(scene => scene.enabled)
-            .Select(scene => scene.path)
-            .Single(scenePath => Path.GetFileNameWithoutExtension(scenePath) == GameplaySceneName);
-
-        return EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        return EditorSceneManager.OpenScene(TestAssets.GameplaySceneRef.Path, OpenSceneMode.Single);
     }
 
     private static IEnumerable<T> FindSceneComponents<T>(Scene scene)
     {
-        return scene.GetRootGameObjects()
-            .SelectMany(root => root.GetComponentsInChildren<T>(true));
+        return scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true));
     }
 
     private static IEnumerable<GameObject> FindSceneGameObjects(Scene scene)

@@ -1,4 +1,5 @@
 using System.Collections;
+using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
@@ -9,11 +10,8 @@ using static GameplaySceneDirectMaxPullBandShapeAssertions;
 using static GameplaySceneBandShapePlayModeTestUtils;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneDirectMaxPullBandShapeTests
+public sealed class GameplaySceneDirectMaxPullBandShapeTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: We should load scene via SceneReference + EditorAssetProvider instead of scene build index.
-    private readonly int _gameplaySceneBuildIndex = 0;
-
     [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePullsDirectlyToMaximumDistance_then_BandPathStaysVisibleSymmetricAndStableAcrossFrames()
     {
@@ -21,7 +19,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
 
         try
         {
-            yield return LoadGameplayScene(_gameplaySceneBuildIndex);
+            yield return LoadGameplayScene(TestAssets.GameplaySceneRef);
             var context = CreateSceneContext(SceneManager.GetActiveScene());
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
@@ -108,7 +106,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
 
         try
         {
-            yield return LoadGameplayScene(_gameplaySceneBuildIndex);
+            yield return LoadGameplayScene(TestAssets.GameplaySceneRef);
             var context = CreateSceneContext(SceneManager.GetActiveScene());
             var inputProjector = new SlingshotInputProjector(context.InputCamera);
             yield return WaitUntilPlayerIsHeld(context);
@@ -232,7 +230,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
 
             try
             {
-                yield return ReloadGameplayScene(_gameplaySceneBuildIndex);
+                yield return ReloadGameplayScene(TestAssets.GameplaySceneRef);
                 var context = CreateSceneContext(SceneManager.GetActiveScene());
                 var inputProjector = new SlingshotInputProjector(context.InputCamera);
                 yield return WaitUntilPlayerIsHeld(context);
@@ -372,7 +370,7 @@ public sealed class GameplaySceneDirectMaxPullBandShapeTests
 
             try
             {
-                yield return ReloadGameplayScene(_gameplaySceneBuildIndex);
+                yield return ReloadGameplayScene(TestAssets.GameplaySceneRef);
                 var context = CreateSceneContext(SceneManager.GetActiveScene());
                 var inputProjector = new SlingshotInputProjector(context.InputCamera);
                 yield return WaitUntilPlayerIsHeld(context);

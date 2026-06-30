@@ -99,7 +99,7 @@ On weak Pull Release, canceled Pull, or invalid Pull projection, the held Launch
 - Add a held-positioning interface for the Launch Target. The minimal contract positions an already-held Launch Target at a world-space Pull Point.
 - Held positioning is valid only after the target has been held. Calling it before hold fails fast.
 - Held positioning is immediate enough that subsequent same-frame contact queries see the assigned Collider at the new pose.
-- Held positioning preserves target rotation in this slice. Add an explicit TODO at the Launch Target boundary for future orientation, facing, lean, or spin work.
+- Held positioning preserves target rotation in this slice. Future orientation, facing, lean, or spin work belongs behind an explicit Launch Target orientation contract.
 - Add a Band contact/wrap provider interface for the Launch Target. It provides Band Contact Points and Band Wrap samples from the assigned Collider's current Transform.
 - The first slice supports one explicitly assigned Unity Collider of any Collider type. It does not auto-discover children or choose among multiple colliders.
 - The contact provider uses generic Collider surface queries as a best-effort approximation. Exact collider-specific tangent or silhouette solving is deferred.
