@@ -22,6 +22,7 @@ namespace Game.Gameplay.Economy
         private readonly EconomySaveSerializer _serializer;
         private readonly EconomySaveSettings _settings;
         private readonly string _temporaryPath;
+        private bool _isPrimaryKnownGood;
 
         public EconomySaveRepository(
             IPersistentDataPathProvider pathProvider,
@@ -51,6 +52,7 @@ namespace Game.Gameplay.Economy
                 try
                 {
                     var snapshot = LoadSnapshot(primaryPath, "primary");
+                    _isPrimaryKnownGood = true;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.Log("[EconomyDiagnostics] Economy save loaded primary: "
                               + $"Path='{primaryPath}', "
@@ -70,8 +72,10 @@ namespace Game.Gameplay.Economy
                 catch (Exception exception)
                 {
                     hadLoadFailure = true;
+                    _isPrimaryKnownGood = false;
                     Debug.LogError("Economy save load failed from primary. " + exception.Message);
                     PreserveCorruptFile(primaryPath, "primary");
+                    DeleteCorruptPrimaryFile(primaryPath);
                 }
             }
 
@@ -80,6 +84,10 @@ namespace Game.Gameplay.Economy
                 try
                 {
                     var snapshot = LoadSnapshot(backupPath, "backup");
+
+                    if (hadLoadFailure)
+                        RestorePrimaryFromBackup(backupPath, primaryPath, _temporaryPath);
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.Log("[EconomyDiagnostics] Economy save loaded backup: "
                               + $"Path='{backupPath}', "
@@ -139,13 +147,14 @@ namespace Game.Gameplay.Economy
                 var json = _serializer.Serialize(snapshot);
                 File.WriteAllText(temporaryPath, json, Encoding.UTF8);
 
-                if (File.Exists(primaryPath))
+                if (File.Exists(primaryPath) && _isPrimaryKnownGood)
                     File.Copy(primaryPath, backupPath, overwrite: true);
 
                 if (File.Exists(primaryPath))
                     File.Delete(primaryPath);
 
                 File.Move(temporaryPath, primaryPath);
+                _isPrimaryKnownGood = true;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log("[EconomyDiagnostics] Economy save wrote primary: "
@@ -166,6 +175,8 @@ namespace Game.Gameplay.Economy
             }
             catch (Exception exception)
             {
+                _isPrimaryKnownGood = File.Exists(primaryPath) && _isPrimaryKnownGood;
+
                 Debug.LogError("Economy save write failed. "
                                + exception.Message
                                + $" Path='{primaryPath}'");
@@ -176,6 +187,27 @@ namespace Game.Gameplay.Economy
                     operation,
                     exception.Message,
                     exception);
+            }
+        }
+
+        private void RestorePrimaryFromBackup(string backupPath, string primaryPath, string temporaryPath)
+        {
+            try
+            {
+                DeleteTemporaryFile(temporaryPath);
+                File.Copy(backupPath, temporaryPath, overwrite: true);
+
+                if (File.Exists(primaryPath))
+                    File.Delete(primaryPath);
+
+                File.Move(temporaryPath, primaryPath);
+                _isPrimaryKnownGood = true;
+            }
+            catch (Exception exception)
+            {
+                _isPrimaryKnownGood = false;
+                Debug.LogWarning("Economy save primary restore from backup failed. " + exception.Message);
+                DeleteTemporaryFile(temporaryPath);
             }
         }
 
@@ -207,6 +239,21 @@ namespace Game.Gameplay.Economy
             catch (Exception exception)
             {
                 Debug.LogWarning("Economy save corrupt-file preservation failed. " + exception.Message);
+            }
+        }
+
+        private void DeleteCorruptPrimaryFile(string primaryPath)
+        {
+            if (!File.Exists(primaryPath))
+                return;
+
+            try
+            {
+                File.Delete(primaryPath);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("Economy save corrupt primary cleanup failed. " + exception.Message);
             }
         }
 

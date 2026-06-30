@@ -79,6 +79,59 @@ public sealed class EconomySaveRepositoryTests
     }
 
     [Test]
+    public void Load_CorruptPrimaryWithValidBackup_RepairsPrimaryFromBackup()
+    {
+        var repository = CreateRepository(out var paths);
+        var serializer = new EconomySaveSerializer(new EconomySaveSettings(), CreateContentIndex());
+
+        var backupSnapshot = new PlayerEconomySnapshot(
+            revision: 7,
+            new[] { new PlayerCurrencyBalance("currency-coins", 44) },
+            Array.Empty<PlayerUpgradeLevel>());
+        Directory.CreateDirectory(paths.PersistentDataPath);
+        File.WriteAllText(paths.PrimaryPath, "{ broken json", System.Text.Encoding.UTF8);
+        File.WriteAllText(paths.BackupPath, serializer.Serialize(backupSnapshot), System.Text.Encoding.UTF8);
+        LogAssert.Expect(LogType.Error, new Regex("Economy save load failed.*primary"));
+
+        var loadResult = repository.Load();
+        var repairedSnapshot = LoadSnapshotFromPath(serializer, paths.PrimaryPath, "repaired-primary");
+
+        Assert.That(loadResult.Result.Status, Is.EqualTo(EconomyPersistenceStatus.LoadedBackup));
+        Assert.That(repairedSnapshot.Revision, Is.EqualTo(7));
+        Assert.That(repairedSnapshot.GetCurrencyBalance("currency-coins"), Is.EqualTo(44));
+    }
+
+    [Test]
+    public void Save_AfterLoadingBackupFromCorruptPrimary_DoesNotOverwriteBackupWithCorruptPrimary()
+    {
+        var repository = CreateRepository(out var paths);
+        var serializer = new EconomySaveSerializer(new EconomySaveSettings(), CreateContentIndex());
+
+        var backupSnapshot = new PlayerEconomySnapshot(
+            revision: 7,
+            new[] { new PlayerCurrencyBalance("currency-coins", 44) },
+            Array.Empty<PlayerUpgradeLevel>());
+
+        var nextSnapshot = new PlayerEconomySnapshot(
+            revision: 8,
+            new[] { new PlayerCurrencyBalance("currency-coins", 55) },
+            Array.Empty<PlayerUpgradeLevel>());
+        Directory.CreateDirectory(paths.PersistentDataPath);
+        File.WriteAllText(paths.PrimaryPath, "{ broken json", System.Text.Encoding.UTF8);
+        File.WriteAllText(paths.BackupPath, serializer.Serialize(backupSnapshot), System.Text.Encoding.UTF8);
+        LogAssert.Expect(LogType.Error, new Regex("Economy save load failed.*primary"));
+
+        var loadResult = repository.Load();
+        var saveResult = repository.Save(nextSnapshot, "test-save-after-backup-recovery");
+        var preservedBackupSnapshot = LoadSnapshotFromPath(serializer, paths.BackupPath, "preserved-backup");
+
+        Assert.That(loadResult.Result.Status, Is.EqualTo(EconomyPersistenceStatus.LoadedBackup));
+        Assert.That(saveResult.IsSuccess, Is.True);
+        Assert.That(preservedBackupSnapshot.Revision, Is.EqualTo(7));
+        Assert.That(preservedBackupSnapshot.GetCurrencyBalance("currency-coins"), Is.EqualTo(44));
+    }
+
+    [Test]
     public void Load_UnknownFutureSchema_ReturnsDefaultsAndLogsError()
     {
         var repository = CreateRepository(out var paths);
@@ -190,6 +243,11 @@ public sealed class EconomySaveRepositoryTests
             {
                 ["launch-power"] = 2
             });
+    }
+
+    private PlayerEconomySnapshot LoadSnapshotFromPath(EconomySaveSerializer serializer, string path, string sourceName)
+    {
+        return serializer.Deserialize(File.ReadAllText(path, System.Text.Encoding.UTF8), sourceName);
     }
 
     private sealed class TestPersistentDataPathProvider : IPersistentDataPathProvider
