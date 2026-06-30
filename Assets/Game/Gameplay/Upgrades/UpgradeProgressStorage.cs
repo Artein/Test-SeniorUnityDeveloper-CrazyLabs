@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using Game.Gameplay.Economy;
 
 namespace Game.Gameplay.Upgrades
 {
@@ -11,13 +11,16 @@ namespace Game.Gameplay.Upgrades
 
     public sealed class UpgradeProgressStorage : IUpgradeProgressStorage
     {
-        private readonly Dictionary<string, int> _levelsByUpgradeId = new(StringComparer.Ordinal);
+        private readonly PlayerEconomyState _state;
+
+        public UpgradeProgressStorage(PlayerEconomyState state)
+        {
+            _state = state ?? throw new ArgumentNullException(nameof(state));
+        }
 
         public int GetLevel(UpgradeDefinition definition)
         {
-            return TryGetStableId(definition, out var stableId)
-                ? _levelsByUpgradeId.GetValueOrDefault(stableId, 0)
-                : 0;
+            return TryGetStableId(definition, out var stableId) ? _state.GetUpgradeLevel(stableId) : 0;
         }
 
         public void SetLevel(UpgradeDefinition definition, int level)
@@ -31,13 +34,7 @@ namespace Game.Gameplay.Upgrades
             if (level < 0 || level > definition.MaxLevel)
                 throw new ArgumentOutOfRangeException(nameof(level), level, "Upgrade level must be within definition bounds.");
 
-            if (level == 0)
-            {
-                _levelsByUpgradeId.Remove(stableId);
-                return;
-            }
-
-            _levelsByUpgradeId[stableId] = level;
+            _state.SetUpgradeLevel(stableId, level);
         }
 
         private bool TryGetStableId(UpgradeDefinition definition, out string stableId)

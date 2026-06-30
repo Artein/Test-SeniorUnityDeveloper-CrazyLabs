@@ -70,7 +70,7 @@ During a run, pickup collection updates only the run currency accumulator and pi
 4. As a player, I want an accepted run result to commit its coin reward once, so that the same run cannot double-grant currency.
 5. As a player, I want upgrade purchases to apply immediately, so that spending coins has an immediate visible effect.
 6. As a player, I want a purchased upgrade to remain purchased if the game is closed right after buying, so that important progress is durable.
-7. As a player, I want a purchase to fail cleanly if it cannot be saved, so that I do not lose coins without receiving the upgrade.
+7. As a player, I want a save failure after purchase to be shown cleanly, so that the UI reflects my actual in-session balance and upgrade state.
 8. As a player, I want my balance and upgrades to load before I interact with run preparation, so that the UI shows real progress.
 9. As a player, I want the game to recover from a damaged save when possible, so that one interrupted write does not wipe my progress.
 10. As a player, I want the game to start with a sane default state if no save exists, so that first launch works normally.
@@ -104,7 +104,7 @@ During a run, pickup collection updates only the run currency accumulator and pi
 38. As a developer, I want existing `ICurrencyStorage` read/write semantics to be adapted carefully, so that call sites can migrate incrementally.
 39. As a developer, I want existing `IUpgradeProgressStorage` semantics to be backed by the same economy state, so that upgrades and wallet share one source of truth.
 40. As a developer, I want upgrade purchase to spend and level-up through one service, so that the purchase operation remains atomic.
-41. As a developer, I want a failed save commit to prevent purchase success, so that UI state and durable state do not diverge.
+41. As a developer, I want a failed save commit to return a save-failed purchase result, so that UI can refresh from central in-memory state and warn that durability failed.
 42. As a developer, I want run reward commit to consume a `RunCurrencySnapshot`, so that end-of-run persistence reads immutable result data.
 43. As a developer, I want pickup collection to avoid wallet writes during `Running`, so that per-pickup I/O never happens.
 44. As a developer, I want current-run currency accumulation to stay in memory, so that gameplay performance is independent of file writes.
@@ -134,7 +134,7 @@ During a run, pickup collection updates only the run currency accumulator and pi
 68. As a developer, I want no Unity Jobs path for JSON/file I/O, so that managed strings and file operations stay outside data-oriented job constraints.
 69. As a developer, I want a serialized background save queue, so that overlapping commits cannot race each other.
 70. As a developer, I want important commits to await queue completion when gameplay needs durable success, so that purchase and reward semantics are honest.
-71. As a developer, I want coalescing for non-critical flushes, so that repeated state changes do not create excessive disk writes.
+71. As a developer, I want lifecycle flushes to reuse the serialized save path, so that shutdown/background writes do not overlap important commits.
 72. As a developer, I want app pause and quit hooks to request a flush, so that mobile lifecycle events have a best-effort durability path.
 73. As a developer, I want Unity object access to remain on the main thread, so that background serialization does not touch ScriptableObjects or scene objects.
 74. As a developer, I want immutable DTO snapshots passed to the worker, so that the background thread cannot observe mutated runtime state.
@@ -157,7 +157,7 @@ During a run, pickup collection updates only the run currency accumulator and pi
 91. As a tester, I want EditMode tests for unknown currency and upgrade IDs, so that preservation behavior is locked.
 92. As a tester, I want EditMode tests for invalid negative balances, so that repair policy is deterministic.
 93. As a tester, I want EditMode tests for upgrade levels above current max, so that clamp or migration policy is deterministic.
-94. As a tester, I want EditMode tests for purchase commit failure, so that coins and level do not partially change.
+94. As a tester, I want EditMode tests for purchase commit failure, so that the service reports `SaveFailed`, logs the error, and keeps UI state sourced from the central in-memory state.
 95. As a tester, I want EditMode tests for purchase commit success, so that balance and level persist together.
 96. As a tester, I want EditMode tests for no per-pickup wallet grant, so that run-end-only reward policy is protected.
 97. As a tester, I want EditMode tests for run-result reward commit, so that accepted run snapshots update wallet exactly once.
@@ -209,8 +209,8 @@ During a run, pickup collection updates only the run currency accumulator and pi
 - `RunResultAccepted` is the first-choice hook for committing run rewards because it already carries the accepted run's immutable currency snapshot.
 - Run reward commit must be idempotent per accepted result or protected by run-end flow latching, so duplicate notifications cannot double grant.
 - Upgrade purchase should mutate balance and upgrade level in one transaction.
-- If save commit fails during purchase, return a non-successful purchase result and leave runtime state consistent with durable state.
-- If save commit fails during run reward commit, keep the run-end flow from silently treating the reward as permanently granted. The UI should receive an error or pending state rather than misreport durable progress.
+- If save commit fails during purchase, return a non-successful save-failed purchase result, log the error, and do not roll back the in-memory spend or upgrade level in this first version. UI must re-read central state so the current session shows what the player actually has.
+- If save commit fails during run reward commit, log the error and continue without rollback machinery in this first version. UI and subsequent screens must re-read central state and may warn that durability failed.
 - Include `schemaVersion` in every save.
 - Include a revision or commit counter in every save.
 - Keep old DTO shapes as long as they are needed for migration.
@@ -252,7 +252,7 @@ During a run, pickup collection updates only the run currency accumulator and pi
 - Migration tests should use frozen JSON fixtures representing older schemas.
 - Corruption tests should use malformed or truncated JSON fixtures.
 - Save queue tests should control completion ordering deterministically rather than relying on sleeps.
-- Transaction tests should inject a failing save store to prove runtime rollback or non-success behavior.
+- Transaction tests should inject a failing save store to prove save-failed result behavior, logging, and no rollback machinery in this first version.
 - Run reward tests should prove pickup collection does not touch wallet state before run result acceptance.
 - Run reward tests should prove accepted run result commits wallet state exactly once.
 - Purchase tests should prove insufficient currency, max level, invalid definition, commit failure, and success cases.

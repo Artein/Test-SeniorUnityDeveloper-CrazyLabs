@@ -297,5 +297,11 @@ namespace Game.Gameplay.Slingshot
         {
             return point - (planeNormal * Vector3.Dot(point - planePoint, planeNormal));
         }
+
+        public static class Serialization
+        {
+            public const string BandContactCollider = nameof(_bandContactCollider);
+            public const string BandCenter = nameof(_bandCenter);
+        }
     }
 }

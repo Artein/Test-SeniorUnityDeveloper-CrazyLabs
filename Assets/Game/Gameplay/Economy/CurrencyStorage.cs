@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Game.Gameplay.Economy
 {
@@ -12,7 +11,12 @@ namespace Game.Gameplay.Economy
 
     public sealed class CurrencyStorage : ICurrencyStorage
     {
-        private readonly Dictionary<CurrencyDefinition, int> _amountsByCurrency = new();
+        private readonly PlayerEconomyState _state;
+
+        public CurrencyStorage(PlayerEconomyState state)
+        {
+            _state = state ?? throw new ArgumentNullException(nameof(state));
+        }
 
         void ICurrencyStorage.Grant(CurrencyDefinition currencyDefinition, int amount)
         {
@@ -22,8 +26,7 @@ namespace Game.Gameplay.Economy
             if (amount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "Currency grant amount must be positive.");
 
-            var currentAmount = ((ICurrencyStorage)this).GetAmount(currencyDefinition);
-            _amountsByCurrency[currencyDefinition] = checked(currentAmount + amount);
+            _state.GrantCurrency(GetRequiredSaveId(currencyDefinition), amount);
         }
 
         bool ICurrencyStorage.TrySpend(CurrencyDefinition currencyDefinition, int amount)
@@ -34,18 +37,22 @@ namespace Game.Gameplay.Economy
             if (amount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "Currency spend amount must be positive.");
 
-            var currentAmount = ((ICurrencyStorage)this).GetAmount(currencyDefinition);
-
-            if (currentAmount < amount)
-                return false;
-
-            _amountsByCurrency[currencyDefinition] = currentAmount - amount;
-            return true;
+            return _state.TrySpendCurrency(GetRequiredSaveId(currencyDefinition), amount);
         }
 
         int ICurrencyStorage.GetAmount(CurrencyDefinition currencyDefinition)
         {
-            return currencyDefinition == null ? 0 : _amountsByCurrency.GetValueOrDefault(currencyDefinition, 0);
+            return currencyDefinition == null || string.IsNullOrWhiteSpace(currencyDefinition.SaveId)
+                ? 0
+                : _state.GetCurrencyBalance(currencyDefinition.SaveId);
+        }
+
+        private string GetRequiredSaveId(CurrencyDefinition currencyDefinition)
+        {
+            if (!string.IsNullOrWhiteSpace(currencyDefinition.SaveId))
+                return currencyDefinition.SaveId;
+
+            throw new ArgumentException("Currency definition requires a stable save id.", nameof(currencyDefinition));
         }
     }
 }

@@ -35,9 +35,9 @@ public sealed class RunCameraConfigTests
     public void NegativeSerializedRatesAndSpeed_AreClampedToZero()
     {
         var serializedObject = new SerializedObject(_config);
-        serializedObject.FindProperty("_positionResponseRate").floatValue = -1f;
-        serializedObject.FindProperty("_yawResponseRate").floatValue = -2f;
-        serializedObject.FindProperty("_minimumYawSpeed").floatValue = -3f;
+        serializedObject.FindProperty(RunCameraConfig.Serialization.PositionResponseRate).floatValue = -1f;
+        serializedObject.FindProperty(RunCameraConfig.Serialization.YawResponseRate).floatValue = -2f;
+        serializedObject.FindProperty(RunCameraConfig.Serialization.MinimumYawSpeed).floatValue = -3f;
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
         Assert.That(_config.PositionResponseRate, Is.EqualTo(0f));

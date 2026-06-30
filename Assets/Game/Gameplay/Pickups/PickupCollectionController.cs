@@ -23,7 +23,6 @@ namespace Game.Gameplay.Pickups
     {
         private readonly IReadOnlyList<Pickup> _pickups;
         private readonly ILevelPickupState _levelPickupState;
-        private readonly ICurrencyStorage _currencyStorage;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
         private readonly IPickupCurrencyGrantResolver _pickupCurrencyGrantResolver;
         private readonly IGameplayStateService _gameplayStateService;
@@ -39,7 +38,6 @@ namespace Game.Gameplay.Pickups
         public PickupCollectionController(
             IReadOnlyList<Pickup> pickups,
             ILevelPickupState levelPickupState,
-            ICurrencyStorage currencyStorage,
             IRunCurrencyAccumulator runCurrencyAccumulator,
             IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
@@ -49,7 +47,6 @@ namespace Game.Gameplay.Pickups
         {
             _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
-            _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
 
             _pickupCurrencyGrantResolver = pickupCurrencyGrantResolver
@@ -128,7 +125,6 @@ namespace Game.Gameplay.Pickups
             var finalCurrencyGrant = resolution.FinalCurrencyGrant;
             var position = pickup.Position;
 
-            _currencyStorage.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
             _runCurrencyAccumulator.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
             pickup.SetAvailable(false);
             PickupCollected?.InvokeSafely(new PickupCollectedEventArgs(baseCurrencyGrant, finalCurrencyGrant, position));

@@ -10,6 +10,16 @@ namespace Game.Gameplay.Economy
         {
             _icon = icon;
         }
+
+        internal void SetSaveIdForTests(string saveId)
+        {
+            _saveId = saveId;
+        }
+
+        internal void EnsureSaveIdForTests()
+        {
+            EnsureSaveId();
+        }
     }
 }
 

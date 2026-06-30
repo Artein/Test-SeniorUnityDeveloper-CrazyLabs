@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
 public sealed class UpgradePurchaseFlowTests
@@ -17,6 +19,7 @@ public sealed class UpgradePurchaseFlowTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _statId = Track(ScriptableObject.CreateInstance<GameplayStatId>());
         _statId.SetValuesForTests("SlingshotLaunchPower");
         _icon = CreateIcon();
@@ -36,7 +39,7 @@ public sealed class UpgradePurchaseFlowTests
     [Test]
     public void GetLevel_UnknownUpgrade_ReturnsDefaultLevelZero()
     {
-        IUpgradeProgressStorage storage = new UpgradeProgressStorage();
+        IUpgradeProgressStorage storage = new UpgradeProgressStorage(new PlayerEconomyState());
         var definition = CreateValidDefinition();
 
         var level = storage.GetLevel(definition);
@@ -47,7 +50,7 @@ public sealed class UpgradePurchaseFlowTests
     [Test]
     public void SetLevel_SameStableUpgradeId_ReadsStoredLevelAcrossDefinitionInstances()
     {
-        IUpgradeProgressStorage storage = new UpgradeProgressStorage();
+        IUpgradeProgressStorage storage = new UpgradeProgressStorage(new PlayerEconomyState());
         var definition = CreateValidDefinition(stableId: "launch-power");
         var sameUpgradeId = CreateValidDefinition(stableId: "launch-power");
 
@@ -59,7 +62,7 @@ public sealed class UpgradePurchaseFlowTests
     [Test]
     public void SetLevel_LevelOutsideDefinitionBounds_ThrowsAndLeavesExistingLevel()
     {
-        IUpgradeProgressStorage storage = new UpgradeProgressStorage();
+        IUpgradeProgressStorage storage = new UpgradeProgressStorage(new PlayerEconomyState());
         var definition = CreateValidDefinition(maxLevel: 3);
         storage.SetLevel(definition, 1);
 
@@ -78,8 +81,8 @@ public sealed class UpgradePurchaseFlowTests
     {
         var definition = CreateValidDefinition(maxLevel: 3, costProgression: LinearProgression(100f, 300f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         currencyStorage.Grant(_coins, 100);
 
@@ -95,12 +98,42 @@ public sealed class UpgradePurchaseFlowTests
     }
 
     [Test]
+    public void TryPurchase_SaveCommitFails_ReturnsSaveFailedAndKeepsCentralState()
+    {
+        var definition = CreateValidDefinition(maxLevel: 3, costProgression: LinearProgression(100f, 300f));
+        var catalog = CreateCatalog(definition);
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
+
+        var committer = new RecordingEconomyCommitter
+        {
+            NextResult = new EconomyPersistenceResult(
+                EconomyPersistenceStatus.Failed,
+                "upgrade-purchase",
+                "write failed",
+                new System.InvalidOperationException("write failed"))
+        };
+        var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage, committer);
+        currencyStorage.Grant(_coins, 100);
+        LogAssert.Expect(LogType.Error, new Regex("Economy save commit failed.*write failed"));
+
+        var result = purchaseService.TryPurchase(definition);
+
+        Assert.That(result.Status, Is.EqualTo(UpgradePurchaseStatus.SaveFailed));
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.PersistenceResult.IsSuccess, Is.False);
+        Assert.That(currencyStorage.GetAmount(_coins), Is.Zero);
+        Assert.That(progressStorage.GetLevel(definition), Is.EqualTo(1));
+        Assert.That(committer.CommitReasons, Is.EqualTo(new[] { "upgrade-purchase" }));
+    }
+
+    [Test]
     public void TryPurchase_OneCurrencyLessThanRequired_DoesNotSpendOrIncrement()
     {
         var definition = CreateValidDefinition(maxLevel: 3, costProgression: LinearProgression(100f, 300f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         currencyStorage.Grant(_coins, 99);
 
@@ -120,8 +153,8 @@ public sealed class UpgradePurchaseFlowTests
     {
         var definition = CreateValidDefinition(maxLevel: 3, costProgression: LinearProgression(100f, 300f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         progressStorage.SetLevel(definition, 3);
         currencyStorage.Grant(_coins, 999);
@@ -143,8 +176,8 @@ public sealed class UpgradePurchaseFlowTests
         var catalogDefinition = CreateValidDefinition(stableId: "launch-power");
         var outsideDefinition = CreateValidDefinition(stableId: "player-speed");
         var catalog = CreateCatalog(catalogDefinition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         currencyStorage.Grant(_coins, 500);
 
@@ -164,8 +197,8 @@ public sealed class UpgradePurchaseFlowTests
     {
         var invalidDefinition = CreateValidDefinition(missingIcon: true);
         var catalog = CreateCatalog(invalidDefinition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         currencyStorage.Grant(_coins, 500);
 
@@ -189,8 +222,8 @@ public sealed class UpgradePurchaseFlowTests
             costProgression: LinearProgression(100f, 300f),
             effectProgression: LinearProgression(1f, 1.6f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         var purchaseService = CreatePurchaseService(catalog, currencyStorage, progressStorage);
         var previewService = CreatePreviewService(catalog, currencyStorage, progressStorage);
         currencyStorage.Grant(_coins, 300);
@@ -216,8 +249,8 @@ public sealed class UpgradePurchaseFlowTests
     public void GetLevel_RecreatedStorageInstance_ReturnsDefaultLevelZero()
     {
         var definition = CreateValidDefinition();
-        var firstStorage = new UpgradeProgressStorage();
-        var secondStorage = new UpgradeProgressStorage();
+        var firstStorage = new UpgradeProgressStorage(new PlayerEconomyState());
+        var secondStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         firstStorage.SetLevel(definition, 2);
 
         var level = secondStorage.GetLevel(definition);
@@ -228,14 +261,16 @@ public sealed class UpgradePurchaseFlowTests
     private UpgradePurchaseService CreatePurchaseService(
         UpgradeCatalog catalog,
         ICurrencyStorage currencyStorage,
-        IUpgradeProgressStorage progressStorage)
+        IUpgradeProgressStorage progressStorage,
+        IEconomyCommitter economyCommitter = null)
     {
         return new UpgradePurchaseService(
             catalog,
             currencyStorage,
             progressStorage,
             new UpgradeDefinitionEvaluator(),
-            new UpgradeDefinitionValidator(new UpgradeDefinitionEvaluator()));
+            new UpgradeDefinitionValidator(new UpgradeDefinitionEvaluator()),
+            economyCommitter ?? new NoOpEconomyCommitter());
     }
 
     private UpgradePreviewService CreatePreviewService(
@@ -305,5 +340,35 @@ public sealed class UpgradePurchaseFlowTests
     {
         _objects.Add(value);
         return value;
+    }
+
+    private sealed class RecordingEconomyCommitter : IEconomyCommitter
+    {
+        private readonly List<string> _commitReasons = new();
+
+        public IReadOnlyList<string> CommitReasons => _commitReasons;
+
+        public bool IsCommitPending { get; private set; }
+
+        public EconomyPersistenceResult NextResult { get; set; } =
+            new(EconomyPersistenceStatus.Saved, "upgrade-purchase", "saved", exception: null);
+
+        public EconomyPersistenceResult CommitImportant(string reason)
+        {
+            IsCommitPending = true;
+            _commitReasons.Add(reason);
+            IsCommitPending = false;
+
+            if (!NextResult.IsSuccess)
+                Debug.LogError("Economy save commit failed. " + NextResult.Message);
+
+            return NextResult;
+        }
+
+        public EconomyPersistenceResult RequestBestEffortFlush(string reason)
+        {
+            _commitReasons.Add(reason);
+            return NextResult;
+        }
     }
 }

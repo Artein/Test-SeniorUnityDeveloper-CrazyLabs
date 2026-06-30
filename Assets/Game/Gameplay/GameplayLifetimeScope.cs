@@ -96,6 +96,17 @@ namespace Game.Gameplay
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
+            builder.Register<PlayerEconomyState>(Lifetime.Singleton);
+            builder.Register<EconomySaveSettings>(Lifetime.Singleton);
+            builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
+
+            builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton)
+                .WithParameter("coinCurrencyDefinition", _coinCurrencyDefinition);
+
+            builder.Register<EconomySaveSerializer>(Lifetime.Singleton);
+            builder.Register<IEconomySaveRepository, EconomySaveRepository>(Lifetime.Singleton);
+            builder.Register<EconomySaveQueue>(Lifetime.Singleton);
+            builder.Register<IEconomyCommitter, EconomyCommitter>(Lifetime.Singleton);
             builder.Register<ICurrencyStorage, CurrencyStorage>(Lifetime.Singleton);
             builder.Register<IRunCurrencyAccumulator, RunCurrencyAccumulator>(Lifetime.Singleton);
             builder.Register<IUpgradeProgressStorage, UpgradeProgressStorage>(Lifetime.Singleton);
@@ -123,6 +134,7 @@ namespace Game.Gameplay
             builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton)
                 .WithParameter("pickups", GetLevelPickups());
 
+            builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
             builder.RegisterEntryPoint<RunProgressService>();
 
             builder.RegisterEntryPoint<PlayerSteeringController>()
@@ -138,6 +150,9 @@ namespace Game.Gameplay
                 .WithParameter("restartStateId", _runPreparationStateId)
                 .WithParameter("runningStateId", _runningStateId)
                 .WithParameter("runEndedStateId", _runEndedStateId);
+
+            builder.RegisterEntryPoint<RunRewardCommitter>();
+            builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
 
             builder.RegisterEntryPoint<CharacterPresentationPresenter>()
                 .WithParameter("preLaunchStateId", _preLaunchStateId)
@@ -210,6 +225,8 @@ namespace Game.Gameplay
 
             if (_coinCurrencyDefinition == null)
                 yield return "GameplayLifetimeScope requires a Coin Currency Definition reference.";
+            else if (string.IsNullOrWhiteSpace(_coinCurrencyDefinition.SaveId))
+                yield return "GameplayLifetimeScope requires Coin Currency Definition to have a stable save id.";
 
             if (_coinPickupMultiplierStatId == null)
                 yield return "GameplayLifetimeScope requires a Coin Pickup Multiplier Stat Id reference.";
@@ -286,6 +303,11 @@ namespace Game.Gameplay
         private IReadOnlyList<Collider> GetPlayerPickupContactColliders()
         {
             return _playerPickupContactColliders ?? Array.Empty<Collider>();
+        }
+
+        public static class Serialization
+        {
+            public const string LevelPickups = nameof(_levelPickups);
         }
 
         private IEnumerable<string> GetPickupSetupValidationErrors()

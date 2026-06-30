@@ -18,6 +18,7 @@ public sealed class UpgradeAuthoringTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _statId = Track(ScriptableObject.CreateInstance<GameplayStatId>());
         _statId.SetValuesForTests("SlingshotLaunchPower");
         _icon = CreateIcon();
@@ -140,6 +141,21 @@ public sealed class UpgradeAuthoringTests
         Assert.That(ErrorCodes(errors), Does.Contain(UpgradeValidationErrorCode.MissingPurchaseCurrency));
         Assert.That(ErrorCodes(errors), Does.Contain(UpgradeValidationErrorCode.NullUpgradeDefinition));
         Assert.That(ErrorCodes(errors), Does.Contain(UpgradeValidationErrorCode.DuplicateUpgradeId));
+    }
+
+    [Test]
+    public void Validate_PurchaseCurrencyMissingSaveId_ReturnsMissingPurchaseCurrencyError()
+    {
+        var currency = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
+        currency.name = "Broken Currency";
+        currency.SetSaveIdForTests(string.Empty);
+        var catalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
+        catalog.SetValuesForTests(currency, new[] { CreateValidDefinition() });
+        var validator = new UpgradeCatalogValidator(new UpgradeDefinitionValidator(new UpgradeDefinitionEvaluator()));
+
+        var errors = validator.Validate(catalog);
+
+        Assert.That(ErrorCodes(errors), Does.Contain(UpgradeValidationErrorCode.MissingPurchaseCurrency));
     }
 
     [Test]

@@ -14,7 +14,7 @@ The completed slice should avoid file I/O per pickup, preserve commit order, pre
 - [ ] Queue work receives immutable DTO snapshots built on the main thread.
 - [ ] Background work serializes DTOs and writes files without reading ScriptableObjects, MonoBehaviours, scene objects, catalogs, or mutable gameplay state.
 - [ ] Important commits can await completion and return the structured save result from slice 01.
-- [ ] Non-critical flushes can be coalesced to avoid excessive disk writes.
+- [ ] Best-effort lifecycle flushes reuse the same single-writer path without adding overlapping writes.
 - [ ] App pause and quit hooks request a best-effort flush and log failures without crashing.
 - [ ] Queue cancellation or disposal during shutdown is deterministic and does not leave overlapping workers.
 - [ ] No Unity Jobs, Burst, UniTask, PlayerPrefs, or new package dependency is introduced.
@@ -26,7 +26,7 @@ The completed slice should avoid file I/O per pickup, preserve commit order, pre
   - Later commits cannot be overwritten by earlier worker completions.
   - Important commit returns success from a successful file store.
   - Important commit returns failure from a failing file store and logs.
-  - Coalesced non-critical flushes reduce redundant writes where implemented.
+  - Best-effort lifecycle flushes reuse the same serialized write path.
   - Worker path receives DTO snapshots and does not require Unity objects.
 - PlayMode tests:
   - Lifecycle flush hook is covered if implemented through MonoBehaviour callbacks.

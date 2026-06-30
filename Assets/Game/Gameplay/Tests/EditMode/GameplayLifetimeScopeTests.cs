@@ -192,7 +192,11 @@ public sealed class GameplayLifetimeScopeTests
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
         var runResultNotifier = container.Resolve<IRunResultNotifier>();
+        var playerEconomyState = container.Resolve<PlayerEconomyState>();
         var currencyStorage = container.Resolve<ICurrencyStorage>();
+        var economyContentIndex = container.Resolve<IPlayerEconomyContentIndex>();
+        var economySaveRepository = container.Resolve<IEconomySaveRepository>();
+        var economyCommitter = container.Resolve<IEconomyCommitter>();
         var runCurrencyAccumulator = container.Resolve<IRunCurrencyAccumulator>();
         var upgradeCatalog = container.Resolve<IUpgradeCatalog>();
         var upgradeProgressStorage = container.Resolve<IUpgradeProgressStorage>();
@@ -230,7 +234,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(11));
+        Assert.That(initializables.Count, Is.EqualTo(14));
         Assert.That(tickables.Count, Is.EqualTo(3));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
@@ -253,7 +257,11 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
         Assert.That(runResultNotifier, Is.Not.Null);
+        Assert.That(playerEconomyState, Is.Not.Null);
         Assert.That(currencyStorage, Is.Not.Null);
+        Assert.That(economyContentIndex.IsKnownCurrencyId(fixture.CurrencyDefinition.SaveId), Is.True);
+        Assert.That(economySaveRepository, Is.Not.Null);
+        Assert.That(economyCommitter, Is.Not.Null);
         Assert.That(runCurrencyAccumulator, Is.Not.Null);
         Assert.That(upgradeCatalog, Is.SameAs(fixture.UpgradeCatalog));
         Assert.That(upgradeProgressStorage, Is.Not.Null);
@@ -323,6 +331,7 @@ public sealed class GameplayLifetimeScopeTests
         playerPickupContactCollider.gameObject.tag = "Player";
         var currencyDefinition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         currencyDefinition.name = "Coins";
+        currencyDefinition.SetSaveIdForTests("currency-coins");
         var upgradeCatalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
         var pickupDefinition = CreatePickupDefinition(currencyDefinition, 1);
@@ -372,6 +381,7 @@ public sealed class GameplayLifetimeScopeTests
             RunPreparationStateId = runPreparation,
             PreLaunchStateId = preLaunch,
             UpgradeCatalog = upgradeCatalog,
+            CurrencyDefinition = currencyDefinition,
             GameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig,
             LaunchTarget = launchTarget,
             LevelPickup = levelPickup,
@@ -579,6 +589,7 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayStateId RunPreparationStateId { get; set; }
         public GameplayStateId PreLaunchStateId { get; set; }
         public UpgradeCatalog UpgradeCatalog { get; set; }
+        public CurrencyDefinition CurrencyDefinition { get; set; }
         public GameplaySlingshotLaunchConfig GameplaySlingshotLaunchConfig { get; set; }
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
         public Pickup LevelPickup { get; set; }

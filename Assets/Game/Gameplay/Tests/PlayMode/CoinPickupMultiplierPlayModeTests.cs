@@ -50,7 +50,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
         var stateService = new FakeGameplayStateService(runningStateId);
         var pickup = CreatePickup("Regular Pickup", coins, 2, Vector3.zero);
         var levelPickupState = new LevelPickupState(new[] { pickup });
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
         IRunCurrencyAccumulator runCurrencyAccumulator = new RunCurrencyAccumulator();
         var statResolver = new FixedRunGameplayStatResolver(1.5f);
         var grantResolver = new CoinPickupCurrencyGrantResolver(statResolver, coins, coinPickupMultiplierStatId);
@@ -58,7 +58,6 @@ public sealed class CoinPickupMultiplierPlayModeTests
         var controller = new PickupCollectionController(
             new[] { pickup },
             levelPickupState,
-            currencyStorage,
             runCurrencyAccumulator,
             grantResolver,
             stateService,
@@ -72,7 +71,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
         player.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
-        Assert.That(currencyStorage.GetAmount(coins), Is.EqualTo(3));
+        Assert.That(currencyStorage.GetAmount(coins), Is.Zero);
         Assert.That(runCurrencyAccumulator.CreateSnapshot().GetAmount(coins), Is.EqualTo(3));
         Assert.That(statResolver.ResolveCallCount, Is.EqualTo(1));
     }
@@ -125,6 +124,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
     {
         var currencyDefinition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         currencyDefinition.name = objectName;
+        currencyDefinition.SetSaveIdForTests("currency-" + objectName.ToLowerInvariant());
         return currencyDefinition;
     }
 

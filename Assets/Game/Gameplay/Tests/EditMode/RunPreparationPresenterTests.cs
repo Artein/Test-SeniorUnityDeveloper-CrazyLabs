@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
@@ -23,6 +25,7 @@ public sealed class RunPreparationPresenterTests
     {
         _coins = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
         _coins.name = "Coins";
+        _coins.SetSaveIdForTests("currency-coins");
         _runPreparationStateId = CreateStateId("Run Preparation");
         _statId = Track(ScriptableObject.CreateInstance<GameplayStatId>());
         _statId.SetValuesForTests("SlingshotLaunchPower");
@@ -60,7 +63,7 @@ public sealed class RunPreparationPresenterTests
             costProgression: LinearProgression(50f, 150f),
             effectProgression: LinearProgression(1f, 1.6f));
         var catalog = CreateCatalog(firstDefinition, secondDefinition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
         currencyStorage.Grant(_coins, 150);
         var view = new FakeRunPreparationView();
         var presenter = CreatePresenter(view, catalog, currencyStorage);
@@ -99,8 +102,8 @@ public sealed class RunPreparationPresenterTests
             costProgression: LinearProgression(100f, 200f),
             effectProgression: LinearProgression(1f, 1.4f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         currencyStorage.Grant(_coins, 250);
         var view = new FakeRunPreparationView();
         var presenter = CreatePresenter(view, catalog, currencyStorage, progressStorage);
@@ -122,6 +125,42 @@ public sealed class RunPreparationPresenterTests
     }
 
     [Test]
+    public void BuyRequested_SaveCommitFails_RefreshesFromActualCentralState()
+    {
+        var definition = CreateDefinition(
+            maxLevel: 2,
+            costProgression: LinearProgression(100f, 200f),
+            effectProgression: LinearProgression(1f, 1.4f));
+        var catalog = CreateCatalog(definition);
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
+
+        var committer = new RecordingEconomyCommitter
+        {
+            NextResult = new EconomyPersistenceResult(
+                EconomyPersistenceStatus.Failed,
+                "upgrade-purchase",
+                "write failed",
+                new InvalidOperationException("write failed"))
+        };
+        currencyStorage.Grant(_coins, 250);
+        var view = new FakeRunPreparationView();
+        var presenter = CreatePresenter(view, catalog, currencyStorage, progressStorage, economyCommitter: committer);
+        ((IInitializable)presenter).Initialize();
+        LogAssert.Expect(LogType.Error, new Regex("Economy save commit failed.*write failed"));
+
+        view.RequestBuy(definition);
+
+        Assert.That(view.RenderedStates, Has.Count.EqualTo(2));
+        Assert.That(currencyStorage.GetAmount(_coins), Is.EqualTo(150));
+        Assert.That(progressStorage.GetLevel(definition), Is.EqualTo(1));
+        var upgrade = view.RenderedStates[^1].Upgrades[0];
+        Assert.That(upgrade.OwnedLevel, Is.EqualTo(1));
+        Assert.That(upgrade.NextCost, Is.EqualTo(200));
+        Assert.That(upgrade.CanBuy, Is.False);
+    }
+
+    [Test]
     public void BuyRequested_InsufficientBalance_LeavesLevelAndRendersUnaffordable()
     {
         var definition = CreateDefinition(
@@ -129,8 +168,8 @@ public sealed class RunPreparationPresenterTests
             costProgression: LinearProgression(100f, 200f),
             effectProgression: LinearProgression(1f, 1.4f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         currencyStorage.Grant(_coins, 99);
         var view = new FakeRunPreparationView();
         var presenter = CreatePresenter(view, catalog, currencyStorage, progressStorage);
@@ -158,8 +197,8 @@ public sealed class RunPreparationPresenterTests
             costProgression: LinearProgression(100f, 200f),
             effectProgression: LinearProgression(1f, 1.4f));
         var catalog = CreateCatalog(definition);
-        ICurrencyStorage currencyStorage = new CurrencyStorage();
-        var progressStorage = new UpgradeProgressStorage();
+        ICurrencyStorage currencyStorage = new CurrencyStorage(new PlayerEconomyState());
+        var progressStorage = new UpgradeProgressStorage(new PlayerEconomyState());
         progressStorage.SetLevel(definition, 2);
         currencyStorage.Grant(_coins, 999);
         var view = new FakeRunPreparationView();
@@ -189,8 +228,8 @@ public sealed class RunPreparationPresenterTests
         var presenter = CreatePresenter(
             view,
             catalog,
-            new CurrencyStorage(),
-            new UpgradeProgressStorage(),
+            new CurrencyStorage(new PlayerEconomyState()),
+            new UpgradeProgressStorage(new PlayerEconomyState()),
             continueCommand);
         ((IInitializable)presenter).Initialize();
 
@@ -206,9 +245,10 @@ public sealed class RunPreparationPresenterTests
         ICurrencyStorage currencyStorage,
         IUpgradeProgressStorage progressStorage = null,
         IRunPreparationContinueCommand continueCommand = null,
-        IGameplayStateService gameplayStateService = null)
+        IGameplayStateService gameplayStateService = null,
+        IEconomyCommitter economyCommitter = null)
     {
-        progressStorage ??= new UpgradeProgressStorage();
+        progressStorage ??= new UpgradeProgressStorage(new PlayerEconomyState());
         continueCommand ??= new FakeRunPreparationContinueCommand();
         gameplayStateService ??= new FakeGameplayStateService(_runPreparationStateId);
 
@@ -226,7 +266,8 @@ public sealed class RunPreparationPresenterTests
                 currencyStorage,
                 progressStorage,
                 new UpgradeDefinitionEvaluator(),
-                new UpgradeDefinitionValidator(new UpgradeDefinitionEvaluator())),
+                new UpgradeDefinitionValidator(new UpgradeDefinitionEvaluator()),
+                economyCommitter ?? new NoOpEconomyCommitter()),
             continueCommand,
             gameplayStateService,
             _runPreparationStateId);
@@ -356,6 +397,36 @@ public sealed class RunPreparationPresenterTests
             CurrentStateId = nextStateId;
             GameplayStateChanged?.Invoke(nextStateId, previousStateId);
             return true;
+        }
+    }
+
+    private sealed class RecordingEconomyCommitter : IEconomyCommitter
+    {
+        private readonly List<string> _commitReasons = new();
+
+        public IReadOnlyList<string> CommitReasons => _commitReasons;
+
+        public bool IsCommitPending { get; private set; }
+
+        public EconomyPersistenceResult NextResult { get; set; } =
+            new(EconomyPersistenceStatus.Saved, "upgrade-purchase", "saved", exception: null);
+
+        public EconomyPersistenceResult CommitImportant(string reason)
+        {
+            IsCommitPending = true;
+            _commitReasons.Add(reason);
+            IsCommitPending = false;
+
+            if (!NextResult.IsSuccess)
+                Debug.LogError("Economy save commit failed. " + NextResult.Message);
+
+            return NextResult;
+        }
+
+        public EconomyPersistenceResult RequestBestEffortFlush(string reason)
+        {
+            _commitReasons.Add(reason);
+            return NextResult;
         }
     }
 }
