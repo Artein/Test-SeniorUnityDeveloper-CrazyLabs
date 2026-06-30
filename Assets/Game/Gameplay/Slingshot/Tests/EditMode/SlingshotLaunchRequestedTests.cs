@@ -89,7 +89,7 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
-    public void LaunchApplied_ClearanceProvenAndTargetPassedRestBand_DetachesAtRest()
+    public void LaunchApplied_RecoilCompleteAndClearanceProven_DetachesAtRest()
     {
         using var controller = CreateInitializedController();
         SubscribeToLaunchRequests(controller);
@@ -97,6 +97,7 @@ public sealed class SlingshotLaunchRequestedTests
         var releaseScreenPosition = new Vector2(75f, 80f);
         ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
         _input.Release(1, releaseScreenPosition);
+        _clock.DeltaTime = _config.BandRecoilDuration;
         _observations.Clear();
 
         _launchAppliedNotifier.Apply(_launchRequests[0]);
@@ -114,6 +115,32 @@ public sealed class SlingshotLaunchRequestedTests
     }
 
     [Test]
+    public void LaunchApplied_ClearanceProvenBeforeRecoilDuration_KeepsLoadedReleaseUntilDurationCompletes()
+    {
+        using var controller = CreateInitializedController();
+        SubscribeToLaunchRequests(controller);
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        ConfigureProjectionForPull(releaseScreenPosition, new Vector3(0.5f, 0f, -1.25f), new Vector2(75f, 15f));
+        _input.Release(1, releaseScreenPosition);
+        _clock.DeltaTime = _config.BandRecoilDuration * 0.5f;
+        _observations.Clear();
+
+        _launchAppliedNotifier.Apply(_launchRequests[0]);
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "band-depth-span", "band-shape", "view-loaded-release" }));
+        AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
+        _clock.DeltaTime = _config.BandRecoilDuration;
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "view-inactive-idle" }));
+        AssertBandShapeEquals(_view.LastBandShape, CreateRestBandShape());
+    }
+
+    [Test]
     public void LaunchApplied_ClearanceProvenBeforeTargetPassesRestBand_KeepsLoadedReleaseUntilTargetPasses()
     {
         using var controller = CreateInitializedController();
@@ -125,22 +152,22 @@ public sealed class SlingshotLaunchRequestedTests
         _input.Release(1, releaseScreenPosition);
         _launchAppliedNotifier.Apply(_launchRequests[0]);
         _bandShapeProvider.SilhouetteMaximumDepth = 0.1f;
+        _clock.DeltaTime = _config.BandRecoilDuration;
         _observations.Clear();
 
         ((ITickable)controller).Tick();
 
-        Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-depth-span", "band-shape", "view-loaded-release" }));
-        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(1));
+        Assert.That(_observations,
+            Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-depth-span", "band-clearance", "view-loaded-release" }));
+        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(2));
         Assert.That(_bandShapeProvider.DepthSpanQueries, Has.Count.EqualTo(2));
-        Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.Not.EqualTo(_view.Geometry.RestPoint));
-        AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
         _bandShapeProvider.SilhouetteMaximumDepth = -_view.VisibleBandRadius;
         _observations.Clear();
 
         ((ITickable)controller).Tick();
 
         Assert.That(_observations, Is.EqualTo(new[] { "band-clearance", "band-depth-span", "view-inactive-idle" }));
-        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(2));
+        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(3));
         Assert.That(_bandShapeProvider.DepthSpanQueries, Has.Count.EqualTo(3));
         AssertBandShapeEquals(_view.LastBandShape, CreateRestBandShape());
     }
