@@ -361,8 +361,11 @@ namespace Game.Gameplay.Slingshot
         {
             _releaseRecoilElapsed += Mathf.Max(0f, _clock.DeltaTime);
             var normalizedTime = Mathf.Clamp01(_releaseRecoilElapsed / _config.BandRecoilDuration);
+            var isRecoilComplete = normalizedTime >= 1f;
 
-            if (IsDetachedRestBandShapeClear() && HasTargetSilhouettePassedRestBandShape())
+            if (isRecoilComplete
+                && IsDetachedRestBandShapeClear()
+                && HasTargetSilhouettePassedRestBandShape())
             {
                 _isReleaseRecoilActive = false;
                 _view.ShowInactiveIdle(CreateDetachedRestBandShape());
