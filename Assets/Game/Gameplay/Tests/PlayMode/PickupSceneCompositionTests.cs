@@ -3,6 +3,7 @@ using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
+using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,9 +11,8 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class PickupSceneCompositionTests
+public sealed class PickupSceneCompositionTests : BaseGameplayTestAssetsFixture
 {
-    private const int GameplaySceneBuildIndex = 0;
     private const string PlayerLayerName = "Player";
     private const string PickupLayerName = "Pickup";
     private const string PlayerTag = "Player";
@@ -20,7 +20,7 @@ public sealed class PickupSceneCompositionTests
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_PickupCurrencyCompositionIsReady()
     {
-        SceneManager.LoadScene(GameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
         yield return null;
 
         var scene = SceneManager.GetActiveScene();
@@ -37,7 +37,7 @@ public sealed class PickupSceneCompositionTests
         var pickupCurrencyGrantResolver = lifetimeScope.Container.Resolve<IPickupCurrencyGrantResolver>();
         var pickupCollectionNotifier = lifetimeScope.Container.Resolve<IPickupCollectionNotifier>();
 
-        Assert.That(scene.buildIndex, Is.EqualTo(GameplaySceneBuildIndex));
+        Assert.That(scene.path, Is.EqualTo(TestAssets.GameplaySceneRef.Path));
         Assert.That(lifetimeScope.PickupSetupValidationErrorsForTests, Is.Empty);
         Assert.That(Physics.GetIgnoreLayerCollision(playerLayer, pickupLayer), Is.False);
         Assert.That(configuredPickups, Has.Length.EqualTo(2));

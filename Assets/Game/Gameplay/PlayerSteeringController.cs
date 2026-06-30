@@ -6,6 +6,7 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using UnityEngine;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -44,9 +45,9 @@ namespace Game.Gameplay
             IRunGameplayStatResolver statResolver,
             ITime clock,
             IScreen screen,
-            GameplayStateId runningStateId,
-            GameplayStatId playerMaxSpeedStatId,
-            GameplayStatId playerSteeringResponsivenessStatId)
+            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStatId.PlayerMaxSpeed)] GameplayStatId playerMaxSpeedStatId,
+            [Key(InjectKey.GameplayStatId.PlayerSteeringResponsiveness)] GameplayStatId playerSteeringResponsivenessStatId)
         {
             _unityInput = unityInput ?? throw new ArgumentNullException(nameof(unityInput));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));

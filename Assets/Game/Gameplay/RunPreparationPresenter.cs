@@ -4,6 +4,7 @@ using System.Globalization;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Upgrades;
+using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
@@ -30,7 +31,7 @@ namespace Game.Gameplay
             UpgradePurchaseService purchaseService,
             IRunPreparationContinueCommand continueCommand,
             IGameplayStateService gameplayStateService,
-            GameplayStateId runPreparationStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId runPreparationStateId)
         {
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _currencyStorage = currencyStorage ?? throw new ArgumentNullException(nameof(currencyStorage));

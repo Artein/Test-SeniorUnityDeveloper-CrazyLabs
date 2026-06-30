@@ -349,8 +349,8 @@ audio, richer rope simulation, and retry placement are explicitly deferred.
 - Slingshot pull interpretation depends on held positioning, while Slingshot launch application depends on both `ILaunchTarget` and held positioning.
 - Held positioning is valid only after the Launch Target has been held; calling `SetHeldPosition` before `Hold()` fails fast instead of implicitly
   holding or silently no-oping.
-- Held positioning preserves the Launch Target's rotation in the first slice. The code should keep a TODO at the Launch Target boundary for future
-  explicit rotation/orientation support if game feel later needs the target to face the launch direction.
+- Held positioning preserves the Launch Target's rotation in the first slice. Future facing, lean, spin, or launch-direction orientation behavior
+  belongs behind an explicit Launch Target orientation contract rather than hidden inside hold or launch.
 - SlingshotController does not position the held Launch Target during initialization. `ISlingshotCapture.EnableCapture()` holds the Launch Target and
   positions the authored Band Center at Rest before pointer capture can move it.
 - Rigidbody Launch Target is a shallow MonoBehaviour adapter over an explicitly assigned Rigidbody.

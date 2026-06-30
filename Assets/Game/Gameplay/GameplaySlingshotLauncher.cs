@@ -1,6 +1,8 @@
 using System;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
+using VContainer;
 
 namespace Game.Gameplay
 {
@@ -23,7 +25,7 @@ namespace Game.Gameplay
             SlingshotLaunchImpulseCalculator calculator,
             ILaunchImpulseApplier applier,
             IRunGameplayStatResolver statResolver,
-            GameplayStatId slingshotLaunchPowerStatId,
+            [Key(InjectKey.GameplayStatId.SlingshotLaunchPower)] GameplayStatId slingshotLaunchPowerStatId,
             ISlingshotLaunchAppliedPublisher launchAppliedPublisher)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -34,7 +36,7 @@ namespace Game.Gameplay
             _slingshotLaunchPowerStatId = slingshotLaunchPowerStatId != null
                 ? slingshotLaunchPowerStatId
                 : throw new ArgumentNullException(nameof(slingshotLaunchPowerStatId));
-            
+
             _launchAppliedPublisher = launchAppliedPublisher ?? throw new ArgumentNullException(nameof(launchAppliedPublisher));
         }
 

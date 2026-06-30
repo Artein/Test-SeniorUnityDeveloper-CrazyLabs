@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
+using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -11,11 +12,8 @@ using UnityEngine.TestTools;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneBandVisibilityTests
+public sealed class GameplaySceneBandVisibilityTests : BaseGameplayTestAssetsFixture
 {
-    // TODO - AI Note: We should load scene via SceneRefernce + EditorAssetProvider instead of scene build index.
-    private readonly int _gameplaySceneBuildIndex = 0;
-
     [UnityTest]
     public IEnumerator given_GameplayScene_when_PlayerPullsBandNearHeldTarget_then_BandCenterlineStaysVisibleFromGameplayCamera()
     {
@@ -77,12 +75,12 @@ public sealed class GameplaySceneBandVisibilityTests
         if (CanReuseGameplayScene(SceneManager.GetActiveScene()))
             yield break;
 
-        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
     }
 
     private bool CanReuseGameplayScene(Scene scene)
     {
-        if (!scene.IsValid() || scene.buildIndex != _gameplaySceneBuildIndex)
+        if (!scene.IsValid() || scene.path != TestAssets.GameplaySceneRef.Path)
             return false;
 
         var slingshotViews = FindComponentsInScene<SlingshotView>(scene);

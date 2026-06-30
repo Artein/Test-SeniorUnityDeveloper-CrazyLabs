@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 331aab506c0d1472891cf38c571b5386, type: 3}
+  m_Name: GameplayTestAssetsProvider
+  m_EditorClassIdentifier:
+  <GameplaySceneRef>k__BackingField:
+    asset: {fileID: 102900000, guid: 99c9720ab356a0642a771bea13969a05, type: 3}
+    guid: 99c9720ab356a0642a771bea13969a05
+  <InputActionsAsset>k__BackingField: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  <RunSurfaceLayerMask>k__BackingField:
+    m_Bits: 256
+  <CameraTerrainLayerMask>k__BackingField:
+    m_Bits: 256
+  <CameraObstacleLayerMask>k__BackingField:
+    m_Bits: 512

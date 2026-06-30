@@ -6,6 +6,7 @@ using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
+using Game.Gameplay.Tests.Common;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using TMPro;
@@ -18,7 +19,7 @@ using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneRunPreparationUITests
+public sealed class GameplaySceneRunPreparationUITests : BaseGameplayTestAssetsFixture
 {
     private const float MinimumCoinIconScreenHeight = 40f;
     private const float MinimumBuyButtonScreenHeight = 64f;
@@ -26,9 +27,6 @@ public sealed class GameplaySceneRunPreparationUITests
     private const float MinimumUpgradeCardAutoSizeFloor = 18f;
     private const float MinimumCoinBalanceFontSize = 36f;
     private const float MinimumTapToPlayFontSize = 44f;
-
-    // TODO - AI Note: 
-    private readonly int _gameplaySceneBuildIndex = 0;
 
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_RunPreparationUIRendersCatalogUpgrades()
@@ -307,7 +305,7 @@ public sealed class GameplaySceneRunPreparationUITests
 
     private IEnumerator LoadGameplayScene()
     {
-        SceneManager.LoadScene(_gameplaySceneBuildIndex, LoadSceneMode.Single);
+        SceneManager.LoadScene(TestAssets.GameplaySceneRef.Path, LoadSceneMode.Single);
         yield return null;
     }
 
