@@ -30,6 +30,7 @@ namespace Game.Gameplay.Slingshot
 
             builder.RegisterEntryPoint<SlingshotController>();
             builder.RegisterEntryPoint<SlingshotPresentationContextSource>();
+            builder.RegisterEntryPoint<PullHintPresenter>();
             builder.Register<ISlingshotLaunchAppliedNotifier, ISlingshotLaunchAppliedPublisher, SlingshotLaunchController>(Lifetime.Singleton);
             builder.Register<ISlingshotBandShapeProvider, SlingshotBandShapeProvider>(Lifetime.Singleton);
             builder.Register<ISlingshotPullOffsetNormalizer, SlingshotPullOffsetNormalizer>(Lifetime.Singleton);

@@ -46,6 +46,7 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchSlingshotRigPose;
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
+        [SerializeField] private PullHintView _pullHintView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
@@ -82,6 +83,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
             builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
+            builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
@@ -264,6 +266,9 @@ namespace Game.Gameplay
 
             if (_slingshotView == null)
                 yield return "GameplayLifetimeScope requires a Slingshot View reference.";
+
+            if (_pullHintView == null)
+                yield return "GameplayLifetimeScope requires a Pull Hint View reference.";
 
             if (_runPreparationView == null)
                 yield return "GameplayLifetimeScope requires a Run Preparation View reference.";

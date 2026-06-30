@@ -423,8 +423,8 @@ The visual marker that follows the captured touch during an **Active Pull**.
 _Avoid_: Pointer, cursor
 
 **Pull Hint**:
-The idle tutorial visual that suggests starting a **Pull** on the **Band**.
-_Avoid_: Pointer, nudge
+The intermittent idle tutorial visual that demonstrates touching the **Band**, drawing a **Pull** backward, and ending with **Pull Release**.
+_Avoid_: Pointer, nudge, Touch Indicator
 
 **Pull**:
 A touch gesture that begins on the **Band** and draws it backward before release.

@@ -121,7 +121,7 @@ public sealed class GameplaySceneSlingshotInputTests
 
             yield return SendMouse(mouse, validPullScreenPosition, true);
 
-            Assert.That(pullHint.activeSelf, Is.True);
+            Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return SendMouse(mouse, validPullScreenPosition, false);
@@ -270,7 +270,7 @@ public sealed class GameplaySceneSlingshotInputTests
         if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
             return false;
 
-        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || !pullHint.activeInHierarchy)
+        if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || pullHint.activeSelf)
             return false;
 
         if (!TryFindGameObjectByName(scene, "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)

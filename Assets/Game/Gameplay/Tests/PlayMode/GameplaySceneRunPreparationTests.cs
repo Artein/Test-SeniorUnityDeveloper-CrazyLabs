@@ -81,7 +81,7 @@ public sealed class GameplaySceneRunPreparationTests
             Assert.That(continueCommand.TryContinue(), Is.True);
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("PreLaunchStateId"));
             Assert.That(playerRigidbody.isKinematic, Is.True);
-            Assert.That(pullHint.activeSelf, Is.True);
+            Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
 
             yield return PullAndReleaseSlingshot(mouse, activeScene);
