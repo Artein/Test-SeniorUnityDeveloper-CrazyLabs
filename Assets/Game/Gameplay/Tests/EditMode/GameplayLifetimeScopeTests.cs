@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
@@ -11,6 +12,7 @@ using Game.Foundation.Input;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
 using TMPro;
+using UnityEditor;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,10 +24,19 @@ using VContainer.Unity;
 public sealed class GameplayLifetimeScopeTests
 {
     private readonly List<UnityEngine.Object> _objects = new();
+    private readonly List<string> _assetDirectories = new();
 
     [TearDown]
     public void OnTearDown()
     {
+        foreach (var assetDirectory in _assetDirectories)
+        {
+            AssetDatabase.DeleteAsset(assetDirectory);
+        }
+
+        _assetDirectories.Clear();
+        AssetDatabase.Refresh();
+
         foreach (var unityObject in _objects)
         {
             UnityEngine.Object.DestroyImmediate(unityObject);
@@ -94,6 +105,74 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_SameCurrencyReferencedByCoinCatalogAndPickup_DoesNotThrow()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_DistinctReachableCurrencyWithDuplicateSaveId_ThrowsWithDuplicateSaveIdMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+        var duplicateCurrencyDefinition = CreateCurrencyDefinition("Duplicate Coins", fixture.CoinCurrencyDefinition.SaveId);
+        var duplicatePickupDefinition = CreatePickupDefinition(duplicateCurrencyDefinition, 1);
+        var duplicatePickup = CreatePickup("Duplicate Currency Pickup", duplicatePickupDefinition);
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { fixture.LevelPickup, duplicatePickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            fixture.PlayerTag,
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate save id"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_BlankReachablePickupCurrencySaveId_ThrowsWithStableSaveIdMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+        var blankCurrencyDefinition = CreateCurrencyDefinition("Blank Pickup Currency", string.Empty);
+        var pickupDefinition = CreatePickupDefinition(blankCurrencyDefinition, 1);
+        var pickup = CreatePickup("Blank Currency Pickup", pickupDefinition);
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { pickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            fixture.PlayerTag,
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("requires a stable save id"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_MismatchedReachablePickupCurrencySaveId_ThrowsWithAssetGuidMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+        var mismatchedCurrencyDefinition = CreateCurrencyDefinitionAsset("Mismatched Pickup Currency", "currency-copied");
+        var pickupDefinition = CreatePickupDefinition(mismatchedCurrencyDefinition, 1);
+        var pickup = CreatePickup("Mismatched Currency Pickup", pickupDefinition);
+
+        fixture.Scope.SetPickupReferencesForTests(
+            new[] { pickup },
+            new[] { fixture.PlayerPickupContactCollider },
+            fixture.PlayerTag,
+            "Player",
+            "Pickup");
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("does not match its asset GUID"));
     }
 
     [Test]
@@ -361,9 +440,7 @@ public sealed class GameplayLifetimeScopeTests
         var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
         playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
         playerPickupContactCollider.gameObject.tag = "Player";
-        var currencyDefinition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
-        currencyDefinition.name = "Coins";
-        currencyDefinition.SetSaveIdForTests("currency-coins");
+        var currencyDefinition = CreateCurrencyDefinition("Coins", "currency-coins");
         var upgradeCatalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
         var pickupDefinition = CreatePickupDefinition(currencyDefinition, 1);
@@ -512,6 +589,33 @@ public sealed class GameplayLifetimeScopeTests
         collider.isTrigger = true;
         collider.gameObject.layer = GetRequiredLayer("Pickup");
         return pickup;
+    }
+
+    private CurrencyDefinition CreateCurrencyDefinition(string definitionName, string saveId)
+    {
+        var definition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
+        definition.name = definitionName;
+        definition.SetSaveIdForTests(saveId);
+        return definition;
+    }
+
+    private CurrencyDefinition CreateCurrencyDefinitionAsset(string definitionName, string saveId)
+    {
+        var assetDirectory = "Assets/__GameplayLifetimeScopeCurrencyTests_" + Guid.NewGuid().ToString("N");
+        _assetDirectories.Add(assetDirectory);
+        Directory.CreateDirectory(assetDirectory);
+        AssetDatabase.Refresh();
+
+        var definition = ScriptableObject.CreateInstance<CurrencyDefinition>();
+        definition.name = definitionName;
+        var assetPath = Path.Combine(assetDirectory, definitionName + ".asset").Replace('\\', '/');
+        AssetDatabase.CreateAsset(definition, assetPath);
+        AssetDatabase.Refresh();
+
+        var loadedDefinition = (CurrencyDefinition)AssetDatabase.LoadAssetAtPath(assetPath, typeof(CurrencyDefinition));
+        loadedDefinition.SetSaveIdForTests(saveId);
+        EditorUtility.SetDirty(loadedDefinition);
+        return loadedDefinition;
     }
 
     private RigidbodyLaunchTarget CreateLaunchTarget(

@@ -7,7 +7,8 @@ namespace Game.Gameplay.Economy
     {
         NullCurrencyDefinition = 0,
         MissingSaveId = 1,
-        DuplicateSaveId = 2
+        DuplicateSaveId = 2,
+        MismatchedSaveId = 3
     }
 
     public readonly struct CurrencyValidationError
@@ -47,7 +48,7 @@ namespace Game.Gameplay.Economy
                 throw new ArgumentNullException(nameof(definitions));
 
             var errors = new List<CurrencyValidationError>();
-            var acceptedSaveIds = new HashSet<string>(StringComparer.Ordinal);
+            var acceptedSaveIds = new Dictionary<string, CurrencyDefinition>(StringComparer.Ordinal);
 
             foreach (var definition in definitions)
             {
@@ -57,7 +58,13 @@ namespace Game.Gameplay.Economy
                 if (errors.Count > beforeCount || definition == null)
                     continue;
 
-                if (acceptedSaveIds.Add(definition.SaveId))
+                if (!acceptedSaveIds.TryGetValue(definition.SaveId, out var acceptedDefinition))
+                {
+                    acceptedSaveIds.Add(definition.SaveId, definition);
+                    continue;
+                }
+
+                if (ReferenceEquals(acceptedDefinition, definition))
                     continue;
 
                 errors.Add(new CurrencyValidationError(
@@ -81,12 +88,32 @@ namespace Game.Gameplay.Economy
             }
 
             if (!string.IsNullOrWhiteSpace(definition.SaveId))
+            {
+#if UNITY_EDITOR
+                ValidateAssetBackedSaveId(definition, errors);
+#endif // UNITY_EDITOR
                 return;
+            }
 
             errors.Add(new CurrencyValidationError(
                 CurrencyValidationErrorCode.MissingSaveId,
                 definition,
                 $"Currency definition '{definition.name}' requires a stable save id."));
         }
+
+#if UNITY_EDITOR
+        private void ValidateAssetBackedSaveId(CurrencyDefinition definition, List<CurrencyValidationError> errors)
+        {
+            var status = definition.GetSaveIdStatusForEditor();
+
+            if (status.State != CurrencyDefinitionSaveIdState.Mismatched)
+                return;
+
+            errors.Add(new CurrencyValidationError(
+                CurrencyValidationErrorCode.MismatchedSaveId,
+                definition,
+                $"Currency definition '{definition.name}' save id '{status.CurrentSaveId}' does not match its asset GUID. Expected save id '{status.ExpectedSaveId}'."));
+        }
+#endif // UNITY_EDITOR
     }
 }

@@ -31,17 +31,13 @@ public sealed class CurrencyDefinitionAuthoringTests
     }
 
     [Test]
-    public void EnsureSaveId_BlankDefinition_GeneratesStableNonEmptySaveId()
+    public void SaveId_SetForCurrencyDefinition_ReturnsAssignedSaveId()
     {
         var definition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
 
-        definition.EnsureSaveIdForTests();
-        var firstSaveId = definition.SaveId;
-        definition.SetIconForTests(CreateIcon());
-        definition.EnsureSaveIdForTests();
+        definition.SetSaveIdForTests("currency-coins");
 
-        Assert.That(firstSaveId, Is.Not.Empty);
-        Assert.That(definition.SaveId, Is.EqualTo(firstSaveId));
+        Assert.That(definition.SaveId, Is.EqualTo("currency-coins"));
     }
 
     [Test]
@@ -67,6 +63,18 @@ public sealed class CurrencyDefinitionAuthoringTests
         var errors = validator.ValidateAll(new[] { first, second });
 
         Assert.That(ErrorCodes(errors), Does.Contain(CurrencyValidationErrorCode.DuplicateSaveId));
+    }
+
+    [Test]
+    public void ValidateAll_SameCurrencyDefinitionRepeated_DoesNotReturnDuplicateSaveIdError()
+    {
+        var definition = Track(ScriptableObject.CreateInstance<CurrencyDefinition>());
+        definition.SetSaveIdForTests("currency-coins");
+        var validator = new CurrencyDefinitionValidator();
+
+        var errors = validator.ValidateAll(new[] { definition, definition });
+
+        Assert.That(ErrorCodes(errors), Has.None.EqualTo(CurrencyValidationErrorCode.DuplicateSaveId));
     }
 
     private Sprite CreateIcon()

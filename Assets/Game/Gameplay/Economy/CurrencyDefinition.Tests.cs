@@ -15,11 +15,6 @@ namespace Game.Gameplay.Economy
         {
             _saveId = saveId;
         }
-
-        internal void EnsureSaveIdForTests()
-        {
-            EnsureSaveId();
-        }
     }
 }
 
