@@ -276,7 +276,7 @@ public sealed class LostMomentumDetectorTests
         public float LostMomentumDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
-        public float RunEndedDelay { get; set; }
+        public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 
     private sealed class FakeTime : ITime

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Game.Foundation;
 using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
@@ -49,6 +50,7 @@ namespace Game.Gameplay
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private PullHintView _pullHintView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
+        [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] [TagSelector] private string _playerTag = "Player";
@@ -62,8 +64,27 @@ namespace Game.Gameplay
             if (builder is null)
                 throw new ArgumentNullException(nameof(builder));
 
+            PrepareGameplaySceneComposition();
             ThrowIfInvalidReferences();
             InstallGameplay(builder);
+        }
+
+        private void PrepareGameplaySceneComposition()
+        {
+            var scene = gameObject.scene;
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                return;
+
+            var preCompositionSteps = scene.GetRootGameObjects()
+                .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<MonoBehaviour>(true))
+                .OfType<IGameplayScenePreCompositionStep>()
+                .ToArray();
+
+            for (var stepIndex = 0; stepIndex < preCompositionSteps.Length; stepIndex += 1)
+            {
+                preCompositionSteps[stepIndex].PrepareGameplaySceneComposition();
+            }
         }
 
         private void InstallGameplay(IContainerBuilder builder)
@@ -75,7 +96,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IGameplaySlingshotLaunchConfig>(_gameplaySlingshotLaunchConfig);
 
             builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
-                .As<ILaunchTargetPreLaunchReset>();
+                .As<ILaunchTargetPreLaunchReset, IRunEndPoseLockTarget>();
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
@@ -86,6 +107,8 @@ namespace Game.Gameplay
             builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
+            builder.RegisterInstance<IRunEndedView>(_runEndedView);
+            builder.RegisterInstance<ILevelPickupSource>(new GameplayLifetimeScopePickupSource(this));
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
                 new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
@@ -96,6 +119,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
+            builder.RegisterInstance<IRunRewardConfig>(_runEndConfig);
 
             builder.RegisterInstance(_coinCurrencyDefinition).Keyed(InjectKey.CurrencyDefinition.Coin);
 
@@ -104,13 +128,20 @@ namespace Game.Gameplay
             builder.RegisterInstance(_playerMaxSpeedStatId).Keyed(InjectKey.GameplayStatId.PlayerMaxSpeed);
             builder.RegisterInstance(_playerSteeringResponsivenessStatId).Keyed(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
 
-            var levelPickups = GetLevelPickups();
+            var levelPickups = GetConfiguredLevelPickups();
             builder.RegisterInstance<IReadOnlyList<Pickup>>(levelPickups).Keyed(InjectKey.Pickups.LevelPickups);
             builder.RegisterInstance(_playerTag).Keyed(InjectKey.Tags.Player);
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
+            builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
+            builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
+            builder.Register<RunRewardSourceCatalog>(Lifetime.Singleton);
+            builder.Register<AccumulatedRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<DistanceBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<AirTimeBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<RunRewardBreakdownBuilder>(Lifetime.Singleton);
             builder.Register<PlayerEconomyState>(Lifetime.Singleton);
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
             builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
@@ -124,7 +155,7 @@ namespace Game.Gameplay
             builder.Register<EconomySaveQueue>(Lifetime.Singleton);
             builder.Register<IEconomyCommitter, EconomyCommitter>(Lifetime.Singleton);
             builder.Register<ICurrencyStorage, CurrencyStorage>(Lifetime.Singleton);
-            builder.Register<IRunCurrencyAccumulator, RunCurrencyAccumulator>(Lifetime.Singleton);
+            builder.Register<RunCurrencyAccumulator>(Lifetime.Singleton).As<IRunCurrencyAccumulator, IRunRewardSourceLedger>();
             builder.Register<IUpgradeProgressStorage, UpgradeProgressStorage>(Lifetime.Singleton);
             builder.Register<UpgradeDefinitionValidator>(Lifetime.Singleton);
             builder.Register<UpgradeCatalogValidator>(Lifetime.Singleton);
@@ -145,23 +176,92 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunProgressService>();
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
+            builder.RegisterEntryPoint<RunAirTimeTracker>();
             builder.RegisterEntryPoint<RunEndFlow>();
+            builder.RegisterEntryPoint<RunEndPoseLockController>();
             builder.RegisterEntryPoint<RunRewardCommitter>();
             builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
-            builder.RegisterEntryPoint<CharacterPresentationPresenter>();
+            builder.RegisterEntryPoint<CharacterPresenter>();
             builder.RegisterEntryPoint<PickupCollectionController>();
             builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
+            builder.RegisterEntryPoint<RunEndedPresenter>();
         }
 
         private IReadOnlyList<Pickup> GetLevelPickups()
         {
-            return _levelPickups ?? Array.Empty<Pickup>();
+            var pickups = new List<Pickup>();
+
+            AddPickupReferences(pickups, _levelPickups ?? Array.Empty<Pickup>());
+            AddPickupReferences(pickups, FindSceneLevelPickups());
+
+            return pickups
+                .Distinct()
+                .OrderBy(GetPickupHierarchyPath, StringComparer.Ordinal)
+                .ThenBy(pickup => pickup == null ? 0 : pickup.GetInstanceID())
+                .ToArray();
         }
 
         private IReadOnlyList<Collider> GetPlayerPickupContactColliders()
         {
             return _playerPickupContactColliders ?? Array.Empty<Collider>();
+        }
+
+        private IReadOnlyList<Pickup> GetConfiguredLevelPickups()
+        {
+            return _levelPickups ?? Array.Empty<Pickup>();
+        }
+
+        private void AddPickupReferences(ICollection<Pickup> target, IReadOnlyList<Pickup> source)
+        {
+            for (var pickupIndex = 0; pickupIndex < source.Count; pickupIndex += 1)
+            {
+                target.Add(source[pickupIndex]);
+            }
+        }
+
+        private IReadOnlyList<Pickup> FindSceneLevelPickups()
+        {
+            var scene = gameObject.scene;
+
+            if (!scene.IsValid() || !scene.isLoaded)
+                return Array.Empty<Pickup>();
+
+            return scene.GetRootGameObjects()
+                .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<Pickup>(true))
+                .ToArray();
+        }
+
+        private string GetPickupHierarchyPath(Pickup pickup)
+        {
+            if (pickup == null)
+                return string.Empty;
+
+            var path = pickup.name;
+            var parent = pickup.transform.parent;
+
+            while (parent != null)
+            {
+                path = $"{parent.name}/{path}";
+                parent = parent.parent;
+            }
+
+            return path;
+        }
+
+        private sealed class GameplayLifetimeScopePickupSource : ILevelPickupSource
+        {
+            private readonly GameplayLifetimeScope _lifetimeScope;
+
+            public GameplayLifetimeScopePickupSource(GameplayLifetimeScope lifetimeScope)
+            {
+                _lifetimeScope = lifetimeScope ?? throw new ArgumentNullException(nameof(lifetimeScope));
+            }
+
+            public IReadOnlyList<Pickup> GetLevelPickups()
+            {
+                return _lifetimeScope.GetLevelPickups();
+            }
         }
 
         public static class Serialization

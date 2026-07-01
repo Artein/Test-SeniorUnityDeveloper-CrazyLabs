@@ -8,7 +8,7 @@ using VContainer.Unity;
 
 namespace Game.Gameplay.CharacterPresentation
 {
-    internal sealed class CharacterPresentationPresenter : IInitializable, ITickable, IDisposable
+    internal sealed class CharacterPresenter : IInitializable, ITickable, IDisposable
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly IRunMotionSource _motionSource;
@@ -20,6 +20,7 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly ICharacterPresentationView _view;
         private readonly ICharacterPresentationTuning _tuning;
         private readonly ITime _clock;
+        private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
 
@@ -31,7 +32,7 @@ namespace Game.Gameplay.CharacterPresentation
         private float _currentModeElapsedSeconds;
         private float _ungroundedElapsedSeconds;
 
-        public CharacterPresentationPresenter(
+        public CharacterPresenter(
             IGameplayStateService gameplayStateService,
             IRunMotionSource motionSource,
             IRunProgressService progressService,
@@ -42,8 +43,12 @@ namespace Game.Gameplay.CharacterPresentation
             ICharacterPresentationView view,
             ICharacterPresentationTuning tuning,
             ITime clock,
-            [Key(InjectKey.GameplayStateId.PreLaunch)] GameplayStateId preLaunchStateId,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)]
+            GameplayStateId runPreparationStateId,
+            [Key(InjectKey.GameplayStateId.PreLaunch)]
+            GameplayStateId preLaunchStateId,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
@@ -57,6 +62,10 @@ namespace Game.Gameplay.CharacterPresentation
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+
+            _runPreparationStateId = runPreparationStateId != null
+                ? runPreparationStateId
+                : throw new ArgumentNullException(nameof(runPreparationStateId));
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
@@ -64,7 +73,7 @@ namespace Game.Gameplay.CharacterPresentation
         void IInitializable.Initialize()
         {
             if (_isDisposed)
-                throw new ObjectDisposedException(nameof(CharacterPresentationPresenter));
+                throw new ObjectDisposedException(nameof(CharacterPresenter));
 
             if (_isInitialized)
                 return;
@@ -79,17 +88,19 @@ namespace Game.Gameplay.CharacterPresentation
                 return;
 
             var deltaTime = Mathf.Max(0f, _clock.DeltaTime);
+            var isRunPreparation = _gameplayStateService.IsCurrent(_runPreparationStateId);
             var isPreLaunch = _gameplayStateService.IsCurrent(_preLaunchStateId);
+            var isNeutralPresentationState = isRunPreparation || isPreLaunch;
             var isRunActive = _gameplayStateService.IsCurrent(_runningStateId);
             var slingshotContext = _slingshotPresentationContextSource.Current;
 
-            if (isPreLaunch || isRunActive && !_hasAcceptedRunResult)
-                ResetTerminalStateIfNeeded(isPreLaunch);
+            if (isNeutralPresentationState || isRunActive && !_hasAcceptedRunResult)
+                ResetTerminalStateIfNeeded(isNeutralPresentationState);
 
-            var surfaceContext = isPreLaunch
+            var surfaceContext = isNeutralPresentationState
                 ? new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f)
                 : _surfaceContextSource.Current;
-            UpdateUngroundedTime(surfaceContext, deltaTime, isPreLaunch);
+            UpdateUngroundedTime(surfaceContext, deltaTime, isNeutralPresentationState);
 
             var linearVelocity = _motionSource.LinearVelocity;
             var coursePlanarSpeed = 0f;
@@ -130,18 +141,18 @@ namespace Game.Gameplay.CharacterPresentation
             _acceptedRunResultSucceeded = result.IsSuccess;
         }
 
-        private void ResetTerminalStateIfNeeded(bool isPreLaunch)
+        private void ResetTerminalStateIfNeeded(bool isNeutralPresentationState)
         {
-            if (!isPreLaunch && _hasAcceptedRunResult)
+            if (!isNeutralPresentationState && _hasAcceptedRunResult)
                 return;
 
             _hasAcceptedRunResult = false;
             _acceptedRunResultSucceeded = false;
         }
 
-        private void UpdateUngroundedTime(RunSurfaceContext surfaceContext, float deltaTime, bool isPreLaunch)
+        private void UpdateUngroundedTime(RunSurfaceContext surfaceContext, float deltaTime, bool isNeutralPresentationState)
         {
-            if (isPreLaunch || surfaceContext.IsGrounded)
+            if (isNeutralPresentationState || surfaceContext.IsGrounded)
             {
                 _ungroundedElapsedSeconds = 0f;
                 return;

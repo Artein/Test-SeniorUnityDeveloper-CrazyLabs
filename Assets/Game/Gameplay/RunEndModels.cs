@@ -30,7 +30,8 @@ namespace Game.Gameplay
         public float DistanceTravelled { get; }
         public Vector3 FinalPosition { get; }
         public float FinalSpeed { get; }
-        public RunCurrencySnapshot CurrencySnapshot { get; }
+        public RunRewardBreakdown RewardBreakdown { get; }
+        public RunCurrencySnapshot CurrencySnapshot => RewardBreakdown.CurrencySnapshot;
 
         public RunResult(
             RunEndReason reason,
@@ -38,7 +39,7 @@ namespace Game.Gameplay
             float distanceTravelled,
             Vector3 finalPosition,
             float finalSpeed,
-            RunCurrencySnapshot currencySnapshot)
+            RunRewardBreakdown rewardBreakdown)
         {
             Reason = reason;
             IsSuccess = reason == RunEndReason.Finished;
@@ -46,7 +47,7 @@ namespace Game.Gameplay
             DistanceTravelled = Mathf.Max(0f, distanceTravelled);
             FinalPosition = finalPosition;
             FinalSpeed = Mathf.Max(0f, finalSpeed);
-            CurrencySnapshot = currencySnapshot ?? throw new ArgumentNullException(nameof(currencySnapshot));
+            RewardBreakdown = rewardBreakdown ?? throw new ArgumentNullException(nameof(rewardBreakdown));
         }
 
         public override string ToString()

@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay;
 using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEditor;
@@ -13,6 +15,9 @@ using UnityEngine.SceneManagement;
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneEventSystemAuthoringTests : BaseGameplayTestAssetsFixture
 {
+    private const string LadybugHalfTubeAuthoringTypeName =
+        "Game.Level.RunCourses.LadybugRooftopHalfTube.LadybugHalfTubeRunCourseAuthoring";
+
     [Test]
     public void GameplayScene_WhenAuthored_ContainsSingleInputSystemEventSystem()
     {
@@ -57,9 +62,86 @@ public sealed class GameplaySceneEventSystemAuthoringTests : BaseGameplayTestAss
         Assert.That(objectsWithMissingScripts, Is.Empty);
     }
 
+    [Test]
+    public void GameplayScene_WhenAuthored_UsesSerializedTerrainSectionsForLadybugRunCourse()
+    {
+        var scene = OpenGameplayScene();
+        var authoring = FindLadybugHalfTubeAuthoring(scene);
+        var courseRoot = GetAuthoringFeatureRoot(authoring);
+        var cameraTerrainLayer = LayerMask.NameToLayer("CameraTerrain");
+
+        Assert.That(cameraTerrainLayer, Is.GreaterThanOrEqualTo(0));
+
+        var terrainColliders = authoring.GetComponentsInChildren<TerrainCollider>(true);
+
+        Assert.That(
+            terrainColliders,
+            Has.Length.GreaterThan(0),
+            "Ladybug course must contain at least one authored terrain surface.");
+
+        foreach (var terrainCollider in terrainColliders)
+        {
+            Assert.That(terrainCollider.transform.IsChildOf(authoring.transform), Is.True, terrainCollider.name);
+            AssertTerrainSurfaceContract(terrainCollider.gameObject, courseRoot, cameraTerrainLayer);
+        }
+    }
+
+    private static void AssertTerrainSurfaceContract(GameObject surfaceObject, string courseRoot, int cameraTerrainLayer)
+    {
+        var surfaceName = surfaceObject.name;
+        var terrain = surfaceObject.GetComponent<Terrain>();
+        var terrainCollider = surfaceObject.GetComponent<TerrainCollider>();
+        var runContact = surfaceObject.GetComponent<RunContact>();
+
+        Assert.That(surfaceObject.layer, Is.EqualTo(cameraTerrainLayer), surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshFilter>(), Is.Null, surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshRenderer>(), Is.Null, surfaceName);
+        Assert.That(surfaceObject.GetComponent<MeshCollider>(), Is.Null, surfaceName);
+        Assert.That(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(surfaceObject), Is.EqualTo(0), surfaceName);
+        Assert.That(terrain, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider.enabled, Is.True, surfaceName);
+        Assert.That(runContact, Is.Not.Null, surfaceName);
+        Assert.That(runContact.Category, Is.EqualTo(RunContactCategory.Surface), surfaceName);
+        Assert.That(terrain.terrainData, Is.Not.Null, surfaceName);
+        Assert.That(terrainCollider.terrainData, Is.SameAs(terrain.terrainData), surfaceName);
+
+        AssertCourseOwnedAsset(terrain.terrainData, courseRoot, surfaceName);
+        AssertCourseOwnedAsset(terrainCollider.sharedMaterial, courseRoot, surfaceName);
+    }
+
+    private static void AssertCourseOwnedAsset(UnityEngine.Object asset, string courseRoot, string description)
+    {
+        Assert.That(asset, Is.Not.Null, description);
+
+        var assetPath = AssetDatabase.GetAssetPath(asset);
+
+        Assert.That(assetPath, Does.StartWith(courseRoot), description);
+        Assert.That(assetPath, Does.Not.StartWith("Assets/Plugins/"), description);
+    }
+
     private Scene OpenGameplayScene()
     {
         return EditorSceneManager.OpenScene(TestAssets.GameplaySceneRef.Path, OpenSceneMode.Single);
+    }
+
+    private static MonoBehaviour FindLadybugHalfTubeAuthoring(Scene scene)
+    {
+        var authoring = FindSceneComponents<MonoBehaviour>(scene)
+            .SingleOrDefault(component => component != null && component.GetType().FullName == LadybugHalfTubeAuthoringTypeName);
+
+        Assert.That(authoring, Is.Not.Null);
+        return authoring;
+    }
+
+    private static string GetAuthoringFeatureRoot(MonoBehaviour authoring)
+    {
+        var scriptPath = AssetDatabase.GetAssetPath(MonoScript.FromMonoBehaviour(authoring));
+        var runtimeFolderIndex = scriptPath.IndexOf("/Runtime/", StringComparison.Ordinal);
+
+        Assert.That(runtimeFolderIndex, Is.GreaterThan(0), scriptPath);
+
+        return scriptPath[..(runtimeFolderIndex + 1)];
     }
 
     private static IEnumerable<T> FindSceneComponents<T>(Scene scene)

@@ -31,6 +31,7 @@ namespace Game.Gameplay.Slingshot
         ILaunchTarget,
         IHeldLaunchTarget,
         ILaunchTargetPreLaunchReset,
+        IRunEndPoseLockTarget,
         ILaunchTargetSilhouetteSource,
         ILaunchTargetBandOcclusionSource
     {
@@ -179,6 +180,27 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.transform.SetPositionAndRotation(position, rotation);
             _rigidbody.position = position;
             _rigidbody.rotation = rotation;
+            ClearVelocity();
+        }
+
+        void IRunEndPoseLockTarget.HoldRunEndPose(Vector3 position)
+        {
+            ThrowIfMissingRigidbody();
+
+            if (!position.IsFinite())
+                throw new ArgumentException("Run End position must be finite.", nameof(position));
+
+            CapturePreviousStateIfNeeded();
+            _isHeld = true;
+            _rigidbody.isKinematic = true;
+            _rigidbody.transform.SetPositionAndRotation(position, _rigidbody.rotation);
+            _rigidbody.position = position;
+            ClearVelocity();
+        }
+
+        void IRunEndPoseLockTarget.ReleaseRunEndPose()
+        {
+            ThrowIfMissingRigidbody();
             ClearVelocity();
         }
 

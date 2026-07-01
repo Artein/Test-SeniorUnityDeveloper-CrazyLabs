@@ -148,7 +148,20 @@ public sealed class RunRewardCommitterTests
             distanceTravelled: 10f,
             finalPosition: Vector3.forward,
             finalSpeed: 2f,
-            snapshot);
+            rewardBreakdown: CreateRewardBreakdown(snapshot));
+    }
+
+    private RunRewardBreakdown CreateRewardBreakdown(RunCurrencySnapshot snapshot)
+    {
+        var source = new RunRewardSource("test-reward", "Test Reward", 0, showWhenZero: false);
+        var sourceAmounts = new List<RunRewardSourceAmount>();
+
+        foreach (var amount in snapshot.Amounts)
+        {
+            sourceAmounts.Add(new RunRewardSourceAmount(source, amount.CurrencyDefinition, amount.Amount));
+        }
+
+        return new RunRewardBreakdown(sourceAmounts);
     }
 
     private CurrencyDefinition CreateCurrencyDefinition(string objectName, string saveId)

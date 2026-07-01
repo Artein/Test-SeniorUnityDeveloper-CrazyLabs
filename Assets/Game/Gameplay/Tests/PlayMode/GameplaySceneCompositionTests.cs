@@ -41,8 +41,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, "Run Camera Rig");
         var mainCamera = FindSingleInScene<Camera>(activeScene, "Main Camera");
         var brain = mainCamera.GetComponent<CinemachineBrain>();
+        var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
         var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
         var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
+        var runPreparationHardLookAt = runPreparationCamera.GetComponent<CinemachineHardLookAt>();
+        var preLaunchHardLookAt = preLaunchCamera.GetComponent<CinemachineHardLookAt>();
         var thirdPersonFollow = runCamera.GetComponent<CinemachineThirdPersonFollow>();
         var decollider = runCamera.GetComponent<CinemachineDecollider>();
         var deoccluder = runCamera.GetComponent<CinemachineDeoccluder>();
@@ -60,6 +63,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var bandCenter = FindGameObjectByName(activeScene, "Band Center");
         var launchTargetColliderRoot = FindGameObjectByName(activeScene, "LaunchTargetColliderRoot");
         var characterVisualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
+        var playerCameraLookTarget = FindGameObjectByName(activeScene, "Player Camera Look Target");
         var ladybugCharacter = FindGameObjectByName(activeScene, "LadybugCharacter");
         var characterAnimator = ladybugCharacter.GetComponent<Animator>();
 
@@ -142,9 +146,32 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runCameraRig, Is.Not.Null);
         Assert.That(brain, Is.Not.Null);
         Assert.That(brain.UpdateMethod, Is.EqualTo(CinemachineBrain.UpdateMethods.SmartUpdate));
+        Assert.That(runPreparationCamera, Is.Not.Null);
         Assert.That(preLaunchCamera, Is.Not.Null);
         Assert.That(runCamera, Is.Not.Null);
+        Assert.That(preLaunchCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
         Assert.That(preLaunchCamera.Priority.Value, Is.GreaterThan(runCamera.Priority.Value));
+        Assert.That(playerCameraLookTarget.transform.IsChildOf(preLaunchLaunchTargetPose.transform), Is.True);
+        Assert.That(playerCameraLookTarget.transform.IsChildOf(characterVisualAnchor.transform), Is.False);
+        Assert.That(playerCameraLookTarget.transform.IsChildOf(launchTarget.transform), Is.False);
+        Assert.That(playerCameraLookTarget.GetComponent<Renderer>(), Is.Null);
+        Assert.That(playerCameraLookTarget.GetComponent<Collider>(), Is.Null);
+        Assert.That(runPreparationCamera.Target.TrackingTarget, Is.SameAs(playerCameraLookTarget.transform));
+        Assert.That(preLaunchCamera.Target.TrackingTarget, Is.SameAs(playerCameraLookTarget.transform));
+        Assert.That(runPreparationCamera.Target.CustomLookAtTarget, Is.False);
+        Assert.That(preLaunchCamera.Target.CustomLookAtTarget, Is.False);
+        Assert.That(runPreparationHardLookAt, Is.Not.Null);
+        Assert.That(preLaunchHardLookAt, Is.Not.Null);
+        Assert.That(runPreparationCamera.BlendHint, Is.EqualTo(CinemachineCore.BlendHints.CylindricalPosition));
+        Assert.That(preLaunchCamera.BlendHint, Is.EqualTo(CinemachineCore.BlendHints.CylindricalPosition));
+
+        Assert.That(
+            Vector3.Dot(runPreparationCamera.transform.position - playerCameraLookTarget.transform.position, Vector3.right),
+            Is.GreaterThan(0.25f));
+
+        Assert.That(
+            Mathf.Abs(Vector3.Dot(preLaunchCamera.transform.position - playerCameraLookTarget.transform.position, Vector3.right)),
+            Is.LessThan(0.15f));
         Assert.That(runCamera.Target.TrackingTarget, Is.SameAs(runCameraAnchor.transform));
         Assert.That(thirdPersonFollow, Is.Not.Null);
         Assert.That(decollider, Is.Not.Null);
@@ -443,6 +470,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
             var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
             var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
             var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
@@ -483,6 +511,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
             Assert.That(playerRigidbody.isKinematic, Is.False);
             Assert.That(playerRigidbody.linearVelocity.magnitude, Is.GreaterThan(4f));
+            Assert.That(runCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
             Assert.That(runCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
 
             Assert.That(Vector3.Distance(

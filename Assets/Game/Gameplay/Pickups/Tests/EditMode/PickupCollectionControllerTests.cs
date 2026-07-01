@@ -206,14 +206,15 @@ public sealed class PickupCollectionControllerTests
         IRunCurrencyAccumulator runCurrencyAccumulator = null,
         IPickupCurrencyGrantResolver pickupCurrencyGrantResolver = null)
     {
-        var levelPickupState = new LevelPickupState(pickups);
+        var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(pickups));
         var accumulator = runCurrencyAccumulator ?? new RunCurrencyAccumulator();
         var resolver = pickupCurrencyGrantResolver ?? new FakePickupCurrencyGrantResolver();
 
         var controller = new PickupCollectionController(
-            pickups,
+            new FixedLevelPickupSource(pickups),
             levelPickupState,
             accumulator,
+            new RunRewardSourceCatalog(),
             resolver,
             _stateService,
             _runningStateId,
@@ -317,6 +318,11 @@ public sealed class PickupCollectionControllerTests
             BeforeGrant?.Invoke(currencyDefinition, amount);
             var currentAmount = _amountsByCurrency.GetValueOrDefault(currencyDefinition, 0);
             _amountsByCurrency[currencyDefinition] = currentAmount + amount;
+        }
+
+        public void Grant(RunRewardSource source, CurrencyDefinition currencyDefinition, int amount)
+        {
+            Grant(currencyDefinition, amount);
         }
 
         public void Reset()

@@ -25,6 +25,9 @@ public sealed class RunEndFlowTests
     private FakeRunProgressService _progressService;
     private FakeRunMotionSource _motionSource;
     private RunCurrencyAccumulator _runCurrencyAccumulator;
+    private RunRewardSourceCatalog _runRewardSourceCatalog;
+    private RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+    private FakeRunAirTimeSource _runAirTimeSource;
     private FakeRunEndConfig _config;
     private FakeTime _clock;
     private RunEndFlow _flow;
@@ -53,7 +56,14 @@ public sealed class RunEndFlowTests
             LinearVelocity = new Vector3(0f, 0f, 4f)
         };
         _runCurrencyAccumulator = new RunCurrencyAccumulator();
-        _config = new FakeRunEndConfig { RunEndedDelay = 0.2f };
+        _runRewardSourceCatalog = new RunRewardSourceCatalog();
+
+        _runRewardBreakdownBuilder = new RunRewardBreakdownBuilder(new IRunRewardContributor[]
+        {
+            new AccumulatedRunRewardContributor(_runCurrencyAccumulator)
+        });
+        _runAirTimeSource = new FakeRunAirTimeSource();
+        _config = new FakeRunEndConfig { RunEndedAcknowledgeGuardDuration = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
         _coins = CreateCurrencyDefinition("Coins");
         _flow = CreateFlow();
@@ -117,19 +127,41 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_InvalidProgressSnapshot_DoesNotNotifyRunResult()
+    public void FixedTick_InvalidProgressSnapshot_NotifiesDegradedRunResultAndCanAcknowledge()
     {
         ActivateRun();
         _progressService.HasValidSnapshot = false;
         _progressService.SnapshotError = "bad frame";
+        _motionSource.Position = new Vector3(2f, 3f, 4f);
+        _motionSource.LinearVelocity = new Vector3(1f, 2f, 2f);
+        _runAirTimeSource.CurrentRunAirTimeSeconds = 5f;
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         var acceptedResults = new List<RunResult>();
         ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
-        LogAssert.Expect(LogType.Error, new Regex("Run End Flow skipped Run Result.*bad frame"));
+        LogAssert.Expect(LogType.Error, new Regex("Run End Flow accepted degraded Run Result.*bad frame"));
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True, ElapsedTime=0.1, DistanceTravelled=0"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(acceptedResults, Is.Empty);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+        Assert.That(acceptedResults, Has.Count.EqualTo(1));
+        Assert.That(acceptedResults[0].Reason, Is.EqualTo(RunEndReason.Finished));
+        Assert.That(acceptedResults[0].IsSuccess, Is.True);
+        Assert.That(acceptedResults[0].ElapsedTime, Is.EqualTo(0.1f).Within(0.001f));
+        Assert.That(acceptedResults[0].DistanceTravelled, Is.Zero);
+        Assert.That(acceptedResults[0].FinalPosition, Is.EqualTo(_motionSource.Position));
+        Assert.That(acceptedResults[0].FinalSpeed, Is.EqualTo(3f).Within(0.001f));
+        Assert.That(acceptedResults[0].CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
+
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runPreparationStateId }));
     }
 
     [Test]
@@ -153,7 +185,7 @@ public sealed class RunEndFlowTests
     public void FixedTick_FinishCandidate_PublishesRunResultWithCurrencySnapshot()
     {
         ActivateRun();
-        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -169,7 +201,7 @@ public sealed class RunEndFlowTests
     public void GameplayStateChanged_EnteringRunPreparation_ResetsAccumulatorWithoutMutatingAcceptedResult()
     {
         ActivateRun();
-        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -178,6 +210,7 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
         Assert.That(((IRunCurrencyAccumulator)_runCurrencyAccumulator).CreateSnapshot().GetAmount(_coins), Is.Zero);
@@ -186,7 +219,39 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_RunEndedDelayElapsed_TransitionsBackToRunPreparation()
+    public void FixedTick_RunEndedGuardElapsedWithoutAcknowledge_StaysRunEnded()
+    {
+        ActivateRun();
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_BeforeGuardElapsed_ReturnsFalseAndStaysRunEnded()
+    {
+        ActivateRun();
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
+        ((IFixedTickable)_flow).FixedTick();
+
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.False);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_AfterGuardElapsed_TransitionsBackToRunPreparation()
     {
         ActivateRun();
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
@@ -196,8 +261,20 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
 
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.True);
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runPreparationStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_NotAwaitingRunEnded_ReturnsFalse()
+    {
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.False);
+        Assert.That(_stateService.RequestedStateIds, Is.Empty);
     }
 
     [Test]
@@ -248,17 +325,20 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_InvalidProgressSnapshot_TransitionsButSuppressesRunResult()
+    public void FixedTick_RunEndedTransitionRejected_DoesNotNotifyRunResultOrArmAcknowledgement()
     {
         ActivateRun();
-        _progressService.HasValidSnapshot = false;
-        _progressService.SnapshotError = "bad frame";
-        LogAssert.Expect(LogType.Error, new Regex("Run End Flow skipped Run Result.*bad frame"));
+        _stateService.TryTransitionResult = false;
+        var acceptedResults = new List<RunResult>();
+        ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runningStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+        Assert.That(acceptedResults, Is.Empty);
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.False);
     }
 
     [Test]
@@ -277,7 +357,8 @@ public sealed class RunEndFlowTests
     private RunEndFlow CreateFlow()
     {
         return new RunEndFlow(_stateService, _launchAppliedNotifier, _contactNotifier, _contactClassifier, _progressService, _motionSource,
-            _runCurrencyAccumulator, _config, _clock, _runPreparationStateId, _runningStateId, _runEndedStateId);
+            _runCurrencyAccumulator, _runRewardBreakdownBuilder, _runAirTimeSource, _config, _clock, _runPreparationStateId, _runningStateId,
+            _runEndedStateId);
     }
 
     private void ActivateRun()
@@ -326,6 +407,7 @@ public sealed class RunEndFlowTests
     {
         public GameplayStateId CurrentStateId { get; private set; }
         public List<GameplayStateId> RequestedStateIds { get; } = new();
+        public bool TryTransitionResult { get; set; } = true;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
@@ -343,6 +425,10 @@ public sealed class RunEndFlowTests
         public bool TryTransitionTo(GameplayStateId nextStateId)
         {
             RequestedStateIds.Add(nextStateId);
+
+            if (!TryTransitionResult)
+                return false;
+
             ChangeTo(nextStateId);
             return true;
         }
@@ -428,6 +514,11 @@ public sealed class RunEndFlowTests
         public Vector3 LinearVelocity { get; set; }
     }
 
+    private sealed class FakeRunAirTimeSource : IRunAirTimeSource
+    {
+        public float CurrentRunAirTimeSeconds { get; set; }
+    }
+
     private sealed class FakeRunEndConfig : IRunEndConfig
     {
         public float ObstacleImpactSpeedThreshold { get; set; }
@@ -435,7 +526,7 @@ public sealed class RunEndFlowTests
         public float LostMomentumDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
-        public float RunEndedDelay { get; set; }
+        public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 
     private sealed class FakeTime : ITime

@@ -22,3 +22,8 @@ MonoBehaviour:
     m_Bits: 256
   <CameraObstacleLayerMask>k__BackingField:
     m_Bits: 512
+  <CoinPickupPrefabs>k__BackingField:
+  - {fileID: 1659836021224981653, guid: 85b5e5879d3840688dff5b28891539c0, type: 3}
+  - {fileID: 8608336747017702804, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
+  <CoinPickupMesh>k__BackingField: {fileID: 4300000, guid: 4da0053f24714714afeba0c3e9639ff6, type: 3}
+  <CoinPickupMaterial>k__BackingField: {fileID: 2100000, guid: 1fd5b6ad23c944d5860fc33a811e1c88, type: 2}

@@ -22,9 +22,11 @@ namespace Game.Gameplay.Pickups
 
     public sealed class PickupCollectionController : IInitializable, IDisposable, IPickupCollectionNotifier
     {
-        private readonly IReadOnlyList<Pickup> _pickups;
+        private readonly ILevelPickupSource _pickupSource;
+        private readonly HashSet<Pickup> _subscribedPickups = new();
         private readonly ILevelPickupState _levelPickupState;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
+        private readonly RunRewardSourceCatalog _runRewardSourceCatalog;
         private readonly IPickupCurrencyGrantResolver _pickupCurrencyGrantResolver;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly GameplayStateId _runningStateId;
@@ -37,9 +39,10 @@ namespace Game.Gameplay.Pickups
         public event Action<PickupCollectedEventArgs> PickupCollected;
 
         public PickupCollectionController(
-            [Key(InjectKey.Pickups.LevelPickups)] IReadOnlyList<Pickup> pickups,
+            ILevelPickupSource pickupSource,
             ILevelPickupState levelPickupState,
             IRunCurrencyAccumulator runCurrencyAccumulator,
+            RunRewardSourceCatalog runRewardSourceCatalog,
             IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
             [Key(InjectKey.GameplayStateId.Running)]
@@ -48,9 +51,10 @@ namespace Game.Gameplay.Pickups
             GameplayStateId currencyGrantResolverResetStateId,
             [Key(InjectKey.Tags.Player)] string playerTag)
         {
-            _pickups = pickups ?? throw new ArgumentNullException(nameof(pickups));
+            _pickupSource = pickupSource ?? throw new ArgumentNullException(nameof(pickupSource));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
+            _runRewardSourceCatalog = runRewardSourceCatalog ?? throw new ArgumentNullException(nameof(runRewardSourceCatalog));
 
             _pickupCurrencyGrantResolver = pickupCurrencyGrantResolver
                                            ?? throw new ArgumentNullException(nameof(pickupCurrencyGrantResolver));
@@ -75,14 +79,7 @@ namespace Game.Gameplay.Pickups
             if (_isInitialized)
                 return;
 
-            foreach (var pickup in _pickups)
-            {
-                if (pickup == null)
-                    throw new InvalidOperationException("Pickup Collection Controller cannot subscribe to a null Pickup reference.");
-
-                pickup.TriggerEntered += OnPickupTriggerEntered;
-            }
-
+            SynchronizePickupSubscriptions();
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
         }
@@ -97,7 +94,7 @@ namespace Game.Gameplay.Pickups
             if (!_isInitialized)
                 return;
 
-            foreach (var pickup in _pickups)
+            foreach (var pickup in _subscribedPickups)
             {
                 if (pickup == null)
                     continue;
@@ -128,7 +125,10 @@ namespace Game.Gameplay.Pickups
             var finalCurrencyGrant = resolution.FinalCurrencyGrant;
             var position = pickup.Position;
 
-            _runCurrencyAccumulator.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
+            _runCurrencyAccumulator.Grant(
+                _runRewardSourceCatalog.PickedUpCoins,
+                finalCurrencyGrant.CurrencyDefinition,
+                finalCurrencyGrant.Amount);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log("[EconomyDiagnostics] Pickup collected into run accumulator: "
                       + $"Pickup='{pickup.name}', "
@@ -144,10 +144,39 @@ namespace Game.Gameplay.Pickups
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
-            if (_isDisposed || !ReferenceEquals(nextStateId, _currencyGrantResolverResetStateId))
+            if (_isDisposed)
                 return;
 
-            _pickupCurrencyGrantResolver.Reset();
+            SynchronizePickupSubscriptions();
+
+            if (ReferenceEquals(nextStateId, _currencyGrantResolverResetStateId))
+                _pickupCurrencyGrantResolver.Reset();
+        }
+
+        private void SynchronizePickupSubscriptions()
+        {
+            var pickups = _pickupSource.GetLevelPickups();
+
+            if (pickups == null)
+                throw new InvalidOperationException("Pickup Collection Controller requires a non-null Pickup list.");
+
+            var uniquePickups = new HashSet<Pickup>(pickups.Count);
+
+            for (var pickupIndex = 0; pickupIndex < pickups.Count; pickupIndex += 1)
+            {
+                var pickup = pickups[pickupIndex];
+
+                if (pickup == null)
+                    throw new InvalidOperationException("Pickup Collection Controller cannot subscribe to a null Pickup reference.");
+
+                if (!uniquePickups.Add(pickup))
+                    throw new InvalidOperationException($"Pickup Collection Controller contains duplicate Pickup reference '{pickup.name}'.");
+
+                if (!_subscribedPickups.Add(pickup))
+                    continue;
+
+                pickup.TriggerEntered += OnPickupTriggerEntered;
+            }
         }
     }
 }

@@ -179,15 +179,16 @@ public sealed class PickupPhysicsIntegrationTests
         IReadOnlyList<Pickup> pickups,
         IPickupCurrencyGrantResolver pickupCurrencyGrantResolver = null)
     {
-        var levelPickupState = new LevelPickupState(pickups);
+        var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(pickups));
         var storage = new CurrencyStorage(new PlayerEconomyState());
         var accumulator = new RunCurrencyAccumulator();
         var resolver = pickupCurrencyGrantResolver ?? new FixedPickupCurrencyGrantResolver();
 
         var controller = new PickupCollectionController(
-            pickups,
+            new FixedLevelPickupSource(pickups),
             levelPickupState,
             accumulator,
+            new RunRewardSourceCatalog(),
             resolver,
             _stateService,
             _runningStateId,

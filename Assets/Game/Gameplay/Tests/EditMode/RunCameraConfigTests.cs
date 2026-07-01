@@ -21,14 +21,12 @@ public sealed class RunCameraConfigTests
     }
 
     [Test]
-    public void DefaultValues_ExposeUsableAnchorAndPrioritySettings()
+    public void DefaultValues_ExposeUsableAnchorSettings()
     {
         Assert.That(_config.AnchorOffset, Is.EqualTo(new Vector3(0f, 1.2f, 0f)));
         Assert.That(_config.PositionResponseRate, Is.GreaterThan(0f));
         Assert.That(_config.YawResponseRate, Is.GreaterThan(0f));
         Assert.That(_config.MinimumYawSpeed, Is.GreaterThan(0f));
-        Assert.That(_config.PreLaunchCameraPriority, Is.GreaterThan(_config.RunCameraInactivePriority));
-        Assert.That(_config.RunCameraActivePriority, Is.GreaterThan(_config.PreLaunchCameraPriority));
     }
 
     [Test]

@@ -138,6 +138,6 @@ public sealed class RunContactClassifierTests
         public float LostMomentumDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
-        public float RunEndedDelay { get; set; }
+        public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 }

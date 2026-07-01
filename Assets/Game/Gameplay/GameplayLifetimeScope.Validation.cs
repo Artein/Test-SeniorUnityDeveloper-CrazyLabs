@@ -122,6 +122,9 @@ namespace Game.Gameplay
             if (_runPreparationView == null)
                 yield return "GameplayLifetimeScope requires a Run Preparation View reference.";
 
+            if (_runEndedView == null)
+                yield return "GameplayLifetimeScope requires a Run Ended View reference.";
+
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
 
@@ -137,8 +140,37 @@ namespace Game.Gameplay
 
         private IEnumerable<string> GetPickupSetupValidationErrors()
         {
+            foreach (var error in GetSerializedLevelPickupReferenceErrors())
+            {
+                yield return error;
+            }
+
             var validator = new PickupSetupValidator();
-            return validator.Validate(GetLevelPickups(), GetPlayerPickupContactColliders(), _playerTag, _playerLayerName, _pickupLayerName);
+
+            foreach (var error in validator.Validate(GetLevelPickups(), GetPlayerPickupContactColliders(), _playerTag, _playerLayerName,
+                         _pickupLayerName))
+            {
+                yield return error;
+            }
+        }
+
+        private IEnumerable<string> GetSerializedLevelPickupReferenceErrors()
+        {
+            if (_levelPickups == null)
+                yield break;
+
+            var serializedPickups = new HashSet<Pickup>();
+
+            for (var pickupIndex = 0; pickupIndex < _levelPickups.Length; pickupIndex += 1)
+            {
+                var pickup = _levelPickups[pickupIndex];
+
+                if (pickup == null)
+                    continue;
+
+                if (!serializedPickups.Add(pickup))
+                    yield return $"GameplayLifetimeScope contains duplicate Level Pickup reference '{pickup.name}'.";
+            }
         }
 
         private IEnumerable<string> GetCurrencyDefinitionValidationErrors()

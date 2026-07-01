@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PlayerSteeringConfig
   m_EditorClassIdentifier:
   _steeringDeadzone: 0.1
-  _steeringSensitivity: 1
+  _steeringSensitivity: 0.25
   _steeringResponseRate: 8
   _maximumTurnDegreesPerSecond: 120
   _minimumSteerSpeed: 0.25

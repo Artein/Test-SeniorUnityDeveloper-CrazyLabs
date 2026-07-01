@@ -16,6 +16,11 @@ namespace Game.Gameplay
 
         public RunContactCategory Category => _category;
 
+        internal void SetCategoryForCourseAuthoring(RunContactCategory category)
+        {
+            _category = category;
+        }
+
         private void OnValidate()
         {
             if (GetComponent<Collider>() == null)

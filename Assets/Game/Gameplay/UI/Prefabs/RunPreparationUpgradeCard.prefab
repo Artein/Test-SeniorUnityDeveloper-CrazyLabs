@@ -1252,7 +1252,7 @@ GameObject:
   - component: {fileID: 7764664506989172084}
   - component: {fileID: 1523640374465489545}
   m_Layer: 0
-  m_Name: RunPreparationUpgradeCardView
+  m_Name: RunPreparationUpgradeCard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

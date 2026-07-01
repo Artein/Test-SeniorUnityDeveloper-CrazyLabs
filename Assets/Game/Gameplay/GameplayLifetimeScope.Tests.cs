@@ -59,6 +59,7 @@ namespace Game.Gameplay
             SlingshotView slingshotView,
             PullHintView pullHintView,
             RunPreparationUIView runPreparationView,
+            RunEndedUIView runEndedView,
             RigidbodyLaunchTarget launchTarget,
             CharacterPresentationView characterPresentationView,
             Pickup[] levelPickups,
@@ -97,6 +98,7 @@ namespace Game.Gameplay
             _slingshotView = slingshotView;
             _pullHintView = pullHintView;
             _runPreparationView = runPreparationView;
+            _runEndedView = runEndedView;
             _launchTarget = launchTarget;
             _characterPresentationView = characterPresentationView;
             _levelPickups = levelPickups;

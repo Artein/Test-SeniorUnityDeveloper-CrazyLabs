@@ -6,8 +6,12 @@ namespace Game.Gameplay
 {
     public sealed partial class CinemachineRunCameraRig
     {
-        internal void SetReferencesForTests(CinemachineCamera preLaunchCamera, CinemachineCamera runCamera)
+        internal void SetReferencesForTests(
+            CinemachineCamera runPreparationCamera,
+            CinemachineCamera preLaunchCamera,
+            CinemachineCamera runCamera)
         {
+            _runPreparationCamera = runPreparationCamera;
             _preLaunchCamera = preLaunchCamera;
             _runCamera = runCamera;
         }
