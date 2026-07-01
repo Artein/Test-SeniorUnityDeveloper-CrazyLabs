@@ -110,7 +110,7 @@ public sealed class RunEndPoseLockControllerTests
             distanceTravelled: 2f,
             finalPosition: finalPosition,
             finalSpeed: 0f,
-            currencySnapshot: new RunCurrencySnapshot(Array.Empty<RunCurrencyAmount>()));
+            rewardBreakdown: new RunRewardBreakdown(Array.Empty<RunRewardSourceAmount>()));
     }
 
     private GameplayStateId CreateStateId(string stateName)

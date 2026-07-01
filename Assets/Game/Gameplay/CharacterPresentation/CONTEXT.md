@@ -143,6 +143,7 @@ _Avoid_: Gameplay State, animation mode, run result
 
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** for appearance language.
 - "Slide", "run", "airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
+- "Air time" resolves to gameplay **Run Air Time** when discussing metrics or rewards.
 - "Held" resolves to **Idle** unless an **Active Pull** requires **Pull Anticipation**.
 - "Ground probe", "surface probe", and "slope source" resolve to **Run Surface Context Source**.
 - "Slope math" resolves to **Run Surface Slope Calculator**.

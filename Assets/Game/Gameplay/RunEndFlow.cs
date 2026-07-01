@@ -21,7 +21,6 @@ namespace Game.Gameplay
         event Action<RunResult> RunResultAccepted;
     }
 
-    // TODO — Note for AI: Rename to IRunResultAcknowledger?
     public interface IRunResultAcknowledgeCommand
     {
         bool TryAcknowledge();
@@ -37,6 +36,8 @@ namespace Game.Gameplay
         private readonly IRunProgressService _progressService;
         private readonly IRunMotionSource _motionSource;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
+        private readonly RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+        private readonly IRunAirTimeSource _runAirTimeSource;
         private readonly IRunEndConfig _config;
         private readonly ITime _clock;
         private readonly GameplayStateId _restartStateId;
@@ -62,6 +63,8 @@ namespace Game.Gameplay
             IRunProgressService progressService,
             IRunMotionSource motionSource,
             IRunCurrencyAccumulator runCurrencyAccumulator,
+            RunRewardBreakdownBuilder runRewardBreakdownBuilder,
+            IRunAirTimeSource runAirTimeSource,
             IRunEndConfig config,
             ITime clock,
             [Key(InjectKey.GameplayStateId.RunPreparation)]
@@ -78,6 +81,8 @@ namespace Game.Gameplay
             _progressService = progressService ?? throw new ArgumentNullException(nameof(progressService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
+            _runRewardBreakdownBuilder = runRewardBreakdownBuilder ?? throw new ArgumentNullException(nameof(runRewardBreakdownBuilder));
+            _runAirTimeSource = runAirTimeSource ?? throw new ArgumentNullException(nameof(runAirTimeSource));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _restartStateId = restartStateId != null ? restartStateId : throw new ArgumentNullException(nameof(restartStateId));
@@ -259,14 +264,23 @@ namespace Game.Gameplay
             var finalPosition = _motionSource.Position;
             var finalVelocity = _motionSource.LinearVelocity;
             _progressService.SamplePosition(finalPosition);
+            var distanceTravelled = _progressService.MaximumForwardProgress;
+
+            var rewardBreakdown = _runRewardBreakdownBuilder.Build(new RunRewardContributorContext(
+                candidate.Reason,
+                _elapsedSinceLaunch,
+                distanceTravelled,
+                finalPosition,
+                finalVelocity.magnitude,
+                _runAirTimeSource.CurrentRunAirTimeSeconds));
 
             var result = new RunResult(
                 candidate.Reason,
                 _elapsedSinceLaunch,
-                _progressService.MaximumForwardProgress,
+                distanceTravelled,
                 finalPosition,
                 finalVelocity.magnitude,
-                _runCurrencyAccumulator.CreateSnapshot());
+                rewardBreakdown);
 
             RunResultAccepted?.InvokeSafely(result);
             Debug.Log(result.ToString());

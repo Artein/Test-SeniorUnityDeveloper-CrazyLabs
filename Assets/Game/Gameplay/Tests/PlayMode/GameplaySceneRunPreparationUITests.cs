@@ -14,6 +14,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Utils;
 using UnityEngine.UI;
 using VContainer;
 
@@ -132,10 +133,17 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         var button = panel.GetComponent<Button>();
         var overlay = panel.GetComponent<Image>();
         var title = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Title");
-        var earnedCoinsLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Earned Coins Label");
-        var reachedDistanceLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Reached Distance Label");
-        var bestImprovementLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Best Improvement Label");
+        var reachedDistanceLabel = FindChildComponent<TMP_Text>(panel.transform, "ReachedDistanceLabel");
+        var bestImprovementLabel = FindChildComponent<TMP_Text>(panel.transform, "BestImprovementLabel");
         var continueLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Continue Label");
+        var rewardSourceRowsRoot = FindChildTransform(panel.transform, "RewardSourceContainer");
+        var rewardSourceRowTemplate = FindChildComponent<RunEndedRewardSourceRowUIView>(panel.transform, "RowTemplate");
+        var rewardSourceRowTemplateIcon = FindChildComponent<Image>(rewardSourceRowTemplate.transform, "CurrencyIcon");
+        var totalRewardContainer = FindChildTransform(panel.transform, "CollectedCoinsContainer");
+        var runTotalLabel = FindChildComponent<TMP_Text>(totalRewardContainer, "RunTotalLabel");
+        var earnedCoinsText = FindChildComponent<TMP_Text>(totalRewardContainer, "Amount");
+        var totalRewardIcon = FindChildComponent<Image>(totalRewardContainer, "Icon");
+        var acknowledgeRequestCount = 0;
 
         Assert.That(view.gameObject, Is.SameAs(panel), "RunEndedUIView should be an authored panel view, not a canvas-level runtime UI builder.");
         Assert.That(view.transform.parent.gameObject, Is.SameAs(gameplayUi));
@@ -144,33 +152,71 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(overlay.color.a, Is.GreaterThanOrEqualTo(0.35f));
         Assert.That(title, Is.Not.Null);
         Assert.That(continueLabel.text, Is.EqualTo("TAP TO CONTINUE"));
+        Assert.That(runTotalLabel.text, Is.EqualTo("RUN TOTAL"));
+        Assert.That(rewardSourceRowsRoot, Is.Not.Null);
+        Assert.That(rewardSourceRowTemplate.gameObject.activeSelf, Is.False);
+        Assert.That(rewardSourceRowTemplateIcon.sprite, Is.Not.Null);
+
+        Assert.That(rewardSourceRowTemplate.AmountTextForTests.color, Is.EqualTo(Color.white).Using(ColorEqualityComparer.Instance),
+            "Reward source amount text should be authored white; the row icon already carries the coin color.");
+        Assert.That(totalRewardIcon.sprite, Is.Not.Null);
         Assert.That(panel.activeSelf, Is.False);
+
+        view.SetRevealTimingsForTests(1f, 1f, 1f);
+        view.AcknowledgeRequested += OnAcknowledgeRequested;
 
         view.Apply(new RunEndedViewState(
             isVisible: true,
             isSuccess: true,
             titleText: "VICTORY",
             earnedCoins: 13,
-            earnedCoinsText: "COINS\n13",
+            earnedCoinsText: "RUN TOTAL\n13",
             reachedMeters: 87,
             reachedDistanceText: "DISTANCE\n87 m",
             hasBestImprovement: true,
             bestImprovementMeters: 87,
-            bestImprovementText: "NEW BEST\n+87 m"));
+            bestImprovementText: "NEW BEST\n+87 m",
+            rewardSourceRows: new[]
+            {
+                new RunEndedRewardSourceRowViewState("Picked-Up Coins", 5, "5"),
+                new RunEndedRewardSourceRowViewState("Distance Bonus", 8, "8")
+            }));
 
         Assert.That(panel.activeSelf, Is.True);
+        Assert.That(view.IsRevealRunningForTests, Is.True);
+        Assert.That(view.CanAcknowledgeForTests, Is.False);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        button.onClick.Invoke();
+
+        Assert.That(acknowledgeRequestCount, Is.Zero);
+        Assert.That(view.IsRevealRunningForTests, Is.False);
+        Assert.That(view.CanAcknowledgeForTests, Is.True);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.True);
         Assert.That(title.text, Is.EqualTo("VICTORY"));
-        Assert.That(earnedCoinsLabel.text, Is.EqualTo("COINS\n13"));
+        Assert.That(runTotalLabel.text, Is.EqualTo("RUN TOTAL"));
+        Assert.That(earnedCoinsText.text, Is.EqualTo("RUN TOTAL\n13"));
         Assert.That(reachedDistanceLabel.text, Is.EqualTo("DISTANCE\n87 m"));
         Assert.That(bestImprovementLabel.gameObject.activeSelf, Is.True);
         Assert.That(bestImprovementLabel.text, Is.EqualTo("NEW BEST\n+87 m"));
+        Assert.That(view.RewardSourceRowsForTests, Has.Count.EqualTo(2));
+        Assert.That(view.RewardSourceRowsForTests[0].transform.parent, Is.SameAs(rewardSourceRowsRoot));
+        Assert.That(view.RewardSourceRowsForTests[0].gameObject.activeSelf, Is.True);
+        Assert.That(view.RewardSourceRowsForTests[0].LabelTextForTests.text, Is.EqualTo("Picked-Up Coins"));
+        Assert.That(view.RewardSourceRowsForTests[0].AmountTextForTests.text, Is.EqualTo("5"));
+        Assert.That(view.RewardSourceRowsForTests[1].LabelTextForTests.text, Is.EqualTo("Distance Bonus"));
+        Assert.That(view.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("8"));
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.EqualTo(1f).Within(0.001f));
+
+        button.onClick.Invoke();
+        Assert.That(acknowledgeRequestCount, Is.EqualTo(1));
 
         view.Apply(new RunEndedViewState(
             isVisible: true,
             isSuccess: false,
             titleText: "DEFEAT",
             earnedCoins: 2,
-            earnedCoinsText: "COINS\n2",
+            earnedCoinsText: "RUN TOTAL\n2",
             reachedMeters: 12,
             reachedDistanceText: "DISTANCE\n12 m",
             hasBestImprovement: false,
@@ -180,6 +226,146 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(title.text, Is.EqualTo("DEFEAT"));
         Assert.That(bestImprovementLabel.gameObject.activeSelf, Is.False);
         Assert.That(bestImprovementLabel.text, Is.Empty);
+        Assert.That(view.RewardSourceRowsForTests, Is.Empty);
+
+        view.AcknowledgeRequested -= OnAcknowledgeRequested;
+
+        void OnAcknowledgeRequested()
+        {
+            acknowledgeRequestCount += 1;
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator given_RunEndedView_when_VisibleStateApplied_then_RevealAdvancesInAuthoredOrder()
+    {
+        yield return LoadGameplayScene();
+        var activeScene = SceneManager.GetActiveScene();
+        var view = FindSingleInScene<RunEndedUIView>(activeScene, "RunEndedUIView");
+        var panel = FindGameObjectByName(activeScene, "RunEndedPanel");
+        var title = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Title");
+        var reachedDistanceLabel = FindChildComponent<TMP_Text>(panel.transform, "ReachedDistanceLabel");
+        var bestImprovementLabel = FindChildComponent<TMP_Text>(panel.transform, "BestImprovementLabel");
+        var continueLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Continue Label");
+        var totalRewardContainer = FindChildTransform(panel.transform, "CollectedCoinsContainer");
+        var runTotalLabel = FindChildComponent<TMP_Text>(totalRewardContainer, "RunTotalLabel");
+        var earnedCoinsText = FindChildComponent<TMP_Text>(totalRewardContainer, "Amount");
+        var totalRewardIcon = FindChildComponent<Image>(totalRewardContainer, "Icon");
+
+        view.SetRevealTimingsForTests(labelFadeDuration: 0.2f, counterDuration: 0.2f, stepDelay: 0f);
+
+        view.Apply(new RunEndedViewState(
+            isVisible: true,
+            isSuccess: true,
+            titleText: "VICTORY",
+            earnedCoins: 16,
+            earnedCoinsText: "RUN TOTAL\n16",
+            reachedMeters: 87,
+            reachedDistanceText: "DISTANCE\n87 m",
+            hasBestImprovement: true,
+            bestImprovementMeters: 17,
+            bestImprovementText: "NEW BEST\n+17 m",
+            rewardSourceRows: new[]
+            {
+                new RunEndedRewardSourceRowViewState("Picked-Up Coins", 5, "5"),
+                new RunEndedRewardSourceRowViewState("Distance Bonus", 11, "11")
+            }));
+
+        Assert.That(view.RewardSourceRowsForTests, Has.Count.EqualTo(2));
+        var firstRewardSourceRowIcon = FindChildComponent<Image>(view.RewardSourceRowsForTests[0].transform, "CurrencyIcon");
+        var secondRewardSourceRowIcon = FindChildComponent<Image>(view.RewardSourceRowsForTests[1].transform, "CurrencyIcon");
+        Assert.That(view.IsRevealRunningForTests, Is.True);
+        Assert.That(title.text, Is.EqualTo("VICTORY"));
+        Assert.That(GetTextAlpha(reachedDistanceLabel), Is.Zero);
+        Assert.That(GetTextAlpha(bestImprovementLabel), Is.Zero);
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests), Is.Zero);
+        Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.Zero);
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].AmountTextForTests), Is.Zero);
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[1].LabelTextForTests), Is.Zero);
+        Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.Zero);
+        Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        yield return WaitUntilCondition("Run Ended distance reveal starts", () => GetTextAlpha(reachedDistanceLabel) > 0f);
+
+        Assert.That(GetTextAlpha(title), Is.EqualTo(1f).Within(0.001f));
+        Assert.That(GetTextAlpha(bestImprovementLabel), Is.Zero);
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests), Is.Zero);
+        Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.Zero);
+        Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        yield return WaitUntilCondition("Run Ended best improvement reveal starts",
+            () => GetTextAlpha(bestImprovementLabel) > 0f ||
+                  GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests) > 0f);
+
+        Assert.That(reachedDistanceLabel.text, Is.EqualTo("DISTANCE\n87 m"));
+
+        Assert.That(GetTextAlpha(bestImprovementLabel), Is.GreaterThan(0f),
+            "Best-improvement feedback should reveal immediately after the distance counter.");
+
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests), Is.Zero,
+            "Reward source rows should wait until the distance/new-best performance cluster is revealed.");
+
+        Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.Zero,
+            "Reward source row icons should not appear before their row reveal.");
+        Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        yield return WaitUntilCondition("first reward source row reveal starts",
+            () => GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests) > 0f);
+
+        Assert.That(bestImprovementLabel.text, Is.EqualTo("NEW BEST\n+17 m"));
+        Assert.That(GetTextAlpha(bestImprovementLabel), Is.EqualTo(1f).Within(0.001f));
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests), Is.GreaterThan(0f));
+
+        Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.GreaterThan(0f),
+            "Reward source row label, icon, and amount should reveal together.");
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].AmountTextForTests), Is.GreaterThan(0f));
+        Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[1].LabelTextForTests), Is.Zero);
+        Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.Zero);
+        Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        yield return WaitUntilCondition("second reward source row reveal starts",
+            () => GetTextAlpha(view.RewardSourceRowsForTests[1].LabelTextForTests) > 0f);
+
+        Assert.That(view.RewardSourceRowsForTests[0].AmountTextForTests.text, Is.EqualTo("5"));
+
+        Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.GreaterThan(0f),
+            "Second reward source row icon should reveal with its label and amount.");
+        Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+
+        yield return WaitUntilCondition("total reward reveal starts",
+            () => GetTextAlpha(runTotalLabel) > 0f || GetGraphicAlpha(totalRewardIcon) > 0f);
+
+        Assert.That(view.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("11"));
+        Assert.That(GetTextAlpha(runTotalLabel), Is.GreaterThan(0f));
+
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.GreaterThan(0f),
+            "Total reward icon should reveal with the RUN TOTAL value.");
+        Assert.That(continueLabel.gameObject.activeSelf, Is.False);
+        Assert.That(view.CanAcknowledgeForTests, Is.False);
+
+        yield return WaitUntilCondition("Run Ended reveal completes",
+            () => view.CanAcknowledgeForTests && continueLabel.gameObject.activeSelf);
+
+        Assert.That(title.text, Is.EqualTo("VICTORY"));
+        Assert.That(runTotalLabel.text, Is.EqualTo("RUN TOTAL"));
+        Assert.That(earnedCoinsText.text, Is.EqualTo("RUN TOTAL\n16"));
+        Assert.That(reachedDistanceLabel.text, Is.EqualTo("DISTANCE\n87 m"));
+        Assert.That(bestImprovementLabel.text, Is.EqualTo("NEW BEST\n+17 m"));
+        Assert.That(view.RewardSourceRowsForTests[0].AmountTextForTests.text, Is.EqualTo("5"));
+        Assert.That(view.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("11"));
+        Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.EqualTo(1f).Within(0.001f));
+        Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.EqualTo(1f).Within(0.001f));
+        Assert.That(GetGraphicAlpha(totalRewardIcon), Is.EqualTo(1f).Within(0.001f));
     }
 
     [UnityTest]
@@ -440,6 +626,19 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.Fail($"Expected Gameplay State '{stateName}', but current state is '{stateService.CurrentStateId?.name ?? "<null>"}'.");
     }
 
+    private IEnumerator WaitUntilCondition(string description, Func<bool> condition, int frameLimit = 120)
+    {
+        for (var frameIndex = 0; frameIndex < frameLimit; frameIndex += 1)
+        {
+            if (condition())
+                yield break;
+
+            yield return null;
+        }
+
+        Assert.Fail("Timed out waiting for " + description + ".");
+    }
+
     private IEnumerator ClickButtonThroughEventSystem(Button button)
     {
         var screenPosition = GetScreenCenter(button.GetComponent<RectTransform>());
@@ -522,6 +721,16 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         pointerEventData.rawPointerPress = clickHandler;
 
         return pointerEventData;
+    }
+
+    private static float GetTextAlpha(TMP_Text text)
+    {
+        return text.color.a;
+    }
+
+    private static float GetGraphicAlpha(Graphic graphic)
+    {
+        return graphic.color.a;
     }
 
     private Transform FindUpgradeCard(Scene scene, UpgradeDefinition definition)

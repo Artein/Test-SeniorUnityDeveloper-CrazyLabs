@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
@@ -55,6 +56,7 @@ public sealed class RunEndedPresenterTests
         Assert.That(_view.RenderedStates, Has.Count.EqualTo(1));
         Assert.That(_view.RenderedStates[^1].IsVisible, Is.False);
         Assert.That(_view.RenderedStates[^1].TitleText, Is.Empty);
+        Assert.That(_view.RenderedStates[^1].RewardSourceRows, Is.Empty);
     }
 
     [Test]
@@ -71,6 +73,11 @@ public sealed class RunEndedPresenterTests
         Assert.That(state.TitleText, Is.EqualTo("VICTORY"));
         Assert.That(state.EarnedCoins, Is.EqualTo(5));
         Assert.That(state.EarnedCoinsText, Is.EqualTo("5"));
+        var rewardSourceRows = state.RewardSourceRows.ToArray();
+        Assert.That(rewardSourceRows, Has.Length.EqualTo(1));
+        Assert.That(rewardSourceRows[0].LabelText, Is.EqualTo("Test Reward"));
+        Assert.That(rewardSourceRows[0].Amount, Is.EqualTo(5));
+        Assert.That(rewardSourceRows[0].AmountText, Is.EqualTo("5"));
         Assert.That(state.ReachedMeters, Is.EqualTo(17));
         Assert.That(state.ReachedDistanceText, Is.EqualTo("DISTANCE 17 m"));
         Assert.That(state.HasBestImprovement, Is.True);
@@ -171,7 +178,10 @@ public sealed class RunEndedPresenterTests
             distance,
             Vector3.zero,
             0f,
-            new RunCurrencySnapshot(new[] { new RunCurrencyAmount(_coins, coins) }));
+            new RunRewardBreakdown(new[]
+            {
+                new RunRewardSourceAmount(new RunRewardSource("test-reward", "Test Reward", 0, showWhenZero: false), _coins, coins)
+            }));
     }
 
     private GameplayStateId CreateStateId(string stateName)

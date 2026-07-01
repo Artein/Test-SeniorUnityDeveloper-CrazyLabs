@@ -188,6 +188,7 @@ public sealed class PickupPhysicsIntegrationTests
             new FixedLevelPickupSource(pickups),
             levelPickupState,
             accumulator,
+            new RunRewardSourceCatalog(),
             resolver,
             _stateService,
             _runningStateId,

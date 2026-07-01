@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using VContainer;
 using VContainer.Unity;
@@ -97,8 +99,8 @@ namespace Game.Gameplay
             if (_isDisposed)
                 return;
 
-            _acknowledgeCommand.TryAcknowledge();
-            Refresh();
+            if (_acknowledgeCommand.TryAcknowledge())
+                Refresh();
         }
 
         private void Refresh()
@@ -139,12 +141,13 @@ namespace Game.Gameplay
                 reachedDistanceText: FormatReachedDistanceText(stats.ReachedMeters),
                 hasBestImprovement: stats.HasBestImprovement,
                 bestImprovementMeters: stats.BestImprovementMeters,
-                bestImprovementText: FormatBestImprovementText(stats.HasBestImprovement, stats.BestImprovementMeters));
+                bestImprovementText: FormatBestImprovementText(stats.HasBestImprovement, stats.BestImprovementMeters),
+                rewardSourceRows: BuildRewardSourceRows(result.RewardBreakdown.SourceAmounts));
         }
 
         private static string FormatEarnedCoinsText(int earnedCoins)
         {
-            return earnedCoins.ToString(CultureInfo.InvariantCulture);
+            return Math.Max(0, earnedCoins).ToString(CultureInfo.InvariantCulture);
         }
 
         private static string FormatTitleText(bool isSuccess)
@@ -162,6 +165,32 @@ namespace Game.Gameplay
             return hasBestImprovement
                 ? "NEW BEST +" + bestImprovementMeters.ToString(CultureInfo.InvariantCulture) + " m"
                 : string.Empty;
+        }
+
+        private static IReadOnlyList<RunEndedRewardSourceRowViewState> BuildRewardSourceRows(
+            IReadOnlyList<RunRewardSourceAmount> sourceAmounts)
+        {
+            if (sourceAmounts is not { Count: > 0 })
+                return Array.Empty<RunEndedRewardSourceRowViewState>();
+
+            var rows = new RunEndedRewardSourceRowViewState[sourceAmounts.Count];
+
+            for (var sourceAmountIndex = 0; sourceAmountIndex < sourceAmounts.Count; sourceAmountIndex += 1)
+            {
+                var sourceAmount = sourceAmounts[sourceAmountIndex];
+
+                rows[sourceAmountIndex] = new RunEndedRewardSourceRowViewState(
+                    sourceAmount.Source.Label,
+                    sourceAmount.Amount,
+                    FormatRewardSourceAmountText(sourceAmount.Amount));
+            }
+
+            return rows;
+        }
+
+        private static string FormatRewardSourceAmountText(int amount)
+        {
+            return Math.Max(0, amount).ToString(CultureInfo.InvariantCulture);
         }
     }
 }

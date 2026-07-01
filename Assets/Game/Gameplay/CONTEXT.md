@@ -68,6 +68,10 @@ _Avoid_: Previous run distance, all-time best, saved best
 The UI-facing whole-meter presentation of distance reached by a **Run Result**.
 _Avoid_: Raw meters, rounded-up progress, world position
 
+**Run Air Time**:
+The duration during **Running** when the **Launch Target** is not supported by a **Run Surface**.
+_Avoid_: Airborne animation, jump state, total scene time
+
 **Run Ended UI**:
 The UI surface shown during **Run Ended** to present the accepted **Run Result** and receive **Acknowledge Run Result**.
 _Avoid_: Upgrade screen, runtime-built result screen, Run Preparation UI
@@ -76,8 +80,24 @@ _Avoid_: Upgrade screen, runtime-built result screen, Run Preparation UI
 The moment when **Run Ended UI** appears relative to the accepted **Run Result**.
 _Avoid_: Animation wait, delayed reward reveal
 
+**Run Reward Reveal**:
+The presentation sequence that shows an already accepted **Run Reward Breakdown** during **Run Ended**.
+_Avoid_: Currency grant, payout timing, wallet animation
+
+**Run Reward Source Row**:
+A displayed line in **Run Reward Reveal** for one aggregate **Run Reward Source**.
+_Avoid_: Reward rule, reward event, currency grant
+
+**Run Reward Source Order**:
+The stable sequence in which **Run Reward Sources** are displayed during **Run Reward Reveal**.
+_Avoid_: UI label sort, scene hierarchy order, source-specific view logic
+
+**Run Reward Reveal Fast-Forward**:
+The player input during **Run Reward Reveal** that immediately shows the fully revealed result without acknowledging it.
+_Avoid_: Acknowledge Run Result, skip reward, auto-continue
+
 **Run Ended Acknowledge Guard**:
-The short delay after **Run Ended UI Timing** before **Acknowledge Run Result** can accept input.
+The input gate that prevents **Acknowledge Run Result** until **Run Reward Reveal** is complete.
 _Avoid_: Auto-continue delay, global input debounce
 
 **Run End Pose Lock**:
@@ -142,11 +162,17 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Launch** starts **Running**.
 - **Running** ends with one **Run Result**.
 - **Run End Flow** produces one accepted **Run Result** per ended **Run**.
+- **Run Result** may include a **Run Reward Breakdown** that explains its run-earned currency.
 - **Run Ended** persists until **Acknowledge Run Result**.
+- **Run Reward Reveal** does not change the accepted **Run Result** or grant currency over time.
+- **Run Reward Source Rows** render **Run Reward Sources** without knowing source-specific reward rules.
+- **Run Reward Source Rows** follow **Run Reward Source Order** supplied before reaching the view.
+- **Run Reward Reveal Fast-Forward** completes **Run Reward Reveal** but does not perform **Acknowledge Run Result**.
 - **Acknowledge Run Result** returns to **Run Preparation**.
 - **Run Result** has one **Run End Reason**.
 - **Best Run Distance** belongs to the current **Level Session**.
 - **Run Distance Display** presents **Run Result** distance without changing it.
+- **Run Air Time** is measured from traversal facts, not from **Character Presentation Mode**.
 - **Run Surface** does not end a **Run**.
 - **Run Obstacle**, **Run Safety Net**, and **Run Finish** can end a **Run**.
 - **Run Progress Frame** owns progress, lateral, and up directions for run metrics.
@@ -160,6 +186,18 @@ _Avoid_: Character pivot, camera target, follow transform
 > **Dev:** "Does **Run Ended** automatically reset the player?"
 > **Domain expert:** "No - **Run Ended** holds the accepted result until **Acknowledge Run Result** returns to **Run Preparation**."
 
+> **Dev:** "Does the result animation pay coins as each row appears?"
+> **Domain expert:** "No - **Run Reward Reveal** explains the already accepted **Run Result**."
+
+> **Dev:** "Does a result row know how distance becomes coins?"
+> **Domain expert:** "No - a **Run Reward Source Row** only displays a **Run Reward Source**."
+
+> **Dev:** "Should the result view sort reward rows by label?"
+> **Domain expert:** "No - it follows **Run Reward Source Order**."
+
+> **Dev:** "If the player taps while reward rows are still revealing, should that continue to preparation?"
+> **Domain expert:** "No - that is **Run Reward Reveal Fast-Forward**; the next tap can **Acknowledge Run Result**."
+
 > **Dev:** "Is **Continue** the same input as **Acknowledge Run Result**?"
 > **Domain expert:** "No - **Continue** leaves **Run Preparation**, while **Acknowledge Run Result** leaves **Run Ended**."
 
@@ -170,4 +208,7 @@ _Avoid_: Character pivot, camera target, follow transform
 - "Stops" resolves to **Lost Momentum**, not arbitrary one-frame low velocity.
 - "Boundary" resolves to **Run Safety Net** only when it catches the below-course failure case.
 - "Forward", "downhill", "distance", and "progress" resolve to **Run Progress Frame** for run metrics.
+- "Air time" resolves to **Run Air Time** for run metrics and rewards, not to airborne animation.
+- "Reward row order" resolves to **Run Reward Source Order**, not UI label sorting.
+- "Skip result" resolves to **Run Reward Reveal Fast-Forward** while the reveal is in progress and **Acknowledge Run Result** after it is complete.
 - "Idle camera" resolves to **Run Preparation Camera** before preparation ends and **Pre-Launch Camera** while the slingshot can accept a pull.

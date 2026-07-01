@@ -26,6 +26,7 @@ namespace Game.Gameplay.Pickups
         private readonly HashSet<Pickup> _subscribedPickups = new();
         private readonly ILevelPickupState _levelPickupState;
         private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
+        private readonly RunRewardSourceCatalog _runRewardSourceCatalog;
         private readonly IPickupCurrencyGrantResolver _pickupCurrencyGrantResolver;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly GameplayStateId _runningStateId;
@@ -41,6 +42,7 @@ namespace Game.Gameplay.Pickups
             ILevelPickupSource pickupSource,
             ILevelPickupState levelPickupState,
             IRunCurrencyAccumulator runCurrencyAccumulator,
+            RunRewardSourceCatalog runRewardSourceCatalog,
             IPickupCurrencyGrantResolver pickupCurrencyGrantResolver,
             IGameplayStateService gameplayStateService,
             [Key(InjectKey.GameplayStateId.Running)]
@@ -52,6 +54,7 @@ namespace Game.Gameplay.Pickups
             _pickupSource = pickupSource ?? throw new ArgumentNullException(nameof(pickupSource));
             _levelPickupState = levelPickupState ?? throw new ArgumentNullException(nameof(levelPickupState));
             _runCurrencyAccumulator = runCurrencyAccumulator ?? throw new ArgumentNullException(nameof(runCurrencyAccumulator));
+            _runRewardSourceCatalog = runRewardSourceCatalog ?? throw new ArgumentNullException(nameof(runRewardSourceCatalog));
 
             _pickupCurrencyGrantResolver = pickupCurrencyGrantResolver
                                            ?? throw new ArgumentNullException(nameof(pickupCurrencyGrantResolver));
@@ -122,7 +125,10 @@ namespace Game.Gameplay.Pickups
             var finalCurrencyGrant = resolution.FinalCurrencyGrant;
             var position = pickup.Position;
 
-            _runCurrencyAccumulator.Grant(finalCurrencyGrant.CurrencyDefinition, finalCurrencyGrant.Amount);
+            _runCurrencyAccumulator.Grant(
+                _runRewardSourceCatalog.PickedUpCoins,
+                finalCurrencyGrant.CurrencyDefinition,
+                finalCurrencyGrant.Amount);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log("[EconomyDiagnostics] Pickup collected into run accumulator: "
                       + $"Pickup='{pickup.name}', "

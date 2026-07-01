@@ -59,6 +59,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
             new FixedLevelPickupSource(new[] { pickup }),
             levelPickupState,
             runCurrencyAccumulator,
+            new RunRewardSourceCatalog(),
             grantResolver,
             stateService,
             runningStateId,

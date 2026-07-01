@@ -25,6 +25,9 @@ public sealed class RunEndFlowTests
     private FakeRunProgressService _progressService;
     private FakeRunMotionSource _motionSource;
     private RunCurrencyAccumulator _runCurrencyAccumulator;
+    private RunRewardSourceCatalog _runRewardSourceCatalog;
+    private RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+    private FakeRunAirTimeSource _runAirTimeSource;
     private FakeRunEndConfig _config;
     private FakeTime _clock;
     private RunEndFlow _flow;
@@ -53,6 +56,13 @@ public sealed class RunEndFlowTests
             LinearVelocity = new Vector3(0f, 0f, 4f)
         };
         _runCurrencyAccumulator = new RunCurrencyAccumulator();
+        _runRewardSourceCatalog = new RunRewardSourceCatalog();
+
+        _runRewardBreakdownBuilder = new RunRewardBreakdownBuilder(new IRunRewardContributor[]
+        {
+            new AccumulatedRunRewardContributor(_runCurrencyAccumulator)
+        });
+        _runAirTimeSource = new FakeRunAirTimeSource();
         _config = new FakeRunEndConfig { RunEndedAcknowledgeGuardDuration = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
         _coins = CreateCurrencyDefinition("Coins");
@@ -153,7 +163,7 @@ public sealed class RunEndFlowTests
     public void FixedTick_FinishCandidate_PublishesRunResultWithCurrencySnapshot()
     {
         ActivateRun();
-        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -169,7 +179,7 @@ public sealed class RunEndFlowTests
     public void GameplayStateChanged_EnteringRunPreparation_ResetsAccumulatorWithoutMutatingAcceptedResult()
     {
         ActivateRun();
-        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_coins, 7);
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         RunResult? acceptedResult = null;
         ((IRunResultNotifier)_flow).RunResultAccepted += result => acceptedResult = result;
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
@@ -322,7 +332,8 @@ public sealed class RunEndFlowTests
     private RunEndFlow CreateFlow()
     {
         return new RunEndFlow(_stateService, _launchAppliedNotifier, _contactNotifier, _contactClassifier, _progressService, _motionSource,
-            _runCurrencyAccumulator, _config, _clock, _runPreparationStateId, _runningStateId, _runEndedStateId);
+            _runCurrencyAccumulator, _runRewardBreakdownBuilder, _runAirTimeSource, _config, _clock, _runPreparationStateId, _runningStateId,
+            _runEndedStateId);
     }
 
     private void ActivateRun()
@@ -471,6 +482,11 @@ public sealed class RunEndFlowTests
     {
         public Vector3 Position { get; set; }
         public Vector3 LinearVelocity { get; set; }
+    }
+
+    private sealed class FakeRunAirTimeSource : IRunAirTimeSource
+    {
+        public float CurrentRunAirTimeSeconds { get; set; }
     }
 
     private sealed class FakeRunEndConfig : IRunEndConfig

@@ -119,6 +119,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
+            builder.RegisterInstance<IRunRewardConfig>(_runEndConfig);
 
             builder.RegisterInstance(_coinCurrencyDefinition).Keyed(InjectKey.CurrencyDefinition.Coin);
 
@@ -136,6 +137,11 @@ namespace Game.Gameplay
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
             builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
+            builder.Register<RunRewardSourceCatalog>(Lifetime.Singleton);
+            builder.Register<AccumulatedRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<DistanceBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<AirTimeBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<RunRewardBreakdownBuilder>(Lifetime.Singleton);
             builder.Register<PlayerEconomyState>(Lifetime.Singleton);
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
             builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
@@ -149,7 +155,7 @@ namespace Game.Gameplay
             builder.Register<EconomySaveQueue>(Lifetime.Singleton);
             builder.Register<IEconomyCommitter, EconomyCommitter>(Lifetime.Singleton);
             builder.Register<ICurrencyStorage, CurrencyStorage>(Lifetime.Singleton);
-            builder.Register<IRunCurrencyAccumulator, RunCurrencyAccumulator>(Lifetime.Singleton);
+            builder.Register<RunCurrencyAccumulator>(Lifetime.Singleton).As<IRunCurrencyAccumulator, IRunRewardSourceLedger>();
             builder.Register<IUpgradeProgressStorage, UpgradeProgressStorage>(Lifetime.Singleton);
             builder.Register<UpgradeDefinitionValidator>(Lifetime.Singleton);
             builder.Register<UpgradeCatalogValidator>(Lifetime.Singleton);
@@ -170,6 +176,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunProgressService>();
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
+            builder.RegisterEntryPoint<RunAirTimeTracker>();
             builder.RegisterEntryPoint<RunEndFlow>();
             builder.RegisterEntryPoint<RunEndPoseLockController>();
             builder.RegisterEntryPoint<RunRewardCommitter>();

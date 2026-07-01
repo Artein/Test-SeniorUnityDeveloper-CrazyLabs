@@ -82,7 +82,7 @@ public sealed class RunEndedResultStatsBuilderTests
             distanceTravelled: 5.5f,
             finalPosition: Vector3.zero,
             finalSpeed: 0f,
-            new RunCurrencySnapshot(Array.Empty<RunCurrencyAmount>()));
+            rewardBreakdown: new RunRewardBreakdown(Array.Empty<RunRewardSourceAmount>()));
 
         var stats = _builder.Build(result);
 
@@ -97,7 +97,10 @@ public sealed class RunEndedResultStatsBuilderTests
             distanceTravelled: distance,
             finalPosition: Vector3.zero,
             finalSpeed: 0f,
-            new RunCurrencySnapshot(new[] { new RunCurrencyAmount(_coins, coins) }));
+            rewardBreakdown: new RunRewardBreakdown(new[]
+            {
+                new RunRewardSourceAmount(new RunRewardSource("test-reward", "Test Reward", 0, showWhenZero: false), _coins, coins)
+            }));
     }
 
     private T Track<T>(T value)

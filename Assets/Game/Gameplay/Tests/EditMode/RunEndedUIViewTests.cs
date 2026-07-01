@@ -31,19 +31,34 @@ public sealed class RunEndedUIViewTests
             isSuccess: true,
             titleText: "VICTORY",
             earnedCoins: 13,
-            earnedCoinsText: "COINS\n13",
+            earnedCoinsText: "RUN TOTAL\n13",
             reachedMeters: 87,
             reachedDistanceText: "DISTANCE\n87 m",
             hasBestImprovement: true,
             bestImprovementMeters: 87,
-            bestImprovementText: "NEW BEST\n+87 m"));
+            bestImprovementText: "NEW BEST\n+87 m",
+            rewardSourceRows: new[]
+            {
+                new RunEndedRewardSourceRowViewState("Picked-Up Coins", 5, "5"),
+                new RunEndedRewardSourceRowViewState("Distance Bonus", 8, "8")
+            }));
 
         Assert.That(fixture.Root.activeSelf, Is.True);
         Assert.That(fixture.TitleText.text, Is.EqualTo("VICTORY"));
-        Assert.That(fixture.EarnedCoinsText.text, Is.EqualTo("COINS\n13"));
+        Assert.That(fixture.EarnedCoinsText.text, Is.EqualTo("RUN TOTAL\n13"));
         Assert.That(fixture.ReachedDistanceText.text, Is.EqualTo("DISTANCE\n87 m"));
+        Assert.That(fixture.View.RewardSourceRowsForTests, Has.Count.EqualTo(2));
+        Assert.That(fixture.View.RewardSourceRowsForTests[0].LabelTextForTests.text, Is.EqualTo("Picked-Up Coins"));
+        Assert.That(fixture.View.RewardSourceRowsForTests[0].AmountTextForTests.text, Is.EqualTo("5"));
+        AssertRevealGraphicsAlpha(fixture.View.RewardSourceRowsForTests[0].RevealGraphicsForTests, 1f);
+        Assert.That(fixture.View.RewardSourceRowsForTests[1].LabelTextForTests.text, Is.EqualTo("Distance Bonus"));
+        Assert.That(fixture.View.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("8"));
+        AssertRevealGraphicsAlpha(fixture.View.RewardSourceRowsForTests[1].RevealGraphicsForTests, 1f);
+        AssertRevealGraphicsAlpha(fixture.View.EarnedCoinsRevealGraphicsForTests, 1f);
         Assert.That(fixture.BestImprovementRoot.activeSelf, Is.True);
         Assert.That(fixture.BestImprovementText.text, Is.EqualTo("NEW BEST\n+87 m"));
+        Assert.That(fixture.TapToContinueRoot.activeSelf, Is.True);
+        Assert.That(fixture.View.CanAcknowledgeForTests, Is.True);
     }
 
     [Test]
@@ -56,7 +71,7 @@ public sealed class RunEndedUIViewTests
             isSuccess: false,
             titleText: "DEFEAT",
             earnedCoins: 2,
-            earnedCoinsText: "COINS\n2",
+            earnedCoinsText: "RUN TOTAL\n2",
             reachedMeters: 12,
             reachedDistanceText: "DISTANCE\n12 m",
             hasBestImprovement: false,
@@ -67,26 +82,35 @@ public sealed class RunEndedUIViewTests
         Assert.That(fixture.TitleText.text, Is.EqualTo("DEFEAT"));
         Assert.That(fixture.BestImprovementRoot.activeSelf, Is.False);
         Assert.That(fixture.BestImprovementText.text, Is.Empty);
+        Assert.That(fixture.View.RewardSourceRowsForTests, Is.Empty);
     }
 
     private Fixture CreateFixture()
     {
-        var root = CreateGameObject("Run Ended Panel");
+        var root = CreateGameObject("RunEndedPanel");
         var view = root.AddComponent<RunEndedUIView>();
         var titleText = CreateChildText(root.transform, "Run Ended Title");
-        var earnedCoinsText = CreateChildText(root.transform, "Run Ended Earned Coins Label");
-        var reachedDistanceText = CreateChildText(root.transform, "Run Ended Reached Distance Label");
-        var bestImprovementRoot = CreateChildGameObject(root.transform, "Run Ended Best Improvement Label");
-        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "Run Ended Best Improvement Value");
+        var earnedCoinsIcon = CreateChildImage(root.transform, "Icon");
+        var earnedCoinsText = CreateChildText(root.transform, "RunTotalLabel");
+        var reachedDistanceText = CreateChildText(root.transform, "ReachedDistanceLabel");
+        var rewardSourceRowsRoot = CreateChildGameObject(root.transform, "RewardSourceContainer");
+        var rewardSourceRowPrefab = CreateRewardSourceRowTemplate(rewardSourceRowsRoot.transform);
+        var bestImprovementRoot = CreateChildGameObject(root.transform, "BestImprovementRoot");
+        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "BestImprovementLabel");
+        var tapToContinueRoot = CreateChildGameObject(root.transform, "Run Ended Continue Label");
         var button = root.AddComponent<Button>();
 
         view.SetReferencesForTests(
             root,
             titleText,
             earnedCoinsText,
+            new Graphic[] { earnedCoinsIcon, earnedCoinsText },
             reachedDistanceText,
+            rewardSourceRowsRoot.transform,
+            rewardSourceRowPrefab,
             bestImprovementRoot,
             bestImprovementText,
+            tapToContinueRoot,
             button);
 
         return new Fixture(
@@ -96,7 +120,21 @@ public sealed class RunEndedUIViewTests
             reachedDistanceText,
             bestImprovementRoot,
             bestImprovementText,
+            tapToContinueRoot,
             view);
+    }
+
+    private RunEndedRewardSourceRowUIView CreateRewardSourceRowTemplate(Transform parent)
+    {
+        var rowObject = CreateChildGameObject(parent, "RowTemplate");
+        var row = rowObject.AddComponent<RunEndedRewardSourceRowUIView>();
+        var labelText = CreateChildText(rowObject.transform, "Label");
+        var currencyIcon = CreateChildImage(rowObject.transform, "CurrencyIcon");
+        var amountText = CreateChildText(rowObject.transform, "Amount");
+        amountText.color = Color.white;
+        row.SetReferencesForTests(labelText, amountText, labelText, currencyIcon, amountText);
+        rowObject.SetActive(false);
+        return row;
     }
 
     private GameObject CreateGameObject(string name)
@@ -119,6 +157,22 @@ public sealed class RunEndedUIViewTests
         return child.AddComponent<TextMeshProUGUI>();
     }
 
+    private Image CreateChildImage(Transform parent, string name)
+    {
+        var child = CreateChildGameObject(parent, name);
+        return child.AddComponent<Image>();
+    }
+
+    private static void AssertRevealGraphicsAlpha(IReadOnlyList<Graphic> graphics, float expectedAlpha)
+    {
+        Assert.That(graphics, Is.Not.Empty);
+
+        foreach (var graphic in graphics)
+        {
+            Assert.That(graphic.color.a, Is.EqualTo(expectedAlpha).Within(0.001f));
+        }
+    }
+
     private readonly struct Fixture
     {
         public GameObject Root { get; }
@@ -127,6 +181,7 @@ public sealed class RunEndedUIViewTests
         public TMP_Text ReachedDistanceText { get; }
         public GameObject BestImprovementRoot { get; }
         public TMP_Text BestImprovementText { get; }
+        public GameObject TapToContinueRoot { get; }
         public RunEndedUIView View { get; }
 
         public Fixture(
@@ -136,6 +191,7 @@ public sealed class RunEndedUIViewTests
             TMP_Text reachedDistanceText,
             GameObject bestImprovementRoot,
             TMP_Text bestImprovementText,
+            GameObject tapToContinueRoot,
             RunEndedUIView view)
         {
             Root = root;
@@ -144,6 +200,7 @@ public sealed class RunEndedUIViewTests
             ReachedDistanceText = reachedDistanceText;
             BestImprovementRoot = bestImprovementRoot;
             BestImprovementText = bestImprovementText;
+            TapToContinueRoot = tapToContinueRoot;
             View = view;
         }
     }

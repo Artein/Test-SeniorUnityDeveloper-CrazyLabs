@@ -266,6 +266,7 @@ public sealed class GameplayLifetimeScopeTests
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runCameraConfig = container.Resolve<IRunCameraConfig>();
         var runEndConfig = container.Resolve<IRunEndConfig>();
+        var runRewardConfig = container.Resolve<IRunRewardConfig>();
         var runCameraSource = container.Resolve<IRunCameraSource>();
         var runMotionSource = container.Resolve<IRunMotionSource>();
         var runProgressService = container.Resolve<IRunProgressService>();
@@ -285,6 +286,10 @@ public sealed class GameplayLifetimeScopeTests
         var economySaveRepository = container.Resolve<IEconomySaveRepository>();
         var economyCommitter = container.Resolve<IEconomyCommitter>();
         var runCurrencyAccumulator = container.Resolve<IRunCurrencyAccumulator>();
+        var runRewardSourceLedger = container.Resolve<IRunRewardSourceLedger>();
+        var runRewardSourceCatalog = container.Resolve<RunRewardSourceCatalog>();
+        var runRewardBreakdownBuilder = container.Resolve<RunRewardBreakdownBuilder>();
+        var runAirTimeSource = container.Resolve<IRunAirTimeSource>();
         var upgradeCatalog = container.Resolve<IUpgradeCatalog>();
         var upgradeProgressStorage = container.Resolve<IUpgradeProgressStorage>();
         var runModifierSnapshotFactory = container.Resolve<IRunModifierSnapshotFactory>();
@@ -337,9 +342,9 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(17));
+        Assert.That(initializables.Count, Is.EqualTo(18));
         Assert.That(tickables.Count, Is.EqualTo(4));
-        Assert.That(fixedTickables.Count, Is.EqualTo(4));
+        Assert.That(fixedTickables.Count, Is.EqualTo(5));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -352,6 +357,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
+        Assert.That(runRewardConfig, Is.SameAs(fixture.RunEndConfig));
         Assert.That(runCameraSource, Is.SameAs(fixture.RunCameraSource));
         Assert.That(runMotionSource, Is.SameAs(fixture.RunCameraSource));
         Assert.That(runProgressService, Is.Not.Null);
@@ -372,6 +378,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(economySaveRepository, Is.Not.Null);
         Assert.That(economyCommitter, Is.Not.Null);
         Assert.That(runCurrencyAccumulator, Is.Not.Null);
+        Assert.That(runRewardSourceLedger, Is.SameAs(runCurrencyAccumulator));
+        Assert.That(runRewardSourceCatalog, Is.Not.Null);
+        Assert.That(runRewardBreakdownBuilder, Is.Not.Null);
+        Assert.That(runAirTimeSource, Is.Not.Null);
         Assert.That(upgradeCatalog, Is.SameAs(fixture.UpgradeCatalog));
         Assert.That(upgradeProgressStorage, Is.Not.Null);
         Assert.That(runModifierSnapshotFactory, Is.Not.Null);
@@ -576,22 +586,43 @@ public sealed class GameplayLifetimeScopeTests
         viewObject.SetActive(false);
         var view = viewObject.AddComponent<RunEndedUIView>();
         var titleText = CreateChildText(viewObject.transform, "Run Ended Title");
-        var earnedCoinsText = CreateChildText(viewObject.transform, "Run Ended Earned Coins Label");
-        var reachedDistanceText = CreateChildText(viewObject.transform, "Run Ended Reached Distance Label");
+        var earnedCoinsIcon = CreateChildImage(viewObject.transform, "Icon");
+        var earnedCoinsText = CreateChildText(viewObject.transform, "RunTotalLabel");
+        var reachedDistanceText = CreateChildText(viewObject.transform, "ReachedDistanceLabel");
+        var rewardSourceRowsRoot = CreateChildGameObject(viewObject.transform, "RewardSourceContainer");
+        var rewardSourceRowPrefab = CreateRunEndedRewardSourceRowTemplate(rewardSourceRowsRoot.transform);
         var bestImprovementRoot = CreateChildGameObject(viewObject.transform, "Run Ended Best Improvement");
-        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "Run Ended Best Improvement Label");
+        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "BestImprovementLabel");
+        var tapToContinueRoot = CreateChildGameObject(viewObject.transform, "Run Ended Continue Label");
         var acknowledgeTouchAreaButton = CreateChildButton(viewObject.transform, "Run Ended Continue Touch Area");
 
         view.SetReferencesForTests(
             viewObject,
             titleText,
             earnedCoinsText,
+            new Graphic[] { earnedCoinsIcon, earnedCoinsText },
             reachedDistanceText,
+            rewardSourceRowsRoot.transform,
+            rewardSourceRowPrefab,
             bestImprovementRoot,
             bestImprovementText,
+            tapToContinueRoot,
             acknowledgeTouchAreaButton);
         viewObject.SetActive(true);
         return view;
+    }
+
+    private RunEndedRewardSourceRowUIView CreateRunEndedRewardSourceRowTemplate(Transform parent)
+    {
+        var rowObject = CreateChildGameObject(parent, "RowTemplate");
+        var row = rowObject.AddComponent<RunEndedRewardSourceRowUIView>();
+        var labelText = CreateChildText(rowObject.transform, "Label");
+        var currencyIcon = CreateChildImage(rowObject.transform, "CurrencyIcon");
+        var amountText = CreateChildText(rowObject.transform, "Amount");
+        amountText.color = Color.white;
+        row.SetReferencesForTests(labelText, amountText, labelText, currencyIcon, amountText);
+        rowObject.SetActive(false);
+        return row;
     }
 
     private RunPreparationUpgradeCardView CreateRunPreparationUpgradeCard(Transform parent)

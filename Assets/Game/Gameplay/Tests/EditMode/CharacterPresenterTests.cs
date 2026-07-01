@@ -303,7 +303,7 @@ public sealed class CharacterPresenterTests
             5f,
             Vector3.zero,
             3f,
-            new RunCurrencySnapshot(Array.Empty<RunCurrencyAmount>()));
+            new RunRewardBreakdown(Array.Empty<RunRewardSourceAmount>()));
     }
 
     private RunProgressFrameSnapshot CreateSnapshot()
