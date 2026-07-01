@@ -39,7 +39,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
 
         yield return WaitUntilUpgradeCards(activeScene, definitions.Length);
 
-        var panel = FindGameObjectByName(activeScene, "Run Preparation Panel");
+        var panel = FindGameObjectByName(activeScene, "RunPreparationPanel");
         var coinBalanceIcon = FindGameObjectByName(activeScene, "Coin Balance Icon").GetComponent<Image>();
         var coinBalance = FindGameObjectByName(activeScene, "Coin Balance Label").GetComponent<TMP_Text>();
         var continueButton = FindGameObjectByName(activeScene, "Run Preparation Continue Touch Area").GetComponent<Button>();
@@ -113,12 +113,73 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         yield return WaitUntilUpgradeCards(activeScene, lifetimeScope.Container.Resolve<IUpgradeCatalog>().UpgradeDefinitions.Count);
 
         var view = FindSingleInScene<RunPreparationUIView>(activeScene, "RunPreparationUIView");
-        var panel = FindGameObjectByName(activeScene, "Run Preparation Panel");
+        var panel = FindGameObjectByName(activeScene, "RunPreparationPanel");
         var gameplayUi = FindGameObjectByName(activeScene, "Gameplay UI");
 
         Assert.That(view.gameObject, Is.SameAs(panel),
             "RunPreparationUIView should be an authored panel view, not a canvas-level runtime UI builder.");
         Assert.That(view.transform.parent.gameObject, Is.SameAs(gameplayUi));
+    }
+
+    [UnityTest]
+    public IEnumerator given_GameplayScene_when_Loaded_then_RunEndedViewIsAuthoredOnPanel()
+    {
+        yield return LoadGameplayScene();
+        var activeScene = SceneManager.GetActiveScene();
+        var view = FindSingleInScene<RunEndedUIView>(activeScene, "RunEndedUIView");
+        var panel = FindGameObjectByName(activeScene, "RunEndedPanel");
+        var gameplayUi = FindGameObjectByName(activeScene, "Gameplay UI");
+        var button = panel.GetComponent<Button>();
+        var overlay = panel.GetComponent<Image>();
+        var title = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Title");
+        var earnedCoinsLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Earned Coins Label");
+        var reachedDistanceLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Reached Distance Label");
+        var bestImprovementLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Best Improvement Label");
+        var continueLabel = FindChildComponent<TMP_Text>(panel.transform, "Run Ended Continue Label");
+
+        Assert.That(view.gameObject, Is.SameAs(panel), "RunEndedUIView should be an authored panel view, not a canvas-level runtime UI builder.");
+        Assert.That(view.transform.parent.gameObject, Is.SameAs(gameplayUi));
+        Assert.That(button, Is.Not.Null);
+        Assert.That(overlay, Is.Not.Null);
+        Assert.That(overlay.color.a, Is.GreaterThanOrEqualTo(0.35f));
+        Assert.That(title, Is.Not.Null);
+        Assert.That(continueLabel.text, Is.EqualTo("TAP TO CONTINUE"));
+        Assert.That(panel.activeSelf, Is.False);
+
+        view.Apply(new RunEndedViewState(
+            isVisible: true,
+            isSuccess: true,
+            titleText: "VICTORY",
+            earnedCoins: 13,
+            earnedCoinsText: "COINS\n13",
+            reachedMeters: 87,
+            reachedDistanceText: "DISTANCE\n87 m",
+            hasBestImprovement: true,
+            bestImprovementMeters: 87,
+            bestImprovementText: "NEW BEST\n+87 m"));
+
+        Assert.That(panel.activeSelf, Is.True);
+        Assert.That(title.text, Is.EqualTo("VICTORY"));
+        Assert.That(earnedCoinsLabel.text, Is.EqualTo("COINS\n13"));
+        Assert.That(reachedDistanceLabel.text, Is.EqualTo("DISTANCE\n87 m"));
+        Assert.That(bestImprovementLabel.gameObject.activeSelf, Is.True);
+        Assert.That(bestImprovementLabel.text, Is.EqualTo("NEW BEST\n+87 m"));
+
+        view.Apply(new RunEndedViewState(
+            isVisible: true,
+            isSuccess: false,
+            titleText: "DEFEAT",
+            earnedCoins: 2,
+            earnedCoinsText: "COINS\n2",
+            reachedMeters: 12,
+            reachedDistanceText: "DISTANCE\n12 m",
+            hasBestImprovement: false,
+            bestImprovementMeters: 0,
+            bestImprovementText: string.Empty));
+
+        Assert.That(title.text, Is.EqualTo("DEFEAT"));
+        Assert.That(bestImprovementLabel.gameObject.activeSelf, Is.False);
+        Assert.That(bestImprovementLabel.text, Is.Empty);
     }
 
     [UnityTest]
@@ -240,7 +301,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
 
         yield return WaitUntilUpgradeCards(activeScene, lifetimeScope.Container.Resolve<IUpgradeCatalog>().UpgradeDefinitions.Count);
 
-        var panel = FindGameObjectByName(activeScene, "Run Preparation Panel");
+        var panel = FindGameObjectByName(activeScene, "RunPreparationPanel");
         var continueButton = FindGameObjectByName(activeScene, "Run Preparation Continue Touch Area").GetComponent<Button>();
         Assert.That(panel.activeInHierarchy, Is.True);
 
@@ -261,7 +322,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
 
         yield return WaitUntilUpgradeCards(activeScene, lifetimeScope.Container.Resolve<IUpgradeCatalog>().UpgradeDefinitions.Count);
 
-        var panel = FindGameObjectByName(activeScene, "Run Preparation Panel");
+        var panel = FindGameObjectByName(activeScene, "RunPreparationPanel");
         var continueButton = FindGameObjectByName(activeScene, "Run Preparation Continue Touch Area").GetComponent<Button>();
         Assert.That(panel.activeInHierarchy, Is.True);
         Assert.That(continueButton.interactable, Is.True);

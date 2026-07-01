@@ -10,6 +10,7 @@ using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using NUnit.Framework;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -34,6 +35,11 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var mainCamera = FindSingleInScene<Camera>(activeScene, "Main Camera");
+            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
+            var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
+            var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
+            var playerCameraLookTarget = FindGameObjectByName(activeScene, "Player Camera Look Target");
             var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var bandCenter = FindGameObjectByName(activeScene, "Band Center");
@@ -45,6 +51,10 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             yield return null;
 
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
+            Assert.That(runPreparationCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
+            Assert.That(runPreparationCamera.Priority.Value, Is.GreaterThan(runCamera.Priority.Value));
+            AssertRunPreparationCameraFacesPlayer(runPreparationCamera.transform, launchTarget.transform);
+            AssertCameraFramesTarget(mainCamera, playerCameraLookTarget.transform);
             Assert.That(playerRigidbody.isKinematic, Is.True);
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
@@ -72,12 +82,28 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
             var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var mainCamera = FindSingleInScene<Camera>(activeScene, "Main Camera");
+            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
+            var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
+            var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
+            var playerCameraLookTarget = FindGameObjectByName(activeScene, "Player Camera Look Target");
             var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
 
+            yield return WaitUntilCameraHasPositiveSideBias(mainCamera, playerCameraLookTarget.transform, 0.15f, 30);
+
             Assert.That(continueCommand.TryContinue(), Is.True);
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("PreLaunchStateId"));
+            Assert.That(preLaunchCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
+            Assert.That(preLaunchCamera.Priority.Value, Is.GreaterThan(runCamera.Priority.Value));
+
+            yield return AssertCameraBlendUsesYUpOrbit(
+                mainCamera,
+                playerCameraLookTarget.transform,
+                runPreparationCamera.transform,
+                preLaunchCamera.transform,
+                8);
             Assert.That(playerRigidbody.isKinematic, Is.True);
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
@@ -95,7 +121,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
     }
 
     [UnityTest]
-    public IEnumerator given_GameplayScene_when_RunEnds_then_ReturnsToRunPreparation()
+    public IEnumerator given_GameplayScene_when_RunEndAcknowledged_then_ReturnsToRunPreparation()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Run Preparation Run End Mouse");
 
@@ -106,25 +132,51 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
             var stateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
             var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+            var acknowledgeCommand = lifetimeScope.Container.Resolve<IRunResultAcknowledgeCommand>();
             var runEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
+            var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
+            var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
+            var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
             var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
             var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
             var bandCenter = FindGameObjectByName(activeScene, "Band Center");
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
 
             Assert.That(continueCommand.TryContinue(), Is.True);
             yield return PullAndReleaseSlingshot(mouse, activeScene);
             yield return WaitUntilStateName(stateService, "RunningStateId", 60);
+            yield return WaitUntilPlayerLaunches(playerRigidbody);
 
+            var geometry = slingshotView.CreateGeometrySnapshot();
+            yield return WaitUntilPlayerMovesAwayFrom(playerRigidbody, geometry.RestPoint, 0.5f, 60);
             LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
             runEndCandidateReceiver.SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
             yield return WaitUntilStateName(stateService, "RunEndedStateId", 60);
+            var runEndedPlayerPosition = playerRigidbody.position;
+
+            Assert.That(Vector3.Distance(runEndedPlayerPosition, geometry.RestPoint), Is.GreaterThan(0.5f));
+            Assert.That(runCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
+            Assert.That(runCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
+
+            Assert.That(
+                Vector3.Distance(runCameraAnchor.transform.position, runEndedPlayerPosition + runCameraConfig.AnchorOffset),
+                Is.LessThan(1.5f));
+
+            yield return null;
+            yield return new WaitForFixedUpdate();
+
+            Assert.That(Vector3.Distance(playerRigidbody.position, runEndedPlayerPosition), Is.LessThan(0.05f));
+            Assert.That(acknowledgeCommand.TryAcknowledge(), Is.False);
+            yield return AcknowledgeRunEndAfterGuard(acknowledgeCommand, 30);
             yield return WaitUntilStateName(stateService, "RunPreparationStateId", 120);
 
-            var geometry = slingshotView.CreateGeometrySnapshot();
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
+            Assert.That(runPreparationCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
+            Assert.That(runPreparationCamera.Priority.Value, Is.GreaterThan(runCamera.Priority.Value));
             Assert.That(playerRigidbody.isKinematic, Is.True);
             Assert.That(playerRigidbody.linearVelocity.sqrMagnitude, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(pullHint.activeSelf, Is.False);
@@ -160,6 +212,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             var statResolver = lifetimeScope.Container.Resolve<IRunGameplayStatResolver>();
             var pickupGrantResolver = lifetimeScope.Container.Resolve<IPickupCurrencyGrantResolver>();
             var continueCommand = lifetimeScope.Container.Resolve<IRunPreparationContinueCommand>();
+            var acknowledgeCommand = lifetimeScope.Container.Resolve<IRunResultAcknowledgeCommand>();
             var runEndCandidateReceiver = lifetimeScope.Container.Resolve<IRunEndCandidateReceiver>();
             var launchAppliedNotifier = lifetimeScope.Container.Resolve<ISlingshotLaunchAppliedNotifier>();
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
@@ -226,6 +279,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
             runEndCandidateReceiver.SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
             yield return WaitUntilStateName(stateService, "RunEndedStateId", 60);
+            yield return AcknowledgeRunEndAfterGuard(acknowledgeCommand, 30);
             yield return WaitUntilStateName(stateService, "RunPreparationStateId", 120);
 
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunPreparationStateId"));
@@ -288,6 +342,102 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
         }
 
         Assert.Fail("Expected Slingshot pull release to launch the Player.");
+    }
+
+    private IEnumerator WaitUntilPlayerMovesAwayFrom(
+        Rigidbody playerRigidbody,
+        Vector3 origin,
+        float minimumDistance,
+        int frameLimit)
+    {
+        for (var frameIndex = 0; frameIndex < frameLimit; frameIndex += 1)
+        {
+            if (Vector3.Distance(playerRigidbody.position, origin) >= minimumDistance)
+                yield break;
+
+            yield return null;
+        }
+
+        Assert.Fail($"Expected Player to move at least {minimumDistance:0.###} meters away from the origin.");
+    }
+
+    private IEnumerator AcknowledgeRunEndAfterGuard(IRunResultAcknowledgeCommand acknowledgeCommand, int fixedFrameLimit)
+    {
+        for (var frameIndex = 0; frameIndex < fixedFrameLimit; frameIndex += 1)
+        {
+            if (acknowledgeCommand.TryAcknowledge())
+                yield break;
+
+            yield return new WaitForFixedUpdate();
+        }
+
+        Assert.Fail("Expected Run End acknowledgement guard to elapse.");
+    }
+
+    private void AssertRunPreparationCameraFacesPlayer(Transform runPreparationCamera, Transform player)
+    {
+        var cameraToPlayer = player.position - runPreparationCamera.position;
+        Assert.That(Vector3.Dot(runPreparationCamera.forward.normalized, cameraToPlayer.normalized), Is.GreaterThan(0.85f));
+        Assert.That(Vector3.Dot(runPreparationCamera.position - player.position, Vector3.forward), Is.GreaterThan(0.5f));
+    }
+
+    private IEnumerator WaitUntilCameraHasPositiveSideBias(Camera camera, Transform target, float minimumSideOffset, int frameLimit)
+    {
+        var bestSideOffset = float.NegativeInfinity;
+
+        for (var frameIndex = 0; frameIndex < frameLimit; frameIndex += 1)
+        {
+            yield return null;
+            AssertCameraFramesTarget(camera, target);
+
+            var sideOffset = Vector3.Dot(camera.transform.position - target.position, Vector3.right);
+            bestSideOffset = Mathf.Max(bestSideOffset, sideOffset);
+
+            if (sideOffset > minimumSideOffset)
+                yield break;
+        }
+
+        Assert.Fail(
+            $"Expected RunPreparation camera to settle on positive X before transition. Best side offset: {bestSideOffset:0.###}m.");
+    }
+
+    private IEnumerator AssertCameraBlendUsesYUpOrbit(
+        Camera camera,
+        Transform target,
+        Transform runPreparationCamera,
+        Transform preLaunchCamera,
+        int frameCount)
+    {
+        var minimumHeight = Mathf.Min(runPreparationCamera.position.y, preLaunchCamera.position.y) - 0.25f;
+        var maximumHeight = Mathf.Max(runPreparationCamera.position.y, preLaunchCamera.position.y) + 0.25f;
+        var foundPositiveSideSample = false;
+
+        for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
+        {
+            yield return null;
+            AssertCameraFramesTarget(camera, target);
+
+            Assert.That(camera.transform.position.y, Is.InRange(minimumHeight, maximumHeight));
+
+            var sideOffset = Vector3.Dot(camera.transform.position - target.position, Vector3.right);
+
+            if (sideOffset > 0.15f)
+                foundPositiveSideSample = true;
+        }
+
+        Assert.That(foundPositiveSideSample, Is.True);
+    }
+
+    private void AssertCameraFramesTarget(Camera camera, Transform target)
+    {
+        var cameraToTarget = target.position - camera.transform.position;
+        var forwardAlignment = Vector3.Dot(camera.transform.forward.normalized, cameraToTarget.normalized);
+        var viewportPosition = camera.WorldToViewportPoint(target.position);
+
+        Assert.That(forwardAlignment, Is.GreaterThan(0.65f));
+        Assert.That(viewportPosition.z, Is.GreaterThan(0f));
+        Assert.That(viewportPosition.x, Is.InRange(0.2f, 0.8f));
+        Assert.That(viewportPosition.y, Is.InRange(0.2f, 0.85f));
     }
 
     private Vector2 GetScreenPosition(Camera camera, Vector3 worldPosition)

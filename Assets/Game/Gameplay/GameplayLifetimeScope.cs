@@ -50,6 +50,7 @@ namespace Game.Gameplay
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private PullHintView _pullHintView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
+        [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] [TagSelector] private string _playerTag = "Player";
@@ -95,7 +96,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IGameplaySlingshotLaunchConfig>(_gameplaySlingshotLaunchConfig);
 
             builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
-                .As<ILaunchTargetPreLaunchReset>();
+                .As<ILaunchTargetPreLaunchReset, IRunEndPoseLockTarget>();
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
@@ -106,6 +107,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
+            builder.RegisterInstance<IRunEndedView>(_runEndedView);
             builder.RegisterInstance<ILevelPickupSource>(new GameplayLifetimeScopePickupSource(this));
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
@@ -132,6 +134,8 @@ namespace Game.Gameplay
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
+            builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
+            builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
             builder.Register<PlayerEconomyState>(Lifetime.Singleton);
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
             builder.Register<IPersistentDataPathProvider, UnityPersistentDataPathProvider>(Lifetime.Singleton);
@@ -160,7 +164,6 @@ namespace Game.Gameplay
             builder.Register<ILaunchImpulseApplier, SlingshotLaunchImpulseApplier>(Lifetime.Singleton);
             builder.Register<IGameplaySlingshotLauncher, GameplaySlingshotLauncher>(Lifetime.Singleton);
             builder.Register<IRunModifierSnapshotProvider, IRunModifierSnapshotStore, RunModifierSnapshotHolder>(Lifetime.Singleton);
-
             builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
@@ -168,12 +171,14 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
             builder.RegisterEntryPoint<RunEndFlow>();
+            builder.RegisterEntryPoint<RunEndPoseLockController>();
             builder.RegisterEntryPoint<RunRewardCommitter>();
             builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
-            builder.RegisterEntryPoint<CharacterPresentationPresenter>();
+            builder.RegisterEntryPoint<CharacterPresenter>();
             builder.RegisterEntryPoint<PickupCollectionController>();
             builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
+            builder.RegisterEntryPoint<RunEndedPresenter>();
         }
 
         private IReadOnlyList<Pickup> GetLevelPickups()
@@ -185,7 +190,7 @@ namespace Game.Gameplay
 
             return pickups
                 .Distinct()
-                .OrderBy(pickup => GetPickupHierarchyPath(pickup), StringComparer.Ordinal)
+                .OrderBy(GetPickupHierarchyPath, StringComparer.Ordinal)
                 .ThenBy(pickup => pickup == null ? 0 : pickup.GetInstanceID())
                 .ToArray();
         }

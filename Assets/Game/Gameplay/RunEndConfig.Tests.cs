@@ -10,14 +10,14 @@ namespace Game.Gameplay
             float lostMomentumDuration,
             float lostMomentumPlanarSpeedThreshold,
             float lostMomentumProgressThreshold,
-            float runEndedDelay)
+            float runEndedAcknowledgeGuardDuration)
         {
             _obstacleImpactSpeedThreshold = obstacleImpactSpeedThreshold;
             _lostMomentumLaunchGraceDuration = lostMomentumLaunchGraceDuration;
             _lostMomentumDuration = lostMomentumDuration;
             _lostMomentumPlanarSpeedThreshold = lostMomentumPlanarSpeedThreshold;
             _lostMomentumProgressThreshold = lostMomentumProgressThreshold;
-            _runEndedDelay = runEndedDelay;
+            _runEndedAcknowledgeGuardDuration = runEndedAcknowledgeGuardDuration;
         }
     }
 }

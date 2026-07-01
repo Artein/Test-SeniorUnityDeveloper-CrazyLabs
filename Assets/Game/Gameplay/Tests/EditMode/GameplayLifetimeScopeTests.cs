@@ -93,6 +93,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Pull Hint View")
                 .And.Message.Contains("Run Preparation View")
+                .And.Message.Contains("Run Ended View")
                 .And.Message.Contains("Launch Target")
                 .And.Message.Contains("Character Presentation View")
                 .And.Message.Contains("Level Pickup")
@@ -259,6 +260,7 @@ public sealed class GameplayLifetimeScopeTests
         var heldLaunchTarget = container.Resolve<IHeldLaunchTarget>();
         var silhouetteSource = container.Resolve<ILaunchTargetSilhouetteSource>();
         var launchTargetPreLaunchReset = container.Resolve<ILaunchTargetPreLaunchReset>();
+        var runEndPoseLockTarget = container.Resolve<IRunEndPoseLockTarget>();
         var preLaunchRigPoseResetter = container.Resolve<IPreLaunchRigPoseResetter>();
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
@@ -273,6 +275,7 @@ public sealed class GameplayLifetimeScopeTests
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
         var runResultNotifier = container.Resolve<IRunResultNotifier>();
+        var runResultAcknowledgeCommand = container.Resolve<IRunResultAcknowledgeCommand>();
         var playerEconomyState = container.Resolve<PlayerEconomyState>();
         var applicationPauseNotifier = container.Resolve<IApplicationPauseNotifier>();
         var applicationFocusChangeNotifier = container.Resolve<IApplicationFocusChangeNotifier>();
@@ -290,6 +293,9 @@ public sealed class GameplayLifetimeScopeTests
         var runGameplayStatResolver = container.Resolve<IRunGameplayStatResolver>();
         var pickupCurrencyGrantResolver = container.Resolve<IPickupCurrencyGrantResolver>();
         var runPreparationView = container.Resolve<IRunPreparationView>();
+        var runEndedView = container.Resolve<IRunEndedView>();
+        var runSessionBestDistanceTracker = container.Resolve<RunSessionBestDistanceTracker>();
+        var runEndedResultStatsBuilder = container.Resolve<RunEndedResultStatsBuilder>();
         var pullHintView = container.Resolve<IPullHintView>();
         var pullHintTuning = container.Resolve<IPullHintTuning>();
         var upgradePreviewBuilder = container.Resolve<UpgradePreviewBuilder>();
@@ -331,7 +337,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(15));
+        Assert.That(initializables.Count, Is.EqualTo(17));
         Assert.That(tickables.Count, Is.EqualTo(4));
         Assert.That(fixedTickables.Count, Is.EqualTo(4));
         Assert.That(lateTickables.Count, Is.EqualTo(1));
@@ -339,6 +345,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
         Assert.That(launchTargetPreLaunchReset, Is.SameAs(fixture.LaunchTarget));
+        Assert.That(runEndPoseLockTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(preLaunchRigPoseResetter, Is.Not.Null);
         Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
@@ -355,6 +362,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
         Assert.That(runResultNotifier, Is.Not.Null);
         Assert.That(runResultNotifier, Is.SameAs(runEndCandidateReceiver));
+        Assert.That(runResultAcknowledgeCommand, Is.SameAs(runEndCandidateReceiver));
         Assert.That(playerEconomyState, Is.Not.Null);
         Assert.That(applicationPauseNotifier, Is.Not.Null);
         Assert.That(applicationFocusChangeNotifier, Is.SameAs(applicationPauseNotifier));
@@ -371,6 +379,9 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runGameplayStatResolver, Is.Not.Null);
         Assert.That(pickupCurrencyGrantResolver, Is.Not.Null);
         Assert.That(runPreparationView, Is.Not.Null);
+        Assert.That(runEndedView, Is.SameAs(fixture.RunEndedView));
+        Assert.That(runSessionBestDistanceTracker, Is.Not.Null);
+        Assert.That(runEndedResultStatsBuilder, Is.Not.Null);
         Assert.That(pullHintView, Is.SameAs(fixture.PullHintView));
         Assert.That(pullHintTuning, Is.SameAs(fixture.PullHintView));
         Assert.That(upgradePreviewBuilder, Is.Not.Null);
@@ -425,6 +436,7 @@ public sealed class GameplayLifetimeScopeTests
         var slingshotView = CreateSlingshotView(slingshotConfig);
         var pullHintView = CreateGameObject("Pull Hint View").AddComponent<PullHintView>();
         var runPreparationView = CreateRunPreparationView();
+        var runEndedView = CreateRunEndedView();
         var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
         var slingshotRig = CreateGameObject("Slingshot Rig").transform;
         var preLaunchSlingshotRigPose = CreateGameObject("Pre-Launch Slingshot Rig Pose").transform;
@@ -432,9 +444,10 @@ public sealed class GameplayLifetimeScopeTests
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
         var runCameraAnchor = CreateGameObject("Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
         var runCameraRig = CreateGameObject("Run Camera Rig").AddComponent<CinemachineRunCameraRig>();
+        var runPreparationCamera = CreateGameObject("Run Preparation Camera").AddComponent<CinemachineCamera>();
         var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
-        runCameraRig.SetReferencesForTests(preLaunchCamera, runCamera);
+        runCameraRig.SetReferencesForTests(runPreparationCamera, preLaunchCamera, runCamera);
         var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
         var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
         var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
@@ -480,6 +493,7 @@ public sealed class GameplayLifetimeScopeTests
             slingshotView,
             pullHintView,
             runPreparationView,
+            runEndedView,
             launchTarget,
             characterPresentationView,
             levelPickups,
@@ -516,6 +530,7 @@ public sealed class GameplayLifetimeScopeTests
             RunCameraAnchor = runCameraAnchor,
             RunCameraRig = runCameraRig,
             PullHintView = pullHintView,
+            RunEndedView = runEndedView,
             CharacterPresentationView = characterPresentationView,
             PlayerTag = playerTag
         };
@@ -551,6 +566,30 @@ public sealed class GameplayLifetimeScopeTests
         var continueTouchAreaButton = CreateChildButton(viewObject.transform, "Run Preparation Continue Touch Area");
         var upgradeCard = CreateRunPreparationUpgradeCard(viewObject.transform);
         view.SetReferencesForTests(viewObject, coinBalanceIcon, coinBalanceText, continueTouchAreaButton, new[] { upgradeCard });
+        viewObject.SetActive(true);
+        return view;
+    }
+
+    private RunEndedUIView CreateRunEndedView()
+    {
+        var viewObject = CreateGameObject("Run Ended View");
+        viewObject.SetActive(false);
+        var view = viewObject.AddComponent<RunEndedUIView>();
+        var titleText = CreateChildText(viewObject.transform, "Run Ended Title");
+        var earnedCoinsText = CreateChildText(viewObject.transform, "Run Ended Earned Coins Label");
+        var reachedDistanceText = CreateChildText(viewObject.transform, "Run Ended Reached Distance Label");
+        var bestImprovementRoot = CreateChildGameObject(viewObject.transform, "Run Ended Best Improvement");
+        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "Run Ended Best Improvement Label");
+        var acknowledgeTouchAreaButton = CreateChildButton(viewObject.transform, "Run Ended Continue Touch Area");
+
+        view.SetReferencesForTests(
+            viewObject,
+            titleText,
+            earnedCoinsText,
+            reachedDistanceText,
+            bestImprovementRoot,
+            bestImprovementText,
+            acknowledgeTouchAreaButton);
         viewObject.SetActive(true);
         return view;
     }
@@ -742,6 +781,7 @@ public sealed class GameplayLifetimeScopeTests
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
         public PullHintView PullHintView { get; set; }
+        public RunEndedUIView RunEndedView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
         public string PlayerTag { get; set; }
     }

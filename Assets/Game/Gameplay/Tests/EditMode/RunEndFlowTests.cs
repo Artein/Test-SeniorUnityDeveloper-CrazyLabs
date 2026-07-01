@@ -53,7 +53,7 @@ public sealed class RunEndFlowTests
             LinearVelocity = new Vector3(0f, 0f, 4f)
         };
         _runCurrencyAccumulator = new RunCurrencyAccumulator();
-        _config = new FakeRunEndConfig { RunEndedDelay = 0.2f };
+        _config = new FakeRunEndConfig { RunEndedAcknowledgeGuardDuration = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
         _coins = CreateCurrencyDefinition("Coins");
         _flow = CreateFlow();
@@ -178,6 +178,7 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
         Assert.That(((IRunCurrencyAccumulator)_runCurrencyAccumulator).CreateSnapshot().GetAmount(_coins), Is.Zero);
@@ -186,7 +187,39 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_RunEndedDelayElapsed_TransitionsBackToRunPreparation()
+    public void FixedTick_RunEndedGuardElapsedWithoutAcknowledge_StaysRunEnded()
+    {
+        ActivateRun();
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_BeforeGuardElapsed_ReturnsFalseAndStaysRunEnded()
+    {
+        ActivateRun();
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+
+        ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
+        ((IFixedTickable)_flow).FixedTick();
+
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.False);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_AfterGuardElapsed_TransitionsBackToRunPreparation()
     {
         ActivateRun();
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
@@ -196,8 +229,20 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
         ((IFixedTickable)_flow).FixedTick();
 
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.True);
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runPreparationStateId }));
+    }
+
+    [Test]
+    public void TryAcknowledge_NotAwaitingRunEnded_ReturnsFalse()
+    {
+        var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
+
+        Assert.That(acknowledged, Is.False);
+        Assert.That(_stateService.RequestedStateIds, Is.Empty);
     }
 
     [Test]
@@ -435,7 +480,7 @@ public sealed class RunEndFlowTests
         public float LostMomentumDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
-        public float RunEndedDelay { get; set; }
+        public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 
     private sealed class FakeTime : ITime

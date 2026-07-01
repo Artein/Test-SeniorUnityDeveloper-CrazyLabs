@@ -17,6 +17,8 @@ namespace Game.Gameplay
 
     public interface IRunCameraRig
     {
-        void SetCameraPriorities(int preLaunchCameraPriority, int runCameraPriority);
+        void ActivateRunPreparationCamera();
+        void ActivatePreLaunchCamera();
+        void ActivateRunCamera();
     }
 }

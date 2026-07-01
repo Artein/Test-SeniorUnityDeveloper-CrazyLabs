@@ -122,6 +122,9 @@ namespace Game.Gameplay
             if (_runPreparationView == null)
                 yield return "GameplayLifetimeScope requires a Run Preparation View reference.";
 
+            if (_runEndedView == null)
+                yield return "GameplayLifetimeScope requires a Run Ended View reference.";
+
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
 

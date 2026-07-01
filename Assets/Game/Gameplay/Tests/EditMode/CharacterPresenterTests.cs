@@ -11,9 +11,10 @@ using UnityEngine;
 using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
-public sealed class CharacterPresentationPresenterTests
+public sealed class CharacterPresenterTests
 {
     private readonly List<UnityEngine.Object> _objects = new();
+    private GameplayStateId _runPreparationStateId;
     private GameplayStateId _preLaunchStateId;
     private GameplayStateId _runningStateId;
     private FakeGameplayStateService _stateService;
@@ -26,11 +27,12 @@ public sealed class CharacterPresentationPresenterTests
     private FakeCharacterPresentationView _view;
     private FakeCharacterPresentationTuning _tuning;
     private FakeTime _clock;
-    private CharacterPresentationPresenter _presenter;
+    private CharacterPresenter _presenter;
 
     [SetUp]
     public void OnSetUp()
     {
+        _runPreparationStateId = CreateStateId("RunPreparation");
         _preLaunchStateId = CreateStateId("Pre-Launch");
         _runningStateId = CreateStateId("Running");
         _stateService = new FakeGameplayStateService(_runningStateId);
@@ -239,6 +241,21 @@ public sealed class CharacterPresentationPresenterTests
     }
 
     [Test]
+    public void Tick_RunPreparation_ResetsAcceptedRunResult()
+    {
+        _runResultNotifier.Raise(CreateSuccessfulRunResult());
+        _stateService.ChangeTo(_runPreparationStateId);
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.IsPreLaunch, Is.False);
+        Assert.That(_classifier.LastInput.IsRunActive, Is.False);
+        Assert.That(_classifier.LastInput.HasAcceptedRunResult, Is.False);
+        Assert.That(_classifier.LastInput.SurfaceContext.IsGrounded, Is.True);
+        Assert.That(_classifier.LastInput.SurfaceContext.ForwardDownhillDegrees, Is.Zero);
+    }
+
+    [Test]
     public void RunResultAccepted_SuccessfulResult_IsPassedToClassifierUntilPreLaunch()
     {
         _runResultNotifier.Raise(CreateSuccessfulRunResult());
@@ -260,9 +277,9 @@ public sealed class CharacterPresentationPresenterTests
         Assert.That(_classifier.LastInput.HasAcceptedRunResult, Is.False);
     }
 
-    private CharacterPresentationPresenter CreatePresenter()
+    private CharacterPresenter CreatePresenter()
     {
-        return new CharacterPresentationPresenter(
+        return new CharacterPresenter(
             _stateService,
             _motionSource,
             _progressService,
@@ -273,6 +290,7 @@ public sealed class CharacterPresentationPresenterTests
             _view,
             _tuning,
             _clock,
+            _runPreparationStateId,
             _preLaunchStateId,
             _runningStateId);
     }

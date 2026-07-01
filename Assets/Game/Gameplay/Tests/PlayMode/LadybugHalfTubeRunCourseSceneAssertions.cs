@@ -153,6 +153,6 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         public float LostMomentumDuration => 0.2f;
         public float LostMomentumPlanarSpeedThreshold => 0.5f;
         public float LostMomentumProgressThreshold => 0.05f;
-        public float RunEndedDelay => 0.02f;
+        public float RunEndedAcknowledgeGuardDuration => 0.25f;
     }
 }

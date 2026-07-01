@@ -33,6 +33,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
             var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
             var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
             var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
@@ -79,6 +80,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
 
             Assert.That(playerRigidbody.isKinematic, Is.False);
             Assert.That(playerRigidbody.linearVelocity.magnitude, Is.GreaterThan(4f));
+            Assert.That(runCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
             Assert.That(runCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
 
             Assert.That(Vector3.Distance(

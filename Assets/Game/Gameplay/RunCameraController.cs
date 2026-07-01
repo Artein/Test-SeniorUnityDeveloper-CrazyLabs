@@ -18,7 +18,10 @@ namespace Game.Gameplay
         private readonly IRunCameraRig _rig;
         private readonly IRunCameraConfig _config;
         private readonly ITime _clock;
+        private readonly GameplayStateId _runPreparationStateId;
+        private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
+        private readonly GameplayStateId _runEndedStateId;
 
         private Vector3 _cameraUp = Vector3.up;
         private Quaternion _lastValidYaw = Quaternion.identity;
@@ -36,7 +39,14 @@ namespace Game.Gameplay
             IRunCameraRig rig,
             IRunCameraConfig config,
             ITime clock,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)]
+            GameplayStateId runPreparationStateId,
+            [Key(InjectKey.GameplayStateId.PreLaunch)]
+            GameplayStateId preLaunchStateId,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStateId.RunEnded)]
+            GameplayStateId runEndedStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
@@ -45,7 +55,13 @@ namespace Game.Gameplay
             _rig = rig ?? throw new ArgumentNullException(nameof(rig));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+
+            _runPreparationStateId = runPreparationStateId != null
+                ? runPreparationStateId
+                : throw new ArgumentNullException(nameof(runPreparationStateId));
+            _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
+            _runEndedStateId = runEndedStateId != null ? runEndedStateId : throw new ArgumentNullException(nameof(runEndedStateId));
         }
 
         void IInitializable.Initialize()
@@ -59,7 +75,7 @@ namespace Game.Gameplay
             _launchAppliedNotifier.LaunchApplied += OnSlingshotLaunchApplied;
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
-            ActivatePreLaunchCamera();
+            ApplyCameraForState(_gameplayStateService.CurrentStateId);
             UpdateAnchorPose(0f, true);
         }
 
@@ -106,6 +122,25 @@ namespace Game.Gameplay
             if (_isDisposed)
                 return;
 
+            ApplyCameraForState(nextStateId);
+        }
+
+        private void ApplyCameraForState(GameplayStateId nextStateId)
+        {
+            if (ReferenceEquals(nextStateId, _runPreparationStateId))
+            {
+                ClearRunCameraGate();
+                _rig.ActivateRunPreparationCamera();
+                return;
+            }
+
+            if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            {
+                ClearRunCameraGate();
+                _rig.ActivatePreLaunchCamera();
+                return;
+            }
+
             if (ReferenceEquals(nextStateId, _runningStateId))
             {
                 if (_hasLaunchApplied)
@@ -114,9 +149,16 @@ namespace Game.Gameplay
                 return;
             }
 
-            _hasLaunchApplied = false;
-            _isRunCameraActive = false;
-            ActivatePreLaunchCamera();
+            if (ReferenceEquals(nextStateId, _runEndedStateId))
+            {
+                if (_hasLaunchApplied)
+                    ActivateRunCamera();
+
+                return;
+            }
+
+            ClearRunCameraGate();
+            _rig.ActivateRunPreparationCamera();
         }
 
         private void ActivateRunCamera()
@@ -125,13 +167,14 @@ namespace Game.Gameplay
                 return;
 
             UpdateAnchorPose(0f, true);
-            _rig.SetCameraPriorities(_config.RunCameraInactivePriority, _config.RunCameraActivePriority);
+            _rig.ActivateRunCamera();
             _isRunCameraActive = true;
         }
 
-        private void ActivatePreLaunchCamera()
+        private void ClearRunCameraGate()
         {
-            _rig.SetCameraPriorities(_config.PreLaunchCameraPriority, _config.RunCameraInactivePriority);
+            _hasLaunchApplied = false;
+            _isRunCameraActive = false;
         }
 
         private void UpdateAnchorPose(float deltaTime, bool snap)

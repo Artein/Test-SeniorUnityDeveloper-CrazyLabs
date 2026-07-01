@@ -165,7 +165,7 @@ GameObject:
   - component: {fileID: 2689066784924185104}
   - component: {fileID: 5392209091658758512}
   m_Layer: 0
-  m_Name: RunPreparationUIView
+  m_Name: RunPreparationPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

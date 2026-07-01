@@ -16,6 +16,3 @@ MonoBehaviour:
   _positionResponseRate: 12
   _yawResponseRate: 12
   _minimumYawSpeed: 0.25
-  _preLaunchCameraPriority: 10
-  _runCameraInactivePriority: 0
-  _runCameraActivePriority: 20

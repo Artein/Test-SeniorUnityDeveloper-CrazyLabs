@@ -52,6 +52,14 @@ _Avoid_: Game over type, fail reason, death reason
 The immutable summary captured when a **Run** ends.
 _Avoid_: Score state, end payload, outcome data
 
+**Best Run Distance**:
+The greatest accepted **Run Result** distance reached earlier in the current **Level Session**, whether the earlier **Run** ended in success or defeat.
+_Avoid_: Previous run distance, all-time best distance, app-session best distance
+
+**Run Distance Display**:
+The UI-facing whole-meter presentation of the distance reached by a **Run Result**.
+_Avoid_: Fractional meters, rounded-up progress, raw world-position delta
+
 **Run Result Notifier**:
 The runtime notification contract that publishes an accepted **Run Result**.
 _Avoid_: Gameplay State inference, result polling, UI event bus
@@ -78,6 +86,35 @@ The gameplay flow that accepts run-ending signals and produces one **Run Result*
 _Avoid_: Game over manager, result controller, death handler
 
 In the first slice, `RunEndFlow` should implement **Run Result Notifier** and publish exactly one accepted **Run Result** per ended **Run**.
+
+**Run Ended**:
+The **Gameplay State** after a **Run Result** has been accepted and before **Acknowledge Run Result** returns the player to **Run Preparation**.
+_Avoid_: RunEnd, Game Over, auto-reset delay
+
+**Acknowledge Run Result**:
+The player confirmation action in **Run Ended** that accepts the shown **Run Result** before returning to **Run Preparation**.
+_Avoid_: Continue, Start Run, auto-retry
+
+In the first slice, **Run End Flow** owns **Acknowledge Run Result** and performs the **Run Ended** to **Run Preparation** transition for both
+successful and defeated **Run Results**.
+
+**Run Ended UI**:
+The scene-authored UI surface shown during **Run Ended** to present the current **Run Result** and receive **Acknowledge Run Result**.
+_Avoid_: Runtime-built result screen, Run Preparation UI, upgrade screen
+
+In the first slice, **Run Ended UI** presents the accepted current **Run Result**, not live run counters, live physics state, or total **Currency Balance**.
+
+**Run Ended UI Timing**:
+The **Run Ended UI** appears when the current **Run Result** is accepted, while terminal character presentation plays concurrently.
+_Avoid_: Animation-gated result screen, delayed reward reveal, auto-transition pause
+
+**Run Ended Acknowledge Guard**:
+The short delay after **Run Ended UI Timing** before **Acknowledge Run Result** can accept player input.
+_Avoid_: Animation wait, auto-continue delay, input debounce everywhere
+
+**Run End Pose Lock**:
+The hold applied to the **Launch Target** during **Run Ended** so its gameplay body stays at the accepted **Run Result** pose until **Acknowledge Run Result**.
+_Avoid_: Visual-only freeze, animation root motion, continued physics drift
 
 **Run Contact Category**:
 The gameplay meaning of a contact or region encountered during a **Run**.
@@ -887,11 +924,20 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - A **Run Result** summarizes one ended **Run**.
 - A **Run Result** has one **Run End Reason**.
 - A **Run Result** has one **Run Currency Snapshot**.
+- A **Run Result** reports earned-this-run currency from **Run Currency Snapshot**, not total **Currency Balance**.
 - A **Run Result** uses the **Run Progress Frame** to describe forward downhill progress.
+- A **Run Distance Display** shows a **Run Result** distance in whole meters without rounding up fractional progress.
+- **Best Run Distance** belongs to the current **Level Session**, not to all-time saved player progress.
+- **Best Run Distance** may improve from any accepted **Run Result**, including a defeated **Run**.
 - A **Run Result Notifier** publishes accepted **Run Results**.
 - **Run End Flow** produces one **Run Result** for an ended **Run**.
 - **Run End Flow** may implement **Run Result Notifier**.
 - **Run End Flow** publishes one accepted **Run Result** per ended **Run**.
+- **Run End Flow** owns **Acknowledge Run Result**.
+- **Acknowledge Run Result** returns to **Run Preparation** for both successful and defeated **Run Results** in the first slice.
+- **Run Ended UI** is scene-authored and presents accepted current **Run Result** data during **Run Ended**.
+- **Run Ended UI Timing** does not wait for `Victory` or `Defeat` character presentation to finish.
+- **Run Ended Acknowledge Guard** delays only **Acknowledge Run Result**, not **Run Ended UI Timing**.
 - A **Run Contact Category** determines how a **Run** contact or region affects the **Run**.
 - A **Run Surface** does not end a **Run**.
 - **Run Surface Context** describes current **Run Surface** support for the **Launch Target**.
@@ -1602,6 +1648,7 @@ _Avoid_: Collider mesh, 3D wrap shape, concave collider outline
 - "`ModelRoot`", "mesh root", "avatar root", and imported-model alignment root resolve to **Character Model Root**, not **Character Visual Anchor** or the `LadybugCharacter` prefab root.
 - The `LadybugCharacter` prefab root is the stable presentation contract root; imported model local offsets belong under **Character Model Root**.
 - "Slide", "run", "airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance or animation, not to **Gameplay State**.
+- "Victory" and "Defeat" describe **Character Presentation Modes**; **Run Ended** UI result copy does not have to use those words as titles.
 - "Held" resolves to `Idle` when no **Active Pull** is changing the character presentation; live pulled presentation resolves to **Pull Anticipation**.
 - "Character config", "Ladybug config", and slide/run threshold data resolve to **Character Presentation Tuning** when discussing presentation-only values.
 - "`ICharacterPresentationView`" and "`ICharacterPresentationTuning`" are separate read-only contracts; in the first slice both can resolve to the same passive `CharacterPresentationView` MonoBehaviour instance.

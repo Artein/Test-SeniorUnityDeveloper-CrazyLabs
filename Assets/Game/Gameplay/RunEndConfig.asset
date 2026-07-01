@@ -17,4 +17,4 @@ MonoBehaviour:
   _lostMomentumDuration: 1
   _lostMomentumPlanarSpeedThreshold: 0.35
   _lostMomentumProgressThreshold: 0.05
-  _runEndedDelay: 0.02
+  _runEndedAcknowledgeGuardDuration: 0.25

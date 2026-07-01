@@ -21,7 +21,14 @@ namespace Game.Gameplay
         event Action<RunResult> RunResultAccepted;
     }
 
-    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier
+    // TODO — Note for AI: Rename to IRunResultAcknowledger?
+    public interface IRunResultAcknowledgeCommand
+    {
+        bool TryAcknowledge();
+    }
+
+    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier,
+        IRunResultAcknowledgeCommand
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -41,7 +48,7 @@ namespace Game.Gameplay
         private bool _isDisposed;
         private bool _hasLaunchApplied;
         private bool _hasAcceptedResult;
-        private bool _isAwaitingRestart;
+        private bool _isAwaitingAcknowledgement;
         private float _elapsedSinceLaunch;
         private float _runEndedElapsed;
 
@@ -57,9 +64,12 @@ namespace Game.Gameplay
             IRunCurrencyAccumulator runCurrencyAccumulator,
             IRunEndConfig config,
             ITime clock,
-            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId restartStateId,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
-            [Key(InjectKey.GameplayStateId.RunEnded)] GameplayStateId runEndedStateId)
+            [Key(InjectKey.GameplayStateId.RunPreparation)]
+            GameplayStateId restartStateId,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStateId.RunEnded)]
+            GameplayStateId runEndedStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
@@ -97,9 +107,9 @@ namespace Game.Gameplay
 
             var fixedDeltaTime = Math.Max(0f, _clock.FixedDeltaTime);
 
-            if (_isAwaitingRestart)
+            if (_isAwaitingAcknowledgement)
             {
-                TickRunEndedDelay(fixedDeltaTime);
+                TickRunEndedAcknowledgementGuard(fixedDeltaTime);
                 return;
             }
 
@@ -145,6 +155,21 @@ namespace Game.Gameplay
             _pendingCandidates.Add(candidate);
         }
 
+        bool IRunResultAcknowledgeCommand.TryAcknowledge()
+        {
+            if (_isDisposed)
+                return false;
+
+            if (!_isAwaitingAcknowledgement || !_hasAcceptedResult || !_gameplayStateService.IsCurrent(_runEndedStateId))
+                return false;
+
+            if (_runEndedElapsed < _config.RunEndedAcknowledgeGuardDuration)
+                return false;
+
+            _isAwaitingAcknowledgement = false;
+            return _gameplayStateService.TryTransitionTo(_restartStateId);
+        }
+
         private void OnSlingshotLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
         {
             if (_isDisposed)
@@ -152,7 +177,7 @@ namespace Game.Gameplay
 
             _hasLaunchApplied = true;
             _hasAcceptedResult = false;
-            _isAwaitingRestart = false;
+            _isAwaitingAcknowledgement = false;
             _elapsedSinceLaunch = 0f;
             _runEndedElapsed = 0f;
             _pendingCandidates.Clear();
@@ -220,7 +245,7 @@ namespace Game.Gameplay
         private void AcceptCandidate(RunEndCandidate candidate)
         {
             _hasAcceptedResult = true;
-            _isAwaitingRestart = _gameplayStateService.TryTransitionTo(_runEndedStateId);
+            _isAwaitingAcknowledgement = _gameplayStateService.TryTransitionTo(_runEndedStateId);
             _runEndedElapsed = 0f;
 
             if (!_progressService.HasValidSnapshot)
@@ -247,21 +272,15 @@ namespace Game.Gameplay
             Debug.Log(result.ToString());
         }
 
-        private void TickRunEndedDelay(float fixedDeltaTime)
+        private void TickRunEndedAcknowledgementGuard(float fixedDeltaTime)
         {
             if (!_gameplayStateService.IsCurrent(_runEndedStateId))
             {
-                _isAwaitingRestart = false;
+                _isAwaitingAcknowledgement = false;
                 return;
             }
 
             _runEndedElapsed += fixedDeltaTime;
-
-            if (_runEndedElapsed < _config.RunEndedDelay)
-                return;
-
-            _isAwaitingRestart = false;
-            _gameplayStateService.TryTransitionTo(_restartStateId);
         }
 
         private static int GetPriority(RunEndReason reason)
@@ -280,7 +299,7 @@ namespace Game.Gameplay
         {
             _hasLaunchApplied = false;
             _hasAcceptedResult = false;
-            _isAwaitingRestart = false;
+            _isAwaitingAcknowledgement = false;
             _elapsedSinceLaunch = 0f;
             _runEndedElapsed = 0f;
             _pendingCandidates.Clear();

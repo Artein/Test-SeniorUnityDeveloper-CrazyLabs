@@ -19,16 +19,20 @@ public sealed class RunCameraControllerTests
     private FakeRunCameraRig _rig;
     private FakeRunCameraConfig _config;
     private FakeTime _clock;
+    private GameplayStateId _runPreparationStateId;
     private GameplayStateId _preLaunchStateId;
     private GameplayStateId _runningStateId;
+    private GameplayStateId _runEndedStateId;
     private RunCameraController _controller;
 
     [SetUp]
     public void OnSetUp()
     {
+        _runPreparationStateId = CreateStateId("RunPreparation");
         _preLaunchStateId = CreateStateId("PreLaunch");
         _runningStateId = CreateStateId("Running");
-        _stateService = new FakeGameplayStateService(_preLaunchStateId);
+        _runEndedStateId = CreateStateId("RunEnded");
+        _stateService = new FakeGameplayStateService(_runPreparationStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
 
         _source = new FakeRunCameraSource
@@ -49,10 +53,7 @@ public sealed class RunCameraControllerTests
             AnchorOffset = new Vector3(0f, 1.5f, 0f),
             PositionResponseRate = 10f,
             YawResponseRate = 10f,
-            MinimumYawSpeed = 0.25f,
-            PreLaunchCameraPriority = 10,
-            RunCameraInactivePriority = 0,
-            RunCameraActivePriority = 20
+            MinimumYawSpeed = 0.25f
         };
 
         _clock = new FakeTime
@@ -78,21 +79,29 @@ public sealed class RunCameraControllerTests
     }
 
     [Test]
-    public void Initialize_SetsPreLaunchCameraPrioritiesAndPrimesAnchor()
+    public void Initialize_ActivatesRunPreparationCameraAndPrimesAnchor()
     {
-        Assert.That(_rig.PreLaunchCameraPriority, Is.EqualTo(_config.PreLaunchCameraPriority));
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
         Assert.That(_anchor.Position, Is.EqualTo(_source.Position + _config.AnchorOffset));
         AssertForward(_anchor.Rotation, Vector3.forward);
     }
 
     [Test]
+    public void PreLaunch_ActivatesPreLaunchCamera()
+    {
+        _stateService.ChangeTo(_preLaunchStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.PreLaunch));
+    }
+
+    [Test]
     public void RunningWithoutLaunchApplied_DoesNotActivateRunCamera()
     {
+        _stateService.ChangeTo(_preLaunchStateId);
         _stateService.ChangeTo(_runningStateId);
         ((ILateTickable)_controller).LateTick();
 
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.PreLaunch));
     }
 
     [Test]
@@ -102,8 +111,7 @@ public sealed class RunCameraControllerTests
 
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
 
-        Assert.That(_rig.PreLaunchCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
     }
 
     [Test]
@@ -111,35 +119,58 @@ public sealed class RunCameraControllerTests
     {
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
 
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
 
         _stateService.ChangeTo(_runningStateId);
 
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
     }
 
     [Test]
-    public void LeavingRunning_DeactivatesRunCameraAndClearsLaunchGate()
+    public void PreLaunchAfterRunning_DeactivatesRunCameraAndClearsLaunchGate()
     {
         ActivateRunCamera();
 
         _stateService.ChangeTo(_preLaunchStateId);
         _stateService.ChangeTo(_runningStateId);
 
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraInactivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.PreLaunch));
+    }
+
+    [Test]
+    public void RunEndedAfterRunning_KeepsRunCameraActiveAndLaunchGate()
+    {
+        ActivateRunCamera();
+
+        _stateService.ChangeTo(_runEndedStateId);
+        _stateService.ChangeTo(_runningStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
+    }
+
+    [Test]
+    public void RunPreparationAfterRunEnded_ActivatesRunPreparationCameraAndClearsLaunchGate()
+    {
+        ActivateRunCamera();
+
+        _stateService.ChangeTo(_runEndedStateId);
+        _stateService.ChangeTo(_runPreparationStateId);
+        _stateService.ChangeTo(_runningStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
     }
 
     [Test]
     public void RepeatedLaunchAndStateEvents_AreIdempotent()
     {
         ActivateRunCamera();
-        var activationCallCount = _rig.SetCameraPrioritiesCallCount;
+        var activationCallCount = _rig.ActivationCallCount;
 
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
         _stateService.ChangeTo(_runningStateId);
 
-        Assert.That(_rig.SetCameraPrioritiesCallCount, Is.EqualTo(activationCallCount));
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
+        Assert.That(_rig.ActivationCallCount, Is.EqualTo(activationCallCount));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
     }
 
     [Test]
@@ -209,14 +240,17 @@ public sealed class RunCameraControllerTests
             _rig,
             _config,
             _clock,
-            _runningStateId);
+            _runPreparationStateId,
+            _preLaunchStateId,
+            _runningStateId,
+            _runEndedStateId);
     }
 
     private void ActivateRunCamera()
     {
         _stateService.ChangeTo(_runningStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
-        Assert.That(_rig.RunCameraPriority, Is.EqualTo(_config.RunCameraActivePriority));
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
     }
 
     private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 launchDirection, Vector3 upDirection)
@@ -316,15 +350,41 @@ public sealed class RunCameraControllerTests
 
     private sealed class FakeRunCameraRig : IRunCameraRig
     {
-        public int PreLaunchCameraPriority { get; private set; }
-        public int RunCameraPriority { get; private set; }
-        public int SetCameraPrioritiesCallCount { get; private set; }
-
-        public void SetCameraPriorities(int preLaunchCameraPriority, int runCameraPriority)
+        public enum CameraId
         {
-            PreLaunchCameraPriority = preLaunchCameraPriority;
-            RunCameraPriority = runCameraPriority;
-            SetCameraPrioritiesCallCount += 1;
+            None = 0,
+            RunPreparation = 1,
+            PreLaunch = 2,
+            Run = 3
+        }
+
+        public CameraId ActiveCamera { get; private set; }
+        public int ActivationCallCount { get; private set; }
+
+        public void ActivateRunPreparationCamera()
+        {
+            Activate(CameraId.RunPreparation);
+        }
+
+        public void ActivatePreLaunchCamera()
+        {
+            Activate(CameraId.PreLaunch);
+        }
+
+        public void ActivateRunCamera()
+        {
+            Activate(CameraId.Run);
+        }
+
+        private void Activate(CameraId cameraId)
+        {
+            if (ActiveCamera == cameraId)
+            {
+                return;
+            }
+
+            ActiveCamera = cameraId;
+            ActivationCallCount += 1;
         }
     }
 
@@ -334,9 +394,6 @@ public sealed class RunCameraControllerTests
         public float PositionResponseRate { get; set; }
         public float YawResponseRate { get; set; }
         public float MinimumYawSpeed { get; set; }
-        public int PreLaunchCameraPriority { get; set; }
-        public int RunCameraInactivePriority { get; set; }
-        public int RunCameraActivePriority { get; set; }
     }
 
     private sealed class FakeTime : ITime
