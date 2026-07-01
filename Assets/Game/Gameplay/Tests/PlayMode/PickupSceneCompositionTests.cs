@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Game.Foundation.Presentation;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
@@ -95,12 +96,30 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
         Assert.That(colliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
 
         pickup.Definition.Validate();
+        AssertPickupVisualAuthoring(pickup);
 
         foreach (var collider in colliders)
         {
             Assert.That(collider.isTrigger, Is.True, collider.name);
             Assert.That(collider.gameObject.layer, Is.EqualTo(pickupLayer), collider.name);
         }
+    }
+
+    private void AssertPickupVisualAuthoring(Pickup pickup)
+    {
+        var renderers = pickup.GetComponentsInChildren<MeshRenderer>(true);
+        var meshFilters = pickup.GetComponentsInChildren<MeshFilter>(true);
+        var spinner = pickup.GetComponentInChildren<Spinner>(true);
+
+        Assert.That(renderers, Has.Length.EqualTo(1), pickup.name);
+        Assert.That(meshFilters, Has.Length.EqualTo(1), pickup.name);
+        Assert.That(spinner, Is.Not.Null, pickup.name);
+        Assert.That(spinner.transform, Is.SameAs(renderers[0].transform), pickup.name);
+        Assert.That(meshFilters[0].sharedMesh, Is.SameAs(TestAssets.CoinPickupMesh), pickup.name);
+        Assert.That(renderers[0].sharedMaterials, Has.Length.EqualTo(1), pickup.name);
+        Assert.That(renderers[0].sharedMaterials[0], Is.SameAs(TestAssets.CoinPickupMaterial), pickup.name);
+        Assert.That(renderers[0].sharedMaterials[0].shader, Is.Not.Null, pickup.name);
+        Assert.That(renderers[0].sharedMaterials[0].shader.name, Does.Not.Contain("InternalErrorShader"), pickup.name);
     }
 
     private int GetRequiredLayer(string layerName)

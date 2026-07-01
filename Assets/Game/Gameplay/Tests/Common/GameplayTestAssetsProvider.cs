@@ -11,5 +11,8 @@ namespace Game.Gameplay.Tests.Common
         [field: SerializeField] public LayerMask RunSurfaceLayerMask { get; private set; }
         [field: SerializeField] public LayerMask CameraTerrainLayerMask { get; private set; }
         [field: SerializeField] public LayerMask CameraObstacleLayerMask { get; private set; }
+        [field: SerializeField] public GameObject[] CoinPickupPrefabs { get; private set; }
+        [field: SerializeField] public Mesh CoinPickupMesh { get; private set; }
+        [field: SerializeField] public Material CoinPickupMaterial { get; private set; }
     }
 }
