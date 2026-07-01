@@ -127,19 +127,41 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_InvalidProgressSnapshot_DoesNotNotifyRunResult()
+    public void FixedTick_InvalidProgressSnapshot_NotifiesDegradedRunResultAndCanAcknowledge()
     {
         ActivateRun();
         _progressService.HasValidSnapshot = false;
         _progressService.SnapshotError = "bad frame";
+        _motionSource.Position = new Vector3(2f, 3f, 4f);
+        _motionSource.LinearVelocity = new Vector3(1f, 2f, 2f);
+        _runAirTimeSource.CurrentRunAirTimeSeconds = 5f;
+        ((IRunCurrencyAccumulator)_runCurrencyAccumulator).Grant(_runRewardSourceCatalog.PickedUpCoins, _coins, 7);
         var acceptedResults = new List<RunResult>();
         ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
-        LogAssert.Expect(LogType.Error, new Regex("Run End Flow skipped Run Result.*bad frame"));
+        LogAssert.Expect(LogType.Error, new Regex("Run End Flow accepted degraded Run Result.*bad frame"));
+        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True, ElapsedTime=0.1, DistanceTravelled=0"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(acceptedResults, Is.Empty);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+        Assert.That(acceptedResults, Has.Count.EqualTo(1));
+        Assert.That(acceptedResults[0].Reason, Is.EqualTo(RunEndReason.Finished));
+        Assert.That(acceptedResults[0].IsSuccess, Is.True);
+        Assert.That(acceptedResults[0].ElapsedTime, Is.EqualTo(0.1f).Within(0.001f));
+        Assert.That(acceptedResults[0].DistanceTravelled, Is.Zero);
+        Assert.That(acceptedResults[0].FinalPosition, Is.EqualTo(_motionSource.Position));
+        Assert.That(acceptedResults[0].FinalSpeed, Is.EqualTo(3f).Within(0.001f));
+        Assert.That(acceptedResults[0].CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
+
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runPreparationStateId }));
     }
 
     [Test]
@@ -303,17 +325,20 @@ public sealed class RunEndFlowTests
     }
 
     [Test]
-    public void FixedTick_InvalidProgressSnapshot_TransitionsButSuppressesRunResult()
+    public void FixedTick_RunEndedTransitionRejected_DoesNotNotifyRunResultOrArmAcknowledgement()
     {
         ActivateRun();
-        _progressService.HasValidSnapshot = false;
-        _progressService.SnapshotError = "bad frame";
-        LogAssert.Expect(LogType.Error, new Regex("Run End Flow skipped Run Result.*bad frame"));
+        _stateService.TryTransitionResult = false;
+        var acceptedResults = new List<RunResult>();
+        ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
         ((IFixedTickable)_flow).FixedTick();
 
-        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
+        Assert.That(_stateService.CurrentStateId, Is.SameAs(_runningStateId));
+        Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
+        Assert.That(acceptedResults, Is.Empty);
+        Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.False);
     }
 
     [Test]
@@ -382,6 +407,7 @@ public sealed class RunEndFlowTests
     {
         public GameplayStateId CurrentStateId { get; private set; }
         public List<GameplayStateId> RequestedStateIds { get; } = new();
+        public bool TryTransitionResult { get; set; } = true;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
@@ -399,6 +425,10 @@ public sealed class RunEndFlowTests
         public bool TryTransitionTo(GameplayStateId nextStateId)
         {
             RequestedStateIds.Add(nextStateId);
+
+            if (!TryTransitionResult)
+                return false;
+
             ChangeTo(nextStateId);
             return true;
         }

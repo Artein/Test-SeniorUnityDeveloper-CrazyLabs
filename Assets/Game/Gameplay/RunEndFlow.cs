@@ -249,41 +249,55 @@ namespace Game.Gameplay
 
         private void AcceptCandidate(RunEndCandidate candidate)
         {
-            _hasAcceptedResult = true;
-            _isAwaitingAcknowledgement = _gameplayStateService.TryTransitionTo(_runEndedStateId);
-            _runEndedElapsed = 0f;
-
-            if (!_progressService.HasValidSnapshot)
-            {
-                Debug.LogError(
-                    "Run End Flow skipped Run Result because the Run Progress Frame snapshot is invalid. "
-                    + _progressService.SnapshotError);
-                return;
-            }
-
             var finalPosition = _motionSource.Position;
             var finalVelocity = _motionSource.LinearVelocity;
-            _progressService.SamplePosition(finalPosition);
-            var distanceTravelled = _progressService.MaximumForwardProgress;
+            var distanceTravelled = ResolveDistanceTravelled(finalPosition);
 
+            var result = CreateRunResult(candidate, finalPosition, finalVelocity, distanceTravelled);
+
+            if (!_gameplayStateService.TryTransitionTo(_runEndedStateId))
+                return;
+
+            _hasAcceptedResult = true;
+            _isAwaitingAcknowledgement = true;
+            _runEndedElapsed = 0f;
+            RunResultAccepted?.InvokeSafely(result);
+            Debug.Log(result.ToString());
+        }
+
+        private float ResolveDistanceTravelled(Vector3 finalPosition)
+        {
+            if (_progressService.HasValidSnapshot)
+            {
+                _progressService.SamplePosition(finalPosition);
+                return _progressService.MaximumForwardProgress;
+            }
+
+            Debug.LogError(
+                "Run End Flow accepted degraded Run Result because the Run Progress Frame snapshot is invalid. "
+                + _progressService.SnapshotError);
+
+            return 0f;
+        }
+
+        private RunResult CreateRunResult(RunEndCandidate candidate, Vector3 finalPosition, Vector3 finalVelocity, float distanceTravelled)
+        {
+            var finalSpeed = finalVelocity.magnitude;
             var rewardBreakdown = _runRewardBreakdownBuilder.Build(new RunRewardContributorContext(
                 candidate.Reason,
                 _elapsedSinceLaunch,
                 distanceTravelled,
                 finalPosition,
-                finalVelocity.magnitude,
+                finalSpeed,
                 _runAirTimeSource.CurrentRunAirTimeSeconds));
 
-            var result = new RunResult(
+            return new RunResult(
                 candidate.Reason,
                 _elapsedSinceLaunch,
                 distanceTravelled,
                 finalPosition,
-                finalVelocity.magnitude,
+                finalSpeed,
                 rewardBreakdown);
-
-            RunResultAccepted?.InvokeSafely(result);
-            Debug.Log(result.ToString());
         }
 
         private void TickRunEndedAcknowledgementGuard(float fixedDeltaTime)
