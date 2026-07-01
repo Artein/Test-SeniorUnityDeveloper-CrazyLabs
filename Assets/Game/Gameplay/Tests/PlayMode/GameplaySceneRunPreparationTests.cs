@@ -9,6 +9,7 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
+using Game.Foundation.Input;
 using NUnit.Framework;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -108,9 +109,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.False);
 
-            yield return PullAndReleaseSlingshot(mouse, activeScene);
-            yield return WaitUntilStateName(stateService, "RunningStateId", 60);
-            yield return WaitUntilPlayerLaunches(playerRigidbody);
+            yield return LaunchFromPreLaunch(mouse, activeScene, stateService, playerRigidbody);
 
             Assert.That(stateService.CurrentStateId.name, Is.EqualTo("RunningStateId"));
         }
@@ -147,9 +146,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
             var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
 
             Assert.That(continueCommand.TryContinue(), Is.True);
-            yield return PullAndReleaseSlingshot(mouse, activeScene);
-            yield return WaitUntilStateName(stateService, "RunningStateId", 60);
-            yield return WaitUntilPlayerLaunches(playerRigidbody);
+            yield return LaunchFromPreLaunch(mouse, activeScene, stateService, playerRigidbody);
 
             var geometry = slingshotView.CreateGeometrySnapshot();
             yield return WaitUntilPlayerMovesAwayFrom(playerRigidbody, geometry.RestPoint, 0.5f, 60);
@@ -259,9 +256,7 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
 
             launchAppliedNotifier.LaunchApplied += appliedEvents.Add;
 
-            yield return PullAndReleaseSlingshot(mouse, activeScene);
-            yield return WaitUntilStateName(stateService, "RunningStateId", 60);
-            yield return WaitUntilPlayerLaunches(playerRigidbody);
+            yield return LaunchFromPreLaunch(mouse, activeScene, stateService, playerRigidbody);
 
             Assert.That(appliedEvents, Has.Count.EqualTo(1));
             Assert.That(appliedEvents[0].VelocityChange.sqrMagnitude, Is.GreaterThan(0f));
@@ -296,26 +291,117 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
         yield return LoadGameplaySceneWithIsolatedSaves();
     }
 
-    private IEnumerator PullAndReleaseSlingshot(Mouse mouse, Scene activeScene)
+    private IEnumerator LaunchFromPreLaunch(
+        Mouse mouse,
+        Scene activeScene,
+        IGameplayStateService stateService,
+        Rigidbody playerRigidbody)
     {
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
         var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+        var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
+        var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+        var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
+        var unityInput = lifetimeScope.Container.Resolve<IUnityInput>();
         var slingshotInputProjector = lifetimeScope.Container.Resolve<ISlingshotInputProjector>();
         var slingshotConfig = lifetimeScope.Container.Resolve<ISlingshotConfig>();
+
+        yield return null;
+        yield return WaitUntilStateName(stateService, "PreLaunchStateId", 10);
+        yield return WaitUntilPlayerIsHeld(playerRigidbody);
+        AssertCleanSlingshotRestState(activeScene);
+
         var geometry = slingshotView.CreateGeometrySnapshot();
         var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-        var pullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 1.25f);
+
+        var pullWorldPosition = geometry.RestPoint
+                                + (geometry.LaunchFrameRight * 0.35f)
+                                - (geometry.LaunchFrameForward * 1.25f);
         var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
+
+        var expectedPullPoint = GetExpectedClampedPullPoint(
+            slingshotInputProjector,
+            releaseScreenPosition,
+            geometry,
+            slingshotConfig);
+        var pointerPressedCount = 0;
+
+        void OnPointerPressed(PointerInput _)
+        {
+            pointerPressedCount += 1;
+        }
 
         Assert.That(
             slingshotInputProjector.TryProjectScreenToPullPlane(releaseScreenPosition, geometry, out _),
             Is.True);
         Assert.That(slingshotConfig.MinimumPullDistance, Is.LessThan(1.25f));
 
-        yield return SendMouse(mouse, pressScreenPosition, true);
-        yield return SendMouse(mouse, releaseScreenPosition, true);
-        yield return SendMouse(mouse, releaseScreenPosition, false);
+        unityInput.PointerPressed += OnPointerPressed;
+
+        try
+        {
+            yield return SendMouse(mouse, pressScreenPosition, true);
+
+            Assert.That(pointerPressedCount, Is.EqualTo(1));
+
+            yield return SendMouse(mouse, releaseScreenPosition, true);
+
+            Assert.That(touchIndicator.activeSelf, Is.True);
+            Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
+
+            AssertAcceptedPullPresentation(
+                bandCenter.transform.position,
+                expectedPullPoint,
+                geometry,
+                slingshotConfig);
+
+            yield return SendMouse(mouse, releaseScreenPosition, false);
+        }
+        finally
+        {
+            unityInput.PointerPressed -= OnPointerPressed;
+        }
+
+        yield return WaitUntilStateName(stateService, "RunningStateId", 60);
+        yield return WaitUntilPlayerLaunches(playerRigidbody);
+    }
+
+    private void AssertAcceptedPullPresentation(
+        Vector3 actualBandCenter,
+        Vector3 expectedPullPoint,
+        SlingshotGeometrySnapshot geometry,
+        ISlingshotConfig slingshotConfig)
+    {
+        var actualOffset = Vector3.Dot(actualBandCenter - geometry.RestPoint, geometry.LaunchFrameRight);
+        var expectedOffset = Vector3.Dot(expectedPullPoint - geometry.RestPoint, geometry.LaunchFrameRight);
+        var actualDepth = Vector3.Dot(actualBandCenter - geometry.RestPoint, -geometry.LaunchFrameForward);
+        var expectedDepth = Vector3.Dot(expectedPullPoint - geometry.RestPoint, -geometry.LaunchFrameForward);
+
+        Assert.That(
+            actualDepth,
+            Is.EqualTo(expectedDepth).Within(0.1f),
+            "Accepted pull should move Band Center to the requested pull depth.");
+
+        Assert.That(
+            actualDepth,
+            Is.GreaterThan(slingshotConfig.MinimumPullDistance),
+            "Accepted pull should exceed the launch threshold.");
+
+        Assert.That(
+            Mathf.Sign(actualOffset),
+            Is.EqualTo(Mathf.Sign(expectedOffset)),
+            "Accepted pull should move Band Center to the requested side.");
+
+        Assert.That(
+            Mathf.Abs(actualOffset),
+            Is.GreaterThan(0.05f),
+            "Accepted pull should visibly move Band Center sideways.");
+
+        Assert.That(
+            Mathf.Abs(actualOffset),
+            Is.LessThanOrEqualTo(Mathf.Abs(expectedOffset) + 0.05f),
+            "Accepted pull should not overshoot the requested lateral offset.");
     }
 
     private IEnumerator WaitUntilStateName(IGameplayStateService stateService, string stateName, int frameLimit)
@@ -342,6 +428,32 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
         }
 
         Assert.Fail("Expected Slingshot pull release to launch the Player.");
+    }
+
+    private IEnumerator WaitUntilPlayerIsHeld(Rigidbody playerRigidbody)
+    {
+        for (var frameIndex = 0; frameIndex < 10; frameIndex += 1)
+        {
+            if (playerRigidbody.isKinematic)
+                yield break;
+
+            yield return null;
+        }
+
+        Assert.Fail("Expected Player to be held by the Slingshot.");
+    }
+
+    private void AssertCleanSlingshotRestState(Scene scene)
+    {
+        var slingshotView = FindSingleInScene<SlingshotView>(scene, "SlingshotView");
+        var bandCenter = FindGameObjectByName(scene, "Band Center");
+        var pullHint = FindGameObjectByName(scene, "Pull Hint");
+        var touchIndicator = FindGameObjectByName(scene, "Touch Indicator");
+        var geometry = slingshotView.CreateGeometrySnapshot();
+
+        Assert.That(pullHint.activeSelf, Is.False);
+        Assert.That(touchIndicator.activeSelf, Is.False);
+        Assert.That(Vector3.Distance(bandCenter.transform.position, geometry.RestPoint), Is.LessThanOrEqualTo(0.05f));
     }
 
     private IEnumerator WaitUntilPlayerMovesAwayFrom(
@@ -446,6 +558,67 @@ public sealed class GameplaySceneRunPreparationTests : BaseGameplayScenePlayMode
 
         Assert.That(screenPosition.z, Is.GreaterThan(0f));
         return new Vector2(screenPosition.x, screenPosition.y);
+    }
+
+    private Vector3 GetExpectedClampedPullPoint(
+        ISlingshotInputProjector slingshotInputProjector,
+        Vector2 screenPosition,
+        SlingshotGeometrySnapshot geometry,
+        ISlingshotConfig slingshotConfig)
+    {
+        Assert.That(slingshotInputProjector.TryProjectScreenToPullPlane(screenPosition, geometry, out var rawPullPoint), Is.True);
+
+        var delta = rawPullPoint - geometry.RestPoint;
+
+        var pullDistance = Mathf.Clamp(
+            -Vector3.Dot(delta, geometry.LaunchFrameForward),
+            0f,
+            slingshotConfig.MaximumPullDistance);
+
+        var pullOffset = GetClampedPullOffset(
+            Vector3.Dot(delta, geometry.LaunchFrameRight),
+            pullDistance,
+            geometry,
+            slingshotConfig);
+
+        return geometry.RestPoint
+               + (geometry.LaunchFrameRight * pullOffset)
+               - (geometry.LaunchFrameForward * pullDistance);
+    }
+
+    private float GetClampedPullOffset(
+        float rawPullOffset,
+        float pullDistance,
+        SlingshotGeometrySnapshot geometry,
+        ISlingshotConfig slingshotConfig)
+    {
+        var fullLateralPullDistance = Mathf.Max(0.02f, slingshotConfig.MinimumPullDistance + (slingshotConfig.BandContactPadding * 2f))
+                                      + (slingshotConfig.BandContactPadding * 2f);
+
+        var lateralPullScale = fullLateralPullDistance <= 0.000001f
+            ? 1f
+            : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
+
+        return Mathf.Clamp(
+            rawPullOffset,
+            GetMinimumAllowedPullOffset(geometry, slingshotConfig) * lateralPullScale,
+            GetMaximumAllowedPullOffset(geometry, slingshotConfig) * lateralPullScale);
+    }
+
+    private float GetMinimumAllowedPullOffset(SlingshotGeometrySnapshot geometry, ISlingshotConfig slingshotConfig)
+    {
+        var leftAnchorOffset = Vector3.Dot(geometry.LeftAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
+        var rightAnchorOffset = Vector3.Dot(geometry.RightAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
+        var minimumAnchorOffset = Mathf.Min(leftAnchorOffset, rightAnchorOffset);
+        return Mathf.Max(-slingshotConfig.MaximumLateralPull, minimumAnchorOffset);
+    }
+
+    private float GetMaximumAllowedPullOffset(SlingshotGeometrySnapshot geometry, ISlingshotConfig slingshotConfig)
+    {
+        var leftAnchorOffset = Vector3.Dot(geometry.LeftAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
+        var rightAnchorOffset = Vector3.Dot(geometry.RightAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
+        var maximumAnchorOffset = Mathf.Max(leftAnchorOffset, rightAnchorOffset);
+        return Mathf.Min(slingshotConfig.MaximumLateralPull, maximumAnchorOffset);
     }
 
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
