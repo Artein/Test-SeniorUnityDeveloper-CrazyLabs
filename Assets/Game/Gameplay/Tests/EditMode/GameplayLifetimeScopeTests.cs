@@ -264,6 +264,7 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchRigPoseResetter = container.Resolve<IPreLaunchRigPoseResetter>();
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
+        var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
         var runCameraConfig = container.Resolve<IRunCameraConfig>();
         var runEndConfig = container.Resolve<IRunEndConfig>();
         var runRewardConfig = container.Resolve<IRunRewardConfig>();
@@ -355,6 +356,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
+        Assert.That(runSteeringGesture, Is.Not.Null);
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
         Assert.That(runRewardConfig, Is.SameAs(fixture.RunEndConfig));

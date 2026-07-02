@@ -6,6 +6,7 @@ namespace Game.Foundation.Screen
     {
         int Width { get; }
         int Height { get; }
+        float Dpi { get; }
     }
 
     [UsedImplicitly]
@@ -13,5 +14,6 @@ namespace Game.Foundation.Screen
     {
         public int Width => UnityEngine.Screen.width;
         public int Height => UnityEngine.Screen.height;
+        public float Dpi => UnityEngine.Screen.dpi;
     }
 }

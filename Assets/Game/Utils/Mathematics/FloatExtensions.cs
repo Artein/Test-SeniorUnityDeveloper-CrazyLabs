@@ -13,5 +13,21 @@ namespace Game.Utils.Mathematics
         {
             return math.isfinite(value) && !(value < 0f);
         }
+        
+        public static float GetPositiveOrDefault(this float value, float defaultValue)
+        {
+            if (math.isfinite(value) && value > 0f)
+                return value;
+
+            return defaultValue;
+        }
+
+        public static float GetNonNegativeOrDefault(this float value, float defaultValue)
+        {
+            if (math.isfinite(value) && value >= 0f)
+                return value;
+
+            return defaultValue;
+        }
     }
 }
