@@ -42,13 +42,22 @@ namespace Game.Gameplay.CharacterPresentation
 
         private CharacterPresentationClassificationResult ClassifyUngrounded(CharacterPresentationClassificationInput input)
         {
-            if (input.UngroundedElapsedSeconds < Mathf.Max(0f, _tuning.AirborneDelaySeconds)
+            if (input.CurrentMode == CharacterPresentationMode.Airborne)
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Airborne);
+
+            if (HasFallIntent(input))
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Airborne);
+
+            if (input.UngroundedElapsedSeconds < Mathf.Max(0f, _tuning.FallEnterMinimumUngroundedSeconds)
                 && TryGetPreservedUngroundedLocomotion(input.CurrentMode, out var preservedMode))
             {
                 return new CharacterPresentationClassificationResult(preservedMode);
             }
 
-            return new CharacterPresentationClassificationResult(CharacterPresentationMode.Airborne);
+            if (HasMeaningfulGroundedMovement(input))
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
+
+            return new CharacterPresentationClassificationResult(CharacterPresentationMode.Idle);
         }
 
         private CharacterPresentationClassificationResult ClassifyGrounded(CharacterPresentationClassificationInput input)
@@ -68,6 +77,22 @@ namespace Game.Gameplay.CharacterPresentation
         private bool HasMeaningfulGroundedMovement(CharacterPresentationClassificationInput input)
         {
             return Mathf.Max(0f, input.CoursePlanarSpeed) >= Mathf.Max(0f, _tuning.MeaningfulGroundedMovementThreshold);
+        }
+
+        private bool HasFallIntent(CharacterPresentationClassificationInput input)
+        {
+            var hardTimeout = Mathf.Max(0f, _tuning.FallEnterHardUngroundedSeconds);
+
+            if (input.UngroundedElapsedSeconds >= hardTimeout)
+                return true;
+
+            if (input.UngroundedElapsedSeconds < Mathf.Max(0f, _tuning.FallEnterMinimumUngroundedSeconds))
+                return false;
+
+            if (input.CourseVerticalSpeed <= -Mathf.Max(0f, _tuning.FallEnterMinimumDownwardSpeed))
+                return true;
+
+            return input.UngroundedVerticalSeparation <= -Mathf.Max(0f, _tuning.FallEnterMinimumVerticalSeparation);
         }
 
         private bool TryGetPreservedUngroundedLocomotion(CharacterPresentationMode mode, out CharacterPresentationMode preservedMode)

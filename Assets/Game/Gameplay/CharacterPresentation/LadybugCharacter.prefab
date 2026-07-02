@@ -172,7 +172,10 @@ MonoBehaviour:
   _normalizedLaunchPowerParameterName: NormalizedLaunchPower
   _normalizedPullOffsetParameterName: NormalizedPullOffset
   _normalizedLaunchOffsetParameterName: NormalizedLaunchOffset
-  _airborneDelaySeconds: 0.12
+  _fallEnterMinimumUngroundedSeconds: 0.3
+  _fallEnterMinimumDownwardSpeed: 1.5
+  _fallEnterMinimumVerticalSeparation: 0.18
+  _fallEnterHardUngroundedSeconds: 0.65
   _meaningfulGroundedMovementThreshold: 0.5
   _minimumLocomotionModeDuration: 0.35
   _launchPushMinimumSeconds: 0.25

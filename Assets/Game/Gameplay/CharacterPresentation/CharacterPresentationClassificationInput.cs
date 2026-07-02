@@ -17,6 +17,8 @@ namespace Game.Gameplay.CharacterPresentation
         public RunSurfaceContext SurfaceContext { get; }
         public float CoursePlanarSpeed { get; }
         public float CourseForwardSpeed { get; }
+        public float CourseVerticalSpeed { get; }
+        public float UngroundedVerticalSeparation { get; }
         public Vector3 LinearVelocity { get; }
 
         public CharacterPresentationClassificationInput(
@@ -33,6 +35,8 @@ namespace Game.Gameplay.CharacterPresentation
             RunSurfaceContext surfaceContext,
             float coursePlanarSpeed,
             float courseForwardSpeed,
+            float courseVerticalSpeed,
+            float ungroundedVerticalSeparation,
             Vector3 linearVelocity)
         {
             CurrentMode = currentMode;
@@ -48,6 +52,8 @@ namespace Game.Gameplay.CharacterPresentation
             SurfaceContext = surfaceContext;
             CoursePlanarSpeed = float.IsFinite(coursePlanarSpeed) ? coursePlanarSpeed : 0f;
             CourseForwardSpeed = float.IsFinite(courseForwardSpeed) ? courseForwardSpeed : 0f;
+            CourseVerticalSpeed = float.IsFinite(courseVerticalSpeed) ? courseVerticalSpeed : 0f;
+            UngroundedVerticalSeparation = float.IsFinite(ungroundedVerticalSeparation) ? ungroundedVerticalSeparation : 0f;
             LinearVelocity = linearVelocity;
         }
     }

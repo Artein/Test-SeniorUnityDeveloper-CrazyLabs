@@ -30,7 +30,10 @@ namespace Game.Gameplay.CharacterPresentation
         [SerializeField, AnimatorParam(nameof(_animator), AnimatorControllerParameterType.Float)]
         private string _normalizedLaunchOffsetParameterName = "NormalizedLaunchOffset";
 
-        [SerializeField] private float _airborneDelaySeconds = 0.12f;
+        [SerializeField] private float _fallEnterMinimumUngroundedSeconds = 0.3f;
+        [SerializeField] private float _fallEnterMinimumDownwardSpeed = 1.5f;
+        [SerializeField] private float _fallEnterMinimumVerticalSeparation = 0.18f;
+        [SerializeField] private float _fallEnterHardUngroundedSeconds = 0.65f;
         [SerializeField] private float _meaningfulGroundedMovementThreshold = 0.5f;
         [SerializeField] private float _minimumLocomotionModeDuration = 0.35f;
         [SerializeField, Min(0f)] private float _launchPushMinimumSeconds = 0.25f;
@@ -44,7 +47,10 @@ namespace Game.Gameplay.CharacterPresentation
         [SerializeField] private float _visualSnapDistance = 0.75f;
         [SerializeField] private float _visualSnapAngleDegrees = 45f;
 
-        public float AirborneDelaySeconds => Mathf.Max(0f, _airborneDelaySeconds);
+        public float FallEnterMinimumUngroundedSeconds => Mathf.Max(0f, _fallEnterMinimumUngroundedSeconds);
+        public float FallEnterMinimumDownwardSpeed => Mathf.Max(0f, _fallEnterMinimumDownwardSpeed);
+        public float FallEnterMinimumVerticalSeparation => Mathf.Max(0f, _fallEnterMinimumVerticalSeparation);
+        public float FallEnterHardUngroundedSeconds => Mathf.Max(FallEnterMinimumUngroundedSeconds, _fallEnterHardUngroundedSeconds);
         public float MeaningfulGroundedMovementThreshold => Mathf.Max(0f, _meaningfulGroundedMovementThreshold);
         public float MinimumLocomotionModeDuration => Mathf.Max(0f, _minimumLocomotionModeDuration);
         public float LaunchPushMinimumSeconds => Mathf.Max(0f, _launchPushMinimumSeconds);

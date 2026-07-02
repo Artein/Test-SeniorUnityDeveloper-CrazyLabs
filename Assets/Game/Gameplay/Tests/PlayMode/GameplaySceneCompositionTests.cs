@@ -218,7 +218,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunContactClassifier, Is.Not.Null);
         Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
-        Assert.That(resolvedCharacterPresentationTuning.AirborneDelaySeconds, Is.EqualTo(0.12f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.FallEnterMinimumUngroundedSeconds, Is.EqualTo(0.3f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.FallEnterMinimumDownwardSpeed, Is.EqualTo(1.5f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.FallEnterMinimumVerticalSeparation, Is.EqualTo(0.18f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.FallEnterHardUngroundedSeconds, Is.EqualTo(0.65f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.MeaningfulGroundedMovementThreshold, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
@@ -302,8 +305,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
-        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(15f).Within(0.0001f));
-        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(30f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(30f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(100f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.MaximumLateralLaunchAngleDegrees, Is.EqualTo(35f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.HasMinimumTotalImpulse, Is.False);

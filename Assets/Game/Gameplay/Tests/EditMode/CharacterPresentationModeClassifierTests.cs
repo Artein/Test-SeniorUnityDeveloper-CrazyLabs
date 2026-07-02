@@ -285,7 +285,7 @@ public sealed class CharacterPresentationModeClassifierTests
         var input = CreateInput(
             currentMode: CharacterPresentationMode.Slide,
             surfaceContext: Ungrounded(),
-            ungroundedElapsedSeconds: _tuning.AirborneDelaySeconds * 0.5f);
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds * 0.5f);
 
         var result = _classifier.Classify(input);
 
@@ -298,7 +298,7 @@ public sealed class CharacterPresentationModeClassifierTests
         var input = CreateInput(
             currentMode: CharacterPresentationMode.Run,
             surfaceContext: Ungrounded(),
-            ungroundedElapsedSeconds: _tuning.AirborneDelaySeconds * 0.5f);
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds * 0.5f);
 
         var result = _classifier.Classify(input);
 
@@ -306,16 +306,90 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
-    public void Classify_LongUngrounded_ReturnsAirborne()
+    public void Classify_UngroundedPastMinimumWithoutFallIntentAndMoving_PreservesSlide()
     {
         var input = CreateInput(
             currentMode: CharacterPresentationMode.Slide,
             surfaceContext: Ungrounded(),
-            ungroundedElapsedSeconds: _tuning.AirborneDelaySeconds + 0.01f);
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds + 0.01f,
+            coursePlanarSpeed: _tuning.MeaningfulGroundedMovementThreshold + 0.01f,
+            courseVerticalSpeed: 0f,
+            ungroundedVerticalSeparation: 0f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastMinimumWithDownwardSpeed_ReturnsAirborne()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds,
+            courseVerticalSpeed: -_tuning.FallEnterMinimumDownwardSpeed);
 
         var result = _classifier.Classify(input);
 
         Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Airborne));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastMinimumWithDownwardSeparation_ReturnsAirborne()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds,
+            ungroundedVerticalSeparation: -_tuning.FallEnterMinimumVerticalSeparation);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Airborne));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastHardTimeout_ReturnsAirborne()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterHardUngroundedSeconds);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Airborne));
+    }
+
+    [Test]
+    public void Classify_CurrentAirborneStillUngrounded_ReturnsAirborne()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Airborne,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds * 0.5f,
+            coursePlanarSpeed: 4f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Airborne));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastMinimumWithoutFallIntentAndStopped_ReturnsIdle()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Idle,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds + 0.01f,
+            coursePlanarSpeed: _tuning.MeaningfulGroundedMovementThreshold - 0.01f,
+            courseVerticalSpeed: 0f,
+            ungroundedVerticalSeparation: 0f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Idle));
     }
 
     [Test]
@@ -394,7 +468,10 @@ public sealed class CharacterPresentationModeClassifierTests
         {
             var view = gameObject.AddComponent<CharacterPresentationView>();
 
-            Assert.That(view.AirborneDelaySeconds, Is.EqualTo(0.12f).Within(0.0001f));
+            Assert.That(view.FallEnterMinimumUngroundedSeconds, Is.EqualTo(0.3f).Within(0.0001f));
+            Assert.That(view.FallEnterMinimumDownwardSpeed, Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(view.FallEnterMinimumVerticalSeparation, Is.EqualTo(0.18f).Within(0.0001f));
+            Assert.That(view.FallEnterHardUngroundedSeconds, Is.EqualTo(0.65f).Within(0.0001f));
             Assert.That(view.MeaningfulGroundedMovementThreshold, Is.EqualTo(0.5f).Within(0.0001f));
             Assert.That(view.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
             Assert.That(view.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
@@ -440,7 +517,9 @@ public sealed class CharacterPresentationModeClassifierTests
         float launchPushElapsedSeconds = 0f,
         RunSurfaceContext? surfaceContext = null,
         float coursePlanarSpeed = 4f,
-        float courseForwardSpeed = 4f)
+        float courseForwardSpeed = 4f,
+        float courseVerticalSpeed = 0f,
+        float ungroundedVerticalSeparation = 0f)
     {
         return new CharacterPresentationClassificationInput(
             currentMode,
@@ -456,6 +535,8 @@ public sealed class CharacterPresentationModeClassifierTests
             surfaceContext.GetValueOrDefault(GroundedDownhill(0f)),
             coursePlanarSpeed,
             courseForwardSpeed,
+            courseVerticalSpeed,
+            ungroundedVerticalSeparation,
             Vector3.zero);
     }
 
@@ -465,7 +546,9 @@ public sealed class CharacterPresentationModeClassifierTests
         float courseForwardSpeed,
         CharacterPresentationMode currentMode = CharacterPresentationMode.Idle,
         float currentModeElapsedSeconds = 1f,
-        float ungroundedElapsedSeconds = 0f)
+        float ungroundedElapsedSeconds = 0f,
+        float courseVerticalSpeed = 0f,
+        float ungroundedVerticalSeparation = 0f)
     {
         return new CharacterPresentationClassificationInput(
             currentMode,
@@ -481,6 +564,8 @@ public sealed class CharacterPresentationModeClassifierTests
             surfaceContext,
             coursePlanarSpeed,
             courseForwardSpeed,
+            courseVerticalSpeed,
+            ungroundedVerticalSeparation,
             Vector3.zero);
     }
 
@@ -506,7 +591,10 @@ public sealed class CharacterPresentationModeClassifierTests
 
     private sealed class FakeCharacterPresentationTuning : ICharacterPresentationTuning
     {
-        public float AirborneDelaySeconds { get; set; } = 0.12f;
+        public float FallEnterMinimumUngroundedSeconds { get; set; } = 0.3f;
+        public float FallEnterMinimumDownwardSpeed { get; set; } = 1.5f;
+        public float FallEnterMinimumVerticalSeparation { get; set; } = 0.18f;
+        public float FallEnterHardUngroundedSeconds { get; set; } = 0.65f;
         public float MeaningfulGroundedMovementThreshold { get; set; } = 0.5f;
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;

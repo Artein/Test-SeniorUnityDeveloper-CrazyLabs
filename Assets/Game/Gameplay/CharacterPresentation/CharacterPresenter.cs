@@ -2,6 +2,7 @@ using System;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using Game.Utils.Mathematics;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -31,6 +32,8 @@ namespace Game.Gameplay.CharacterPresentation
         private bool _acceptedRunResultSucceeded;
         private float _currentModeElapsedSeconds;
         private float _ungroundedElapsedSeconds;
+        private bool _hasUngroundedStartPosition;
+        private Vector3 _ungroundedStartPosition;
 
         public CharacterPresenter(
             IGameplayStateService gameplayStateService,
@@ -100,21 +103,34 @@ namespace Game.Gameplay.CharacterPresentation
             var surfaceContext = isNeutralPresentationState
                 ? new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f)
                 : _surfaceContextSource.Current;
-            UpdateUngroundedTime(surfaceContext, deltaTime, isNeutralPresentationState);
-
+            var currentPosition = _motionSource.Position;
             var linearVelocity = _motionSource.LinearVelocity;
             var coursePlanarSpeed = 0f;
             var courseForwardSpeed = 0f;
+            var courseVerticalSpeed = 0f;
+            var courseUpDirection = Vector3.up;
 
             if (_progressService.HasValidSnapshot)
             {
-                coursePlanarSpeed = _progressService.Snapshot.GetCoursePlanarSpeed(linearVelocity);
-                courseForwardSpeed = _progressService.Snapshot.GetCourseForwardSpeed(linearVelocity);
+                var snapshot = _progressService.Snapshot;
+                coursePlanarSpeed = snapshot.GetCoursePlanarSpeed(linearVelocity);
+                courseForwardSpeed = snapshot.GetCourseForwardSpeed(linearVelocity);
+                courseUpDirection = snapshot.UpDirection;
             }
+
+            courseVerticalSpeed = GetCourseVerticalSpeed(linearVelocity, courseUpDirection);
+
+            var ungroundedVerticalSeparation = UpdateUngroundedState(
+                surfaceContext,
+                deltaTime,
+                isNeutralPresentationState,
+                currentPosition,
+                courseUpDirection);
 
             var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, _ungroundedElapsedSeconds, isPreLaunch,
                 isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull, slingshotContext.HasLaunchPush,
-                slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed, linearVelocity);
+                slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed, courseVerticalSpeed,
+                ungroundedVerticalSeparation, linearVelocity);
 
             var result = _classifier.Classify(input);
             var mode = NormalizeReservedPresentationMode(result.Mode);
@@ -151,15 +167,51 @@ namespace Game.Gameplay.CharacterPresentation
             _acceptedRunResultSucceeded = false;
         }
 
-        private void UpdateUngroundedTime(RunSurfaceContext surfaceContext, float deltaTime, bool isNeutralPresentationState)
+        private float UpdateUngroundedState(
+            RunSurfaceContext surfaceContext,
+            float deltaTime,
+            bool isNeutralPresentationState,
+            Vector3 currentPosition,
+            Vector3 courseUpDirection)
         {
             if (isNeutralPresentationState || surfaceContext.IsGrounded)
             {
                 _ungroundedElapsedSeconds = 0f;
-                return;
+                _hasUngroundedStartPosition = false;
+                _ungroundedStartPosition = Vector3.zero;
+                return 0f;
+            }
+
+            if (!_hasUngroundedStartPosition)
+            {
+                _hasUngroundedStartPosition = true;
+                _ungroundedStartPosition = GetFiniteOrZero(currentPosition);
             }
 
             _ungroundedElapsedSeconds += deltaTime;
+            var positionDelta = GetFiniteOrZero(currentPosition) - _ungroundedStartPosition;
+            var separation = Vector3.Dot(positionDelta, GetSafeUpDirection(courseUpDirection));
+            return float.IsFinite(separation) ? separation : 0f;
+        }
+
+        private static float GetCourseVerticalSpeed(Vector3 linearVelocity, Vector3 courseUpDirection)
+        {
+            var speed = Vector3.Dot(linearVelocity, GetSafeUpDirection(courseUpDirection));
+            return float.IsFinite(speed) ? speed : 0f;
+        }
+
+        private static Vector3 GetSafeUpDirection(Vector3 upDirection)
+        {
+            if (!upDirection.IsFinite() || upDirection.sqrMagnitude <= 0.000001f)
+                return Vector3.up;
+
+            var normalized = upDirection.normalized;
+            return normalized.IsFinite() ? normalized : Vector3.up;
+        }
+
+        private static Vector3 GetFiniteOrZero(Vector3 position)
+        {
+            return position.IsFinite() ? position : Vector3.zero;
         }
 
         private void UpdateModeElapsed(CharacterPresentationMode nextMode, float deltaTime)
