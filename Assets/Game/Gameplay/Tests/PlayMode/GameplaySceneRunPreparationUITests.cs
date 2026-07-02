@@ -284,6 +284,9 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[1].LabelTextForTests), Is.Zero);
         Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.Zero);
         Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.Zero,
+            "Total reward amount should wait for the total reward reveal.");
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
         Assert.That(continueLabel.gameObject.activeSelf, Is.False);
 
@@ -294,6 +297,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[0].LabelTextForTests), Is.Zero);
         Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.Zero);
         Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.Zero);
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
         Assert.That(continueLabel.gameObject.activeSelf, Is.False);
 
@@ -312,6 +316,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.Zero,
             "Reward source row icons should not appear before their row reveal.");
         Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.Zero);
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
         Assert.That(continueLabel.gameObject.activeSelf, Is.False);
 
@@ -328,6 +333,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(GetTextAlpha(view.RewardSourceRowsForTests[1].LabelTextForTests), Is.Zero);
         Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.Zero);
         Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.Zero);
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
         Assert.That(continueLabel.gameObject.activeSelf, Is.False);
 
@@ -339,6 +345,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.GreaterThan(0f),
             "Second reward source row icon should reveal with its label and amount.");
         Assert.That(GetTextAlpha(runTotalLabel), Is.Zero);
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.Zero);
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.Zero);
         Assert.That(continueLabel.gameObject.activeSelf, Is.False);
 
@@ -347,6 +354,9 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
 
         Assert.That(view.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("11"));
         Assert.That(GetTextAlpha(runTotalLabel), Is.GreaterThan(0f));
+
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.GreaterThan(0f),
+            "Total reward amount should reveal with the RUN TOTAL label and icon.");
 
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.GreaterThan(0f),
             "Total reward icon should reveal with the RUN TOTAL value.");
@@ -365,6 +375,7 @@ public sealed class GameplaySceneRunPreparationUITests : BaseGameplayScenePlayMo
         Assert.That(view.RewardSourceRowsForTests[1].AmountTextForTests.text, Is.EqualTo("11"));
         Assert.That(GetGraphicAlpha(firstRewardSourceRowIcon), Is.EqualTo(1f).Within(0.001f));
         Assert.That(GetGraphicAlpha(secondRewardSourceRowIcon), Is.EqualTo(1f).Within(0.001f));
+        Assert.That(GetTextAlpha(earnedCoinsText), Is.EqualTo(1f).Within(0.001f));
         Assert.That(GetGraphicAlpha(totalRewardIcon), Is.EqualTo(1f).Within(0.001f));
     }
 

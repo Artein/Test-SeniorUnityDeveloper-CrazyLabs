@@ -60,7 +60,7 @@ namespace Game.Gameplay
                 _reachedDistanceText.text = string.Empty;
                 _bestImprovementRoot.SetActive(false);
                 _bestImprovementText.text = string.Empty;
-                SetGraphicsAlpha(_earnedCoinsRevealGraphics, 0f);
+                SetEarnedCoinsRevealAlpha(0f);
                 _tapToContinueRoot.SetActive(false);
                 _acknowledgeTouchAreaButton.interactable = false;
                 return;
@@ -206,7 +206,7 @@ namespace Game.Gameplay
                 yield return WaitForStepDelay();
             }
 
-            yield return AnimateGraphicsAlpha(_earnedCoinsRevealGraphics, _labelFadeDuration);
+            yield return AnimateEarnedCoinsRevealAlpha(_labelFadeDuration);
 
             _revealCoroutine = null;
             ApplyCompletedRevealFrame();
@@ -250,6 +250,26 @@ namespace Game.Gameplay
             }
 
             SetGraphicsAlpha(graphics, 1f);
+        }
+
+        private IEnumerator AnimateEarnedCoinsRevealAlpha(float duration)
+        {
+            if (duration <= 0f)
+            {
+                SetEarnedCoinsRevealAlpha(1f);
+                yield break;
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                SetEarnedCoinsRevealAlpha(Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+
+            SetEarnedCoinsRevealAlpha(1f);
         }
 
         private IEnumerator AnimateDistanceCounter(RunEndedViewState state)
@@ -328,7 +348,7 @@ namespace Game.Gameplay
             _bestImprovementText.text = state.BestImprovementText;
 
             SetTextAlpha(_titleText, 0f);
-            SetGraphicsAlpha(_earnedCoinsRevealGraphics, 0f);
+            SetEarnedCoinsRevealAlpha(0f);
             SetTextAlpha(_reachedDistanceText, 0f);
             SetTextAlpha(_bestImprovementText, 0f);
 
@@ -358,7 +378,7 @@ namespace Game.Gameplay
             _bestImprovementText.text = _currentState.BestImprovementText;
 
             SetTextAlpha(_titleText, 1f);
-            SetGraphicsAlpha(_earnedCoinsRevealGraphics, 1f);
+            SetEarnedCoinsRevealAlpha(1f);
             SetTextAlpha(_reachedDistanceText, 1f);
             SetTextAlpha(_bestImprovementText, _currentState.HasBestImprovement ? 1f : 0f);
 
@@ -375,6 +395,12 @@ namespace Game.Gameplay
 
             StopCoroutine(_revealCoroutine);
             _revealCoroutine = null;
+        }
+
+        private void SetEarnedCoinsRevealAlpha(float alpha)
+        {
+            SetTextAlpha(_earnedCoinsText, alpha);
+            SetGraphicsAlpha(_earnedCoinsRevealGraphics, alpha);
         }
 
         private static void SetTextAlpha(TMP_Text text, float alpha)
