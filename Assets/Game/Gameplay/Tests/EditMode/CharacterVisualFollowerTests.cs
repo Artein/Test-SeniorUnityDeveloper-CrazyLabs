@@ -115,16 +115,28 @@ public sealed class CharacterVisualFollowerTests
     }
 
     [Test]
-    public void GameplayStateChanged_ToRunEnded_SnapsPose()
+    public void GameplayStateChanged_ToRunEnded_DoesNotSnapAndNextLateTickSmoothsPose()
     {
         ((IInitializable)_follower).Initialize();
         _stateService.ChangeTo(_runningStateId);
         _targetPoseSource.CurrentPose = new CharacterVisualPose(new Vector3(1.4f, 2f, 3f), Quaternion.Euler(0f, 25f, 0f));
         ((ILateTickable)_follower).LateTick();
+        var poseBeforeRunEnded = _view.CurrentVisualPose;
+        var appliedPoseCountBeforeRunEnded = _view.AppliedPoseCount;
+        var terminalPose = new CharacterVisualPose(new Vector3(1.45f, 2f, 3f), Quaternion.Euler(0f, 30f, 0f));
+        _targetPoseSource.CurrentPose = terminalPose;
 
         _stateService.ChangeTo(_runEndedStateId);
 
-        AssertPose(_view.CurrentVisualPose, _targetPoseSource.CurrentPose);
+        AssertPose(_view.CurrentVisualPose, poseBeforeRunEnded);
+        Assert.That(_view.AppliedPoseCount, Is.EqualTo(appliedPoseCountBeforeRunEnded));
+
+        ((ILateTickable)_follower).LateTick();
+
+        Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, terminalPose.Position),
+            Is.LessThanOrEqualTo(_tuning.VisualMaxPositionLag + 0.0001f));
+        Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, terminalPose.Position), Is.GreaterThan(0.0001f));
+        Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, terminalPose.Rotation), Is.GreaterThan(0.0001f));
     }
 
     [Test]
@@ -178,8 +190,7 @@ public sealed class CharacterVisualFollowerTests
             _smoother,
             _clock,
             _runPreparationStateId,
-            _preLaunchStateId,
-            _runEndedStateId);
+            _preLaunchStateId);
     }
 
     private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()

@@ -19,7 +19,6 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly ITime _clock;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
-        private readonly GameplayStateId _runEndedStateId;
 
         private bool _isInitialized;
         private bool _isDisposed;
@@ -35,9 +34,7 @@ namespace Game.Gameplay.CharacterPresentation
             [Key(InjectKey.GameplayStateId.RunPreparation)]
             GameplayStateId runPreparationStateId,
             [Key(InjectKey.GameplayStateId.PreLaunch)]
-            GameplayStateId preLaunchStateId,
-            [Key(InjectKey.GameplayStateId.RunEnded)]
-            GameplayStateId runEndedStateId)
+            GameplayStateId preLaunchStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
@@ -51,7 +48,6 @@ namespace Game.Gameplay.CharacterPresentation
                 ? runPreparationStateId
                 : throw new ArgumentNullException(nameof(runPreparationStateId));
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
-            _runEndedStateId = runEndedStateId != null ? runEndedStateId : throw new ArgumentNullException(nameof(runEndedStateId));
         }
 
         void IInitializable.Initialize()
@@ -101,8 +97,7 @@ namespace Game.Gameplay.CharacterPresentation
                 return;
 
             if (ReferenceEquals(nextStateId, _runPreparationStateId)
-                || ReferenceEquals(nextStateId, _preLaunchStateId)
-                || ReferenceEquals(nextStateId, _runEndedStateId))
+                || ReferenceEquals(nextStateId, _preLaunchStateId))
             {
                 SnapToTargetPose();
             }

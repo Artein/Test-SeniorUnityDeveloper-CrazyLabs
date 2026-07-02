@@ -20,10 +20,7 @@ namespace Game.Gameplay.CharacterPresentation
         public CharacterPresentationClassificationResult Classify(CharacterPresentationClassificationInput input)
         {
             if (input.HasAcceptedRunResult)
-            {
-                return new CharacterPresentationClassificationResult(
-                    input.AcceptedRunResultSucceeded ? CharacterPresentationMode.Victory : CharacterPresentationMode.Defeat);
-            }
+                return ClassifyAcceptedRunResult(input);
 
             if (input.HasActivePull)
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.PullAnticipation);
@@ -38,6 +35,12 @@ namespace Game.Gameplay.CharacterPresentation
                 return ClassifyUngrounded(input);
 
             return ClassifyGrounded(input);
+        }
+
+        private CharacterPresentationClassificationResult ClassifyAcceptedRunResult(CharacterPresentationClassificationInput input)
+        {
+            return new CharacterPresentationClassificationResult(
+                input.AcceptedRunResultSucceeded ? CharacterPresentationMode.Victory : CharacterPresentationMode.Defeat);
         }
 
         private CharacterPresentationClassificationResult ClassifyUngrounded(CharacterPresentationClassificationInput input)

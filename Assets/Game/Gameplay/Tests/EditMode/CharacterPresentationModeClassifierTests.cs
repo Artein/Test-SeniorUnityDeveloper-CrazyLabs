@@ -36,9 +36,11 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
-    public void Classify_AcceptedSuccessfulRunResult_ReturnsVictory()
+    public void Classify_AcceptedSuccessfulRunResult_ReturnsVictoryImmediately()
     {
-        var input = CreateInput(hasAcceptedRunResult: true, acceptedRunResultSucceeded: true);
+        var input = CreateInput(
+            hasAcceptedRunResult: true,
+            acceptedRunResultSucceeded: true);
 
         var result = _classifier.Classify(input);
 
@@ -46,9 +48,11 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
-    public void Classify_AcceptedFailedRunResult_ReturnsDefeat()
+    public void Classify_AcceptedFailedRunResult_ReturnsDefeatImmediately()
     {
-        var input = CreateInput(hasAcceptedRunResult: true, acceptedRunResultSucceeded: false);
+        var input = CreateInput(
+            hasAcceptedRunResult: true,
+            acceptedRunResultSucceeded: false);
 
         var result = _classifier.Classify(input);
 
@@ -112,7 +116,10 @@ public sealed class CharacterPresentationModeClassifierTests
     [Test]
     public void Classify_ActivePullWithAcceptedSuccessfulRunResult_ReturnsVictory()
     {
-        var input = CreateInput(hasActivePull: true, hasAcceptedRunResult: true, acceptedRunResultSucceeded: true);
+        var input = CreateInput(
+            hasActivePull: true,
+            hasAcceptedRunResult: true,
+            acceptedRunResultSucceeded: true);
 
         var result = _classifier.Classify(input);
 

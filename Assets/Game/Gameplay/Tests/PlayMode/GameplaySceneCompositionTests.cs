@@ -14,6 +14,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
+#if UNITY_EDITOR
+using UnityEditor.Animations;
+#endif
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFixture
@@ -274,6 +277,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchPower", AnimatorControllerParameterType.Float);
         AssertAnimatorParameter(characterAnimator, "NormalizedPullOffset", AnimatorControllerParameterType.Float);
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
+#if UNITY_EDITOR
+        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Victory, 0.24f);
+        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Defeat, 0.2f);
+#endif
         Assert.That(characterAnimationEventReceiver, Is.Not.Null);
         Assert.That(characterAnimationEventReceiver.transform, Is.SameAs(characterAnimator.transform));
 
@@ -648,6 +655,33 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             Is.True,
             $"{animator.name} Animator should contain {parameterType} parameter '{parameterName}'.");
     }
+
+#if UNITY_EDITOR
+    private void AssertAnyStateTransitionDuration(Animator animator, CharacterPresentationMode mode, float expectedDuration)
+    {
+        var controller = animator.runtimeAnimatorController as AnimatorController;
+
+        Assert.That(controller, Is.Not.Null, $"{animator.name} should use an AnimatorController asset.");
+
+        var transition = controller.layers
+            .SelectMany(layer => layer.stateMachine.anyStateTransitions)
+            .SingleOrDefault(candidate => IsPresentationModeAnyStateTransition(candidate, mode));
+
+        Assert.That(transition, Is.Not.Null, $"{controller.name} should contain an AnyState transition to {mode}.");
+        Assert.That(transition.hasFixedDuration, Is.True, $"{mode} transition should use fixed-duration seconds.");
+        Assert.That(transition.duration, Is.EqualTo(expectedDuration).Within(0.0001f), mode.ToString());
+    }
+
+    private bool IsPresentationModeAnyStateTransition(AnimatorStateTransition transition, CharacterPresentationMode mode)
+    {
+        return transition.destinationState != null
+               && transition.destinationState.name == mode.ToString()
+               && transition.conditions.Any(condition =>
+                   condition.parameter == "PresentationMode"
+                   && condition.mode == AnimatorConditionMode.Equals
+                   && Mathf.Approximately(condition.threshold, (int)mode));
+    }
+#endif
 
     private void AssertPoleFramesAnchor(GameObject pole, Transform anchor, Vector3 anchorPosition, string poleName)
     {
