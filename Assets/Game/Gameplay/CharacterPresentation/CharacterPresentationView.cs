@@ -26,11 +26,11 @@ namespace Game.Gameplay.CharacterPresentation
         private string _normalizedLaunchOffsetParameterName = "NormalizedLaunchOffset";
 
         [SerializeField] private float _airborneDelaySeconds = 0.12f;
-        [SerializeField] private float _slideEnterDownhillDegrees = 6f;
-        [SerializeField] private float _slideExitDownhillDegrees = 3f;
+        [SerializeField] private float _slideEnterDownhillDegrees = 9f;
+        [SerializeField] private float _slideExitDownhillDegrees = 3.5f;
         [SerializeField] private float _runFlatMaximumAbsSlopeDegrees = 4f;
         [SerializeField] private float _runMinimumForwardSpeed = 0.5f;
-        [SerializeField] private float _minimumLocomotionModeDuration = 0.15f;
+        [SerializeField] private float _minimumLocomotionModeDuration = 0.35f;
         [SerializeField, Min(0f)] private float _launchPushMinimumSeconds = 0.25f;
         [SerializeField] private float _slideReferenceSpeed = 8f;
         [SerializeField] private float _runReferenceSpeed = 8f;

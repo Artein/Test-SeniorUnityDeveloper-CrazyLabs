@@ -10,7 +10,7 @@ namespace Game.Gameplay
     public sealed partial class PhysicsRunSurfaceContextSource : MonoBehaviour, IRunSurfaceContextSource
     {
         private const float SupportProbeSkinWidth = 0.02f;
-        private const float MinimumSupportNormalDot = 0.0001f;
+        private const float MinimumSupportNormalDot = 0.17f;
         private const int UngroundedMissThreshold = 2;
 
         [SerializeField] private Collider _supportCollider;
@@ -19,6 +19,7 @@ namespace Game.Gameplay
         [SerializeField] private LayerMask _surfaceMask = Physics.DefaultRaycastLayers;
 
         private readonly RaycastHit[] _supportHits = new RaycastHit[16];
+        private readonly RaycastHit[] _normalProbeHits = new RaycastHit[16];
         private readonly Collider[] _overlapHits = new Collider[16];
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator = new RunSurfaceSlopeCalculator();
 
@@ -51,7 +52,7 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (!TryGetClosestSupportHit(frame.UpDirection, Mathf.Max(0f, _supportProbeDistance), out var supportHit))
+            if (!TryGetBestSupportHit(frame.UpDirection, Mathf.Max(0f, _supportProbeDistance), out var supportHit))
             {
                 RecordMissedSupportSample();
                 return;
@@ -79,11 +80,11 @@ namespace Game.Gameplay
             Current = new RunSurfaceContext(false, Vector3.up, 0f);
         }
 
-        private bool TryGetClosestSupportHit(Vector3 upDirection, float supportProbeDistance, out SupportHit closestHit)
+        private bool TryGetBestSupportHit(Vector3 upDirection, float supportProbeDistance, out SupportHit bestHit)
         {
-            closestHit = default;
+            bestHit = default;
 
-            if (TryGetOverlapSupport(upDirection, out closestHit))
+            if (TryGetOverlapSupport(upDirection, out bestHit))
                 return true;
 
             if (supportProbeDistance <= 0f)
@@ -94,7 +95,8 @@ namespace Game.Gameplay
             var distance = supportProbeDistance + SupportProbeSkinWidth;
             var hitCount = CastSupport(castOffset, direction, distance);
             var hasHit = false;
-            var closestDistance = float.PositiveInfinity;
+            var bestNormalDot = float.NegativeInfinity;
+            var bestDistance = float.PositiveInfinity;
 
             for (var hitIndex = 0; hitIndex < hitCount; hitIndex += 1)
             {
@@ -103,18 +105,96 @@ namespace Game.Gameplay
                 if (!IsValidSupportHit(hit))
                     continue;
 
-                if (!IsValidSupportNormal(hit.normal, upDirection))
+                if (!TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
                     continue;
 
-                if (hit.distance >= closestDistance)
-                    continue;
+                var normalDot = Vector3.Dot(normal, upDirection);
 
-                closestDistance = hit.distance;
-                closestHit = new SupportHit(hit.normal.normalized);
+                if (normalDot < bestNormalDot
+                    || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
+                {
+                    continue;
+                }
+
+                bestNormalDot = normalDot;
+                bestDistance = hit.distance;
+                bestHit = new SupportHit(normal);
                 hasHit = true;
             }
 
             return hasHit;
+        }
+
+        private bool TryGetCastSupportNormal(
+            RaycastHit hit,
+            Vector3 upDirection,
+            Vector3 direction,
+            float distance,
+            out Vector3 normal)
+        {
+            normal = default;
+
+            if (!IsValidSupportNormal(hit.normal, upDirection))
+                return false;
+
+            normal = hit.normal.normalized;
+
+            if (!TryProbeSupportSurfaceNormal(hit.collider, upDirection, direction, distance, out var probedNormal))
+                return true;
+
+            normal = probedNormal;
+            return true;
+        }
+
+        private bool TryProbeSupportSurfaceNormal(
+            Collider targetCollider,
+            Vector3 upDirection,
+            Vector3 direction,
+            float distance,
+            out Vector3 normal)
+        {
+            normal = default;
+
+            var probeOrigin = GetSupportProbeOrigin(upDirection);
+
+            var hitCount = Physics.RaycastNonAlloc(
+                probeOrigin,
+                direction,
+                _normalProbeHits,
+                distance,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+            var bestDistance = float.PositiveInfinity;
+            var hasHit = false;
+
+            for (var hitIndex = 0; hitIndex < hitCount; hitIndex += 1)
+            {
+                var hit = _normalProbeHits[hitIndex];
+
+                if (hit.collider != targetCollider || !IsValidSupportHit(hit) || !IsValidSupportNormal(hit.normal, upDirection))
+                    continue;
+
+                if (hit.distance >= bestDistance)
+                    continue;
+
+                bestDistance = hit.distance;
+                normal = hit.normal.normalized;
+                hasHit = true;
+            }
+
+            return hasHit;
+        }
+
+        private Vector3 GetSupportProbeOrigin(Vector3 upDirection)
+        {
+            var bounds = _supportCollider.bounds;
+
+            var projectedExtent =
+                bounds.extents.x * Mathf.Abs(upDirection.x)
+                + bounds.extents.y * Mathf.Abs(upDirection.y)
+                + bounds.extents.z * Mathf.Abs(upDirection.z);
+
+            return bounds.center - (upDirection * projectedExtent) + (upDirection * SupportProbeSkinWidth);
         }
 
         private int CastSupport(Vector3 castOffset, Vector3 direction, float distance)
@@ -321,7 +401,12 @@ namespace Game.Gameplay
                 return false;
 
             var supportBody = _supportCollider.attachedRigidbody;
-            return supportBody == null || hitCollider.attachedRigidbody != supportBody;
+
+            if (supportBody != null && hitCollider.attachedRigidbody == supportBody)
+                return false;
+
+            return hitCollider.TryGetComponent(out RunContact runContact)
+                   && runContact.Category == RunContactCategory.Surface;
         }
 
         private bool IsValidSupportNormal(Vector3 normal, Vector3 upDirection)

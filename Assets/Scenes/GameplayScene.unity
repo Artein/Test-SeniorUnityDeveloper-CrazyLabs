@@ -15202,7 +15202,7 @@ MonoBehaviour:
   _supportProbeDistance: 0.08
   _surfaceMask:
     serializedVersion: 2
-    m_Bits: 819
+    m_Bits: 256
 --- !u!1001 &1931583834
 PrefabInstance:
   m_ObjectHideFlags: 0

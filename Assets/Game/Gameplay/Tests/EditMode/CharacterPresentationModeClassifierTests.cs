@@ -194,6 +194,30 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_GroundedMildDownhillMovingForward_ReturnsRun()
+    {
+        var input = CreateInput(
+            surfaceContext: GroundedDownhill(_tuning.SlideEnterDownhillDegrees - 0.5f),
+            courseForwardSpeed: 10f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Run));
+    }
+
+    [Test]
+    public void Classify_GroundedAtSlideEnterThreshold_ReturnsSlide()
+    {
+        var input = CreateInput(
+            surfaceContext: GroundedDownhill(_tuning.SlideEnterDownhillDegrees),
+            courseForwardSpeed: 10f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
     public void Classify_GroundedFlatMovingForward_ReturnsRun()
     {
         var input = CreateInput(surfaceContext: GroundedDownhill(0f), courseForwardSpeed: 3f);
@@ -277,6 +301,20 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_RunWithinMinimumModeDuration_PreservesRunWhenSurfaceBecomesDownhill()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Run,
+            currentModeElapsedSeconds: _tuning.MinimumLocomotionModeDuration * 0.5f,
+            surfaceContext: GroundedDownhill(_tuning.SlideEnterDownhillDegrees + 1f),
+            courseForwardSpeed: 5f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Run));
+    }
+
+    [Test]
     public void Classify_RunAboveSlideExitButBelowSlideEnter_PreservesRun()
     {
         var input = CreateInput(
@@ -316,6 +354,27 @@ public sealed class CharacterPresentationModeClassifierTests
         var result = _classifier.Classify(input);
 
         Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Run));
+    }
+
+    [Test]
+    public void CharacterPresentationView_DefaultTuning_UsesStableRunSlideThresholds()
+    {
+        var gameObject = new GameObject("Character Presentation View");
+
+        try
+        {
+            var view = gameObject.AddComponent<CharacterPresentationView>();
+
+            Assert.That(view.SlideEnterDownhillDegrees, Is.EqualTo(9f).Within(0.0001f));
+            Assert.That(view.SlideExitDownhillDegrees, Is.EqualTo(3.5f).Within(0.0001f));
+            Assert.That(view.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
+            Assert.That(view.RunFlatMaximumAbsSlopeDegrees, Is.EqualTo(4f).Within(0.0001f));
+            Assert.That(view.RunMinimumForwardSpeed, Is.EqualTo(0.5f).Within(0.0001f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(gameObject);
+        }
     }
 
     private CharacterPresentationClassificationInput CreateInput(
@@ -363,11 +422,11 @@ public sealed class CharacterPresentationModeClassifierTests
     private sealed class FakeCharacterPresentationTuning : ICharacterPresentationTuning
     {
         public float AirborneDelaySeconds { get; set; } = 0.12f;
-        public float SlideEnterDownhillDegrees { get; set; } = 6f;
-        public float SlideExitDownhillDegrees { get; set; } = 3f;
+        public float SlideEnterDownhillDegrees { get; set; } = 9f;
+        public float SlideExitDownhillDegrees { get; set; } = 3.5f;
         public float RunFlatMaximumAbsSlopeDegrees { get; set; } = 4f;
         public float RunMinimumForwardSpeed { get; set; } = 0.5f;
-        public float MinimumLocomotionModeDuration { get; set; } = 0.15f;
+        public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float RunReferenceSpeed { get; set; } = 8f;

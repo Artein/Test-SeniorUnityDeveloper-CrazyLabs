@@ -89,6 +89,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
         var preLaunchRigPoseResetter = lifetimeScope.Container.Resolve<IPreLaunchRigPoseResetter>();
         var resolvedPlayerSteeringTarget = lifetimeScope.Container.Resolve<IPlayerSteeringTarget>();
+        var gameplaySlingshotLaunchConfig = lifetimeScope.Container.Resolve<IGameplaySlingshotLaunchConfig>();
         var playerSteeringConfig = lifetimeScope.Container.Resolve<IPlayerSteeringConfig>();
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
         var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
@@ -181,6 +182,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runObstacle.layer, Is.EqualTo(cameraObstacleLayer));
         Assert.That(surfaceContact, Is.Not.Null);
         Assert.That(surfaceContact.Category, Is.EqualTo(RunContactCategory.Surface));
+        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeCompletionGlide", 0.16f);
+        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeEarlyReachPressure", 0.25f);
         Assert.That(decollider.TerrainResolution.Enabled, Is.True);
         Assert.That(decollider.TerrainResolution.TerrainLayers.value, Is.EqualTo(cameraTerrainLayerMask.value));
         Assert.That(decollider.Decollision.Enabled, Is.True);
@@ -212,6 +215,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunContactClassifier, Is.Not.Null);
         Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedCharacterPresentationTuning.SlideEnterDownhillDegrees, Is.EqualTo(9f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.SlideExitDownhillDegrees, Is.EqualTo(3.5f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.RunFlatMaximumAbsSlopeDegrees, Is.EqualTo(4f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.RunMinimumForwardSpeed, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
@@ -229,6 +237,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
         Assert.That(runSurfaceContextSource.SupportColliderForTests, Is.SameAs(targetCollider));
         Assert.That(runSurfaceContextSource.SupportProbeDistanceForTests, Is.LessThanOrEqualTo(0.25f));
+        Assert.That(runSurfaceContextSource.SurfaceMaskForTests.value, Is.EqualTo(TestAssets.RunSurfaceLayerMask.value));
         Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);
@@ -272,6 +281,16 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig, Is.Not.Null);
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
+        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(7f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(18f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumLateralLaunchAngleDegrees, Is.EqualTo(35f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.HasMinimumTotalImpulse, Is.False);
+        Assert.That(gameplaySlingshotLaunchConfig.HasMaximumTotalImpulse, Is.False);
+        Assert.That(resolvedRunEndConfig.LostMomentumLaunchGraceDuration, Is.EqualTo(1.25f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumDuration, Is.EqualTo(0.75f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumPlanarSpeedThreshold, Is.EqualTo(0.6f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumProgressThreshold, Is.EqualTo(0.2f).Within(0.0001f));
 
         Assert.That(runProgressFrameSource.TryCreateSnapshot(playerRigidbody.position, out var frameSnapshot, out var frameError), Is.True,
             frameError);
@@ -578,6 +597,24 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(contact, Is.Not.Null, placeholder.name);
         Assert.That(contact.Category, Is.EqualTo(expectedCategory), placeholder.name);
         Assert.That(contact.gameObject, Is.SameAs(collider.gameObject), placeholder.name);
+    }
+
+    private void AssertRunSurfacePhysicsMaterial(Scene scene, string materialName, float expectedFriction)
+    {
+        var materials = FindComponentsInScene<Collider>(scene)
+            .Where(collider => collider.sharedMaterial != null && collider.sharedMaterial.name == materialName)
+            .Select(collider => collider.sharedMaterial)
+            .Distinct()
+            .ToArray();
+
+        Assert.That(materials, Has.Length.EqualTo(1), materialName);
+
+        var material = materials[0];
+        Assert.That(material.dynamicFriction, Is.EqualTo(expectedFriction).Within(0.0001f), materialName);
+        Assert.That(material.staticFriction, Is.EqualTo(expectedFriction).Within(0.0001f), materialName);
+        Assert.That(material.bounciness, Is.EqualTo(0f).Within(0.0001f), materialName);
+        Assert.That(material.frictionCombine, Is.EqualTo(PhysicsMaterialCombine.Minimum), materialName);
+        Assert.That(material.bounceCombine, Is.EqualTo(PhysicsMaterialCombine.Minimum), materialName);
     }
 
     private void AssertAnimatorParameter(Animator animator, string parameterName, AnimatorControllerParameterType parameterType)

@@ -80,7 +80,8 @@ namespace Game.Gameplay.CharacterPresentation
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
             }
 
-            if (Mathf.Abs(downhillDegrees) <= runFlatMaximumAbsSlopeDegrees
+            if (downhillDegrees < slideEnterDownhillDegrees
+                && downhillDegrees >= -runFlatMaximumAbsSlopeDegrees
                 && HasForwardRunSpeed(input))
             {
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Run);

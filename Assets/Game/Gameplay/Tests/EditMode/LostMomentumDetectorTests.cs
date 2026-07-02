@@ -11,6 +11,12 @@ using VContainer.Unity;
 // ReSharper disable once CheckNamespace
 public sealed class LostMomentumDetectorTests
 {
+    private const float LostMomentumLaunchGraceDuration = 1.25f;
+    private const float LostMomentumDuration = 0.75f;
+    private const float LostMomentumPlanarSpeedThreshold = 0.6f;
+    private const float LostMomentumProgressThreshold = 0.2f;
+    private const float TestFixedDeltaTime = 0.25f;
+
     private readonly List<UnityEngine.Object> _objects = new();
     private GameplayStateId _preLaunchStateId;
     private GameplayStateId _runningStateId;
@@ -36,12 +42,12 @@ public sealed class LostMomentumDetectorTests
 
         _config = new FakeRunEndConfig
         {
-            LostMomentumLaunchGraceDuration = 0.1f,
-            LostMomentumDuration = 0.2f,
-            LostMomentumPlanarSpeedThreshold = 0.5f,
-            LostMomentumProgressThreshold = 0.05f
+            LostMomentumLaunchGraceDuration = LostMomentumLaunchGraceDuration,
+            LostMomentumDuration = LostMomentumDuration,
+            LostMomentumPlanarSpeedThreshold = LostMomentumPlanarSpeedThreshold,
+            LostMomentumProgressThreshold = LostMomentumProgressThreshold
         };
-        _clock = new FakeTime { FixedDeltaTime = 0.1f };
+        _clock = new FakeTime { FixedDeltaTime = TestFixedDeltaTime };
         _detector = CreateDetector();
         ((IInitializable)_detector).Initialize();
     }
@@ -95,7 +101,7 @@ public sealed class LostMomentumDetectorTests
         ActivateDetector();
         _motionSource.LinearVelocity = Vector3.forward;
 
-        Tick(5);
+        Tick(8);
 
         Assert.That(_candidateReceiver.Candidates, Is.Empty);
     }
@@ -105,9 +111,9 @@ public sealed class LostMomentumDetectorTests
     {
         ActivateDetector();
 
-        for (var tick = 0; tick < 5; tick += 1)
+        for (var tick = 0; tick < 8; tick += 1)
         {
-            _motionSource.Position += Vector3.forward * 0.1f;
+            _motionSource.Position += Vector3.forward * 0.25f;
             SampleProgressService();
             ((IFixedTickable)_detector).FixedTick();
         }
@@ -120,10 +126,43 @@ public sealed class LostMomentumDetectorTests
     {
         ActivateDetector();
 
-        Tick(4);
+        Tick(7);
 
         Assert.That(_candidateReceiver.Candidates, Has.Count.EqualTo(1));
         Assert.That(_candidateReceiver.Candidates[0].Reason, Is.EqualTo(RunEndReason.LostMomentum));
+    }
+
+    [Test]
+    public void FixedTick_CrawlProgressBelowThresholdForDuration_SubmitsLostMomentum()
+    {
+        ActivateDetector();
+        _motionSource.LinearVelocity = Vector3.forward * 0.4f;
+
+        for (var tick = 0; tick < 7; tick += 1)
+        {
+            _motionSource.Position += Vector3.forward * 0.04f;
+            SampleProgressService();
+            ((IFixedTickable)_detector).FixedTick();
+        }
+
+        Assert.That(_candidateReceiver.Candidates, Has.Count.EqualTo(1));
+        Assert.That(_candidateReceiver.Candidates[0].Reason, Is.EqualTo(RunEndReason.LostMomentum));
+    }
+
+    [Test]
+    public void FixedTick_MeaningfulProgressWithinDuration_DoesNotSubmitCandidate()
+    {
+        ActivateDetector();
+        _motionSource.LinearVelocity = Vector3.forward * 0.4f;
+
+        for (var tick = 0; tick < 8; tick += 1)
+        {
+            _motionSource.Position += Vector3.forward * 0.25f;
+            SampleProgressService();
+            ((IFixedTickable)_detector).FixedTick();
+        }
+
+        Assert.That(_candidateReceiver.Candidates, Is.Empty);
     }
 
     private LostMomentumDetector CreateDetector()

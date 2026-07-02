@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunEndConfig
   _obstacleImpactSpeedThreshold: 2.5
   _lostMomentumLaunchGraceDuration: 1.25
-  _lostMomentumDuration: 1
-  _lostMomentumPlanarSpeedThreshold: 0.35
-  _lostMomentumProgressThreshold: 0.05
+  _lostMomentumDuration: 0.5
+  _lostMomentumPlanarSpeedThreshold: 1
+  _lostMomentumProgressThreshold: 0.5
   _runEndedAcknowledgeGuardDuration: 0.25
   _distanceBonusCoinsPerMeter: 0.1
   _airTimeBonusCoinsPerSecond: 1

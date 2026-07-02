@@ -24,10 +24,8 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
 
         try
         {
-            yield return LoadGameplayScene();
+            yield return PrepareFreshPreLaunchScene();
             var activeScene = SceneManager.GetActiveScene();
-            yield return ContinueToPreLaunch(activeScene);
-            yield return WaitUntilPlayerIsHeld(activeScene);
 
             var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
@@ -83,7 +81,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             yield return WaitUntilPlayerLaunches(playerRigidbody);
 
             Assert.That(playerRigidbody.isKinematic, Is.False);
-            Assert.That(playerRigidbody.linearVelocity.magnitude, Is.GreaterThan(4f));
+            Assert.That(playerRigidbody.linearVelocity.magnitude, Is.GreaterThan(6f));
             Assert.That(runCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
             Assert.That(runCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
 

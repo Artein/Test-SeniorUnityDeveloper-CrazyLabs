@@ -434,11 +434,11 @@ public sealed class CharacterPresenterTests
     private sealed class FakeCharacterPresentationTuning : ICharacterPresentationTuning
     {
         public float AirborneDelaySeconds { get; set; } = 0.12f;
-        public float SlideEnterDownhillDegrees { get; set; } = 6f;
-        public float SlideExitDownhillDegrees { get; set; } = 3f;
+        public float SlideEnterDownhillDegrees { get; set; } = 9f;
+        public float SlideExitDownhillDegrees { get; set; } = 3.5f;
         public float RunFlatMaximumAbsSlopeDegrees { get; set; } = 4f;
         public float RunMinimumForwardSpeed { get; set; } = 0.5f;
-        public float MinimumLocomotionModeDuration { get; set; } = 0.15f;
+        public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float RunReferenceSpeed { get; set; } = 8f;

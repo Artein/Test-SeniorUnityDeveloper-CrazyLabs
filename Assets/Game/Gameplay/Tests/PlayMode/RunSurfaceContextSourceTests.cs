@@ -7,6 +7,8 @@ using UnityEngine;
 // ReSharper disable once CheckNamespace
 public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
 {
+    private static readonly Vector3 TestOrigin = new(1000f, 0f, 1000f);
+
     private readonly List<GameObject> _createdObjects = new();
 
     [TearDown]
@@ -120,6 +122,47 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     }
 
     [Test]
+    public void given_ColliderWithoutRunContactWithinProbeDistance_when_Sampled_then_ContextIsUngrounded()
+    {
+        var source = CreateSource(1.1f, 0.08f);
+        CreateSurface(0.05f, Quaternion.identity, RunContactCategory.Surface, false);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.False);
+    }
+
+    [TestCase(RunContactCategory.Obstacle)]
+    [TestCase(RunContactCategory.SafetyNet)]
+    [TestCase(RunContactCategory.Finish)]
+    public void given_NonSurfaceRunContactWithinProbeDistance_when_Sampled_then_ContextIsUngrounded(RunContactCategory category)
+    {
+        var source = CreateSource(1.1f, 0.08f);
+        CreateSurface(0.05f, Quaternion.identity, category);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.False);
+    }
+
+    [Test]
+    public void given_CloserSteepSurfaceAndFartherFlatSurface_when_Sampled_then_ContextUsesMostSupportiveSurfaceNormal()
+    {
+        var source = CreateSource(1.35f, 0.35f);
+        CreateSurface(0.22f, Quaternion.AngleAxis(55f, Vector3.right));
+        CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(Vector3.Dot(source.Current.GroundNormal, Vector3.up), Is.GreaterThan(0.98f));
+        Assert.That(source.Current.ForwardDownhillDegrees, Is.EqualTo(0f).Within(0.75f));
+    }
+
+    [Test]
     public void given_MissingReferences_when_Sampled_then_ContextIsUngrounded()
     {
         var source = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
@@ -132,6 +175,7 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     private PhysicsRunSurfaceContextSource CreateSource(float supportCenterY, float supportProbeDistance)
     {
         var sourceObject = CreateGameObject("Run Surface Context Source");
+        sourceObject.transform.position = TestOrigin;
         sourceObject.AddComponent<RunProgressFrameSource>();
 
         var source = sourceObject.AddComponent<PhysicsRunSurfaceContextSource>();
@@ -158,13 +202,23 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         return supportCollider;
     }
 
-    private GameObject CreateSurface(float topY, Quaternion rotation)
+    private GameObject CreateSurface(
+        float topY,
+        Quaternion rotation,
+        RunContactCategory category = RunContactCategory.Surface,
+        bool addRunContact = true)
     {
         var surface = CreateGameObject("Surface");
         surface.layer = GetSingleLayer(TestAssets.RunSurfaceLayerMask, "Run Surface");
-        surface.transform.SetPositionAndRotation(new Vector3(0f, topY, 0f) - (rotation * Vector3.up * 0.05f), rotation);
+        surface.transform.SetPositionAndRotation(
+            TestOrigin + new Vector3(0f, topY, 0f) - (rotation * Vector3.up * 0.05f),
+            rotation);
         surface.transform.localScale = new Vector3(8f, 0.1f, 8f);
         surface.AddComponent<BoxCollider>();
+
+        if (addRunContact)
+            surface.AddComponent<RunContact>().SetCategoryForTests(category);
+
         return surface;
     }
 
