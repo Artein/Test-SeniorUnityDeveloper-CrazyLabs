@@ -188,8 +188,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runObstacle.layer, Is.EqualTo(cameraObstacleLayer));
         Assert.That(surfaceContact, Is.Not.Null);
         Assert.That(surfaceContact.Category, Is.EqualTo(RunContactCategory.Surface));
-        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeCompletionGlide", 0.16f);
-        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeEarlyReachPressure", 0.25f);
+        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeCompletionGlide", 0.10f);
+        AssertRunSurfacePhysicsMaterial(activeScene, "LadybugHalfTubeEarlyReachPressure", 0.15f);
         Assert.That(decollider.TerrainResolution.Enabled, Is.True);
         Assert.That(decollider.TerrainResolution.TerrainLayers.value, Is.EqualTo(cameraTerrainLayerMask.value));
         Assert.That(decollider.Decollision.Enabled, Is.True);
