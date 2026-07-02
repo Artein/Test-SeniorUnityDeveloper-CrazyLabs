@@ -36,6 +36,26 @@ _Avoid_: Pull release, shot preview, impulse value
 The **Gameplay State** where the **Launch Target** is moving through the **Run Course**.
 _Avoid_: Sliding state, animation run
 
+**Run Steering Control**:
+The player touch control used during **Running** to steer the **Launch Target**.
+_Avoid_: Virtual joystick, screen steering, Pull
+
+**Run Steering Origin**:
+The touch position that acts as neutral for one active **Run Steering Control** gesture.
+_Avoid_: Screen center, joystick center, Pull Point
+
+**Run Steering Range**:
+The maximum physical touch displacement from the **Run Steering Origin** that represents full steering.
+_Avoid_: Deadzone, screen half-width, raw pixel distance, invalid drag distance
+
+**Run Steering Deadzone**:
+The neutral portion of **Run Steering Range** near the **Run Steering Origin** that produces no steering.
+_Avoid_: Screen center deadzone, input delay, response smoothing
+
+**Run Steering Responsiveness**:
+How quickly the **Launch Target** responds to requested **Run Steering Control** during **Running**.
+_Avoid_: Input polling rate, touch sampling rate
+
 **Run Ended**:
 The **Gameplay State** after one **Run Result** is accepted and before **Acknowledge Run Result** returns to **Run Preparation**.
 _Avoid_: Game Over, RunEnd, auto-reset
@@ -160,6 +180,21 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Continue** occurs during **Run Preparation**.
 - **Pre-Launch** accepts a **Pull** and may lead to **Launch**.
 - **Launch** starts **Running**.
+- **Run Steering Control** belongs to **Running**, not **Pre-Launch**.
+- **Run Steering Control** steers the **Launch Target** during **Running**.
+- **Run Steering Control** may begin from any touch during **Running**.
+- One active **Run Steering Control** gesture has one **Run Steering Origin**.
+- Only one **Run Steering Control** gesture is active at a time.
+- Additional touches do not change the active **Run Steering Control** gesture.
+- The active **Run Steering Control** gesture ends when its touch ends.
+- **Run Steering Range** defines full steering from the **Run Steering Origin** as a physical touch distance.
+- **Run Steering Range** maps physical horizontal displacement directly to steering amount until full steering is reached.
+- **Run Steering Range** remains a strict physical distance when **Run Steering Origin** is near a screen edge.
+- **Run Steering Deadzone** ignores a small initial portion of **Run Steering Range** near the **Run Steering Origin**.
+- **Run Steering Deadzone** does not reduce full steering; the remaining **Run Steering Range** still reaches full steering.
+- **Run Steering Responsiveness** affects how quickly the **Launch Target** responds to requested **Run Steering Control**.
+- **Run Steering Responsiveness** does not affect how often input is sampled.
+- **Run Steering Control** uses horizontal displacement; vertical displacement has no steering meaning.
 - **Running** ends with one **Run Result**.
 - **Run End Flow** produces one accepted **Run Result** per ended **Run**.
 - **Run Result** may include a **Run Reward Breakdown** that explains its run-earned currency.
@@ -201,10 +236,22 @@ _Avoid_: Character pivot, camera target, follow transform
 > **Dev:** "Is **Continue** the same input as **Acknowledge Run Result**?"
 > **Domain expert:** "No - **Continue** leaves **Run Preparation**, while **Acknowledge Run Result** leaves **Run Ended**."
 
+> **Dev:** "Is the **Run Steering Control** the same thing as a **Pull**?"
+> **Domain expert:** "No - a **Pull** prepares **Launch** during **Pre-Launch**, while **Run Steering Control** steers the **Launch Target** during **Running**."
+
+> **Dev:** "Does **Run Steering Control** use screen center as neutral?"
+> **Domain expert:** "No - the **Run Steering Origin** is the initial touch position for that gesture."
+
 ## Flagged ambiguities
 
 - "State" resolves to one current **Gameplay State**, not tags or simultaneous flags.
 - "Player" and "target" resolve to **Launch Target** when discussing the controlled run object.
+- "Virtual joystick" resolves to **Run Steering Control** when discussing **Running**, not to **Pull** or a visible joystick asset.
+- "Center" resolves to **Run Steering Origin** for **Run Steering Control**, not screen center.
+- "Size limit" resolves to **Run Steering Range**, where physical displacement beyond the range clamps to full steering.
+- "Deadzone" resolves to **Run Steering Deadzone** for **Run Steering Control**, not screen center distance.
+- "Responsiveness" resolves to **Run Steering Responsiveness**, not input polling or touch sampling.
+- "Joystick" does not imply two-dimensional movement for **Run Steering Control**.
 - "Stops" resolves to **Lost Momentum**, not arbitrary one-frame low velocity.
 - "Boundary" resolves to **Run Safety Net** only when it catches the below-course failure case.
 - "Forward", "downhill", "distance", and "progress" resolve to **Run Progress Frame** for run metrics.

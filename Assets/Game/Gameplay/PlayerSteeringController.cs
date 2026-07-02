@@ -21,6 +21,7 @@ namespace Game.Gameplay
         private readonly IRunGameplayStatResolver _statResolver;
         private readonly ITime _clock;
         private readonly IScreen _screen;
+        private readonly IRunSteeringGesture _runSteeringGesture;
         private readonly GameplayStateId _runningStateId;
         private readonly GameplayStatId _playerMaxSpeedStatId;
         private readonly GameplayStatId _playerSteeringResponsivenessStatId;
@@ -31,8 +32,6 @@ namespace Game.Gameplay
         private bool _isDisposed;
         private bool _hasLaunchApplied;
         private bool _isSteeringActive;
-        private bool _hasActivePointer;
-        private int _activePointerId;
         private float _desiredSteer;
         private float _currentSteer;
 
@@ -45,9 +44,13 @@ namespace Game.Gameplay
             IRunGameplayStatResolver statResolver,
             ITime clock,
             IScreen screen,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId,
-            [Key(InjectKey.GameplayStatId.PlayerMaxSpeed)] GameplayStatId playerMaxSpeedStatId,
-            [Key(InjectKey.GameplayStatId.PlayerSteeringResponsiveness)] GameplayStatId playerSteeringResponsivenessStatId)
+            IRunSteeringGesture runSteeringGesture,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId,
+            [Key(InjectKey.GameplayStatId.PlayerMaxSpeed)]
+            GameplayStatId playerMaxSpeedStatId,
+            [Key(InjectKey.GameplayStatId.PlayerSteeringResponsiveness)]
+            GameplayStatId playerSteeringResponsivenessStatId)
         {
             _unityInput = unityInput ?? throw new ArgumentNullException(nameof(unityInput));
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
@@ -57,6 +60,7 @@ namespace Game.Gameplay
             _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
+            _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
 
             _playerMaxSpeedStatId = playerMaxSpeedStatId != null
@@ -169,75 +173,52 @@ namespace Game.Gameplay
 
         private void ResetPointerAndSteerState()
         {
-            _hasActivePointer = false;
+            _runSteeringGesture.Reset();
             _desiredSteer = 0f;
             _currentSteer = 0f;
         }
 
         private void OnInputPointerPressed(PointerInput pointerInput)
         {
-            if (!_isSteeringActive || _hasActivePointer)
+            if (!_isSteeringActive)
                 return;
 
-            _activePointerId = pointerInput.PointerId;
-            _hasActivePointer = true;
-            _desiredSteer = GetSteerFromScreenPosition(pointerInput.ScreenPosition);
+            if (_runSteeringGesture.TryBegin(pointerInput, _screen.Dpi))
+                _desiredSteer = _runSteeringGesture.RequestedSteering;
         }
 
         private void OnInputPointerMoved(PointerInput pointerInput)
         {
-            if (!IsActivePointer(pointerInput))
+            if (!_isSteeringActive)
                 return;
 
-            _desiredSteer = GetSteerFromScreenPosition(pointerInput.ScreenPosition);
+            if (_runSteeringGesture.TryMove(pointerInput))
+                _desiredSteer = _runSteeringGesture.RequestedSteering;
         }
 
         private void OnInputPointerReleased(PointerInput pointerInput)
         {
-            if (!IsActivePointer(pointerInput))
+            if (!_isSteeringActive)
                 return;
 
-            _hasActivePointer = false;
-            _desiredSteer = 0f;
+            if (_runSteeringGesture.TryRelease(pointerInput))
+                _desiredSteer = 0f;
         }
 
         private void OnInputPointerCanceled(PointerInput pointerInput)
         {
-            if (!IsActivePointer(pointerInput))
+            if (!_isSteeringActive)
                 return;
 
-            _hasActivePointer = false;
-            _desiredSteer = 0f;
-        }
-
-        private bool IsActivePointer(PointerInput pointerInput)
-        {
-            return _isSteeringActive && _hasActivePointer && pointerInput.PointerId == _activePointerId;
-        }
-
-        private float GetSteerFromScreenPosition(Vector2 screenPosition)
-        {
-            var screenWidth = _screen.Width;
-            var halfWidth = screenWidth * 0.5f;
-
-            if (halfWidth <= 0.0001f)
-                return 0f;
-
-            var rawSteer = Mathf.Clamp((screenPosition.x - halfWidth) / halfWidth, -1f, 1f);
-            var deadzone = Mathf.Clamp(_config.SteeringDeadzone, 0f, 0.95f);
-
-            if (Mathf.Abs(rawSteer) <= deadzone)
-                return 0f;
-
-            var sensitivity = Mathf.Max(0f, _config.SteeringSensitivity);
-            return Mathf.Clamp(rawSteer * sensitivity, -1f, 1f);
+            if (_runSteeringGesture.TryCancel(pointerInput))
+                _desiredSteer = 0f;
         }
 
         private void UpdateSmoothedSteer()
         {
-            var responseRate = ResolveSteeringResponsiveness();
+            var responsiveness = ResolveSteeringResponsiveness();
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
-            _currentSteer = Mathf.MoveTowards(_currentSteer, _desiredSteer, responseRate * fixedDeltaTime);
+            _currentSteer = Mathf.MoveTowards(_currentSteer, _desiredSteer, responsiveness * fixedDeltaTime);
         }
 
         private void ApplySteering()
@@ -277,7 +258,7 @@ namespace Game.Gameplay
 
         private float ResolveSteeringResponsiveness()
         {
-            return Mathf.Max(0f, _statResolver.Resolve(_playerSteeringResponsivenessStatId, _config.SteeringResponseRate));
+            return Mathf.Max(0f, _statResolver.Resolve(_playerSteeringResponsivenessStatId, _config.RunSteeringResponsiveness));
         }
 
         private float ResolveMaximumPlanarSpeed()

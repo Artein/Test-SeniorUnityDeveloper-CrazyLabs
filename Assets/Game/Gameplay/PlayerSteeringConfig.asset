@@ -11,10 +11,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 818e906e77af44f483200c3858e62f79, type: 3}
   m_Name: PlayerSteeringConfig
-  m_EditorClassIdentifier:
-  _steeringDeadzone: 0.1
-  _steeringSensitivity: 0.25
-  _steeringResponseRate: 8
-  _maximumTurnDegreesPerSecond: 120
+  m_EditorClassIdentifier: 
+  _runSteeringRangeCentimeters: 1.5
+  _runSteeringDeadzoneFraction: 0.15
+  _runSteeringResponsiveness: 4
+  _fallbackDpi: 326
+  _minimumAcceptedDpi: 1
+  _maximumAcceptedDpi: 1000
+  _maximumTurnDegreesPerSecond: 30
   _minimumSteerSpeed: 0.25
   _maximumPlanarSpeed: 10

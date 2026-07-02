@@ -133,6 +133,7 @@ namespace Game.Gameplay
             builder.RegisterInstance(_playerTag).Keyed(InjectKey.Tags.Player);
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
+            builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
