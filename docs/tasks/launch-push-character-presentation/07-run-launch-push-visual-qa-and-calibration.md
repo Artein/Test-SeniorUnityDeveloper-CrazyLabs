@@ -2,11 +2,13 @@
 
 [Launch Push Character Presentation PRD](../../prd/prd-launch-push-character-presentation.md)
 
+Supersession note: [Slide-Only Character Presentation](../slide-only-character-presentation/index.md) supersedes wording in this slice that treats flat grounded movement as normal visible **Run**. **Run** remains reserved compatibility.
+
 ## What to build
 
 Run human visual QA and final calibration for Pull Anticipation and Launch Push in the real Gameplay Scene. This slice accepts that animation feel, transition timing, lateral pose readability, pull-strength response, and the absence of awkward leg poses require in-editor judgement after the deterministic runtime path is already built.
 
-Calibration should focus on authored Animator transitions, launch-push minimum duration, normalized pull and launch blend response, and verifying that slingshot-specific modes hand off cleanly into normal Slide, Run, or Airborne. Any runtime code changes discovered during QA should stay narrowly scoped to presentation behavior and should keep launch physics, band visuals, and collider geometry stable unless a separate issue is opened.
+Calibration should focus on authored Animator transitions, launch-push minimum duration, normalized pull and launch blend response, and verifying that slingshot-specific modes hand off cleanly into normal Slide, Idle, or Airborne. Any runtime code changes discovered during QA should stay narrowly scoped to presentation behavior and should keep launch physics, band visuals, and collider geometry stable unless a separate issue is opened.
 
 ## Acceptance criteria
 
@@ -15,10 +17,10 @@ Calibration should focus on authored Animator transitions, launch-push minimum d
 - [ ] Pull Anticipation visibly responds to lateral pull direction where the authored animation supports it.
 - [ ] Launch Push starts immediately after accepted launch.
 - [ ] Launch Push preserves accepted launch strength and lateral intent through its normalized Animator inputs.
-- [ ] Slide and Run do not appear during the intended launch-push guard window.
-- [ ] Launch Push hands off cleanly into Slide, Run, or Airborne after the guard, depending on real surface and motion facts.
+- [ ] Normal locomotion does not appear during the intended launch-push guard window.
+- [ ] Launch Push hands off cleanly into Slide, Idle, or Airborne after the guard, depending on real surface and motion facts.
 - [ ] The previously observed early sliding pose during slingshot push is no longer visible.
-- [ ] The previously observed awkward Slide-to-Run leg-split transition is no longer visible during the slingshot push handoff.
+- [ ] The previously observed awkward locomotion handoff pose is no longer visible during the slingshot push handoff.
 - [ ] Inactive slingshot Animator channels return to zero and do not leak stale pull or launch values into locomotion or terminal modes.
 - [ ] Victory and Defeat still override slingshot presentation.
 - [ ] Animator root motion remains disabled and the Ladybug visual does not move Band Center, collider, Rigidbody, or camera anchor transforms.

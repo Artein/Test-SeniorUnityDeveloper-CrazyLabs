@@ -12,13 +12,13 @@ This slice should produce a concise QA result that either accepts the first slic
 
 - [ ] Full Ladybug asset payload is available, not only pointer-sized source files.
 - [ ] Ladybug visual scale, local offset, local rotation, and Model Root setup are reviewed in Gameplay Scene.
-- [ ] Idle, Slide, Run, Airborne, Victory, and Defeat presentation modes are reviewed in representative gameplay contexts.
-- [ ] Slide is confirmed as the active downhill default.
-- [ ] Run is confirmed as acceptable for flat grounded forward movement.
+- [ ] Idle, Slide, reserved Run compatibility, Airborne, Victory, and Defeat presentation modes are reviewed in representative gameplay contexts.
+- [ ] Slide is confirmed as the active grounded locomotion default for meaningful movement.
+- [ ] Flat grounded forward movement remains visible Slide and does not expose visible Run.
 - [ ] Airborne debounce feels stable over small terrain gaps and responsive over sustained gaps.
 - [ ] Playback speed reference values and clamps are calibrated enough for the first slice.
 - [ ] Materials and shaders render acceptably in the active render pipeline.
-- [ ] Camera framing remains acceptable through pull, launch, slide, flat run, airborne, victory, and defeat moments.
+- [ ] Camera framing remains acceptable through pull, launch, slide, flat coasting, airborne, victory, and defeat moments.
 - [ ] Deferred items remain explicitly deferred unless a tiny VFX/audio addition is approved and wired through presentation-facing boundaries.
 - [ ] QA result records any accepted compromises and any follow-up issues required before production polish.
 
@@ -34,7 +34,7 @@ This slice should produce a concise QA result that either accepts the first slic
   - Unity compile through the connector before tests.
   - AssetDatabase refresh/reimport if final prefab, material, controller, or scene data changed.
 - Manual Unity smoke check:
-  - Human QA pass covers pre-launch hold, pull, release, downhill slide, flat run, short contact gaps, sustained airborne, obstacle failure, finish victory, and restart/pre-launch return.
+  - Human QA pass covers pre-launch hold, pull, release, downhill slide, flat coasting slide, short contact gaps, sustained airborne, obstacle failure, finish victory, and restart/pre-launch return.
   - Human QA pass records whether first-slice VFX/audio are included or explicitly deferred.
 - Package version/changelog:
   - No package manifest update expected.

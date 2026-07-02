@@ -148,7 +148,7 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
-    public void Tick_NonSlingshotMode_ZerosPullAndLaunchValues()
+    public void Tick_ReservedRunMode_ZerosPullAndLaunchValues()
     {
         _classifier.NextMode = CharacterPresentationMode.Run;
 
@@ -164,7 +164,7 @@ public sealed class CharacterPresenterTests
         ((ITickable)_presenter).Tick();
 
         var frame = _view.AppliedFrames[0];
-        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.Run));
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
         Assert.That(frame.NormalizedPull, Is.Zero);
         Assert.That(frame.NormalizedPullOffset, Is.Zero);
         Assert.That(frame.NormalizedLaunchPower, Is.Zero);
@@ -195,15 +195,39 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
-    public void Tick_ClassifierReturnsRun_AppliesRunFrameWithClampedPlayback()
+    public void Tick_ClassifierReturnsSlide_UsesSlideReferenceSpeed()
+    {
+        _tuning.SlideReferenceSpeed = 4f;
+        _motionSource.LinearVelocity = new Vector3(0f, 0f, 6f);
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_view.AppliedFrames[0].PlaybackSpeedMultiplier, Is.EqualTo(1.5f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_ClassifierReturnsRun_NormalizesToSlideFrameWithClampedPlayback()
     {
         _classifier.NextMode = CharacterPresentationMode.Run;
         _motionSource.LinearVelocity = new Vector3(0f, 0f, 20f);
 
         ((ITickable)_presenter).Tick();
 
-        Assert.That(_view.AppliedFrames[0].Mode, Is.EqualTo(CharacterPresentationMode.Run));
+        Assert.That(_view.AppliedFrames[0].Mode, Is.EqualTo(CharacterPresentationMode.Slide));
         Assert.That(_view.AppliedFrames[0].PlaybackSpeedMultiplier, Is.EqualTo(_tuning.MaximumPlaybackSpeedMultiplier));
+    }
+
+    [Test]
+    public void Tick_ClassifierReturnsRun_StoresSlideAsCurrentMode()
+    {
+        _classifier.NextMode = CharacterPresentationMode.Run;
+
+        ((ITickable)_presenter).Tick();
+
+        _classifier.NextMode = CharacterPresentationMode.Idle;
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.CurrentMode, Is.EqualTo(CharacterPresentationMode.Slide));
     }
 
     [Test]
@@ -434,14 +458,10 @@ public sealed class CharacterPresenterTests
     private sealed class FakeCharacterPresentationTuning : ICharacterPresentationTuning
     {
         public float AirborneDelaySeconds { get; set; } = 0.12f;
-        public float SlideEnterDownhillDegrees { get; set; } = 9f;
-        public float SlideExitDownhillDegrees { get; set; } = 3.5f;
-        public float RunFlatMaximumAbsSlopeDegrees { get; set; } = 4f;
-        public float RunMinimumForwardSpeed { get; set; } = 0.5f;
+        public float MeaningfulGroundedMovementThreshold { get; set; } = 0.5f;
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float SlideReferenceSpeed { get; set; } = 8f;
-        public float RunReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;
         public float MaximumPlaybackSpeedMultiplier { get; set; } = 1.5f;
     }

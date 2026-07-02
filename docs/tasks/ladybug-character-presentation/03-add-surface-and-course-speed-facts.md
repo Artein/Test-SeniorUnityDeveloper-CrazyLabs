@@ -6,7 +6,7 @@
 
 Add the motion and terrain facts needed for Character presentation without choosing any animation mode yet. Runtime code should expose a signed course-forward speed beside existing course-planar speed and expose a continuous Run Surface Context containing grounded state, ground normal, and forward downhill degrees.
 
-This slice creates the presentation-facing facts that later slices use to choose Slide, Run, and Airborne. It should not depend on Ladybug assets or Animator setup.
+This slice creates the presentation-facing facts that later slices use to choose Slide, reserved Run compatibility, and Airborne. It should not depend on Ladybug assets or Animator setup.
 
 ## Acceptance criteria
 

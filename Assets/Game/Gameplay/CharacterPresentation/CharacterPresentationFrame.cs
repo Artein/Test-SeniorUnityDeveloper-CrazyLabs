@@ -36,14 +36,10 @@ namespace Game.Gameplay.CharacterPresentation
     public interface ICharacterPresentationTuning
     {
         float AirborneDelaySeconds { get; }
-        float SlideEnterDownhillDegrees { get; }
-        float SlideExitDownhillDegrees { get; }
-        float RunFlatMaximumAbsSlopeDegrees { get; }
-        float RunMinimumForwardSpeed { get; }
+        float MeaningfulGroundedMovementThreshold { get; }
         float MinimumLocomotionModeDuration { get; }
         float LaunchPushMinimumSeconds { get; }
         float SlideReferenceSpeed { get; }
-        float RunReferenceSpeed { get; }
         float MinimumPlaybackSpeedMultiplier { get; }
         float MaximumPlaybackSpeedMultiplier { get; }
     }

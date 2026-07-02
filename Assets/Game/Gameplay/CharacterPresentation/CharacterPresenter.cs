@@ -117,8 +117,9 @@ namespace Game.Gameplay.CharacterPresentation
                 slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed, linearVelocity);
 
             var result = _classifier.Classify(input);
-            UpdateModeElapsed(result.Mode, deltaTime);
-            _view.ApplyFrame(CreateFrame(result.Mode, coursePlanarSpeed, slingshotContext));
+            var mode = NormalizeReservedPresentationMode(result.Mode);
+            UpdateModeElapsed(mode, deltaTime);
+            _view.ApplyFrame(CreateFrame(mode, coursePlanarSpeed, slingshotContext));
         }
 
         void IDisposable.Dispose()
@@ -175,12 +176,12 @@ namespace Game.Gameplay.CharacterPresentation
 
         private float CalculatePlaybackSpeed(CharacterPresentationMode mode, float coursePlanarSpeed)
         {
-            if (mode != CharacterPresentationMode.Slide && mode != CharacterPresentationMode.Run)
+            var normalizedMode = NormalizeReservedPresentationMode(mode);
+
+            if (normalizedMode != CharacterPresentationMode.Slide)
                 return 1f;
 
-            var referenceSpeed = mode == CharacterPresentationMode.Slide
-                ? _tuning.SlideReferenceSpeed
-                : _tuning.RunReferenceSpeed;
+            var referenceSpeed = _tuning.SlideReferenceSpeed;
 
             if (referenceSpeed <= 0f)
                 return 1f;
@@ -215,6 +216,11 @@ namespace Game.Gameplay.CharacterPresentation
             }
 
             return new CharacterPresentationFrame(mode, CalculatePlaybackSpeed(mode, coursePlanarSpeed));
+        }
+
+        private static CharacterPresentationMode NormalizeReservedPresentationMode(CharacterPresentationMode mode)
+        {
+            return mode == CharacterPresentationMode.Run ? CharacterPresentationMode.Slide : mode;
         }
     }
 }

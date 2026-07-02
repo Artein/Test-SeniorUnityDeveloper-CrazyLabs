@@ -172,14 +172,10 @@ MonoBehaviour:
   _normalizedPullOffsetParameterName: NormalizedPullOffset
   _normalizedLaunchOffsetParameterName: NormalizedLaunchOffset
   _airborneDelaySeconds: 0.12
-  _slideEnterDownhillDegrees: 9
-  _slideExitDownhillDegrees: 3.5
-  _runFlatMaximumAbsSlopeDegrees: 4
-  _runMinimumForwardSpeed: 0.5
+  _meaningfulGroundedMovementThreshold: 0.5
   _minimumLocomotionModeDuration: 0.35
   _launchPushMinimumSeconds: 0.25
   _slideReferenceSpeed: 8
-  _runReferenceSpeed: 8
   _minimumPlaybackSpeedMultiplier: 0.5
   _maximumPlaybackSpeedMultiplier: 1.5
 --- !u!114 &6423808732164892831

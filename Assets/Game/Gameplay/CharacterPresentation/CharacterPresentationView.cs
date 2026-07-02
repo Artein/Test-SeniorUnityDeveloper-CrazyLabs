@@ -26,26 +26,18 @@ namespace Game.Gameplay.CharacterPresentation
         private string _normalizedLaunchOffsetParameterName = "NormalizedLaunchOffset";
 
         [SerializeField] private float _airborneDelaySeconds = 0.12f;
-        [SerializeField] private float _slideEnterDownhillDegrees = 9f;
-        [SerializeField] private float _slideExitDownhillDegrees = 3.5f;
-        [SerializeField] private float _runFlatMaximumAbsSlopeDegrees = 4f;
-        [SerializeField] private float _runMinimumForwardSpeed = 0.5f;
+        [SerializeField] private float _meaningfulGroundedMovementThreshold = 0.5f;
         [SerializeField] private float _minimumLocomotionModeDuration = 0.35f;
         [SerializeField, Min(0f)] private float _launchPushMinimumSeconds = 0.25f;
         [SerializeField] private float _slideReferenceSpeed = 8f;
-        [SerializeField] private float _runReferenceSpeed = 8f;
         [SerializeField] private float _minimumPlaybackSpeedMultiplier = 0.5f;
         [SerializeField] private float _maximumPlaybackSpeedMultiplier = 1.5f;
 
         public float AirborneDelaySeconds => Mathf.Max(0f, _airborneDelaySeconds);
-        public float SlideEnterDownhillDegrees => Mathf.Max(0f, _slideEnterDownhillDegrees);
-        public float SlideExitDownhillDegrees => Mathf.Clamp(_slideExitDownhillDegrees, 0f, SlideEnterDownhillDegrees);
-        public float RunFlatMaximumAbsSlopeDegrees => Mathf.Max(0f, _runFlatMaximumAbsSlopeDegrees);
-        public float RunMinimumForwardSpeed => Mathf.Max(0f, _runMinimumForwardSpeed);
+        public float MeaningfulGroundedMovementThreshold => Mathf.Max(0f, _meaningfulGroundedMovementThreshold);
         public float MinimumLocomotionModeDuration => Mathf.Max(0f, _minimumLocomotionModeDuration);
         public float LaunchPushMinimumSeconds => Mathf.Max(0f, _launchPushMinimumSeconds);
         public float SlideReferenceSpeed => Mathf.Max(0.0001f, _slideReferenceSpeed);
-        public float RunReferenceSpeed => Mathf.Max(0.0001f, _runReferenceSpeed);
         public float MinimumPlaybackSpeedMultiplier => Mathf.Max(0f, _minimumPlaybackSpeedMultiplier);
         public float MaximumPlaybackSpeedMultiplier => Mathf.Max(MinimumPlaybackSpeedMultiplier, _maximumPlaybackSpeedMultiplier);
 

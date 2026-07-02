@@ -1,12 +1,14 @@
 # PRD: Ladybug Character Presentation
 
+Supersession note: [Slide-Only Character Presentation](prd-slide-only-character-presentation.md) supersedes every requirement in this PRD that treats flat grounded forward movement as normal visible **Run** presentation. The architecture remains current: the Rigidbody-backed **Launch Target** is gameplay truth, and the **Character** remains presentation only.
+
 ## Problem Statement
 
 The current player-facing Launch Target is represented by a cylinder-like gameplay object. That shape is useful for early physics and slingshot iteration, but it is not acceptable as the main character presentation for the game. The game needs the player to control a Ladybug character while preserving the existing physics-based downhill movement, slingshot launch behavior, steering, contact handling, run camera assumptions, and run-end flow.
 
 The core product problem is separation of responsibility. The Launch Target is the authoritative gameplay body. It owns the Rigidbody, collision behavior, slingshot interaction, band center, steering, and run progress relationships. The Ladybug should not replace that authority with imported prefab physics, root motion, or vendor scripts. The Ladybug should be a presentation child that reads gameplay state and motion data, then drives animation, visual scale, VFX, and audio in a way that matches the game loop.
 
-The game is mostly about sliding forward downhill. That means the default active grounded locomotion should be Slide, not Run. Run is still important for level parts that flatten out while the player continues to move forward because of existing physics. Airborne, victory, and defeat presentation must also be supported without leaking gameplay-specific result concepts into the view.
+The game is mostly about sliding forward downhill. That means the default active grounded locomotion should be Slide, not Run. Earlier versions of this PRD allowed visible Run for flat forward sections; that behavior is now superseded by slide-only presentation, where Run remains reserved compatibility. Airborne, victory, and defeat presentation must also be supported without leaking gameplay-specific result concepts into the view.
 
 This PRD defines the first implementation slice for a generic Character presentation system using the imported Ladybug assets as the first concrete character.
 
@@ -25,16 +27,18 @@ The first slice uses one Animator base layer with these parameters:
 1. `PresentationMode` as `int`.
 2. `PlaybackSpeedMultiplier` as `float`.
 
-The first slice uses these presentation modes:
+The current presentation mode enum includes slingshot-specific modes from later presentation work. The original Ladybug slice used these user-facing modes, with Run now reserved for compatibility:
 
 1. `Idle = 0`
-2. `Slide = 1`
-3. `Run = 2`
-4. `Airborne = 3`
-5. `Victory = 4`
-6. `Defeat = 5`
+2. `PullAnticipation = 1`
+3. `LaunchPush = 2`
+4. `Slide = 3`
+5. `Run = 4`
+6. `Airborne = 5`
+7. `Victory = 6`
+8. `Defeat = 7`
 
-Slide is the default active grounded locomotion on downhill surface. Run is used for grounded flat forward movement. Airborne is used only after a short ungrounded debounce to avoid flicker on tiny terrain gaps. Victory and Defeat are terminal presentation modes sourced from accepted run results.
+Slide is the default active grounded locomotion for meaningful grounded movement, including downhill and flat coasting. Run remains a reserved compatibility mode rather than a normal visible locomotion result. Airborne is used only after a short ungrounded debounce to avoid flicker on tiny terrain gaps. Victory and Defeat are terminal presentation modes sourced from accepted run results.
 
 The implementation should use generic names for reusable runtime code. `Ladybug` belongs in concrete asset names, prefab names, controller names, and imported asset buckets. Runtime classes should use `Character*` names unless they are truly Ladybug-specific.
 
@@ -80,7 +84,7 @@ Animator surfaces:
 7. Defeat state using `Death2`.
 8. Persistent `PresentationMode` integer parameter.
 9. Persistent `PlaybackSpeedMultiplier` float parameter.
-10. Authored Run-to-Slide and Slide-to-Run transition clips when the imported content supports them.
+10. Authored transition clips only when they support reserved compatibility or future polish; normal grounded locomotion must not depend on Run-to-Slide or Slide-to-Run transitions.
 
 Imported Ladybug asset surfaces:
 
@@ -102,7 +106,7 @@ Package and tooling surfaces:
 
 2. As a player, I want the Ladybug to slide when moving downhill so that the default animation matches the main fantasy of the game.
 
-3. As a player, I want the Ladybug to run on flatter forward-moving sections so that the character does not look like it is sliding on level ground.
+3. Superseded by slide-only presentation: flatter forward-moving sections now remain visible Slide when movement is meaningful.
 
 4. As a player, I want the Ladybug to continue moving with the current physics feel so that changing the character does not change the core controls.
 
@@ -128,17 +132,17 @@ Package and tooling surfaces:
 
 15. As a designer, I want Slide to be the active downhill default so that levels can be authored around the main sliding loop.
 
-16. As a designer, I want Run to be selected on flatter forward-moving surfaces so that flat sections can visually differ from downhill sections.
+16. Superseded by slide-only presentation: flatter forward-moving surfaces should remain visible Slide when movement is meaningful.
 
-17. As a designer, I want hysteresis between Slide and Run so that small slope changes do not cause animation chatter.
+17. Superseded by slide-only presentation: slope changes should not switch normal grounded locomotion between Slide and Run.
 
-18. As a designer, I want a minimum locomotion mode duration so that Slide and Run transitions remain visually intentional.
+18. As a designer, I want a minimum locomotion mode duration so that locomotion transitions remain visually intentional.
 
 19. As a designer, I want Airborne to have a configurable enter delay so that tiny contact losses do not look like jumps.
 
 20. As a designer, I want Airborne to exit immediately when grounded so that landing feels responsive.
 
-21. As a designer, I want separate reference speeds for Slide and Run so that each clip can be calibrated independently.
+21. As a designer, I want a Slide reference speed so that grounded locomotion playback can be calibrated consistently.
 
 22. As a designer, I want playback speed clamps so that animations do not become absurdly slow or fast.
 
@@ -184,7 +188,7 @@ Package and tooling surfaces:
 
 43. As a gameplay engineer, I want the frame to contain only mode and playback speed for the first slice so that raw slope and gameplay data do not leak into Animator code.
 
-44. As a gameplay engineer, I want a signed course-forward speed helper so that Run selection can reason about forward motion rather than only planar magnitude.
+44. As a gameplay engineer, I want a signed course-forward speed helper so that diagnostics and future presentation flavor can reason about forward motion rather than only planar magnitude.
 
 45. As a gameplay engineer, I want course-planar speed to remain available so that playback speed can use stable magnitude data.
 
@@ -222,11 +226,11 @@ Package and tooling surfaces:
 
 62. As a gameplay engineer, I want VContainer registration to follow existing gameplay lifetime patterns so that dependency direction remains consistent.
 
-63. As a QA engineer, I want EditMode tests for classifier priority so that terminal, pre-launch, airborne, slide, run, and fallback order is locked.
+63. As a QA engineer, I want EditMode tests for classifier priority so that terminal, pre-launch, airborne, slide, reserved Run compatibility, and fallback order is locked.
 
 64. As a QA engineer, I want EditMode tests for slope calculation so that downhill, uphill, flat, and banked surfaces classify consistently.
 
-65. As a QA engineer, I want tests for Slide and Run hysteresis so that slope threshold tuning does not introduce chatter.
+65. As a QA engineer, I want tests for Slide mode hold and reserved Run normalization so that animation presentation does not chatter.
 
 66. As a QA engineer, I want tests for Airborne debounce so that short gaps preserve locomotion and sustained gaps switch to Airborne.
 
@@ -278,7 +282,7 @@ The first-slice clip mapping is:
 
 1. Idle uses `Ilde_Breathing`.
 2. Slide uses plain `Slide`.
-3. Run uses `RunLoop` or `RunLoop2`.
+3. Run uses `RunLoop` or `RunLoop2` only as a reserved compatibility state when authored controller compatibility requires it.
 4. Airborne uses `JumpFall`.
 5. Victory uses `Victory`.
 6. Defeat uses `Death2`.
@@ -307,16 +311,16 @@ Classification priority is:
 2. Pre-launch Idle.
 3. Active-run Airborne after debounce.
 4. Active grounded Slide.
-5. Active grounded Run.
+5. Reserved Run compatibility normalized to Slide before view application.
 6. Fallback Idle.
 
 Idle represents pre-launch hold and non-active fallback. The first slice does not use a Held mode.
 
-Slide is the default active grounded locomotion for downhill movement. Run is used for grounded flat forward movement when the player still has enough forward motion.
+Slide is the default active grounded locomotion for meaningful grounded movement. Flat grounded coasting no longer selects visible Run.
 
-Slide and Run switching uses separate enter and exit thresholds for slope, plus a minimum locomotion mode duration. This prevents animation chatter near threshold boundaries.
+Normal grounded presentation uses a meaningful grounded movement threshold plus a minimum locomotion mode duration. Slope thresholds no longer switch normal locomotion between Slide and Run.
 
-Airborne switching uses an enter delay. During short ungrounded gaps, the presenter preserves the current Slide or Run mode. Once ungrounded time exceeds the delay, the classifier selects Airborne. Airborne exits immediately once grounded.
+Airborne switching uses an enter delay. During short ungrounded gaps, the presenter preserves visible Slide for active locomotion. Once ungrounded time exceeds the delay, the classifier selects Airborne. Airborne exits immediately once grounded.
 
 The first slice does not include a Landing mode. Landing can be added later if the game needs a visible landing anticipation or impact beat.
 
@@ -324,11 +328,11 @@ The Character Presentation Frame contains only selected mode and playback speed 
 
 Playback speed is driven by an Animator float parameter rather than global Animator speed. This allows clip playback to be controlled without changing the Animator component's global timing semantics.
 
-Playback speed multiplier is calculated from course-planar speed divided by the active mode reference speed, then clamped by tuning. Slide and Run have independent reference speeds. Non-locomotion modes default to `1`.
+Playback speed multiplier is calculated from course-planar speed divided by Slide Reference Speed, then clamped by tuning. Non-locomotion modes default to `1`.
 
-The initial Slide and Run reference speeds are seeded from the middle of the current launch speed range. This is a calibration starting point, not an imported clip truth.
+The initial Slide Reference Speed is seeded from the middle of the current launch speed range. This is a calibration starting point, not an imported clip truth.
 
-The signed course-forward speed helper is added beside the existing course-planar speed helper. Forward speed supports flat-section Run classification and avoids treating backward or lateral motion as forward running.
+The signed course-forward speed helper is added beside the existing course-planar speed helper for diagnostics and future presentation flavor. Normal grounded slide-only classification uses course-planar speed.
 
 The continuous run surface context source is separate from contact-enter classification. It exposes stable semantic terrain data for presentation: grounded state, ground normal, and forward downhill degrees.
 
@@ -350,15 +354,15 @@ The first slice may ship without VFX or audio if animation presentation, physics
 
 Testing starts with pure EditMode tests for deep modules. PlayMode tests are used where Unity scene, prefab, Animator, physics, or serialized component behavior is the actual risk.
 
-The Character Presentation Mode Classifier gets EditMode tests for terminal priority, pre-launch Idle, active grounded Slide, active grounded Run, fallback Idle, Airborne debounce, Airborne immediate exit on grounded, Slide-to-Run hysteresis, Run-to-Slide hysteresis, and minimum locomotion mode duration.
+The Character Presentation Mode Classifier gets EditMode tests for terminal priority, pre-launch Idle, active grounded Slide, reserved Run normalization, fallback Idle, Airborne debounce, Airborne immediate exit on grounded, and minimum locomotion mode duration.
 
-Classifier tests should cover edge cases where course-planar speed is non-zero but course-forward speed is zero or negative. Those cases must not classify as forward Run merely because the body is moving sideways or backward.
+Classifier tests should cover edge cases where course-planar speed is non-zero but course-forward speed is zero or negative. Those cases should still produce visible Slide when grounded movement is meaningful, and they must not expose visible Run merely because the body is moving sideways or backward.
 
 Run Surface Slope Calculator gets EditMode tests for flat surface, downhill surface, uphill surface, banked surface, normalized and non-normalized input, and expected sign convention for forward downhill degrees.
 
 Run Progress Frame Snapshot gets EditMode tests for signed course-forward speed. Tests cover forward movement, backward movement, pure lateral movement, zero velocity, and non-unit forward direction if relevant to the API contract.
 
-Playback speed calculation gets EditMode tests. Tests cover Slide reference speed, Run reference speed, clamping, zero reference speed guard behavior, zero movement, fast movement, and non-locomotion default playback.
+Playback speed calculation gets EditMode tests. Tests cover Slide reference speed, clamping, zero reference speed guard behavior, zero movement, fast movement, and non-locomotion default playback.
 
 Character Presentation Presenter gets EditMode tests using test doubles for motion, surface context, run-result notifier, time, classifier, tuning, and view. Tests cover applying one frame per tick, preserving mode elapsed time, resetting ungrounded time, mapping accepted run results to terminal presentation, and unsubscribing on disposal.
 
@@ -380,7 +384,7 @@ Prefab isolation tests verify that visual anchor transform changes do not move t
 
 Existing slingshot band, launch, run contact, and run-end tests remain gates. They should be run after collider hierarchy changes because the character swap can affect gameplay contacts even when the code change is presentation-focused.
 
-Visual QA is required after full LFS assets are available. Manual or captured PlayMode checks should inspect Ladybug scale, orientation, material appearance, collider fit, slingshot pull readability, slide/run/airborne transitions, victory, defeat, and camera framing.
+Visual QA is required after full LFS assets are available. Manual or captured PlayMode checks should inspect Ladybug scale, orientation, material appearance, collider fit, slingshot pull readability, Slide/Idle/Airborne transitions, reserved Run compatibility, victory, defeat, and camera framing.
 
 No test should hardcode imported asset paths or GUIDs unless the project already has a typed test asset provider for that purpose. If tests need concrete assets, expose them through the project's typed test asset provider pattern.
 
@@ -446,7 +450,7 @@ Assumptions:
 1. Full Ladybug LFS assets will be available before final prefab, material, collider, and visual QA calibration.
 2. The imported T-pose Ladybug source asset remains the correct avatar source after the third-party asset move.
 3. The existing Launch Target physics feel is product-correct and should be preserved.
-4. The current launch speed range is a reasonable first calibration source for Slide and Run playback reference speeds.
+4. The current launch speed range is a reasonable first calibration source for Slide playback reference speed.
 5. The first slice is allowed to be animation-only if VFX and audio wiring would broaden scope too much.
 6. SaintsField is already available or will be approved separately before implementation if it is missing.
 
@@ -454,8 +458,8 @@ Unresolved but non-blocking calibration questions:
 
 1. Exact Ladybug visual scale, local offset, and local rotation require full asset inspection in Unity.
 2. Exact gameplay collider shape, size, and offset require visual alignment plus band/contact regression checks.
-3. Exact Slide and Run slope thresholds require in-editor playtesting against representative downhill and flat level sections.
-4. Exact Slide and Run reference speeds require visual calibration against authored clips.
+3. Exact meaningful-grounded-movement threshold and Slide hold duration require in-editor playtesting against representative downhill and flat level sections.
+4. Exact Slide reference speed requires visual calibration against authored clips.
 5. Final material and shader fixes depend on how the imported assets render in the active pipeline.
 6. First-slice VFX and audio inclusion can be decided after the animation-only path is validated.
 

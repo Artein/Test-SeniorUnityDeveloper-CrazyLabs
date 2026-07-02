@@ -43,9 +43,9 @@ namespace Game.Gameplay.CharacterPresentation
         private CharacterPresentationClassificationResult ClassifyUngrounded(CharacterPresentationClassificationInput input)
         {
             if (input.UngroundedElapsedSeconds < Mathf.Max(0f, _tuning.AirborneDelaySeconds)
-                && IsLocomotionMode(input.CurrentMode))
+                && TryGetPreservedUngroundedLocomotion(input.CurrentMode, out var preservedMode))
             {
-                return new CharacterPresentationClassificationResult(input.CurrentMode);
+                return new CharacterPresentationClassificationResult(preservedMode);
             }
 
             return new CharacterPresentationClassificationResult(CharacterPresentationMode.Airborne);
@@ -53,51 +53,33 @@ namespace Game.Gameplay.CharacterPresentation
 
         private CharacterPresentationClassificationResult ClassifyGrounded(CharacterPresentationClassificationInput input)
         {
-            if (IsLocomotionMode(input.CurrentMode)
+            if (input.CurrentMode == CharacterPresentationMode.Slide
                 && input.CurrentModeElapsedSeconds < Mathf.Max(0f, _tuning.MinimumLocomotionModeDuration))
             {
-                return new CharacterPresentationClassificationResult(input.CurrentMode);
-            }
-
-            var downhillDegrees = input.SurfaceContext.ForwardDownhillDegrees;
-            var slideEnterDownhillDegrees = Mathf.Max(0f, _tuning.SlideEnterDownhillDegrees);
-            var slideExitDownhillDegrees = Mathf.Clamp(_tuning.SlideExitDownhillDegrees, 0f, slideEnterDownhillDegrees);
-            var runFlatMaximumAbsSlopeDegrees = Mathf.Max(0f, _tuning.RunFlatMaximumAbsSlopeDegrees);
-
-            if (downhillDegrees >= slideEnterDownhillDegrees)
-                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
-
-            if (input.CurrentMode == CharacterPresentationMode.Run
-                && downhillDegrees < slideEnterDownhillDegrees
-                && HasForwardRunSpeed(input))
-            {
-                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Run);
-            }
-
-            if (input.CurrentMode == CharacterPresentationMode.Slide
-                && downhillDegrees > slideExitDownhillDegrees)
-            {
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
             }
 
-            if (downhillDegrees < slideEnterDownhillDegrees
-                && downhillDegrees >= -runFlatMaximumAbsSlopeDegrees
-                && HasForwardRunSpeed(input))
-            {
-                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Run);
-            }
+            if (HasMeaningfulGroundedMovement(input))
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
 
             return new CharacterPresentationClassificationResult(CharacterPresentationMode.Idle);
         }
 
-        private bool HasForwardRunSpeed(CharacterPresentationClassificationInput input)
+        private bool HasMeaningfulGroundedMovement(CharacterPresentationClassificationInput input)
         {
-            return input.CourseForwardSpeed >= Mathf.Max(0f, _tuning.RunMinimumForwardSpeed);
+            return Mathf.Max(0f, input.CoursePlanarSpeed) >= Mathf.Max(0f, _tuning.MeaningfulGroundedMovementThreshold);
         }
 
-        private bool IsLocomotionMode(CharacterPresentationMode mode)
+        private bool TryGetPreservedUngroundedLocomotion(CharacterPresentationMode mode, out CharacterPresentationMode preservedMode)
         {
-            return mode is CharacterPresentationMode.Slide or CharacterPresentationMode.Run;
+            if (mode is CharacterPresentationMode.Slide or CharacterPresentationMode.Run)
+            {
+                preservedMode = CharacterPresentationMode.Slide;
+                return true;
+            }
+
+            preservedMode = CharacterPresentationMode.Idle;
+            return false;
         }
     }
 }

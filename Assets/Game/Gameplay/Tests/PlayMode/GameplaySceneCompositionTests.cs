@@ -215,11 +215,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunContactClassifier, Is.Not.Null);
         Assert.That(resolvedCharacterPresentationView, Is.SameAs(characterPresentationView));
         Assert.That(resolvedCharacterPresentationTuning, Is.SameAs(characterPresentationView));
-        Assert.That(resolvedCharacterPresentationTuning.SlideEnterDownhillDegrees, Is.EqualTo(9f).Within(0.0001f));
-        Assert.That(resolvedCharacterPresentationTuning.SlideExitDownhillDegrees, Is.EqualTo(3.5f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.AirborneDelaySeconds, Is.EqualTo(0.12f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.MeaningfulGroundedMovementThreshold, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
-        Assert.That(resolvedCharacterPresentationTuning.RunFlatMaximumAbsSlopeDegrees, Is.EqualTo(4f).Within(0.0001f));
-        Assert.That(resolvedCharacterPresentationTuning.RunMinimumForwardSpeed, Is.EqualTo(0.5f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
@@ -281,16 +281,16 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig, Is.Not.Null);
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
-        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(7f).Within(0.0001f));
-        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(18f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(15f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(30f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.MaximumLateralLaunchAngleDegrees, Is.EqualTo(35f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.HasMinimumTotalImpulse, Is.False);
         Assert.That(gameplaySlingshotLaunchConfig.HasMaximumTotalImpulse, Is.False);
         Assert.That(resolvedRunEndConfig.LostMomentumLaunchGraceDuration, Is.EqualTo(1.25f).Within(0.0001f));
-        Assert.That(resolvedRunEndConfig.LostMomentumDuration, Is.EqualTo(0.75f).Within(0.0001f));
-        Assert.That(resolvedRunEndConfig.LostMomentumPlanarSpeedThreshold, Is.EqualTo(0.6f).Within(0.0001f));
-        Assert.That(resolvedRunEndConfig.LostMomentumProgressThreshold, Is.EqualTo(0.2f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumDuration, Is.EqualTo(0.5f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumPlanarSpeedThreshold, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(resolvedRunEndConfig.LostMomentumProgressThreshold, Is.EqualTo(0.5f).Within(0.0001f));
 
         Assert.That(runProgressFrameSource.TryCreateSnapshot(playerRigidbody.position, out var frameSnapshot, out var frameError), Is.True,
             frameError);

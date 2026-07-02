@@ -13,14 +13,14 @@ Source root: `Assets/Plugins/Ladybug/`
 | --- | --- | --- |
 | Idle | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@Ilde_Breathing_FacingForward.FBX` | `LadyBug@Ilde_TurningLeftRight_FacingForward.FBX`, `LadyBug@Ilde_TurningLeftRight.FBX` |
 | Slide | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@Slide.FBX` | `LadyBug@Slide2.FBX` |
-| Run | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@RunLoop.FBX` | `LadyBug@RunLoop2.FBX` |
+| Run (reserved compatibility) | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@RunLoop.FBX` | `LadyBug@RunLoop2.FBX` |
 | Airborne | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@JumpFall.FBX` | `LadyBug@Jump.FBX`, `LadyBug@Jump2.FBX`, `LadyBug@Jump2_Fall.FBX` |
 | Victory | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@Victory.FBX` | none selected |
 | Defeat | `Content/Geometry/Characters/Animations/Ladybug/LadyBug@Death2.FBX` | `LadyBug@Death3.FBX`, `LadyBug@Death4.FBX`, `LadyBug@DeathBehind.FBX`, `LadyBug@DeathTurning.FBX` |
 
 ## Deferred Animation Content
 
-- Run/slide transitions: `LadyBug@Run_to_Slide.FBX`, `LadyBug@Run_to_Slide2.FBX`, `LadyBug@Slide_to_Run.FBX`, `LadyBug@Slide_to_Run2.FBX`, `LadyBug@Slide2_to_Run.FBX`
+- Reserved Run/slide transition candidates: `LadyBug@Run_to_Slide.FBX`, `LadyBug@Run_to_Slide2.FBX`, `LadyBug@Slide_to_Run.FBX`, `LadyBug@Slide_to_Run2.FBX`, `LadyBug@Slide2_to_Run.FBX`
 - Slide variants: `LadyBug@Slide_CenterRotation.FBX`
 - Launch/jump variants: `LadyBug@Jump2_Fall_toRun.FBX`, `LadyBug@JumpFall_toRun.FBX`, `LadyBug@JumpRoll.FBX`, `LadyBug@JumpRollFall.FBX`, `LadyBug@JumpRollFallToRun.FBX`, `LadyBug@JumpSalt.FBX`, `LadyBug@JumpSaltFall.FBX`, `LadyBug@JumpSaltFallToRun.FBX`
 - Abilities/special moves: `LadyBug@Yoyo_Start.FBX`, `LadyBug@Yoyo_Loop.FBX`, `LadyBug@Yoyo_End.FBX`, `LadyBug@StandingYoyo.FBX`, `LadyBug@Shield_Start.FBX`, `LadyBug@Shield_Loop.FBX`, `LadyBug@Shield_End.FBX`, `LadyBug@Shield.FBX`, `LadyBug@Magnet_All.FBX`, `LadyBug@WallRunLoop.FBX`, `LadyBug@WallRunLoop Right.FBX`

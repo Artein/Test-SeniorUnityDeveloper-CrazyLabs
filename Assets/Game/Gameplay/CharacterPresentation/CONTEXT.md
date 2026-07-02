@@ -25,8 +25,8 @@ The selected appearance state for the **Character**.
 _Avoid_: Gameplay State, animation trigger, run phase
 
 **Idle**:
-The neutral **Character Presentation Mode** used when no stronger presentation state is active.
-_Avoid_: Held, asleep, inactive
+The neutral or stalled **Character Presentation Mode** used when no stronger presentation state or meaningful grounded movement is active.
+_Avoid_: Held, asleep, inactive, slow locomotion
 
 **Pull Anticipation**:
 The **Character Presentation Mode** used while an **Active Pull** is preparing a launch.
@@ -37,12 +37,28 @@ The **Character Presentation Mode** used immediately after an accepted **Launch*
 _Avoid_: Band recoil, Running, Pull Anticipation
 
 **Slide**:
-The grounded locomotion **Character Presentation Mode** for downhill sliding.
-_Avoid_: Gameplay State, Run Surface, skid effect
+The grounded locomotion **Character Presentation Mode** for momentum-driven movement across a **Run Surface**, including downhill sliding and flat coasting.
+_Avoid_: Gameplay State, Run Surface, skid effect, downhill-only mode, stalled movement
+
+**Coast**:
+A descriptive flavor of **Slide** used for flatter or slower grounded movement.
+_Avoid_: Run, separate Character Presentation Mode, powered movement
+
+**Slide Flavor**:
+An optional visual variation inside **Slide** based on presentation facts such as slope or speed.
+_Avoid_: Character Presentation Mode, gameplay state, Run replacement
+
+**Slide Flavor Tuning**:
+Future **Character Presentation Tuning** for visual variation inside **Slide**, not for canonical mode selection.
+_Avoid_: SlideEnterDownhillDegrees, SlideExitDownhillDegrees, RunFlatMaximumAbsSlopeDegrees
 
 **Run**:
-The grounded locomotion **Character Presentation Mode** for forward running movement.
-_Avoid_: Gameplay Run, Running state
+A reserved **Character Presentation Mode** kept for compatibility, not a normal visible locomotion choice.
+_Avoid_: Gameplay Run, Running state, flat locomotion
+
+**Reserved Presentation Mode**:
+A serialized or asset-backed **Character Presentation Mode** retained to avoid compatibility churn while normal runtime selection stops using it.
+_Avoid_: Active mode, cleanup target, gameplay state
 
 **Airborne**:
 The **Character Presentation Mode** used when the character is not supported by a **Run Surface**.
@@ -93,20 +109,32 @@ The probe boundary that provides current **Run Surface Context**.
 _Avoid_: Run Contact Category, collision event, classifier
 
 **Run Surface Slope Calculator**:
-The math boundary that derives forward-downhill slope from surface and course axes.
-_Avoid_: Animator transition, surface probe, character view
+The math boundary that derives forward-downhill slope from surface and course axes for presentation flavor or diagnostics.
+_Avoid_: Animator transition, surface probe, character view, canonical mode boundary
 
 **Course Planar Speed**:
 The unsigned planar speed magnitude across the **Run Progress Frame** plane.
-_Avoid_: Forward speed, vertical speed, animation speed
+_Avoid_: Forward speed, vertical speed, progress speed
 
 **Course Forward Speed**:
 The signed speed along the **Run Progress Frame** forward axis.
-_Avoid_: Planar speed, launch speed, world speed
+_Avoid_: Planar speed, launch speed, presentation locomotion eligibility
+
+**Meaningful Grounded Movement**:
+Grounded **Course Planar Speed** above the presentation locomotion threshold, independent of signed forward progress.
+_Avoid_: Forward progress, downhill-only movement, powered movement
+
+**Meaningful Grounded Movement Threshold**:
+The **Character Presentation Tuning** value that defines the minimum **Course Planar Speed** for **Slide** instead of **Idle**.
+_Avoid_: RunMinimumForwardSpeed, forward-speed threshold, migration shim
 
 **Playback Speed Multiplier**:
 The presentation value that scales locomotion playback.
 _Avoid_: Global animation speed, movement speed, stat modifier
+
+**Slide Reference Speed**:
+The **Character Presentation Tuning** value used to scale **Slide** playback for all normal grounded locomotion.
+_Avoid_: RunReferenceSpeed, separate run playback speed, compatibility playback tuning
 
 **Lateral Lean**:
 A future visual left-right presentation value if steering needs to affect the **Character**.
@@ -124,8 +152,18 @@ _Avoid_: Gameplay State, animation mode, run result
 - **Character Presentation Mode** is appearance language, not **Gameplay State**.
 - **Character Presenter** gathers facts and applies one **Character Presentation Frame** to the **Character Presentation View**.
 - **Character Presentation Mode Classifier** returns one **Character Presentation Classification Result**.
-- **Run Surface Context** helps choose grounded, sliding, running, and airborne presentation.
-- **Course Planar Speed** is useful for playback scaling; **Course Forward Speed** is useful for forward-run eligibility.
+- **Run Surface Context** helps choose grounded **Slide**, **Idle**, and **Airborne** presentation.
+- **Slide** covers both downhill sliding and flatter **Coast** flavor; slope may affect **Slide Flavor** but not the canonical mode.
+- The first **Slide** implementation uses the existing **Slide** presentation for all **Meaningful Grounded Movement**; **Coast** does not require a separate clip or blend.
+- **Idle** covers true stopped or stalled grounded presentation; **Slide** requires **Meaningful Grounded Movement**.
+- **Run** remains a **Reserved Presentation Mode**, not normal appearance language.
+- Normal runtime classification must not emit **Run**; view compatibility may map unexpected **Run** frames to **Slide** until asset cleanup removes the legacy state.
+- Character presentation regression tests should broadly protect that normal classifier paths do not return **Run**, while still covering special modes such as **Launch Push**, **Airborne**, **Victory**, and **Defeat**.
+- **Course Planar Speed** is useful for playback scaling and **Meaningful Grounded Movement**; **Course Forward Speed** belongs to progress, failure, and reward logic.
+- Character presentation tuning should be renamed in place to **Meaningful Grounded Movement Threshold** language; no `FormerlySerializedAs` or migration shim is required for the old run-forward name.
+- **Slide Reference Speed** is the normal locomotion playback reference; old run-reference tuning should be removed or treated as compatibility-only fallback to **Slide Reference Speed**.
+- **Run Surface Slope Calculator** must not decide between **Slide** and **Run**; it can only support **Slide Flavor** or diagnostics.
+- Old slope threshold mode-selection tuning should be removed from the classifier path; any future slope tuning must be explicitly named as **Slide Flavor Tuning** and left unwired from canonical mode selection until a flavor pass needs it.
 - **Victory** and **Defeat** come from the accepted **Run Result**, not from **Run Ended** alone.
 
 ## Example dialogue
@@ -134,7 +172,34 @@ _Avoid_: Gameplay State, animation mode, run result
 > **Domain expert:** "No - Ladybug is the **Character**; the controlled gameplay object remains the **Launch Target**."
 
 > **Dev:** "Should sliding and running be separate **Gameplay States**?"
-> **Domain expert:** "No - they are **Character Presentation Modes** derived from run context."
+> **Domain expert:** "No - **Slide** is a **Character Presentation Mode**, while **Run** is gameplay language or reserved presentation compatibility."
+
+> **Dev:** "Should flat coasting switch from **Slide** to **Run**?"
+> **Domain expert:** "No - flat coasting is still **Slide** presentation, possibly with a calmer **Coast** flavor."
+
+> **Dev:** "Should we delete the old **Run** enum and Animator state now?"
+> **Domain expert:** "No - keep **Run** as a **Reserved Presentation Mode** for compatibility, but normal runtime classification should not produce it."
+
+> **Dev:** "Should a barely moving grounded character keep sliding?"
+> **Domain expert:** "No - once grounded movement is no longer meaningful, presentation returns to **Idle**."
+
+> **Dev:** "Should a grounded character sliding sideways or briefly backward switch out of **Slide**?"
+> **Domain expert:** "No - presentation uses **Meaningful Grounded Movement**, not signed forward progress."
+
+> **Dev:** "Should downhill thresholds decide whether the character is in **Slide**?"
+> **Domain expert:** "No - grounded movement decides **Slide**; slope can only influence **Slide Flavor**."
+
+> **Dev:** "Should `SlideEnterDownhillDegrees`, `SlideExitDownhillDegrees`, or `RunFlatMaximumAbsSlopeDegrees` stay in the classifier?"
+> **Domain expert:** "No - remove old slope thresholds from canonical mode selection; reintroduce only explicitly named **Slide Flavor Tuning** when needed."
+
+> **Dev:** "Do we need a new **Coast** animation before removing visible running?"
+> **Domain expert:** "No - first route all meaningful grounded movement to the existing **Slide** presentation."
+
+> **Dev:** "Should the old run-forward tuning name stay serialized for migration safety?"
+> **Domain expert:** "No - rename it in place to **Meaningful Grounded Movement Threshold** language as a clean authoring update."
+
+> **Dev:** "Should old run playback keep its own reference speed?"
+> **Domain expert:** "No - use **Slide Reference Speed** for normal locomotion and compatibility fallback."
 
 > **Dev:** "Does **Run Ended** alone tell us whether to play victory or defeat?"
 > **Domain expert:** "No - terminal character presentation uses the accepted **Run Result**."
@@ -142,7 +207,14 @@ _Avoid_: Gameplay State, animation mode, run result
 ## Flagged ambiguities
 
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** for appearance language.
-- "Slide", "run", "airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
+- "Slide", "coast", "flat sliding", and "grounded locomotion" resolve to **Slide** when discussing normal active grounded appearance.
+- "Stopped", "stalled", and "barely moving" resolve to **Idle** when grounded movement is not meaningful.
+- "Moving", "sliding sideways", and "sliding backward" resolve by **Meaningful Grounded Movement** for presentation and by **Course Forward Speed** for progress/failure.
+- "Run minimum speed", "forward locomotion threshold", and `RunMinimumForwardSpeed` resolve to **Meaningful Grounded Movement Threshold** for character presentation.
+- "Run reference speed" and `RunReferenceSpeed` resolve to **Slide Reference Speed** or compatibility fallback, not normal tuning.
+- "Slope threshold", "downhill threshold", "flat threshold", `SlideEnterDownhillDegrees`, `SlideExitDownhillDegrees`, and `RunFlatMaximumAbsSlopeDegrees` resolve to **Slide Flavor Tuning** or diagnostics, not **Character Presentation Mode** selection.
+- "Run" resolves to gameplay **Run** unless explicitly discussing the **Reserved Presentation Mode** kept for compatibility.
+- "Airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
 - "Air time" resolves to gameplay **Run Air Time** when discussing metrics or rewards.
 - "Held" resolves to **Idle** unless an **Active Pull** requires **Pull Anticipation**.
 - "Ground probe", "surface probe", and "slope source" resolve to **Run Surface Context Source**.

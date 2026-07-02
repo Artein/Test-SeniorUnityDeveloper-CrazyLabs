@@ -1,8 +1,10 @@
 # PRD: Launch Push Character Presentation
 
+Supersession note: [Slide-Only Character Presentation](prd-slide-only-character-presentation.md) supersedes any wording in this PRD that says flat grounded forward movement should become visible **Run** after Launch Push. Launch Push still hands off through the same classifier, but normal grounded locomotion is now visible **Slide** when movement is meaningful.
+
 ## Problem Statement
 
-After replacing the prototype cylinder with the Ladybug Character, the current presentation system can show downhill Slide or transition into Run while the Launch Target is still in the early post-release slingshot motion. From the player's perspective this looks wrong: the character appears to be sliding while the slingshot is still pushing it away, and the later Slide-to-Run handoff can briefly expose an awkward pose where the legs split apart.
+After replacing the prototype cylinder with the Ladybug Character, the current presentation system can show downhill Slide or other locomotion while the Launch Target is still in the early post-release slingshot motion. From the player's perspective this looks wrong: the character appears to be sliding while the slingshot is still pushing it away, and any early locomotion handoff can briefly expose an awkward pose where the legs split apart.
 
 The slingshot band visuals are not the problem in this feature. The problem is character presentation ownership. The current Character Presentation Mode classification understands pre-launch Idle, locomotion, Airborne, Victory, and Defeat, but it does not yet understand the two slingshot-specific character presentation intervals that happen around a launch:
 
@@ -25,7 +27,7 @@ The expected player-facing result is:
 
 1. While the player drags the band with a valid pull, the character shows Pull Anticipation instead of generic Idle or locomotion.
 2. On accepted launch, Pull Anticipation hands off immediately to Launch Push.
-3. During Launch Push, Slide and Run cannot take over early, even if the support surface is downhill or flat.
+3. During Launch Push, normal locomotion cannot take over early, even if the support surface is grounded and the Launch Target is moving.
 4. After the minimum Launch Push guard elapses, normal grounded or airborne locomotion resumes using existing surface and motion classification.
 5. Terminal Victory or Defeat still override everything else.
 
@@ -66,7 +68,7 @@ Scene, prefab, Animator, and asset surfaces:
 2. The Launch Target root remains the gameplay authority for Rigidbody, collider, Band Center, camera anchor, steering, and contacts.
 3. No imported Ladybug physics components become authoritative gameplay components as part of this feature.
 4. The Ladybug Animator Controller gains PullAnticipation and LaunchPush states or blend trees.
-5. PresentationMode drives state selection for Idle, PullAnticipation, LaunchPush, Slide, Run, Airborne, Victory, and Defeat.
+5. PresentationMode drives state selection for Idle, PullAnticipation, LaunchPush, Slide, reserved Run compatibility, Airborne, Victory, and Defeat.
 6. NormalizedPull, NormalizedLaunchPower, NormalizedPullOffset, and NormalizedLaunchOffset are Animator float parameters.
 7. PlaybackSpeedMultiplier remains available for locomotion playback scaling.
 8. The Slingshot band rig, Band Shape provider, Band Release Recoil visuals, and touch indicator remain slingshot presentation surfaces, not character presentation surfaces.
@@ -91,8 +93,8 @@ Tooling and workflow surfaces:
 1. As a player, I want the character to react while I pull the slingshot, so that the launch preparation feels connected to the character.
 2. As a player, I want the character to show a launch push animation right after release, so that the first moment after launch looks intentional.
 3. As a player, I want Slide not to appear while the slingshot is still visually pushing the character, so that the launch does not look like downhill locomotion too early.
-4. As a player, I want Run not to appear during the initial launch push, so that flat ground under the target does not override the slingshot moment.
-5. As a player, I want the character to hand off from launch push into Slide or Run cleanly, so that the transition does not show broken leg poses.
+4. As a player, I want generic locomotion not to appear during the initial launch push, so that surface or speed facts under the target do not override the slingshot moment.
+5. As a player, I want the character to hand off from launch push into normal Slide, Idle, or Airborne cleanly, so that the transition does not show broken leg poses.
 6. As a player, I want Pull Anticipation to respond to pull strength, so that a deeper pull looks more intense than a small pull.
 7. As a player, I want Pull Anticipation to respond to lateral pull direction, so that left and right pulls can be visually readable.
 8. As a player, I want Launch Push to preserve the accepted launch strength, so that the post-release animation matches the shot that was actually fired.
@@ -102,9 +104,9 @@ Tooling and workflow surfaces:
 12. As a player, I want victory and defeat animations to still override slingshot presentation, so that run-end feedback stays clear.
 13. As a player, I want airborne presentation after launch once the launch-push handoff is complete, so that jumps and gaps still read correctly.
 14. As a player, I want downhill Slide to remain the normal locomotion default after the launch-push interval, so that the core downhill fantasy remains intact.
-15. As a player, I want flat forward sections to use Run after launch-push handoff, so that character motion matches the surface.
+15. Superseded by slide-only presentation: flat forward sections should remain visible Slide after launch-push handoff while movement is meaningful.
 16. As a designer, I want PullAnticipation to be a Character Presentation Mode, so that I can author a dedicated Animator state or blend tree.
-17. As a designer, I want LaunchPush to be a Character Presentation Mode, so that I can author launch-specific animation independent from Slide and Run.
+17. As a designer, I want LaunchPush to be a Character Presentation Mode, so that I can author launch-specific animation independent from normal locomotion.
 18. As a designer, I want Pull Anticipation to enter quickly from eligible modes, so that input feels responsive.
 19. As a designer, I want Launch Push to enter immediately after accepted launch, so that the launch edge is visually clear.
 20. As a designer, I want Launch Push to have a minimum duration, so that locomotion cannot cut it off after a single frame.
@@ -115,7 +117,7 @@ Tooling and workflow surfaces:
 25. As a designer, I want normalized pull offset available in Animator, so that Pull Anticipation can vary left and right.
 26. As a designer, I want normalized launch offset available in Animator, so that Launch Push can vary left and right from the accepted release.
 27. As a designer, I want inactive slingshot channels zeroed, so that Animator blend trees do not keep stale values after a mode changes.
-28. As a designer, I want existing PlaybackSpeedMultiplier to continue applying to locomotion, so that Slide and Run calibration is preserved.
+28. As a designer, I want existing PlaybackSpeedMultiplier to continue applying to locomotion, so that Slide calibration is preserved.
 29. As a technical artist, I want Animator parameter fields to use dropdowns, so that invalid parameter names are less likely in prefab authoring.
 30. As a technical artist, I want PullAnticipation and LaunchPush selected by PresentationMode, so that Animator transitions can be inspected from one stable mode parameter.
 31. As a technical artist, I want no Animator state names serialized into gameplay logic, so that controller internals can be refactored without code changes.
@@ -145,7 +147,7 @@ Tooling and workflow surfaces:
 55. As a gameplay engineer, I want terminal modes to outrank Pull Anticipation and Launch Push, so that run results cannot be masked by stale slingshot facts.
 56. As a gameplay engineer, I want Pull Anticipation to outrank Launch Push, so that a validated active pull always maps to pre-release presentation.
 57. As a gameplay engineer, I want Launch Push to outrank locomotion until its minimum guard elapses, so that surface classification cannot steal the first launch frames.
-58. As a gameplay engineer, I want normal locomotion to resume after the Launch Push guard, so that Slide, Run, and Airborne continue using existing physics facts.
+58. As a gameplay engineer, I want normal presentation to resume after the Launch Push guard, so that Slide, Idle, and Airborne continue using existing physics facts.
 59. As a gameplay engineer, I want Normalized Pull Offset to use effective side-specific limits, so that full-left and full-right values reflect the actual clamped pull range.
 60. As a gameplay engineer, I want Normalized Launch Offset to use the same effective normalization at release, so that accepted launch pose matches active pull pose.
 61. As a gameplay engineer, I want Slingshot Pull Offset Normalizer to be slingshot-owned, so that character presentation does not copy slingshot geometry math.
@@ -160,7 +162,7 @@ Tooling and workflow surfaces:
 70. As a gameplay engineer, I want no global event bus for this feature, so that local coordination stays explicit.
 71. As a QA engineer, I want classifier tests for Pull Anticipation versus downhill Slide, so that pull presentation priority is locked.
 72. As a QA engineer, I want classifier tests for Launch Push versus downhill Slide, so that post-launch push cannot be overridden by slope.
-73. As a QA engineer, I want classifier tests for Launch Push versus flat forward Run, so that post-launch push cannot be overridden by speed.
+73. As a QA engineer, I want classifier tests for Launch Push versus flat forward Slide, so that post-launch push cannot be overridden by speed.
 74. As a QA engineer, I want classifier tests for Launch Push handoff after the minimum duration, so that normal locomotion resumes deterministically.
 75. As a QA engineer, I want classifier tests proving terminal modes outrank slingshot modes, so that run-end presentation remains deterministic.
 76. As a QA engineer, I want presenter tests proving slingshot context facts are forwarded into classification input, so that mode decisions have the right facts.
@@ -194,7 +196,7 @@ Tooling and workflow surfaces:
 16. Character Presentation Frame carries Mode, PlaybackSpeedMultiplier, NormalizedPull, NormalizedLaunchPower, NormalizedPullOffset, and NormalizedLaunchOffset.
 17. Pull Anticipation frames carry live pull values and zero launch values.
 18. Launch Push frames carry frozen accepted-launch values and zero pull values.
-19. Idle, Slide, Run, Airborne, Victory, and Defeat frames zero all slingshot-specific float values.
+19. Idle, Slide, reserved Run compatibility, Airborne, Victory, and Defeat frames zero all slingshot-specific float values.
 20. Character Presentation View writes Animator parameters only and remains a shallow MonoBehaviour view.
 21. Character Presentation View does not know what pull, launch, run result, or gameplay state means beyond frame values and serialized Animator parameters.
 22. Character Presentation View uses Animator parameter dropdown attributes for all serialized Animator parameter names where the project dependency supports it.
@@ -203,7 +205,7 @@ Tooling and workflow surfaces:
 25. PullAnticipation enters from eligible states with no exit time and a short or immediate transition.
 26. LaunchPush enters immediately after accepted LaunchApplied with no exit time.
 27. LaunchPush hands off to locomotion through a short fixed transition after the classifier stops selecting LaunchPush.
-28. Slide and Run transitions remain locomotion-specific and should not be used as the route into LaunchPush.
+28. Normal locomotion transitions remain locomotion-specific and should not be used as the route into LaunchPush.
 29. Slingshot Active Pull Notifier is the event source for validated active-pull changes.
 30. Slingshot Active Pull Notifier exposes ActivePullChanged with Slingshot Active Pull Context and ActivePullCleared without payload.
 31. Slingshot Active Pull Context first-slice payload contains NormalizedPull and NormalizedPullOffset. Raw pull diagnostics may be added only if useful and kept out of the character frame contract.
@@ -252,7 +254,7 @@ EditMode tests:
 
 1. Character Presentation Mode Classifier returns PullAnticipation when HasActivePull is true, even when the surface would otherwise classify as downhill Slide.
 2. Character Presentation Mode Classifier returns LaunchPush when HasLaunchPush is true and LaunchPushElapsedSeconds is below LaunchPushMinimumSeconds, even when downhill slope would otherwise classify as Slide.
-3. Character Presentation Mode Classifier returns LaunchPush when HasLaunchPush is true and LaunchPushElapsedSeconds is below LaunchPushMinimumSeconds, even when flat forward motion would otherwise classify as Run.
+3. Character Presentation Mode Classifier returns LaunchPush when HasLaunchPush is true and LaunchPushElapsedSeconds is below LaunchPushMinimumSeconds, even when flat forward motion would otherwise classify as normal Slide.
 4. Character Presentation Mode Classifier resumes normal locomotion when LaunchPushElapsedSeconds is at or above LaunchPushMinimumSeconds.
 5. Character Presentation Mode Classifier keeps Victory and Defeat above PullAnticipation and LaunchPush.
 6. Character Presentation Presenter reads Slingshot Presentation Context Source.Current and forwards HasActivePull, HasLaunchPush, and LaunchPushElapsedSeconds into classification input.
@@ -290,8 +292,8 @@ Manual Unity smoke checks:
 1. Pull and hold the band with a valid pull; character enters PullAnticipation and normalized pull values change in the Animator.
 2. Pull left and right; NormalizedPullOffset drives the expected lateral blend direction.
 3. Release a valid launch; character enters LaunchPush immediately.
-4. During LaunchPush, Slide and Run do not take over before the configured minimum guard elapses.
-5. After LaunchPush handoff, downhill sections enter Slide and flat forward sections enter Run.
+4. During LaunchPush, normal locomotion does not take over before the configured minimum guard elapses.
+5. After LaunchPush handoff, meaningful grounded movement enters Slide, including downhill and flat forward sections.
 6. Victory and Defeat still override slingshot presentation.
 7. No Animator parameter warnings, missing receiver errors, root-motion movement, collider drift, or Band Center movement regressions appear.
 

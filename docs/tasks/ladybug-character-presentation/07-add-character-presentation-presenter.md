@@ -19,7 +19,7 @@ This slice delivers a testable runtime path from gameplay facts to view frames w
 - [ ] The presenter builds Character Presentation Frames containing only mode and playback speed multiplier.
 - [ ] Playback speed multiplier uses course-planar speed, mode-specific reference speed, and tuning clamps.
 - [ ] Non-locomotion modes use neutral playback speed.
-- [ ] During short ungrounded gaps that preserve Slide or Run, playback still uses the preserved locomotion reference speed.
+- [ ] During short ungrounded gaps that preserve locomotion, playback still uses the preserved Slide reference speed.
 - [ ] The presenter uses injected frame delta time for presentation timing and does not drive physics movement.
 - [ ] The presenter does not expose raw Gameplay State IDs, Run Result, Run End Reason, slope values, or trigger commands to the view.
 - [ ] The presenter can be registered without injecting concrete MonoBehaviours into domain logic.
@@ -34,7 +34,7 @@ This slice delivers a testable runtime path from gameplay facts to view frames w
   - Accepted success result reaches Victory presentation.
   - Accepted failure result reaches Defeat presentation.
   - Disposal unsubscribes from run-result notifications.
-  - Playback speed uses Slide reference, Run reference, clamps, zero-speed handling, and neutral non-locomotion speed.
+  - Playback speed uses Slide reference, clamps, zero-speed handling, reserved Run normalization, and neutral non-locomotion speed.
 - PlayMode tests:
   - None expected until scene/prefab wiring slices.
 - Static checks:
