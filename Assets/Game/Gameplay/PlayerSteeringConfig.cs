@@ -18,6 +18,8 @@ namespace Game.Gameplay
         float LaunchBurstPlanarSpeedGraceSeconds { get; }
         float LaunchBurstPlanarSpeedRecoverySeconds { get; }
         float LaunchBurstMaximumPlanarSpeedMultiplier { get; }
+        float LaunchLandingStabilizationSeconds { get; }
+        float LaunchLandingMaximumLiftSpeed { get; }
         float RunSteeringFrameNormalSlewDegreesPerSecond { get; }
         float RunSteeringFrameSnapDegrees { get; }
         float RunSteeringFrameUngroundedGraceSeconds { get; }
@@ -80,6 +82,14 @@ namespace Game.Gameplay
          Tooltip("Maximum launch-burst planar speed as a multiplier of resolved Player Max Speed.")]
         private float _launchBurstMaximumPlanarSpeedMultiplier = 3f;
 
+        [SerializeField, Min(0f),
+         Tooltip("Seconds after first post-launch Run Surface landing where positive surface-normal lift is suppressed.")]
+        private float _launchLandingStabilizationSeconds = 0.3f;
+
+        [SerializeField, Min(0f),
+         Tooltip("Maximum allowed speed away from the landed Run Surface normal during post-launch landing stabilization.")]
+        private float _launchLandingMaximumLiftSpeed = 0f;
+
         [Header("Run Steering Frame Stability")]
         [SerializeField, Min(0f),
          Tooltip(
@@ -119,6 +129,12 @@ namespace Game.Gameplay
 
         float IPlayerSteeringConfig.LaunchBurstMaximumPlanarSpeedMultiplier =>
             Mathf.Max(1f, _launchBurstMaximumPlanarSpeedMultiplier.GetPositiveOrDefault(3f));
+
+        float IPlayerSteeringConfig.LaunchLandingStabilizationSeconds =>
+            _launchLandingStabilizationSeconds.GetNonNegativeOrDefault(0.3f);
+
+        float IPlayerSteeringConfig.LaunchLandingMaximumLiftSpeed =>
+            _launchLandingMaximumLiftSpeed.GetNonNegativeOrDefault(0f);
 
         float IPlayerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond =>
             _runSteeringFrameNormalSlewDegreesPerSecond.GetNonNegativeOrDefault(180f);

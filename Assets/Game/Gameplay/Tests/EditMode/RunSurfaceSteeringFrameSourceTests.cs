@@ -329,6 +329,8 @@ public sealed class RunSurfaceSteeringFrameSourceTests
         public float LaunchBurstPlanarSpeedGraceSeconds { get; set; } = 0.35f;
         public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; } = 0.65f;
         public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; } = 3f;
+        public float LaunchLandingStabilizationSeconds { get; set; } = 0.3f;
+        public float LaunchLandingMaximumLiftSpeed { get; set; } = 0f;
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
         public float RunSteeringFrameSnapDegrees { get; set; }
         public float RunSteeringFrameUngroundedGraceSeconds { get; set; }

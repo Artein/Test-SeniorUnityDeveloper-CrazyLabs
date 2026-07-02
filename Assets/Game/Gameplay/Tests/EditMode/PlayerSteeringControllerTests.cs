@@ -256,6 +256,121 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void FixedTick_PostLaunchFlatSurfaceLanding_RemovesLiftAndPreservesTangentSpeed()
+    {
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = new Vector3(3f, 4f, 12f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(3f, 4f, 12f));
+
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, new Vector3(3f, 0f, 12f).magnitude);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchTiltedSurfaceLanding_UsesRunSurfaceNormal()
+    {
+        var groundNormal = new Vector3(0f, 1f, 1f).normalized;
+        var tangentVelocity = Vector3.ProjectOnPlane(Vector3.forward, groundNormal).normalized * 4f;
+        var liftVelocity = groundNormal * 2f;
+        SetGroundedSurface(groundNormal);
+        _steeringTarget.LinearVelocity = tangentVelocity + liftVelocity;
+        ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+
+        FixedTick();
+
+        Assert.That(Vector3.Dot(_steeringTarget.LinearVelocity, groundNormal), Is.EqualTo(0f).Within(0.0001f));
+        AssertVectorEqual(_steeringTarget.LinearVelocity, tangentVelocity);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchDownwardSurfaceVelocity_DoesNotModifyNormalVelocity()
+    {
+        var groundNormal = Vector3.up;
+        var expectedVelocity = new Vector3(0f, -2f, 8f);
+        SetGroundedSurface(groundNormal);
+        _steeringTarget.LinearVelocity = expectedVelocity;
+        ActivateSteeringWithLaunchVelocity(expectedVelocity);
+
+        FixedTick();
+
+        AssertVectorEqual(_steeringTarget.LinearVelocity, expectedVelocity);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchUngrounded_DoesNotModifyLiftVelocity()
+    {
+        SetUngroundedSurface();
+        var expectedVelocity = new Vector3(0f, 4f, 8f);
+        _steeringTarget.LinearVelocity = expectedVelocity;
+        ActivateSteeringWithLaunchVelocity(expectedVelocity);
+
+        FixedTick();
+
+        AssertVectorEqual(_steeringTarget.LinearVelocity, expectedVelocity);
+    }
+
+    [Test]
+    public void FixedTick_GroundedWithoutLaunch_DoesNotSuppressLiftVelocity()
+    {
+        SetGroundedSurface(Vector3.up);
+        var expectedVelocity = new Vector3(0f, 4f, 8f);
+        _stateService.ChangeTo(_runningStateId);
+        _steeringTarget.LinearVelocity = expectedVelocity;
+
+        FixedTick();
+
+        AssertVectorEqual(_steeringTarget.LinearVelocity, expectedVelocity);
+        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_AfterLaunchLandingStabilizationWindow_DoesNotSuppressLiftVelocity()
+    {
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
+        ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+        FixedTick();
+
+        _clock.FixedDeltaTime = _config.LaunchLandingStabilizationSeconds + 0.01f;
+        _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(4f).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 8f);
+    }
+
+    [Test]
+    public void LeavingRunning_ClearsLaunchLandingStabilization()
+    {
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
+        ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+
+        _stateService.ChangeTo(_preLaunchStateId);
+        _stateService.ChangeTo(_runningStateId);
+        _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(4f).Within(0.0001f));
+        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchLandingWithBurstOverspeed_ClampsTangentSpeedAndRemovesLift()
+    {
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = new Vector3(0f, 5f, 60f);
+        ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 30f);
+    }
+
+    [Test]
     public void FixedTick_PlayerSteeringResponsivenessModifier_IncreasesSteeringResponse()
     {
         _config.RunSteeringResponsiveness = 5f;

@@ -207,6 +207,8 @@ public sealed class RunSteeringGestureTests
         public float LaunchBurstPlanarSpeedGraceSeconds { get; set; }
         public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; }
         public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; }
+        public float LaunchLandingStabilizationSeconds { get; set; }
+        public float LaunchLandingMaximumLiftSpeed { get; set; }
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
         public float RunSteeringFrameSnapDegrees { get; set; }
         public float RunSteeringFrameUngroundedGraceSeconds { get; set; }

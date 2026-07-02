@@ -19,6 +19,7 @@ namespace Game.Gameplay
         private readonly IPlayerSteeringTarget _steeringTarget;
         private readonly IRunSteeringFrameSource _steeringFrameSource;
         private readonly IRunSteeringFrameResetter _steeringFrameResetter;
+        private readonly IRunSurfaceContextSource _surfaceContextSource;
         private readonly IPlayerSteeringConfig _config;
         private readonly IRunGameplayStatResolver _statResolver;
         private readonly ITime _clock;
@@ -35,10 +36,13 @@ namespace Game.Gameplay
         private bool _hasLaunchApplied;
         private bool _isSteeringActive;
         private bool _hasLaunchBurstPlanarSpeed;
+        private bool _isLaunchLandingStabilizationArmed;
+        private bool _isLaunchLandingStabilizationActive;
         private float _desiredSteer;
         private float _currentSteer;
         private float _launchBurstPlanarSpeed;
         private float _launchBurstElapsedSeconds;
+        private float _launchLandingStabilizationElapsedSeconds;
 
         public PlayerSteeringController(
             IUnityInput unityInput,
@@ -47,6 +51,7 @@ namespace Game.Gameplay
             IPlayerSteeringTarget steeringTarget,
             IRunSteeringFrameSource steeringFrameSource,
             IRunSteeringFrameResetter steeringFrameResetter,
+            IRunSurfaceContextSource surfaceContextSource,
             IPlayerSteeringConfig config,
             IRunGameplayStatResolver statResolver,
             ITime clock,
@@ -65,6 +70,7 @@ namespace Game.Gameplay
             _steeringTarget = steeringTarget ?? throw new ArgumentNullException(nameof(steeringTarget));
             _steeringFrameSource = steeringFrameSource ?? throw new ArgumentNullException(nameof(steeringFrameSource));
             _steeringFrameResetter = steeringFrameResetter ?? throw new ArgumentNullException(nameof(steeringFrameResetter));
+            _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -136,6 +142,7 @@ namespace Game.Gameplay
             _hasLaunchApplied = true;
             _steeringUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
             CaptureLaunchBurstPlanarSpeed(launchApplied.VelocityChange, _steeringUp);
+            ArmLaunchLandingStabilization();
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
                 ActivateSteering();
@@ -156,6 +163,7 @@ namespace Game.Gameplay
 
             _hasLaunchApplied = false;
             ClearLaunchBurst();
+            ClearLaunchLandingStabilization();
             DeactivateSteering();
         }
 
@@ -253,7 +261,7 @@ namespace Game.Gameplay
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
             var turnAngle = _currentSteer * Mathf.Max(0f, _config.MaximumTurnDegreesPerSecond) * fixedDeltaTime;
             var steeredPlanarVelocity = Quaternion.AngleAxis(turnAngle, upDirection) * planarVelocity;
-            var steeredVelocity = steeredPlanarVelocity + verticalVelocity;
+            var steeredVelocity = ApplyLaunchLandingStabilization(steeredPlanarVelocity + verticalVelocity);
             var targetRotation = Quaternion.LookRotation(steeredPlanarVelocity.normalized, upDirection);
 
             _steeringTarget.ApplySteering(steeredVelocity, targetRotation);
@@ -328,6 +336,95 @@ namespace Game.Gameplay
             _launchBurstElapsedSeconds = 0f;
         }
 
+        private void ArmLaunchLandingStabilization()
+        {
+            _isLaunchLandingStabilizationArmed = true;
+            _isLaunchLandingStabilizationActive = false;
+            _launchLandingStabilizationElapsedSeconds = 0f;
+        }
+
+        private Vector3 ApplyLaunchLandingStabilization(Vector3 velocity)
+        {
+            var surfaceContext = _surfaceContextSource.Current;
+
+            if (!_isLaunchLandingStabilizationArmed && !_isLaunchLandingStabilizationActive)
+                return velocity;
+
+            var startedThisTick = false;
+
+            if (_isLaunchLandingStabilizationArmed)
+            {
+                if (!HasValidGroundedSurface(surfaceContext))
+                    return velocity;
+
+                _isLaunchLandingStabilizationArmed = false;
+                _isLaunchLandingStabilizationActive = true;
+                _launchLandingStabilizationElapsedSeconds = 0f;
+                startedThisTick = true;
+            }
+
+            if (!_isLaunchLandingStabilizationActive)
+                return velocity;
+
+            var duration = Mathf.Max(0f, _config.LaunchLandingStabilizationSeconds);
+
+            if (duration <= 0f)
+            {
+                ClearLaunchLandingStabilization();
+                return velocity;
+            }
+
+            if (!startedThisTick)
+            {
+                _launchLandingStabilizationElapsedSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
+
+                if (_launchLandingStabilizationElapsedSeconds > duration)
+                {
+                    ClearLaunchLandingStabilization();
+                    return velocity;
+                }
+            }
+
+            if (!HasValidGroundedSurface(surfaceContext))
+                return velocity;
+
+            var stabilizedVelocity = ClampSurfaceNormalLiftVelocity(velocity, surfaceContext.GroundNormal);
+
+            if (startedThisTick)
+                _launchLandingStabilizationElapsedSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
+
+            if (_launchLandingStabilizationElapsedSeconds >= duration)
+                ClearLaunchLandingStabilization();
+
+            return stabilizedVelocity;
+        }
+
+        private bool HasValidGroundedSurface(RunSurfaceContext surfaceContext)
+        {
+            return surfaceContext.IsGrounded
+                   && surfaceContext.HasValidGroundNormal
+                   && IsValidDirection(surfaceContext.GroundNormal);
+        }
+
+        private Vector3 ClampSurfaceNormalLiftVelocity(Vector3 velocity, Vector3 groundNormal)
+        {
+            var normal = groundNormal.normalized;
+            var liftSpeed = Vector3.Dot(velocity, normal);
+            var maximumLiftSpeed = Mathf.Max(0f, _config.LaunchLandingMaximumLiftSpeed);
+
+            if (liftSpeed <= maximumLiftSpeed)
+                return velocity;
+
+            return velocity - (normal * (liftSpeed - maximumLiftSpeed));
+        }
+
+        private void ClearLaunchLandingStabilization()
+        {
+            _isLaunchLandingStabilizationArmed = false;
+            _isLaunchLandingStabilizationActive = false;
+            _launchLandingStabilizationElapsedSeconds = 0f;
+        }
+
         private Vector3 GetValidUpDirection(Vector3 upDirection)
         {
             return GetValidUpDirection(upDirection, Vector3.up);
@@ -341,6 +438,12 @@ namespace Game.Gameplay
                 return GetValidUpDirection(fallbackUpDirection);
 
             return upDirection.normalized;
+        }
+
+        private bool IsValidDirection(Vector3 direction)
+        {
+            var sqrMagnitude = direction.sqrMagnitude;
+            return sqrMagnitude > 0.000001f && !float.IsNaN(sqrMagnitude) && !float.IsInfinity(sqrMagnitude);
         }
 
         private float ResolveSteeringResponsiveness()

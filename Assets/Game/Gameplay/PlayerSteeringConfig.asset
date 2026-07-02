@@ -24,6 +24,8 @@ MonoBehaviour:
   _launchBurstPlanarSpeedGraceSeconds: 0.35
   _launchBurstPlanarSpeedRecoverySeconds: 0.65
   _launchBurstMaximumPlanarSpeedMultiplier: 3
+  _launchLandingStabilizationSeconds: 0.3
+  _launchLandingMaximumLiftSpeed: 0
   _runSteeringFrameNormalSlewDegreesPerSecond: 120
   _runSteeringFrameSnapDegrees: 60
   _runSteeringFrameUngroundedGraceSeconds: 0.12

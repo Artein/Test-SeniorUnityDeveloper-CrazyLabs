@@ -23,6 +23,7 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     protected FakePlayerSteeringTarget _steeringTarget;
     protected FakePlayerSteeringConfig _config;
+    protected FakeRunSurfaceContextSource _surfaceContextSource;
     protected FakeRunGameplayStatResolver _statResolver;
     protected FakeTime _clock;
     protected FakeScreen _screen;
@@ -66,10 +67,17 @@ public abstract class PlayerSteeringControllerTestFixture
             LaunchBurstPlanarSpeedGraceSeconds = 0.35f,
             LaunchBurstPlanarSpeedRecoverySeconds = 0.65f,
             LaunchBurstMaximumPlanarSpeedMultiplier = 3f,
+            LaunchLandingStabilizationSeconds = 0.3f,
+            LaunchLandingMaximumLiftSpeed = 0f,
             RunSteeringFrameNormalSlewDegreesPerSecond = 180f,
             RunSteeringFrameSnapDegrees = 60f,
             RunSteeringFrameUngroundedGraceSeconds = 0.08f,
             RunSteeringFrameSuspectNormalConfirmationSeconds = 0.04f
+        };
+
+        _surfaceContextSource = new FakeRunSurfaceContextSource
+        {
+            Current = new RunSurfaceContext(false, Vector3.up, 0f)
         };
 
         _clock = new FakeTime
@@ -187,6 +195,16 @@ public abstract class PlayerSteeringControllerTestFixture
         return velocity - Vector3.Project(velocity, upDirection.normalized);
     }
 
+    protected void SetGroundedSurface(Vector3 groundNormal)
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, groundNormal, 0f);
+    }
+
+    protected void SetUngroundedSurface()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+    }
+
     protected void AssertVectorEqual(Vector3 actual, Vector3 expected)
     {
         Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
@@ -197,7 +215,7 @@ public abstract class PlayerSteeringControllerTestFixture
     private PlayerSteeringController CreateController()
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
-            _steeringFrameSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
+            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
             _playerMaxSpeedStatId, _playerSteeringResponsivenessStatId);
     }
 
@@ -346,6 +364,8 @@ public abstract class PlayerSteeringControllerTestFixture
         public float LaunchBurstPlanarSpeedGraceSeconds { get; set; }
         public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; }
         public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; }
+        public float LaunchLandingStabilizationSeconds { get; set; }
+        public float LaunchLandingMaximumLiftSpeed { get; set; }
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
         public float RunSteeringFrameSnapDegrees { get; set; }
         public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
@@ -368,6 +388,11 @@ public abstract class PlayerSteeringControllerTestFixture
             RangePixelRawDpiRequests.Add(rawDpi);
             return RunSteeringRangeCentimeters / 2.54f * ResolveRunSteeringDpi(rawDpi);
         }
+    }
+
+    protected sealed class FakeRunSurfaceContextSource : IRunSurfaceContextSource
+    {
+        public RunSurfaceContext Current { get; set; }
     }
 
     protected sealed class FakeRunGameplayStatResolver : IRunGameplayStatResolver

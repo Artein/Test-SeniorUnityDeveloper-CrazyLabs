@@ -309,6 +309,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig.LaunchBurstPlanarSpeedGraceSeconds, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchBurstPlanarSpeedRecoverySeconds, Is.EqualTo(0.65f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchBurstMaximumPlanarSpeedMultiplier, Is.EqualTo(3f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
         Assert.That(playerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(120f).Within(0.0001f));
         Assert.That(playerSteeringConfig.RunSteeringFrameSnapDegrees, Is.EqualTo(60f).Within(0.0001f));
         Assert.That(playerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.12f).Within(0.0001f));

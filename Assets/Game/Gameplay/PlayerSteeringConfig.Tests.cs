@@ -25,6 +25,14 @@ namespace Game.Gameplay
             _launchBurstPlanarSpeedRecoverySeconds = recoverySeconds;
             _launchBurstMaximumPlanarSpeedMultiplier = maximumPlanarSpeedMultiplier;
         }
+
+        internal void SetLaunchLandingStabilizationForTests(
+            float stabilizationSeconds,
+            float maximumLiftSpeed)
+        {
+            _launchLandingStabilizationSeconds = stabilizationSeconds;
+            _launchLandingMaximumLiftSpeed = maximumLiftSpeed;
+        }
     }
 }
 
