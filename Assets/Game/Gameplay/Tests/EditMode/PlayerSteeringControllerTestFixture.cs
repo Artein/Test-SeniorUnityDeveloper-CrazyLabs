@@ -62,7 +62,11 @@ public abstract class PlayerSteeringControllerTestFixture
             MaximumAcceptedDpi = 1000f,
             MaximumTurnDegreesPerSecond = 90f,
             MinimumSteerSpeed = 0.25f,
-            MaximumPlanarSpeed = DefaultPlanarSpeed
+            MaximumPlanarSpeed = DefaultPlanarSpeed,
+            RunSteeringFrameNormalSlewDegreesPerSecond = 180f,
+            RunSteeringFrameSnapDegrees = 60f,
+            RunSteeringFrameUngroundedGraceSeconds = 0.08f,
+            RunSteeringFrameSuspectNormalConfirmationSeconds = 0.04f
         };
 
         _clock = new FakeTime
@@ -175,9 +179,9 @@ public abstract class PlayerSteeringControllerTestFixture
 
     private PlayerSteeringController CreateController()
     {
-        return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource, _config,
-            _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId, _playerMaxSpeedStatId,
-            _playerSteeringResponsivenessStatId);
+        return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
+            _steeringFrameSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
+            _playerMaxSpeedStatId, _playerSteeringResponsivenessStatId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -322,6 +326,10 @@ public abstract class PlayerSteeringControllerTestFixture
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
         public float MaximumPlanarSpeed { get; set; }
+        public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
+        public float RunSteeringFrameSnapDegrees { get; set; }
+        public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
+        public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; }
         public List<float> RangePixelRawDpiRequests { get; } = new();
 
         public float ResolveRunSteeringDpi(float rawDpi)
@@ -385,11 +393,13 @@ public abstract class PlayerSteeringControllerTestFixture
         public float Dpi { get; set; }
     }
 
-    protected sealed class FakeRunSteeringFrameSource : IRunSteeringFrameSource
+    protected sealed class FakeRunSteeringFrameSource : IRunSteeringFrameSource, IRunSteeringFrameResetter
     {
         public Vector3 UpDirection { get; set; } = Vector3.up;
         public Vector3 LastFallbackUpDirection { get; private set; }
+        public Vector3 LastResetLaunchUpDirection { get; private set; }
         public int GetUpDirectionCallCount { get; private set; }
+        public int ResetCallCount { get; private set; }
 
         public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
         {
@@ -397,6 +407,12 @@ public abstract class PlayerSteeringControllerTestFixture
             GetUpDirectionCallCount += 1;
 
             return UpDirection;
+        }
+
+        public void Reset(Vector3 launchUpDirection)
+        {
+            LastResetLaunchUpDirection = launchUpDirection;
+            ResetCallCount += 1;
         }
     }
 }

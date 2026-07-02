@@ -2993,12 +2993,12 @@ Transform:
   m_GameObject: {fileID: 443566141}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0, y: 0, z: -0.067}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 613386047}
-  m_Father: {fileID: 1918570524}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &450964958
 GameObject:
@@ -3845,34 +3845,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: LadybugCharacter
       objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
+    - target: {fileID: 4774342557744189813, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+      propertyPath: _visualAnchor
+      value: 
+      objectReference: {fileID: 443566142}
     - target: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
@@ -15102,7 +15078,6 @@ Transform:
   m_Children:
   - {fileID: 200501557}
   - {fileID: 1613459821}
-  - {fileID: 443566142}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &1918570525
@@ -18213,3 +18188,4 @@ SceneRoots:
   - {fileID: 1900001001}
   - {fileID: 2400000001}
   - {fileID: 2600000002}
+  - {fileID: 443566142}

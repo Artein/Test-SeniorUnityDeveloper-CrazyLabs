@@ -204,6 +204,10 @@ public sealed class RunSteeringGestureTests
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
         public float MaximumPlanarSpeed { get; set; }
+        public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
+        public float RunSteeringFrameSnapDegrees { get; set; }
+        public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
+        public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; }
         public float RunSteeringRangePixels { get; set; }
         public float RangePixelRawDpiRequest { get; private set; }
 

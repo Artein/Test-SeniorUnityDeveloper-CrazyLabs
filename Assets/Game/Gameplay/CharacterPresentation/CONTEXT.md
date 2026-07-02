@@ -13,8 +13,20 @@ An imported model, skeleton, material, texture, audio, effect, or animation sour
 _Avoid_: Character, gameplay object, composition root
 
 **Character Visual Anchor**:
-The transform role that mounts the **Character** onto the controlled **Launch Target**.
-_Avoid_: Collider root, Band Center, model root
+The presentation-space transform role that positions and orients the **Character** relative to the controlled **Launch Target**.
+_Avoid_: Launch Target child, Collider root, Band Center, model root
+
+**Character Visual Follower**:
+The presentation coordinator that keeps the **Character Visual Anchor** visually following the **Launch Target** render pose with bounded smoothing.
+_Avoid_: Movement controller, Rigidbody follower, gameplay pose source, camera smoother
+
+**Character Visual Follow Tuning**:
+The serialized **Character Presentation Tuning** values controlling **Character Visual Follower** response, lag clamps, and snap thresholds.
+_Avoid_: Movement tuning, steering frame tuning, Run Surface Context smoothing
+
+**Smoothed Character Pose**:
+The presentation-only pose applied to the **Character Visual Anchor** by the **Character Visual Follower**.
+_Avoid_: Launch Target pose, Rigidbody pose, gameplay position, camera source pose
 
 **Character Model Root**:
 The internal alignment role that absorbs imported model offset, rotation, and scale.
@@ -147,7 +159,13 @@ _Avoid_: Gameplay State, animation mode, run result
 ## Relationships
 
 - A **Character** visually represents the **Launch Target** but does not replace it.
-- **Character Visual Anchor** belongs to visual mounting, not gameplay contact or band alignment.
+- **Character Visual Anchor** belongs to visual mounting, not transform hierarchy, gameplay contact, or band alignment.
+- **Character Visual Follower** smooths only the **Character Visual Anchor**; it must not move the **Launch Target**, Rigidbody, colliders, camera source, progress source, or surface probes.
+- **Character Visual Follower** samples the **Launch Target** Transform render pose in the presentation late update phase, not raw Rigidbody position, so the visible **Character** follows Unity's interpolated render pose.
+- **Smoothed Character Pose** is presentation-only and must not become gameplay truth or an input to physics, steering, progress, collision, or camera systems.
+- **Character Visual Follow Tuning** belongs to the **Character Presentation View** scene or prefab authoring; it is not gameplay movement, upgrade, or economy tuning.
+- **Character Visual Follower** is owned by the composition root as a presentation entry point; the view remains passive and should not own a standalone `LateUpdate` loop.
+- **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; distance and angle snap thresholds prevent visible lag after teleports, run resets, and terminal state changes.
 - **Character Model Root** handles source-asset alignment under a **Character**.
 - **Character Presentation Mode** is appearance language, not **Gameplay State**.
 - **Character Presenter** gathers facts and applies one **Character Presentation Frame** to the **Character Presentation View**.
@@ -170,6 +188,15 @@ _Avoid_: Gameplay State, animation mode, run result
 
 > **Dev:** "Is Ladybug the new **Launch Target**?"
 > **Domain expert:** "No - Ladybug is the **Character**; the controlled gameplay object remains the **Launch Target**."
+
+> **Dev:** "Does the **Character Visual Anchor** need to be parented under the **Launch Target**?"
+> **Domain expert:** "No - it is the presentation pose for the **Character** relative to the **Launch Target**, not a gameplay hierarchy requirement."
+
+> **Dev:** "Can gameplay systems read the **Smoothed Character Pose**?"
+> **Domain expert:** "No - gameplay reads the **Launch Target** and its Rigidbody-backed facts; the smoothed pose is visual-only."
+
+> **Dev:** "Should the **Character Visual Follower** smooth raw Rigidbody position?"
+> **Domain expert:** "No - it follows the **Launch Target** Transform render pose during presentation late update, after Rigidbody interpolation has produced the visible pose."
 
 > **Dev:** "Should sliding and running be separate **Gameplay States**?"
 > **Domain expert:** "No - **Slide** is a **Character Presentation Mode**, while **Run** is gameplay language or reserved presentation compatibility."
@@ -207,6 +234,10 @@ _Avoid_: Gameplay State, animation mode, run result
 ## Flagged ambiguities
 
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** for appearance language.
+- "Visual mount", "visual child", and "character parent" resolve to **Character Visual Anchor**; the term does not imply Unity transform parenting under the **Launch Target**.
+- "Visual smoothing", "presentation follower", "visual follower", and "character smoothing" resolve to **Character Visual Follower**.
+- "Smoothed pose", "visual pose", and "follower pose" resolve to **Smoothed Character Pose** and must not be treated as gameplay truth.
+- "Visual follow tuning", "anchor smoothing values", and "jitter smoothing settings" resolve to **Character Visual Follow Tuning**.
 - "Slide", "coast", "flat sliding", and "grounded locomotion" resolve to **Slide** when discussing normal active grounded appearance.
 - "Stopped", "stalled", and "barely moving" resolve to **Idle** when grounded movement is not meaningful.
 - "Moving", "sliding sideways", and "sliding backward" resolve by **Meaningful Grounded Movement** for presentation and by **Course Forward Speed** for progress/failure.

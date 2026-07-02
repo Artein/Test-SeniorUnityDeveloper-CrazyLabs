@@ -165,6 +165,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.CharacterPresentationView
   _animator: {fileID: 8986264095524748893}
+  _visualAnchor: {fileID: 0}
   _modeParameterName: PresentationMode
   _playbackSpeedParameterName: PlaybackSpeedMultiplier
   _normalizedPullParameterName: NormalizedPull
@@ -178,6 +179,12 @@ MonoBehaviour:
   _slideReferenceSpeed: 8
   _minimumPlaybackSpeedMultiplier: 0.5
   _maximumPlaybackSpeedMultiplier: 1.5
+  _visualPositionResponseRate: 60
+  _visualHeadingResponseRate: 45
+  _visualUpTiltResponseRate: 18
+  _visualMaxPositionLag: 0.06
+  _visualSnapDistance: 0.75
+  _visualSnapAngleDegrees: 45
 --- !u!114 &6423808732164892831
 MonoBehaviour:
   m_ObjectHideFlags: 0

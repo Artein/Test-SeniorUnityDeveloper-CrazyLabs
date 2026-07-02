@@ -32,6 +32,14 @@ _Avoid_: Zone, checkpoint, difficulty tier
 **Run Surface** shaping that usually redirects the **Launch Target** back into the **Run Course** without making escape impossible.
 _Avoid_: Wall, hard boundary, guard rail
 
+**Side Bank**:
+The banked side of a **Half-Tube Course** that remains traversable **Run Surface**.
+_Avoid_: Wall, guard rail, boundary
+
+**Course Lip**:
+The upper edge of a **Half-Tube Course** where the **Launch Target** can leave **Soft Containment**.
+_Avoid_: Hidden wall, hard boundary, side collider
+
 **Main Playable Line**:
 The expected traversable route through a **Run Course** for a competent player.
 _Avoid_: Perfect path, center line, speedrun route
@@ -66,6 +74,10 @@ _Avoid_: Generic city level, mesh source, asset folder
 - A **Run Course** may have **Run Progression Bands**.
 - A **Run Progression Band** describes tuning pressure, not gameplay lifecycle state.
 - **Soft Containment** is achieved by **Run Surface** shape.
+- A **Half-Tube Course** has **Side Banks**.
+- **Side Banks** are **Run Surface** used for **Soft Containment**.
+- A **Course Lip** marks where **Soft Containment** can be escaped.
+- Riding a **Side Bank** should remain recoverable unless the **Launch Target** crests a **Course Lip**.
 - **Main Playable Line** should remain understandable without requiring **Risk Line** choices.
 - **Coin Line** can communicate route intent without changing the **Run Course** structure.
 - **Finish Approach** belongs to the **Run Course**, while **Run Finish** belongs to gameplay contact language.
@@ -81,9 +93,13 @@ _Avoid_: Generic city level, mesh source, asset folder
 > **Dev:** "Is the **Risk Line** required for completion?"
 > **Domain expert:** "No - the **Main Playable Line** should remain the expected route to the finish."
 
+> **Dev:** "Should high side riding end the **Run**?"
+> **Domain expert:** "No - **Side Bank** riding remains **Run Surface** traversal; cresting the **Course Lip** can set up escape from **Soft Containment**."
+
 ## Flagged ambiguities
 
 - "Chunk" describes asset packaging, while **Run Course Section** describes gameplay-design purpose.
+- "Edge" resolves to **Side Bank** when still inside **Soft Containment** and **Course Lip** when discussing the upper escape edge.
 - "Progression zone", "upgrade zone", and "reach band" resolve to **Run Progression Band**.
 - "Ramp" resolves to **Run Surface** unless a ramp-specific gameplay term becomes necessary.
 - "Finish marker" resolves to readable level dressing; **Run Finish** is the gameplay contact term.

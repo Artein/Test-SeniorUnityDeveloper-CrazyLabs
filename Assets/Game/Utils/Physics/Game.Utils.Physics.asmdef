@@ -1,15 +1,7 @@
 {
-  "name": "Game.Gameplay.Slingshot",
+  "name": "Game.Utils.Physics",
   "rootNamespace": "",
-  "references": [
-    "Game.Foundation",
-    "Game.Foundation.Input",
-    "Game.Utils.Invocation",
-    "Game.Utils.Mathematics",
-    "Game.Utils.Physics",
-    "Unity.Mathematics",
-    "VContainer"
-  ],
+  "references": [],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

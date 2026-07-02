@@ -266,6 +266,7 @@ public sealed class GameplayLifetimeScopeTests
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
         var runSteeringFrameSource = container.Resolve<IRunSteeringFrameSource>();
+        var runSteeringFrameResetter = container.Resolve<IRunSteeringFrameResetter>();
         var runCameraConfig = container.Resolve<IRunCameraConfig>();
         var runEndConfig = container.Resolve<IRunEndConfig>();
         var runRewardConfig = container.Resolve<IRunRewardConfig>();
@@ -316,6 +317,10 @@ public sealed class GameplayLifetimeScopeTests
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
         var presentationView = container.Resolve<ICharacterPresentationView>();
         var presentationTuning = container.Resolve<ICharacterPresentationTuning>();
+        var characterVisualTargetPoseSource = container.Resolve<ICharacterVisualTargetPoseSource>();
+        var characterVisualFollowView = container.Resolve<ICharacterVisualFollowView>();
+        var characterVisualFollowTuning = container.Resolve<ICharacterVisualFollowTuning>();
+        var characterVisualPoseSmoother = container.Resolve<ICharacterVisualPoseSmoother>();
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
         var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
         var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
@@ -328,6 +333,12 @@ public sealed class GameplayLifetimeScopeTests
         var resolvedPlayerSteeringResponsivenessStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
         var resolvedLevelPickups = container.Resolve<IReadOnlyList<Pickup>>(InjectKey.Pickups.LevelPickups);
         var resolvedPlayerTag = container.Resolve<string>(InjectKey.Tags.Player);
+
+        var runSteeringFrameFixedTickableIndex =
+            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSteeringFrameSource));
+
+        var playerSteeringControllerFixedTickableIndex =
+            GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is PlayerSteeringController);
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
@@ -344,10 +355,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(18));
+        Assert.That(initializables.Count, Is.EqualTo(19));
         Assert.That(tickables.Count, Is.EqualTo(4));
-        Assert.That(fixedTickables.Count, Is.EqualTo(5));
-        Assert.That(lateTickables.Count, Is.EqualTo(1));
+        Assert.That(fixedTickables.Count, Is.EqualTo(6));
+        Assert.That(lateTickables.Count, Is.EqualTo(2));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
@@ -359,6 +370,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runSteeringGesture, Is.Not.Null);
         Assert.That(runSteeringFrameSource, Is.Not.Null);
+        Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
+        Assert.That(runSteeringFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(playerSteeringControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(playerSteeringControllerFixedTickableIndex));
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
         Assert.That(runRewardConfig, Is.SameAs(fixture.RunEndConfig));
@@ -409,6 +424,20 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(bandShapeProvider, Is.Not.Null);
         Assert.That(presentationView, Is.SameAs(fixture.CharacterPresentationView));
         Assert.That(presentationTuning, Is.SameAs(fixture.CharacterPresentationView));
+        Assert.That(characterVisualTargetPoseSource, Is.Not.Null);
+        Assert.That(characterVisualTargetPoseSource.CurrentPose.Position, Is.EqualTo(fixture.LaunchTarget.transform.position));
+
+        Assert.That(Quaternion.Angle(characterVisualTargetPoseSource.CurrentPose.Rotation, fixture.LaunchTarget.transform.rotation),
+            Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(characterVisualFollowView, Is.SameAs(fixture.CharacterPresentationView));
+        Assert.That(characterVisualFollowTuning, Is.SameAs(fixture.CharacterPresentationView));
+        Assert.That(characterVisualFollowTuning.VisualPositionResponseRate, Is.EqualTo(60f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualHeadingResponseRate, Is.EqualTo(45f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualUpTiltResponseRate, Is.EqualTo(18f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualMaxPositionLag, Is.EqualTo(0.06f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualSnapDistance, Is.EqualTo(0.75f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
+        Assert.That(characterVisualPoseSmoother, Is.Not.Null);
         Assert.That(presentationClassifier, Is.Not.Null);
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
@@ -568,6 +597,17 @@ public sealed class GameplayLifetimeScopeTests
 
         view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, touchIndicatorObject, config);
         return view;
+    }
+
+    private static int GetFixedTickableIndex(IReadOnlyList<IFixedTickable> fixedTickables, Predicate<IFixedTickable> predicate)
+    {
+        for (var fixedTickableIndex = 0; fixedTickableIndex < fixedTickables.Count; fixedTickableIndex += 1)
+        {
+            if (predicate(fixedTickables[fixedTickableIndex]))
+                return fixedTickableIndex;
+        }
+
+        return -1;
     }
 
     private RunPreparationUIView CreateRunPreparationView()

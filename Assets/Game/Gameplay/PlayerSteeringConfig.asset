@@ -21,3 +21,7 @@ MonoBehaviour:
   _maximumTurnDegreesPerSecond: 30
   _minimumSteerSpeed: 0.25
   _maximumPlanarSpeed: 10
+  _runSteeringFrameNormalSlewDegreesPerSecond: 120
+  _runSteeringFrameSnapDegrees: 60
+  _runSteeringFrameUngroundedGraceSeconds: 0.12
+  _runSteeringFrameSuspectNormalConfirmationSeconds: 0.6

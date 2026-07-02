@@ -18,6 +18,7 @@ namespace Game.Gameplay
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly IPlayerSteeringTarget _steeringTarget;
         private readonly IRunSteeringFrameSource _steeringFrameSource;
+        private readonly IRunSteeringFrameResetter _steeringFrameResetter;
         private readonly IPlayerSteeringConfig _config;
         private readonly IRunGameplayStatResolver _statResolver;
         private readonly ITime _clock;
@@ -42,6 +43,7 @@ namespace Game.Gameplay
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IPlayerSteeringTarget steeringTarget,
             IRunSteeringFrameSource steeringFrameSource,
+            IRunSteeringFrameResetter steeringFrameResetter,
             IPlayerSteeringConfig config,
             IRunGameplayStatResolver statResolver,
             ITime clock,
@@ -59,6 +61,7 @@ namespace Game.Gameplay
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _steeringTarget = steeringTarget ?? throw new ArgumentNullException(nameof(steeringTarget));
             _steeringFrameSource = steeringFrameSource ?? throw new ArgumentNullException(nameof(steeringFrameSource));
+            _steeringFrameResetter = steeringFrameResetter ?? throw new ArgumentNullException(nameof(steeringFrameResetter));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -155,6 +158,7 @@ namespace Game.Gameplay
             if (_isSteeringActive)
                 return;
 
+            _steeringFrameResetter.Reset(_steeringUp);
             _inputEnableHandle = _unityInput.Enable();
             _isSteeringActive = true;
             ResetPointerAndSteerState();

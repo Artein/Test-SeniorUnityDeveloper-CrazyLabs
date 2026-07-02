@@ -102,6 +102,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedRunContactClassifier = lifetimeScope.Container.Resolve<IRunContactClassifier>();
         var resolvedCharacterPresentationView = lifetimeScope.Container.Resolve<ICharacterPresentationView>();
         var resolvedCharacterPresentationTuning = lifetimeScope.Container.Resolve<ICharacterPresentationTuning>();
+        var resolvedCharacterVisualTargetPoseSource = lifetimeScope.Container.Resolve<ICharacterVisualTargetPoseSource>();
+        var resolvedCharacterVisualFollowView = lifetimeScope.Container.Resolve<ICharacterVisualFollowView>();
+        var resolvedCharacterVisualFollowTuning = lifetimeScope.Container.Resolve<ICharacterVisualFollowTuning>();
         var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
         var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
@@ -220,6 +223,19 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualTargetPoseSource, Is.Not.Null);
+        Assert.That(resolvedCharacterVisualTargetPoseSource.CurrentPose.Position, Is.EqualTo(launchTarget.transform.position));
+
+        Assert.That(Quaternion.Angle(resolvedCharacterVisualTargetPoseSource.CurrentPose.Rotation, launchTarget.transform.rotation),
+            Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowView, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedCharacterVisualFollowTuning, Is.SameAs(characterPresentationView));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualPositionResponseRate, Is.EqualTo(60f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualHeadingResponseRate, Is.EqualTo(45f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualUpTiltResponseRate, Is.EqualTo(18f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualMaxPositionLag, Is.EqualTo(0.06f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualSnapDistance, Is.EqualTo(0.75f).Within(0.0001f));
+        Assert.That(resolvedCharacterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
@@ -241,7 +257,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);
-        Assert.That(characterVisualAnchor.transform.IsChildOf(launchTarget.transform), Is.True);
+        Assert.That(characterPresentationView.VisualAnchorForTests, Is.SameAs(characterVisualAnchor.transform));
+        Assert.That(characterVisualAnchor.transform.IsChildOf(launchTarget.transform), Is.False);
         Assert.That(ladybugCharacter.transform.IsChildOf(characterVisualAnchor.transform), Is.True);
         Assert.That(characterPresentationView.transform, Is.SameAs(ladybugCharacter.transform));
         Assert.That(characterAnimator, Is.Not.Null);
@@ -279,6 +296,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
         Assert.That(playerSteeringConfig, Is.Not.Null);
+        Assert.That(playerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(120f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunSteeringFrameSnapDegrees, Is.EqualTo(60f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.12f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
         Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(15f).Within(0.0001f));

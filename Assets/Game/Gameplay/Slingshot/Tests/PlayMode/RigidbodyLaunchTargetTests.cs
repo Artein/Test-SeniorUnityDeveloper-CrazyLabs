@@ -51,6 +51,18 @@ public sealed class RigidbodyLaunchTargetTests
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    [Test]
+    public void Hold_AlreadyKinematic_DoesNotWriteVelocityToKinematicBody()
+    {
+        _rigidbody.isKinematic = true;
+
+        ((ILaunchTarget)_target).Hold();
+
+        Assert.That(_rigidbody.isKinematic, Is.True);
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]
@@ -87,6 +99,7 @@ public sealed class RigidbodyLaunchTargetTests
             Is.EqualTo(RigidbodyConstraints.FreezeRotationY | PostLaunchStabilizationConstraints));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 1f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]
@@ -127,6 +140,7 @@ public sealed class RigidbodyLaunchTargetTests
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
         Assert.That(_rigidbody.position, Is.EqualTo(preLaunchPosition));
         AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+        LogAssert.NoUnexpectedReceived();
     }
 
     [Test]
@@ -141,6 +155,25 @@ public sealed class RigidbodyLaunchTargetTests
 
         AssertPositionEquals(heldPosition, _bandCenter.position);
         AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    [Test]
+    public void RunEndPoseLock_HoldAndRelease_DoesNotWriteVelocityToKinematicBody()
+    {
+        _rigidbody.isKinematic = false;
+        _rigidbody.linearVelocity = new Vector3(4f, 5f, 6f);
+        _rigidbody.angularVelocity = new Vector3(7f, 8f, 9f);
+        var runEndPosition = new Vector3(3f, 2f, 1f);
+
+        ((IRunEndPoseLockTarget)_target).HoldRunEndPose(runEndPosition);
+        ((IRunEndPoseLockTarget)_target).ReleaseRunEndPose();
+
+        Assert.That(_rigidbody.isKinematic, Is.True);
+        Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.position, Is.EqualTo(runEndPosition));
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]

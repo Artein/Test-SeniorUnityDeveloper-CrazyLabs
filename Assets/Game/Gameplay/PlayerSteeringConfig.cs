@@ -15,6 +15,10 @@ namespace Game.Gameplay
         float MaximumTurnDegreesPerSecond { get; }
         float MinimumSteerSpeed { get; }
         float MaximumPlanarSpeed { get; }
+        float RunSteeringFrameNormalSlewDegreesPerSecond { get; }
+        float RunSteeringFrameSnapDegrees { get; }
+        float RunSteeringFrameUngroundedGraceSeconds { get; }
+        float RunSteeringFrameSuspectNormalConfirmationSeconds { get; }
         float ResolveRunSteeringDpi(float rawDpi);
         float ResolveRunSteeringRangePixels(float rawDpi);
     }
@@ -22,7 +26,7 @@ namespace Game.Gameplay
     [CreateAssetMenu(
         fileName = nameof(PlayerSteeringConfig),
         menuName = "Game/Gameplay/Player Steering Config")]
-    public sealed class PlayerSteeringConfig : ScriptableObject, IPlayerSteeringConfig
+    public sealed partial class PlayerSteeringConfig : ScriptableObject, IPlayerSteeringConfig
     {
         [Header("Run Steering Control")]
         [SerializeField, Min(0.0001f),
@@ -61,6 +65,24 @@ namespace Game.Gameplay
              "Maximum planar speed before steering clamps movement speed. This base value can be raised by max-speed upgrades. Common base range: 8-10.")]
         private float _maximumPlanarSpeed = 10f;
 
+        [Header("Run Steering Frame Stability")]
+        [SerializeField, Min(0f),
+         Tooltip(
+             "Maximum angular speed, in degrees per second, used when the Run Steering Frame follows ordinary grounded Run Surface normal changes.")]
+        private float _runSteeringFrameNormalSlewDegreesPerSecond = 180f;
+
+        [SerializeField, Range(0f, 180f),
+         Tooltip("Ground-normal angle above which a continuously grounded Run Steering Frame change is treated as suspect before it is accepted.")]
+        private float _runSteeringFrameSnapDegrees = 60f;
+
+        [SerializeField, Min(0f),
+         Tooltip("Steering-only duration, in seconds, to keep the last stable Run Steering Frame through short raw support misses.")]
+        private float _runSteeringFrameUngroundedGraceSeconds = 0.08f;
+
+        [SerializeField, Min(0f),
+         Tooltip("Duration, in seconds, a large suspect Run Steering Frame normal must persist before it is accepted as real support.")]
+        private float _runSteeringFrameSuspectNormalConfirmationSeconds = 0.04f;
+
         float IPlayerSteeringConfig.RunSteeringRangeCentimeters => _runSteeringRangeCentimeters.GetPositiveOrDefault(1.5f);
         float IPlayerSteeringConfig.RunSteeringDeadzoneFraction => Mathf.Clamp(_runSteeringDeadzoneFraction, 0f, 0.95f);
         float IPlayerSteeringConfig.RunSteeringResponsiveness => _runSteeringResponsiveness.GetNonNegativeOrDefault(8f);
@@ -73,6 +95,18 @@ namespace Game.Gameplay
         float IPlayerSteeringConfig.MaximumTurnDegreesPerSecond => _maximumTurnDegreesPerSecond;
         float IPlayerSteeringConfig.MinimumSteerSpeed => _minimumSteerSpeed;
         float IPlayerSteeringConfig.MaximumPlanarSpeed => _maximumPlanarSpeed;
+
+        float IPlayerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond =>
+            _runSteeringFrameNormalSlewDegreesPerSecond.GetNonNegativeOrDefault(180f);
+
+        float IPlayerSteeringConfig.RunSteeringFrameSnapDegrees =>
+            Mathf.Clamp(_runSteeringFrameSnapDegrees.GetNonNegativeOrDefault(60f), 0f, 180f);
+
+        float IPlayerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds =>
+            _runSteeringFrameUngroundedGraceSeconds.GetNonNegativeOrDefault(0.08f);
+
+        float IPlayerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds =>
+            _runSteeringFrameSuspectNormalConfirmationSeconds.GetNonNegativeOrDefault(0.04f);
 
         float IPlayerSteeringConfig.ResolveRunSteeringDpi(float rawDpi)
         {

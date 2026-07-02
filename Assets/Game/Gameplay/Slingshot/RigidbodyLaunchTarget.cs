@@ -1,5 +1,6 @@
 using System;
 using Game.Utils.Mathematics;
+using Game.Utils.Physics;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -58,8 +59,8 @@ namespace Game.Gameplay.Slingshot
                 _isHeld = true;
             }
 
+            _rigidbody.ClearVelocityIfDynamic();
             _rigidbody.isKinematic = true;
-            ClearVelocity();
         }
 
         void ILaunchTarget.Launch(Vector3 velocity)
@@ -76,7 +77,7 @@ namespace Game.Gameplay.Slingshot
             }
 
             _rigidbody.constraints = launchBaseConstraints | PostLaunchStabilizationConstraints;
-            ClearVelocity();
+            _rigidbody.ClearVelocityIfDynamic();
             _rigidbody.AddForce(velocity, ForceMode.VelocityChange);
         }
 
@@ -97,7 +98,6 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.transform.SetPositionAndRotation(targetPosition, targetRotation);
             _rigidbody.position = targetPosition;
             _rigidbody.rotation = targetRotation;
-            ClearVelocity();
         }
 
         bool ILaunchTargetSilhouetteSource.TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount)
@@ -157,12 +157,6 @@ namespace Game.Gameplay.Slingshot
             }
         }
 
-        private void ClearVelocity()
-        {
-            _rigidbody.linearVelocity = Vector3.zero;
-            _rigidbody.angularVelocity = Vector3.zero;
-        }
-
         void ILaunchTargetPreLaunchReset.ResetToPreLaunchPose(Vector3 position, Quaternion rotation)
         {
             ThrowIfInvalidReferences();
@@ -174,13 +168,13 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Pre-Launch rotation must be finite and non-zero.", nameof(rotation));
 
             CapturePreviousStateIfNeeded();
+            _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
             _rigidbody.constraints = _previousConstraints;
             _rigidbody.transform.SetPositionAndRotation(position, rotation);
             _rigidbody.position = position;
             _rigidbody.rotation = rotation;
-            ClearVelocity();
         }
 
         void IRunEndPoseLockTarget.HoldRunEndPose(Vector3 position)
@@ -191,17 +185,17 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Run End position must be finite.", nameof(position));
 
             CapturePreviousStateIfNeeded();
+            _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
             _rigidbody.transform.SetPositionAndRotation(position, _rigidbody.rotation);
             _rigidbody.position = position;
-            ClearVelocity();
         }
 
         void IRunEndPoseLockTarget.ReleaseRunEndPose()
         {
             ThrowIfMissingRigidbody();
-            ClearVelocity();
+            _rigidbody.ClearVelocityIfDynamic();
         }
 
         private void CapturePreviousStateIfNeeded()

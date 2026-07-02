@@ -27,6 +27,44 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void LaunchApplied_WhenRunning_ResetsSteeringFrameFromLaunchUp()
+    {
+        var launchUp = new Vector3(0f, 1f, 1f).normalized;
+        _stateService.ChangeTo(_runningStateId);
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(launchUp));
+
+        Assert.That(_steeringFrameSource.ResetCallCount, Is.EqualTo(1));
+        AssertVectorEqual(_steeringFrameSource.LastResetLaunchUpDirection, launchUp);
+    }
+
+    [Test]
+    public void LaunchApplied_BeforeRunning_DoesNotResetSteeringFrameUntilRunningActivates()
+    {
+        var launchUp = new Vector3(1f, 1f, 0f).normalized;
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(launchUp));
+
+        Assert.That(_input.ActiveHandleCount, Is.Zero);
+        Assert.That(_steeringFrameSource.ResetCallCount, Is.Zero);
+
+        _stateService.ChangeTo(_runningStateId);
+
+        Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+        Assert.That(_steeringFrameSource.ResetCallCount, Is.EqualTo(1));
+        AssertVectorEqual(_steeringFrameSource.LastResetLaunchUpDirection, launchUp);
+    }
+
+    [Test]
+    public void RunningEnteredBeforeLaunch_DoesNotResetSteeringFrame()
+    {
+        _stateService.ChangeTo(_runningStateId);
+
+        Assert.That(_input.ActiveHandleCount, Is.Zero);
+        Assert.That(_steeringFrameSource.ResetCallCount, Is.Zero);
+    }
+
+    [Test]
     public void LeavingRunning_DisablesInputAndResetsPointerState()
     {
         ActivateSteering();

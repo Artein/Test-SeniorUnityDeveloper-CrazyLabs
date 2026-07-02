@@ -56,6 +56,10 @@ _Avoid_: Screen center deadzone, input delay, response smoothing
 How quickly the **Launch Target** responds to requested **Run Steering Control** during **Running**.
 _Avoid_: Input polling rate, touch sampling rate
 
+**Run Steering Frame**:
+The gameplay orientation used by **Run Steering Control** to steer the **Launch Target** during **Running**.
+_Avoid_: Ground normal, support frame, locomotion frame, physics normal
+
 **Run Ended**:
 The **Gameplay State** after one **Run Result** is accepted and before **Acknowledge Run Result** returns to **Run Preparation**.
 _Avoid_: Game Over, RunEnd, auto-reset
@@ -194,6 +198,9 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Run Steering Deadzone** does not reduce full steering; the remaining **Run Steering Range** still reaches full steering.
 - **Run Steering Responsiveness** affects how quickly the **Launch Target** responds to requested **Run Steering Control**.
 - **Run Steering Responsiveness** does not affect how often input is sampled.
+- **Run Steering Frame** defines the orientation used by **Run Steering Control**.
+- **Run Steering Frame** is a gameplay control concept, not a **Run Progress Frame** metric reference.
+- **Run Steering Frame** may be derived from **Run Surface** traversal facts without being identical to a raw contact normal.
 - **Run Steering Control** uses horizontal displacement; vertical displacement has no steering meaning.
 - **Running** ends with one **Run Result**.
 - **Run End Flow** produces one accepted **Run Result** per ended **Run**.
@@ -242,6 +249,9 @@ _Avoid_: Character pivot, camera target, follow transform
 > **Dev:** "Does **Run Steering Control** use screen center as neutral?"
 > **Domain expert:** "No - the **Run Steering Origin** is the initial touch position for that gesture."
 
+> **Dev:** "Is the **Run Steering Frame** the same as the **Run Progress Frame**?"
+> **Domain expert:** "No - **Run Steering Frame** orients player control, while **Run Progress Frame** defines run metrics."
+
 ## Flagged ambiguities
 
 - "State" resolves to one current **Gameplay State**, not tags or simultaneous flags.
@@ -251,6 +261,8 @@ _Avoid_: Character pivot, camera target, follow transform
 - "Size limit" resolves to **Run Steering Range**, where physical displacement beyond the range clamps to full steering.
 - "Deadzone" resolves to **Run Steering Deadzone** for **Run Steering Control**, not screen center distance.
 - "Responsiveness" resolves to **Run Steering Responsiveness**, not input polling or touch sampling.
+- "Ground normal", "support frame", and "locomotion frame" resolve to **Run Steering Frame** only when discussing player steering orientation.
+- "Steering frame" resolves to **Run Steering Frame**, not **Run Progress Frame**.
 - "Joystick" does not imply two-dimensional movement for **Run Steering Control**.
 - "Stops" resolves to **Lost Momentum**, not arbitrary one-frame low velocity.
 - "Boundary" resolves to **Run Safety Net** only when it catches the below-course failure case.
