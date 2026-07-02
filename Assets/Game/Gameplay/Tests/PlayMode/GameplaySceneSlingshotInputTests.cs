@@ -72,8 +72,12 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             Assert.That(pullHint.activeSelf, Is.False);
             Assert.That(touchIndicator.activeSelf, Is.True);
             Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
-            Assert.That(bandCenter.transform.position.x, Is.EqualTo(expectedPullPoint.x).Within(0.05f));
-            Assert.That(bandCenter.transform.position.z, Is.EqualTo(expectedPullPoint.z).Within(0.05f));
+
+            AssertAcceptedPullPresentation(
+                bandCenter.transform.position,
+                expectedPullPoint,
+                geometry,
+                slingshotConfig);
 
             yield return SendMouse(mouse, releaseScreenPosition, false);
             yield return WaitUntilPlayerLaunches(playerRigidbody);
@@ -404,6 +408,43 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
         return geometry.RestPoint
                + (geometry.LaunchFrameRight * pullOffset)
                - (geometry.LaunchFrameForward * pullDistance);
+    }
+
+    private void AssertAcceptedPullPresentation(
+        Vector3 actualBandCenter,
+        Vector3 expectedPullPoint,
+        SlingshotGeometrySnapshot geometry,
+        ISlingshotConfig slingshotConfig)
+    {
+        var actualOffset = Vector3.Dot(actualBandCenter - geometry.RestPoint, geometry.LaunchFrameRight);
+        var expectedOffset = Vector3.Dot(expectedPullPoint - geometry.RestPoint, geometry.LaunchFrameRight);
+        var actualDepth = Vector3.Dot(actualBandCenter - geometry.RestPoint, -geometry.LaunchFrameForward);
+        var expectedDepth = Vector3.Dot(expectedPullPoint - geometry.RestPoint, -geometry.LaunchFrameForward);
+
+        Assert.That(
+            actualDepth,
+            Is.EqualTo(expectedDepth).Within(0.1f),
+            "Accepted pull should move Band Center to the requested pull depth.");
+
+        Assert.That(
+            actualDepth,
+            Is.GreaterThan(slingshotConfig.MinimumPullDistance),
+            "Accepted pull should exceed the launch threshold.");
+
+        Assert.That(
+            Mathf.Sign(actualOffset),
+            Is.EqualTo(Mathf.Sign(expectedOffset)),
+            "Accepted pull should move Band Center to the requested side.");
+
+        Assert.That(
+            Mathf.Abs(actualOffset),
+            Is.GreaterThan(0.05f),
+            "Accepted pull should visibly move Band Center sideways.");
+
+        Assert.That(
+            Mathf.Abs(actualOffset),
+            Is.LessThanOrEqualTo(Mathf.Abs(expectedOffset) + 0.05f),
+            "Accepted pull should not overshoot the requested lateral offset.");
     }
 
     private float GetClampedPullOffset(

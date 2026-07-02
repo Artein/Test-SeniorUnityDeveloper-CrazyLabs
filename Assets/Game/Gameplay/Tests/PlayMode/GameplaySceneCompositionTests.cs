@@ -1,11 +1,9 @@
-using System;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
-using Game.Foundation.Input;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
 using Unity.Cinemachine;
@@ -96,6 +94,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
         var resolvedRunProgressFrameSource = lifetimeScope.Container.Resolve<IRunProgressFrameSource>();
         var resolvedRunSurfaceContextSource = lifetimeScope.Container.Resolve<IRunSurfaceContextSource>();
+        var resolvedRunSteeringFrameSource = lifetimeScope.Container.Resolve<IRunSteeringFrameSource>();
         var resolvedContactNotifier = lifetimeScope.Container.Resolve<IRigidbodyContactNotifier>();
         var resolvedRunEndConfig = lifetimeScope.Container.Resolve<IRunEndConfig>();
         var resolvedRunProgressService = lifetimeScope.Container.Resolve<IRunProgressService>();
@@ -206,6 +205,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunProgressFrameSource, Is.SameAs(runProgressFrameSource));
         Assert.That(resolvedRunSurfaceContextSource, Is.SameAs(runSurfaceContextSource));
+        Assert.That(resolvedRunSteeringFrameSource, Is.Not.Null);
         Assert.That(resolvedContactNotifier, Is.SameAs(contactNotifier));
         Assert.That(resolvedRunEndConfig, Is.SameAs(assignedRunEndConfigs[0]));
         Assert.That(resolvedRunProgressService, Is.Not.Null);
@@ -253,7 +253,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
                 "StepOnGround",
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
-                types: Type.EmptyTypes,
+                types: System.Type.EmptyTypes,
                 modifiers: null),
             Is.Not.Null);
         Assert.That(ladybugCharacter.GetComponentsInChildren<Collider>(true), Is.Empty);
@@ -281,8 +281,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertRunContactPlaceholder(runContactsRoot, runFinish, RunContactCategory.Finish, true);
         AssertRunContactPlaceholder(runContactsRoot, runSafetyNet, RunContactCategory.SafetyNet, true);
         AssertRunContactPlaceholder(runContactsRoot, runObstacle, RunContactCategory.Obstacle, false);
-        Assert.That(Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
-        Assert.That(Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
+        Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
+        Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
+        Assert.That(playerRigidbody.collisionDetectionMode, Is.EqualTo(CollisionDetectionMode.ContinuousDynamic));
+        Assert.That(playerRigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(bandCenter.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
@@ -452,220 +454,6 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
         AssertPoleFramesAnchor(leftPole, leftAnchor.transform, geometry.LeftAnchorPosition, "Left Slingshot Pole");
         AssertPoleFramesAnchor(rightPole, rightAnchor.transform, geometry.RightAnchorPosition, "Right Slingshot Pole");
-    }
-
-    [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMousePullsSlingshot_then_PlayerLaunches()
-    {
-        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Smoke Mouse");
-
-        try
-        {
-            yield return LoadGameplayScene();
-            var activeScene = SceneManager.GetActiveScene();
-            yield return ContinueToPreLaunch(activeScene);
-            yield return WaitUntilPlayerIsHeld(activeScene);
-
-            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
-            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-            var runPreparationCamera = FindGameObjectByName(activeScene, "Run Preparation Camera").GetComponent<CinemachineCamera>();
-            var preLaunchCamera = FindGameObjectByName(activeScene, "Pre-Launch Camera").GetComponent<CinemachineCamera>();
-            var runCamera = FindGameObjectByName(activeScene, "Run Camera").GetComponent<CinemachineCamera>();
-            var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
-            var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
-            var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
-            var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-            var geometry = slingshotView.CreateGeometrySnapshot();
-            var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-            var slingshotConfig = lifetimeScope.Container.Resolve<ISlingshotConfig>();
-            var slingshotInputProjector = lifetimeScope.Container.Resolve<ISlingshotInputProjector>();
-            var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
-
-            var pullWorldPosition = geometry.RestPoint
-                                    + (geometry.LaunchFrameRight * 0.35f)
-                                    - (geometry.LaunchFrameForward * 1.25f);
-            var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-            var expectedPullPoint = GetExpectedClampedPullPoint(slingshotInputProjector, releaseScreenPosition, geometry, slingshotConfig);
-            var pointerPressedCount = 0;
-            var unityInput = lifetimeScope.Container.Resolve<IUnityInput>();
-            unityInput.PointerPressed += _ => pointerPressedCount += 1;
-
-            yield return SendMouse(mouse, pressScreenPosition, true);
-
-            Assert.That(pointerPressedCount, Is.EqualTo(1));
-
-            yield return SendMouse(mouse, releaseScreenPosition, true);
-
-            Assert.That(pullHint.activeSelf, Is.False);
-            Assert.That(touchIndicator.activeSelf, Is.True);
-            Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
-            Assert.That(bandCenter.transform.position.x, Is.EqualTo(expectedPullPoint.x).Within(0.05f));
-            Assert.That(bandCenter.transform.position.z, Is.EqualTo(expectedPullPoint.z).Within(0.05f));
-
-            yield return SendMouse(mouse, releaseScreenPosition, false);
-            yield return WaitUntilPlayerLaunches(playerRigidbody);
-
-            Assert.That(playerRigidbody.isKinematic, Is.False);
-            Assert.That(playerRigidbody.linearVelocity.magnitude, Is.GreaterThan(4f));
-            Assert.That(runCamera.Priority.Value, Is.GreaterThan(runPreparationCamera.Priority.Value));
-            Assert.That(runCamera.Priority.Value, Is.GreaterThan(preLaunchCamera.Priority.Value));
-
-            Assert.That(Vector3.Distance(
-                    runCameraAnchor.transform.position,
-                    playerRigidbody.position + runCameraConfig.AnchorOffset),
-                Is.LessThan(0.75f));
-        }
-        finally
-        {
-            InputSystem.RemoveDevice(mouse);
-        }
-    }
-
-    [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMousePressesOutsideBand_then_PlayerStaysHeld()
-    {
-        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Outside Band Mouse");
-
-        try
-        {
-            yield return LoadGameplayScene();
-            var activeScene = SceneManager.GetActiveScene();
-            yield return ContinueToPreLaunch(activeScene);
-            yield return WaitUntilPlayerIsHeld(activeScene);
-
-            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-            var pullHint = FindGameObjectByName(activeScene, "Pull Hint");
-            var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
-            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var geometry = slingshotView.CreateGeometrySnapshot();
-            var outsideBandScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint) + new Vector2(0f, 220f);
-            var validPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 1.25f);
-            var validPullScreenPosition = GetScreenPosition(inputCamera, validPullWorldPosition);
-
-            yield return SendMouse(mouse, outsideBandScreenPosition, true);
-
-            yield return SendMouse(mouse, validPullScreenPosition, true);
-
-            Assert.That(pullHint.activeSelf, Is.False);
-            Assert.That(touchIndicator.activeSelf, Is.False);
-
-            yield return SendMouse(mouse, validPullScreenPosition, false);
-            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
-        }
-        finally
-        {
-            InputSystem.RemoveDevice(mouse);
-        }
-    }
-
-    [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMouseReleasesWeakPull_then_PlayerStaysHeld()
-    {
-        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Weak Pull Mouse");
-
-        try
-        {
-            yield return LoadGameplayScene();
-            var activeScene = SceneManager.GetActiveScene();
-            yield return ContinueToPreLaunch(activeScene);
-            yield return WaitUntilPlayerIsHeld(activeScene);
-
-            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-            var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
-            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-            var geometry = slingshotView.CreateGeometrySnapshot();
-            var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-            var weakPullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 0.1f);
-            var weakPullScreenPosition = GetScreenPosition(inputCamera, weakPullWorldPosition);
-
-            yield return SendMouse(mouse, pressScreenPosition, true);
-
-            yield return SendMouse(mouse, weakPullScreenPosition, true);
-
-            Assert.That(touchIndicator.activeSelf, Is.True);
-
-            yield return SendMouse(mouse, weakPullScreenPosition, false);
-            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
-
-            Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
-            Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
-            Assert.That(touchIndicator.activeSelf, Is.False);
-        }
-        finally
-        {
-            InputSystem.RemoveDevice(mouse);
-        }
-    }
-
-    [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMousePullsForward_then_PlayerStaysHeld()
-    {
-        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Forward Pull Mouse");
-
-        try
-        {
-            yield return LoadGameplayScene();
-            var activeScene = SceneManager.GetActiveScene();
-            yield return ContinueToPreLaunch(activeScene);
-            yield return WaitUntilPlayerIsHeld(activeScene);
-
-            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-            var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
-            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
-            var geometry = slingshotView.CreateGeometrySnapshot();
-            var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-            var forwardPullWorldPosition = geometry.RestPoint + (geometry.LaunchFrameForward * 1f);
-            var forwardPullScreenPosition = GetScreenPosition(inputCamera, forwardPullWorldPosition);
-
-            yield return SendMouse(mouse, pressScreenPosition, true);
-
-            yield return SendMouse(mouse, forwardPullScreenPosition, true);
-
-            Assert.That(bandLineRenderer.positionCount, Is.GreaterThan(3));
-            Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.05f));
-            Assert.That(bandCenter.transform.position.z, Is.EqualTo(geometry.RestPoint.z).Within(0.05f));
-
-            yield return SendMouse(mouse, forwardPullScreenPosition, false);
-            yield return AssertPlayerRemainsHeld(playerRigidbody, 10);
-        }
-        finally
-        {
-            InputSystem.RemoveDevice(mouse);
-        }
-    }
-
-    [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMousePullsLeftAndRight_then_LaunchDirectionSteersWithoutPowerChange()
-    {
-        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Steering Mouse");
-        var rightPullVelocity = Vector3.zero;
-        var leftPullVelocity = Vector3.zero;
-
-        try
-        {
-            yield return LaunchAndCaptureVelocity(mouse, 0.75f, 1.25f, velocity => rightPullVelocity = velocity);
-            yield return LaunchAndCaptureVelocity(mouse, -0.75f, 1.25f, velocity => leftPullVelocity = velocity);
-
-            Assert.That(rightPullVelocity.x, Is.LessThan(-0.5f));
-            Assert.That(leftPullVelocity.x, Is.GreaterThan(0.5f));
-            Assert.That(rightPullVelocity.magnitude, Is.EqualTo(leftPullVelocity.magnitude).Within(0.2f));
-        }
-        finally
-        {
-            InputSystem.RemoveDevice(mouse);
-        }
     }
 
     private IEnumerator LoadGameplayScene()
@@ -845,101 +633,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         InputSystem.Update();
     }
 
-    private IEnumerator LaunchAndCaptureVelocity(Mouse mouse, float pullOffset, float pullDistance, Action<Vector3> captureVelocity)
-    {
-        yield return LoadGameplayScene();
-        var activeScene = SceneManager.GetActiveScene();
-        yield return ContinueToPreLaunch(activeScene);
-        yield return WaitUntilPlayerIsHeld(activeScene);
-
-        var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
-        var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
-        var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
-        var geometry = slingshotView.CreateGeometrySnapshot();
-        var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
-
-        var pullWorldPosition = geometry.RestPoint
-                                + (geometry.LaunchFrameRight * pullOffset)
-                                - (geometry.LaunchFrameForward * pullDistance);
-        var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
-
-        yield return SendMouse(mouse, pressScreenPosition, true);
-
-        yield return SendMouse(mouse, releaseScreenPosition, true);
-
-        yield return SendMouse(mouse, releaseScreenPosition, false);
-        yield return WaitUntilPlayerLaunches(playerRigidbody);
-
-        captureVelocity.Invoke(playerRigidbody.linearVelocity);
-    }
-
-    private Vector3 GetExpectedClampedPullPoint(
-        ISlingshotInputProjector slingshotInputProjector,
-        Vector2 screenPosition,
-        SlingshotGeometrySnapshot geometry,
-        ISlingshotConfig slingshotConfig)
-    {
-        Assert.That(slingshotInputProjector.TryProjectScreenToPullPlane(screenPosition, geometry, out var rawPullPoint), Is.True);
-
-        var delta = rawPullPoint - geometry.RestPoint;
-        var pullDistance = Mathf.Clamp(-Vector3.Dot(delta, geometry.LaunchFrameForward), 0f, slingshotConfig.MaximumPullDistance);
-        var pullOffset = GetClampedPullOffset(Vector3.Dot(delta, geometry.LaunchFrameRight), pullDistance, geometry, slingshotConfig);
-
-        return geometry.RestPoint
-               + (geometry.LaunchFrameRight * pullOffset)
-               - (geometry.LaunchFrameForward * pullDistance);
-    }
-
-    private float GetClampedPullOffset(
-        float rawPullOffset,
-        float pullDistance,
-        SlingshotGeometrySnapshot geometry,
-        ISlingshotConfig slingshotConfig)
-    {
-        var fullLateralPullDistance = Mathf.Max(0.02f, slingshotConfig.MinimumPullDistance + (slingshotConfig.BandContactPadding * 2f))
-                                      + (slingshotConfig.BandContactPadding * 2f);
-
-        var lateralPullScale = fullLateralPullDistance <= 0.000001f ? 1f : Mathf.Clamp01(pullDistance / fullLateralPullDistance);
-
-        return Mathf.Clamp(
-            rawPullOffset,
-            GetMinimumAllowedPullOffset(geometry, slingshotConfig) * lateralPullScale,
-            GetMaximumAllowedPullOffset(geometry, slingshotConfig) * lateralPullScale);
-    }
-
-    private float GetMinimumAllowedPullOffset(SlingshotGeometrySnapshot geometry, ISlingshotConfig slingshotConfig)
-    {
-        var leftAnchorOffset = Vector3.Dot(geometry.LeftAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
-        var rightAnchorOffset = Vector3.Dot(geometry.RightAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
-        var minimumAnchorOffset = Mathf.Min(leftAnchorOffset, rightAnchorOffset);
-        return Mathf.Max(-slingshotConfig.MaximumLateralPull, minimumAnchorOffset);
-    }
-
-    private float GetMaximumAllowedPullOffset(SlingshotGeometrySnapshot geometry, ISlingshotConfig slingshotConfig)
-    {
-        var leftAnchorOffset = Vector3.Dot(geometry.LeftAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
-        var rightAnchorOffset = Vector3.Dot(geometry.RightAnchorPosition - geometry.RestPoint, geometry.LaunchFrameRight);
-        var maximumAnchorOffset = Mathf.Max(leftAnchorOffset, rightAnchorOffset);
-        return Mathf.Min(slingshotConfig.MaximumLateralPull, maximumAnchorOffset);
-    }
-
     private int GetSingleLayer(LayerMask layerMask, string description)
     {
         Assert.That(layerMask.value, Is.Not.EqualTo(0), description);
         Assert.That(layerMask.value & (layerMask.value - 1), Is.Zero, description);
         return Mathf.RoundToInt(Mathf.Log(layerMask.value, 2f));
-    }
-
-    private IEnumerator AssertPlayerRemainsHeld(Rigidbody playerRigidbody, int frameCount)
-    {
-        for (var frameIndex = 0; frameIndex < frameCount; frameIndex += 1)
-        {
-            AssertPlayerIsHeld(playerRigidbody);
-            yield return null;
-        }
-
-        AssertPlayerIsHeld(playerRigidbody);
     }
 
     private IEnumerator WaitUntilPlayerLaunches(Rigidbody playerRigidbody)

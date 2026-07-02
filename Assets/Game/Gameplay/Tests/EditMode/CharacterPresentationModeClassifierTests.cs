@@ -204,13 +204,23 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
-    public void Classify_GroundedFlatMovingBackward_ReturnsSlide()
+    public void Classify_GroundedFlatStopped_ReturnsIdle()
+    {
+        var input = CreateInput(surfaceContext: GroundedDownhill(0f), courseForwardSpeed: 0f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Idle));
+    }
+
+    [Test]
+    public void Classify_GroundedFlatMovingBackward_ReturnsIdle()
     {
         var input = CreateInput(surfaceContext: GroundedDownhill(0f), courseForwardSpeed: -3f);
 
         var result = _classifier.Classify(input);
 
-        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Idle));
     }
 
     [Test]

@@ -17,6 +17,7 @@ namespace Game.Gameplay
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly IPlayerSteeringTarget _steeringTarget;
+        private readonly IRunSteeringFrameSource _steeringFrameSource;
         private readonly IPlayerSteeringConfig _config;
         private readonly IRunGameplayStatResolver _statResolver;
         private readonly ITime _clock;
@@ -40,6 +41,7 @@ namespace Game.Gameplay
             IGameplayStateService gameplayStateService,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IPlayerSteeringTarget steeringTarget,
+            IRunSteeringFrameSource steeringFrameSource,
             IPlayerSteeringConfig config,
             IRunGameplayStatResolver statResolver,
             ITime clock,
@@ -56,6 +58,7 @@ namespace Game.Gameplay
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _steeringTarget = steeringTarget ?? throw new ArgumentNullException(nameof(steeringTarget));
+            _steeringFrameSource = steeringFrameSource ?? throw new ArgumentNullException(nameof(steeringFrameSource));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _statResolver = statResolver ?? throw new ArgumentNullException(nameof(statResolver));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -224,7 +227,7 @@ namespace Game.Gameplay
         private void ApplySteering()
         {
             var velocity = _steeringTarget.LinearVelocity;
-            var upDirection = _steeringUp.normalized;
+            var upDirection = GetValidUpDirection(_steeringFrameSource.GetUpDirection(_steeringUp), _steeringUp);
             var verticalVelocity = Vector3.Project(velocity, upDirection);
             var planarVelocity = velocity - verticalVelocity;
             var planarSpeed = planarVelocity.magnitude;
@@ -248,10 +251,15 @@ namespace Game.Gameplay
 
         private Vector3 GetValidUpDirection(Vector3 upDirection)
         {
+            return GetValidUpDirection(upDirection, Vector3.up);
+        }
+
+        private Vector3 GetValidUpDirection(Vector3 upDirection, Vector3 fallbackUpDirection)
+        {
             var sqrMagnitude = upDirection.sqrMagnitude;
 
             if (sqrMagnitude <= 0.000001f || float.IsNaN(sqrMagnitude) || float.IsInfinity(sqrMagnitude))
-                return Vector3.up;
+                return GetValidUpDirection(fallbackUpDirection);
 
             return upDirection.normalized;
         }

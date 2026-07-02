@@ -43,10 +43,12 @@ public sealed class RunEndFlowTests
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _contactNotifier = new FakeContactNotifier();
         _contactClassifier = new FakeRunContactClassifier();
+        RunProgressFrameSnapshot.TryCreate(Vector3.zero, Vector3.forward, Vector3.up, out var progressSnapshot, out _);
 
         _progressService = new FakeRunProgressService
         {
             HasValidSnapshot = true,
+            Snapshot = progressSnapshot,
             MaximumForwardProgress = 12.5f
         };
 
@@ -93,6 +95,16 @@ public sealed class RunEndFlowTests
         ((IFixedTickable)_flow).FixedTick();
 
         Assert.That(_stateService.RequestedStateIds, Is.Empty);
+    }
+
+    [Test]
+    public void FixedTick_RunningWithoutCandidates_DoesNotSampleProgressService()
+    {
+        ActivateRun();
+
+        ((IFixedTickable)_flow).FixedTick();
+
+        Assert.That(_progressService.SamplePositionCallCount, Is.Zero);
     }
 
     [Test]
@@ -489,6 +501,15 @@ public sealed class RunEndFlowTests
         public float CurrentForwardProgress { get; set; }
         public float MaximumForwardProgress { get; set; }
 
+        public RunProgressSample CurrentSample => new(
+            HasValidSnapshot,
+            SnapshotError,
+            Snapshot,
+            CurrentForwardProgress,
+            MaximumForwardProgress);
+
+        public int SamplePositionCallCount { get; private set; }
+
         public bool TryBeginRun(Vector3 origin, out string error)
         {
             error = string.Empty;
@@ -497,12 +518,14 @@ public sealed class RunEndFlowTests
 
         public void SamplePosition(Vector3 position)
         {
+            SamplePositionCallCount += 1;
         }
 
         public void Reset()
         {
             HasValidSnapshot = false;
             SnapshotError = string.Empty;
+            Snapshot = default;
             CurrentForwardProgress = 0f;
             MaximumForwardProgress = 0f;
         }

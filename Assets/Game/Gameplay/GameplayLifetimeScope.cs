@@ -135,6 +135,7 @@ namespace Game.Gameplay
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+            builder.Register<IRunSteeringFrameSource, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
             builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);

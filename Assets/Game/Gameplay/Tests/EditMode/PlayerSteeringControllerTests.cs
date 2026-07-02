@@ -67,6 +67,45 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void FixedTick_GroundedTiltedSteeringFrame_RotatesVelocityAroundSurfaceUp()
+    {
+        var surfaceUp = new Vector3(0f, 1f, 1f).normalized;
+        var initialPlanarVelocity = ProjectPlanar(Vector3.forward, surfaceUp).normalized * DefaultPlanarSpeed;
+        _steeringFrameSource.UpDirection = surfaceUp;
+        _steeringTarget.LinearVelocity = initialPlanarVelocity + surfaceUp * DefaultVerticalSpeed;
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+        FixedTick();
+
+        var steeredPlanarVelocity = ProjectPlanar(_steeringTarget.LinearVelocity, surfaceUp);
+        Assert.That(_steeringFrameSource.GetUpDirectionCallCount, Is.EqualTo(1));
+        Assert.That(Vector3.Dot(steeredPlanarVelocity.normalized, initialPlanarVelocity.normalized), Is.LessThan(0.9999f));
+        AssertSpeedComponentsPreservedAround(_steeringTarget.LinearVelocity, surfaceUp);
+        Assert.That(Vector3.Dot(_steeringTarget.Rotation * Vector3.up, surfaceUp), Is.GreaterThan(0.999f));
+    }
+
+    [Test]
+    public void FixedTick_InvalidSteeringFrame_UsesLaunchUpFallback()
+    {
+        var launchUp = new Vector3(0f, 1f, 1f).normalized;
+        var initialPlanarVelocity = ProjectPlanar(Vector3.forward, launchUp).normalized * DefaultPlanarSpeed;
+        _steeringFrameSource.UpDirection = Vector3.zero;
+        _steeringTarget.LinearVelocity = initialPlanarVelocity + launchUp * DefaultVerticalSpeed;
+        ActivateSteering(launchUp);
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+        FixedTick();
+
+        Assert.That(_steeringFrameSource.GetUpDirectionCallCount, Is.EqualTo(1));
+        AssertVectorEqual(_steeringFrameSource.LastFallbackUpDirection, launchUp);
+        AssertSpeedComponentsPreservedAround(_steeringTarget.LinearVelocity, launchUp);
+        Assert.That(Vector3.Dot(_steeringTarget.Rotation * Vector3.up, launchUp), Is.GreaterThan(0.999f));
+    }
+
+    [Test]
     public void FixedTick_NeutralMovementStats_ResolvesBaseValuesAndPreservesMovement()
     {
         ActivateSteering();

@@ -48,6 +48,65 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     }
 
     [Test]
+    public void given_SurfaceExactlyTouchingSupport_when_Sampled_then_ContextIsGrounded()
+    {
+        var source = CreateSource(1.05f, 0.08f);
+        CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(source.Current.GroundNormal, Is.EqualTo(Vector3.up));
+    }
+
+    [Test]
+    public void given_SurfaceSlightlyPenetratingSupport_when_Sampled_then_ContextIsGrounded()
+    {
+        var source = CreateSource(1.03f, 0.08f);
+        CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(source.Current.GroundNormal, Is.EqualTo(Vector3.up));
+    }
+
+    [Test]
+    public void given_GroundedSampleMissesOnce_when_Sampled_then_ContextStaysGrounded()
+    {
+        var source = CreateSource(1.1f, 0.08f);
+        var surface = CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+        source.SampleForTests();
+        Assert.That(source.Current.IsGrounded, Is.True);
+
+        surface.transform.position += Vector3.down * 10f;
+        Physics.SyncTransforms();
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+    }
+
+    [Test]
+    public void given_GroundedSampleMissesTwice_when_Sampled_then_ContextBecomesUngrounded()
+    {
+        var source = CreateSource(1.1f, 0.08f);
+        var surface = CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+        source.SampleForTests();
+        Assert.That(source.Current.IsGrounded, Is.True);
+
+        surface.transform.position += Vector3.down * 10f;
+        Physics.SyncTransforms();
+        source.SampleForTests();
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.False);
+    }
+
+    [Test]
     public void given_GroundedForwardDownhillSurface_when_Sampled_then_ContextUsesSupportSlope()
     {
         var source = CreateSource(1.1f, 0.2f);

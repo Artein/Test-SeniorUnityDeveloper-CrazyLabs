@@ -26,6 +26,7 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeRunGameplayStatResolver _statResolver;
     protected FakeTime _clock;
     protected FakeScreen _screen;
+    protected FakeRunSteeringFrameSource _steeringFrameSource;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
     protected GameplayStatId _playerMaxSpeedStatId;
@@ -77,6 +78,7 @@ public abstract class PlayerSteeringControllerTestFixture
             Dpi = 100f
         };
 
+        _steeringFrameSource = new FakeRunSteeringFrameSource();
         _runSteeringGesture = new RunSteeringGesture(_config);
         _controller = CreateController();
         ((IInitializable)_controller).Initialize();
@@ -97,8 +99,13 @@ public abstract class PlayerSteeringControllerTestFixture
 
     protected void ActivateSteering()
     {
+        ActivateSteering(Vector3.up);
+    }
+
+    protected void ActivateSteering(Vector3 launchUpDirection)
+    {
         _stateService.ChangeTo(_runningStateId);
-        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up));
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(launchUpDirection));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
 
@@ -145,6 +152,20 @@ public abstract class PlayerSteeringControllerTestFixture
         Assert.That(new Vector3(velocity.x, 0f, velocity.z).magnitude, Is.EqualTo(expectedPlanarSpeed).Within(0.0001f));
     }
 
+    protected void AssertSpeedComponentsPreservedAround(Vector3 velocity, Vector3 upDirection)
+    {
+        var normalizedUpDirection = upDirection.normalized;
+        var planarVelocity = ProjectPlanar(velocity, normalizedUpDirection);
+
+        Assert.That(Vector3.Dot(velocity, normalizedUpDirection), Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        Assert.That(planarVelocity.magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(0.0001f));
+    }
+
+    protected Vector3 ProjectPlanar(Vector3 velocity, Vector3 upDirection)
+    {
+        return velocity - Vector3.Project(velocity, upDirection.normalized);
+    }
+
     protected void AssertVectorEqual(Vector3 actual, Vector3 expected)
     {
         Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
@@ -154,8 +175,9 @@ public abstract class PlayerSteeringControllerTestFixture
 
     private PlayerSteeringController CreateController()
     {
-        return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _config, _statResolver, _clock, _screen,
-            _runSteeringGesture, _runningStateId, _playerMaxSpeedStatId, _playerSteeringResponsivenessStatId);
+        return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource, _config,
+            _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId, _playerMaxSpeedStatId,
+            _playerSteeringResponsivenessStatId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -361,5 +383,20 @@ public abstract class PlayerSteeringControllerTestFixture
         public int Width { get; set; }
         public int Height { get; set; }
         public float Dpi { get; set; }
+    }
+
+    protected sealed class FakeRunSteeringFrameSource : IRunSteeringFrameSource
+    {
+        public Vector3 UpDirection { get; set; } = Vector3.up;
+        public Vector3 LastFallbackUpDirection { get; private set; }
+        public int GetUpDirectionCallCount { get; private set; }
+
+        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
+        {
+            LastFallbackUpDirection = fallbackUpDirection;
+            GetUpDirectionCallCount += 1;
+
+            return UpDirection;
+        }
     }
 }

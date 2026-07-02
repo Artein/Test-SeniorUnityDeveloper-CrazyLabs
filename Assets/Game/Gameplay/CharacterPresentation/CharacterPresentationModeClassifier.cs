@@ -86,7 +86,7 @@ namespace Game.Gameplay.CharacterPresentation
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Run);
             }
 
-            return new CharacterPresentationClassificationResult(CharacterPresentationMode.Slide);
+            return new CharacterPresentationClassificationResult(CharacterPresentationMode.Idle);
         }
 
         private bool HasForwardRunSpeed(CharacterPresentationClassificationInput input)

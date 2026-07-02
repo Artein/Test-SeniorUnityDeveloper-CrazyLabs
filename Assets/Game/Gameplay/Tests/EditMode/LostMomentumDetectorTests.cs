@@ -80,6 +80,16 @@ public sealed class LostMomentumDetectorTests
     }
 
     [Test]
+    public void FixedTick_Running_DoesNotSampleProgressService()
+    {
+        ActivateDetector();
+
+        ((IFixedTickable)_detector).FixedTick();
+
+        Assert.That(_progressService.SamplePositionCallCount, Is.Zero);
+    }
+
+    [Test]
     public void FixedTick_HighPlanarSpeed_DoesNotSubmitCandidate()
     {
         ActivateDetector();
@@ -98,6 +108,7 @@ public sealed class LostMomentumDetectorTests
         for (var tick = 0; tick < 5; tick += 1)
         {
             _motionSource.Position += Vector3.forward * 0.1f;
+            SampleProgressService();
             ((IFixedTickable)_detector).FixedTick();
         }
 
@@ -139,8 +150,15 @@ public sealed class LostMomentumDetectorTests
     {
         for (var tick = 0; tick < count; tick += 1)
         {
+            SampleProgressService();
             ((IFixedTickable)_detector).FixedTick();
         }
+    }
+
+    private void SampleProgressService()
+    {
+        if (_progressService.HasValidSnapshot)
+            _progressService.SamplePosition(_motionSource.Position);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -219,6 +237,14 @@ public sealed class LostMomentumDetectorTests
         public RunProgressFrameSnapshot Snapshot { get; private set; }
         public float CurrentForwardProgress { get; private set; }
         public float MaximumForwardProgress { get; private set; }
+        public int SamplePositionCallCount { get; private set; }
+
+        public RunProgressSample CurrentSample => new(
+            HasValidSnapshot,
+            SnapshotError,
+            Snapshot,
+            CurrentForwardProgress,
+            MaximumForwardProgress);
 
         public bool TryBeginRun(Vector3 origin, out string error)
         {
@@ -236,6 +262,8 @@ public sealed class LostMomentumDetectorTests
 
         public void SamplePosition(Vector3 position)
         {
+            SamplePositionCallCount += 1;
+
             if (!HasValidSnapshot)
                 return;
 

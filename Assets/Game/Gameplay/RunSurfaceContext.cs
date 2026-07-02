@@ -8,10 +8,12 @@ namespace Game.Gameplay
         public bool IsGrounded { get; }
         public Vector3 GroundNormal { get; }
         public float ForwardDownhillDegrees { get; }
+        internal bool HasValidGroundNormal { get; }
 
         public RunSurfaceContext(bool isGrounded, Vector3 groundNormal, float forwardDownhillDegrees)
         {
             IsGrounded = isGrounded;
+            HasValidGroundNormal = false;
 
             if (!isGrounded)
             {
@@ -27,7 +29,16 @@ namespace Game.Gameplay
             else
             {
                 var normalizedGroundNormal = groundNormal.normalized;
-                GroundNormal = normalizedGroundNormal.IsFinite() ? normalizedGroundNormal : Vector3.up;
+
+                if (normalizedGroundNormal.IsFinite())
+                {
+                    GroundNormal = normalizedGroundNormal;
+                    HasValidGroundNormal = true;
+                }
+                else
+                {
+                    GroundNormal = Vector3.up;
+                }
             }
 
             ForwardDownhillDegrees = float.IsFinite(forwardDownhillDegrees) ? forwardDownhillDegrees : 0f;

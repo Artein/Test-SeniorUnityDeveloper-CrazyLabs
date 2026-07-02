@@ -366,6 +366,13 @@ public sealed class CharacterPresenterTests
         public float CurrentForwardProgress { get; set; }
         public float MaximumForwardProgress { get; set; }
 
+        public RunProgressSample CurrentSample => new(
+            HasValidSnapshot,
+            SnapshotError,
+            Snapshot,
+            CurrentForwardProgress,
+            MaximumForwardProgress);
+
         public bool TryBeginRun(Vector3 origin, out string error)
         {
             error = string.Empty;
