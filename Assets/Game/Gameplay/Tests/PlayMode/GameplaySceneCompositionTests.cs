@@ -278,8 +278,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertAnimatorParameter(characterAnimator, "NormalizedPullOffset", AnimatorControllerParameterType.Float);
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
 #if UNITY_EDITOR
+        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.LaunchFlight, 0.08f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Victory, 0.24f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Defeat, 0.2f);
+        AssertLaunchPushUsesSlideMotion(characterAnimator);
+        AssertLaunchFlightUsesDistinctMotion(characterAnimator);
 #endif
         Assert.That(characterAnimationEventReceiver, Is.Not.Null);
         Assert.That(characterAnimationEventReceiver.transform, Is.SameAs(characterAnimator.transform));
@@ -685,6 +688,57 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
                    condition.parameter == "PresentationMode"
                    && condition.mode == AnimatorConditionMode.Equals
                    && Mathf.Approximately(condition.threshold, (int)mode));
+    }
+
+    private void AssertLaunchPushUsesSlideMotion(Animator animator)
+    {
+        var launchPushMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.LaunchPush);
+        var slideMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.Slide);
+        var airborneMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.Airborne);
+
+        Assert.That(
+            launchPushMotion,
+            Is.SameAs(slideMotion),
+            "LaunchPush should visually continue Slide instead of replaying the fall motion.");
+
+        Assert.That(
+            launchPushMotion,
+            Is.Not.SameAs(airborneMotion),
+            "LaunchPush and Airborne should not share a motion because Airborne is reserved for real falls.");
+    }
+
+    private void AssertLaunchFlightUsesDistinctMotion(Animator animator)
+    {
+        var launchFlightMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.LaunchFlight);
+        var slideMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.Slide);
+        var airborneMotion = GetPresentationModeMotion(animator, CharacterPresentationMode.Airborne);
+
+        Assert.That(
+            launchFlightMotion,
+            Is.Not.SameAs(slideMotion),
+            "LaunchFlight should use a distinct fired-through-air motion instead of grounded Slide.");
+
+        Assert.That(
+            launchFlightMotion,
+            Is.Not.SameAs(airborneMotion),
+            "LaunchFlight and Airborne should not share a motion because Airborne is reserved for real falls.");
+    }
+
+    private Motion GetPresentationModeMotion(Animator animator, CharacterPresentationMode mode)
+    {
+        var controller = animator.runtimeAnimatorController as AnimatorController;
+
+        Assert.That(controller, Is.Not.Null, $"{animator.name} should use an AnimatorController asset.");
+
+        var state = controller.layers
+            .SelectMany(layer => layer.stateMachine.states)
+            .Select(childState => childState.state)
+            .SingleOrDefault(candidate => candidate.name == mode.ToString());
+
+        Assert.That(state, Is.Not.Null, $"{controller.name} should contain a {mode} state.");
+        Assert.That(state.motion, Is.Not.Null, $"{mode} should have a motion assigned.");
+
+        return state.motion;
     }
 #endif
 

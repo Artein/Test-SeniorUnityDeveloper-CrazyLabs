@@ -13,6 +13,7 @@ namespace Game.Gameplay.CharacterPresentation
         public bool AcceptedRunResultSucceeded { get; }
         public bool HasActivePull { get; }
         public bool HasLaunchPush { get; }
+        public bool HasLaunchFlight { get; }
         public float LaunchPushElapsedSeconds { get; }
         public RunSurfaceContext SurfaceContext { get; }
         public float CoursePlanarSpeed { get; }
@@ -31,6 +32,7 @@ namespace Game.Gameplay.CharacterPresentation
             bool acceptedRunResultSucceeded,
             bool hasActivePull,
             bool hasLaunchPush,
+            bool hasLaunchFlight,
             float launchPushElapsedSeconds,
             RunSurfaceContext surfaceContext,
             float coursePlanarSpeed,
@@ -48,6 +50,7 @@ namespace Game.Gameplay.CharacterPresentation
             AcceptedRunResultSucceeded = acceptedRunResultSucceeded;
             HasActivePull = hasActivePull;
             HasLaunchPush = hasLaunchPush;
+            HasLaunchFlight = hasLaunchFlight;
             LaunchPushElapsedSeconds = float.IsFinite(launchPushElapsedSeconds) ? Mathf.Max(0f, launchPushElapsedSeconds) : 0f;
             SurfaceContext = surfaceContext;
             CoursePlanarSpeed = float.IsFinite(coursePlanarSpeed) ? coursePlanarSpeed : 0f;

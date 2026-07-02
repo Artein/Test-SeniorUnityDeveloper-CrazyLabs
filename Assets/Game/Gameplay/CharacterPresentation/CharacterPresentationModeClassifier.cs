@@ -25,11 +25,14 @@ namespace Game.Gameplay.CharacterPresentation
             if (input.HasActivePull)
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.PullAnticipation);
 
-            if (input.HasLaunchPush && input.LaunchPushElapsedSeconds < Mathf.Max(0f, _tuning.LaunchPushMinimumSeconds))
-                return new CharacterPresentationClassificationResult(CharacterPresentationMode.LaunchPush);
-
             if (input.IsPreLaunch || !input.IsRunActive)
                 return new CharacterPresentationClassificationResult(CharacterPresentationMode.Idle);
+
+            if (input.HasLaunchFlight)
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.LaunchFlight);
+
+            if (input.HasLaunchPush && input.LaunchPushElapsedSeconds < Mathf.Max(0f, _tuning.LaunchPushMinimumSeconds))
+                return new CharacterPresentationClassificationResult(CharacterPresentationMode.LaunchPush);
 
             if (!input.SurfaceContext.IsGrounded)
                 return ClassifyUngrounded(input);

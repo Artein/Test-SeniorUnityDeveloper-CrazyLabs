@@ -30,6 +30,12 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_LaunchFlightMode_HasStableAnimatorValue()
+    {
+        Assert.That((int)CharacterPresentationMode.LaunchFlight, Is.EqualTo(8));
+    }
+
+    [Test]
     public void Classify_RunMode_HasStableReservedAnimatorValue()
     {
         Assert.That((int)CharacterPresentationMode.Run, Is.EqualTo(4));
@@ -131,6 +137,7 @@ public sealed class CharacterPresentationModeClassifierTests
     {
         var input = CreateInput(
             hasLaunchPush: true,
+            hasLaunchFlight: true,
             launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds * 0.5f,
             hasAcceptedRunResult: true,
             acceptedRunResultSucceeded: false);
@@ -138,6 +145,23 @@ public sealed class CharacterPresentationModeClassifierTests
         var result = _classifier.Classify(input);
 
         Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Defeat));
+    }
+
+    [Test]
+    public void Classify_LaunchFlightWithActivePull_ReturnsPullAnticipation()
+    {
+        var input = CreateInput(
+            hasActivePull: true,
+            hasLaunchPush: true,
+            hasLaunchFlight: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterHardUngroundedSeconds,
+            courseVerticalSpeed: -_tuning.FallEnterMinimumDownwardSpeed);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.PullAnticipation));
     }
 
     [Test]
@@ -167,6 +191,21 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_LaunchFlightBeforeLaunchPushMinimum_ReturnsLaunchFlight()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.LaunchPush,
+            hasLaunchPush: true,
+            hasLaunchFlight: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds * 0.5f,
+            surfaceContext: Ungrounded());
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
+    }
+
+    [Test]
     public void Classify_LaunchPushAtMinimumOnGroundedMeaningfulMovement_ReturnsSlide()
     {
         var input = CreateInput(
@@ -192,6 +231,40 @@ public sealed class CharacterPresentationModeClassifierTests
         var result = _classifier.Classify(input);
 
         Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
+    public void Classify_LaunchFlightAfterLaunchPushMinimum_ReturnsLaunchFlight()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.LaunchPush,
+            hasLaunchPush: true,
+            hasLaunchFlight: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds,
+            courseVerticalSpeed: -_tuning.FallEnterMinimumDownwardSpeed,
+            ungroundedVerticalSeparation: -_tuning.FallEnterMinimumVerticalSeparation);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
+    }
+
+    [Test]
+    public void Classify_LaunchFlightPastHardUngroundedTimeout_ReturnsLaunchFlight()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.LaunchFlight,
+            hasLaunchPush: true,
+            hasLaunchFlight: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds + 0.01f,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterHardUngroundedSeconds);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
     }
 
     [TestCase(0f, 3f, 3f)]
@@ -521,6 +594,7 @@ public sealed class CharacterPresentationModeClassifierTests
         bool acceptedRunResultSucceeded = false,
         bool hasActivePull = false,
         bool hasLaunchPush = false,
+        bool hasLaunchFlight = false,
         float launchPushElapsedSeconds = 0f,
         RunSurfaceContext? surfaceContext = null,
         float coursePlanarSpeed = 4f,
@@ -538,6 +612,7 @@ public sealed class CharacterPresentationModeClassifierTests
             acceptedRunResultSucceeded,
             hasActivePull,
             hasLaunchPush,
+            hasLaunchFlight,
             launchPushElapsedSeconds,
             surfaceContext.GetValueOrDefault(GroundedDownhill(0f)),
             coursePlanarSpeed,
@@ -567,6 +642,7 @@ public sealed class CharacterPresentationModeClassifierTests
             acceptedRunResultSucceeded: false,
             hasActivePull: false,
             hasLaunchPush: false,
+            hasLaunchFlight: false,
             launchPushElapsedSeconds: 0f,
             surfaceContext,
             coursePlanarSpeed,

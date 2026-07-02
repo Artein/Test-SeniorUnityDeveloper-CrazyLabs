@@ -1,6 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 using Game.Gameplay;
 using Game.Gameplay.CharacterPresentation;
+using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -27,6 +30,7 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
             var activeScene = SceneManager.GetActiveScene();
             var context = CreateSceneContext(activeScene);
             var surfaceContextSource = ResolveSurfaceContextSource(activeScene);
+            var slingshotPresentationContextSource = ResolveSlingshotPresentationContextSource(activeScene);
             var characterAnimator = FindCharacterAnimator(activeScene);
             var visualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
 
@@ -46,7 +50,12 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
 
             yield return SendMouse(mouse, pullScreenPosition, false);
             yield return WaitUntilPlayerLaunches(context.PlayerRigidbody);
-            yield return AssertPostLaunchPresentation(characterAnimator, context.PlayerRigidbody, surfaceContextSource);
+
+            yield return AssertPostLaunchPresentation(
+                characterAnimator,
+                context.PlayerRigidbody,
+                surfaceContextSource,
+                slingshotPresentationContextSource);
         }
         finally
         {
@@ -57,36 +66,99 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
     private static IEnumerator AssertPostLaunchPresentation(
         Animator characterAnimator,
         Rigidbody playerRigidbody,
-        IRunSurfaceContextSource surfaceContextSource)
+        IRunSurfaceContextSource surfaceContextSource,
+        ISlingshotPresentationContextSource slingshotPresentationContextSource)
     {
         var sawLaunchPush = false;
+        var sawLaunchFlight = false;
+        var sawSlideAfterLaunchFlight = false;
         var observedMovingGroundedFrames = 0;
+        var modeCounts = new Dictionary<CharacterPresentationMode, int>();
+        var trace = new StringBuilder();
+        var previousMode = CharacterPresentationMode.Idle;
 
         for (var frameIndex = 0; frameIndex < PostLaunchObservationFrameCount; frameIndex += 1)
         {
             yield return null;
 
             var mode = GetPresentationMode(characterAnimator);
+            var surfaceContext = surfaceContextSource.Current;
+            var slingshotContext = slingshotPresentationContextSource.Current;
+
+            if (!modeCounts.TryAdd(mode, 1))
+                modeCounts[mode] += 1;
+
+            if (frameIndex == 0 || mode != previousMode || frameIndex % 30 == 0)
+            {
+                _ = trace.Append("frame ")
+                    .Append(frameIndex)
+                    .Append(": mode=")
+                    .Append(mode)
+                    .Append(", grounded=")
+                    .Append(surfaceContext.IsGrounded)
+                    .Append(", hasLaunchPush=")
+                    .Append(slingshotContext.HasLaunchPush)
+                    .Append(", launchElapsed=")
+                    .Append(slingshotContext.LaunchPushElapsedSeconds.ToString("0.000"))
+                    .Append(", speed=")
+                    .Append(playerRigidbody.linearVelocity.magnitude.ToString("0.000"))
+                    .AppendLine();
+            }
+
+            previousMode = mode;
             Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.Run), $"frame {frameIndex}");
             Assert.That(characterAnimator.applyRootMotion, Is.False, $"frame {frameIndex}");
 
             sawLaunchPush |= mode == CharacterPresentationMode.LaunchPush;
+            sawLaunchFlight |= mode == CharacterPresentationMode.LaunchFlight;
 
             if (mode == CharacterPresentationMode.Slide)
+            {
                 Assert.That(characterAnimator.GetFloat(PlaybackSpeedParameterName), Is.InRange(0.5f, 1.5f), $"frame {frameIndex}");
+                sawSlideAfterLaunchFlight |= sawLaunchFlight;
+            }
 
-            if (surfaceContextSource.Current.IsGrounded && playerRigidbody.linearVelocity.sqrMagnitude > 0.25f)
+            if (surfaceContext.IsGrounded && playerRigidbody.linearVelocity.sqrMagnitude > 0.25f)
             {
                 observedMovingGroundedFrames += 1;
-                if (mode != CharacterPresentationMode.LaunchPush)
+
+                if (mode != CharacterPresentationMode.LaunchPush && mode != CharacterPresentationMode.LaunchFlight)
                     Assert.That(mode, Is.EqualTo(CharacterPresentationMode.Slide), $"frame {frameIndex}");
             }
         }
 
-        Assert.That(sawLaunchPush, Is.True, "Expected launch release to drive the launch-push presentation before sliding.");
+        var diagnostics = CreatePostLaunchDiagnostics(modeCounts, trace);
+
+        Assert.That(
+            sawLaunchPush,
+            Is.True,
+            $"Expected launch release to drive the launch-push presentation before sliding.{diagnostics}");
+
+        Assert.That(
+            sawLaunchFlight,
+            Is.True,
+            $"Expected slingshot-fired airborne motion to use LaunchFlight before first landing.{diagnostics}");
+
+        Assert.That(
+            sawSlideAfterLaunchFlight,
+            Is.True,
+            $"Expected LaunchFlight to resolve back to Slide after valid landing.{diagnostics}");
 
         TestContext.Out.WriteLine(
             $"Observed {observedMovingGroundedFrames} moving grounded presentation frames during post-launch smoke.");
+    }
+
+    private static string CreatePostLaunchDiagnostics(
+        Dictionary<CharacterPresentationMode, int> modeCounts,
+        StringBuilder trace)
+    {
+        var message = new StringBuilder();
+        _ = message.AppendLine().Append("Mode counts:");
+
+        foreach (var pair in modeCounts)
+            _ = message.Append("  ").Append(pair.Key).Append(": ").Append(pair.Value).AppendLine();
+
+        return message.Append("Trace:").AppendLine().Append(trace).ToString();
     }
 
     private static IEnumerator WaitForPresentationMode(Animator animator, CharacterPresentationMode expectedMode, string phase)
@@ -128,6 +200,12 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
     {
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
         return lifetimeScope.Container.Resolve<IRunSurfaceContextSource>();
+    }
+
+    private ISlingshotPresentationContextSource ResolveSlingshotPresentationContextSource(Scene scene)
+    {
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        return lifetimeScope.Container.Resolve<ISlingshotPresentationContextSource>();
     }
 
     private Animator FindCharacterAnimator(Scene scene)

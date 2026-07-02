@@ -34,6 +34,11 @@ namespace Game.Gameplay.CharacterPresentation
         private float _ungroundedElapsedSeconds;
         private bool _hasUngroundedStartPosition;
         private Vector3 _ungroundedStartPosition;
+        private bool _previousHasLaunchPush;
+        private bool _awaitingPostLaunchLanding;
+        private bool _hasObservedPostLaunchUngrounded;
+        private float _launchFlightNormalizedPower;
+        private float _launchFlightNormalizedOffset;
 
         public CharacterPresenter(
             IGameplayStateService gameplayStateService,
@@ -126,10 +131,12 @@ namespace Game.Gameplay.CharacterPresentation
                 isNeutralPresentationState,
                 currentPosition,
                 courseUpDirection);
+            var hasLaunchFlight = UpdateLaunchFlightState(slingshotContext, surfaceContext, isNeutralPresentationState);
 
             var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, _ungroundedElapsedSeconds, isPreLaunch,
                 isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull, slingshotContext.HasLaunchPush,
-                slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed, courseVerticalSpeed,
+                hasLaunchFlight, slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed,
+                courseVerticalSpeed,
                 ungroundedVerticalSeparation, linearVelocity);
 
             var result = _classifier.Classify(input);
@@ -192,6 +199,52 @@ namespace Game.Gameplay.CharacterPresentation
             var positionDelta = GetFiniteOrZero(currentPosition) - _ungroundedStartPosition;
             var separation = Vector3.Dot(positionDelta, GetSafeUpDirection(courseUpDirection));
             return float.IsFinite(separation) ? separation : 0f;
+        }
+
+        private bool UpdateLaunchFlightState(
+            SlingshotPresentationContext slingshotContext,
+            RunSurfaceContext surfaceContext,
+            bool isNeutralPresentationState)
+        {
+            var hasLaunchPush = slingshotContext.HasLaunchPush;
+            var isNewLaunch = hasLaunchPush && !_previousHasLaunchPush;
+            _previousHasLaunchPush = hasLaunchPush;
+
+            if (isNeutralPresentationState || _hasAcceptedRunResult)
+            {
+                ResetLaunchFlightState();
+                return false;
+            }
+
+            if (isNewLaunch)
+            {
+                _awaitingPostLaunchLanding = true;
+                _hasObservedPostLaunchUngrounded = false;
+                _launchFlightNormalizedPower = slingshotContext.NormalizedLaunchPower;
+                _launchFlightNormalizedOffset = slingshotContext.NormalizedLaunchOffset;
+            }
+
+            if (!_awaitingPostLaunchLanding)
+                return false;
+
+            if (!surfaceContext.IsGrounded)
+            {
+                _hasObservedPostLaunchUngrounded = true;
+                return true;
+            }
+
+            if (_hasObservedPostLaunchUngrounded)
+                ResetLaunchFlightState();
+
+            return false;
+        }
+
+        private void ResetLaunchFlightState()
+        {
+            _awaitingPostLaunchLanding = false;
+            _hasObservedPostLaunchUngrounded = false;
+            _launchFlightNormalizedPower = 0f;
+            _launchFlightNormalizedOffset = 0f;
         }
 
         private static float GetCourseVerticalSpeed(Vector3 linearVelocity, Vector3 courseUpDirection)
@@ -265,6 +318,15 @@ namespace Game.Gameplay.CharacterPresentation
                     playbackSpeedMultiplier: 1f,
                     normalizedLaunchPower: slingshotContext.NormalizedLaunchPower,
                     normalizedLaunchOffset: slingshotContext.NormalizedLaunchOffset);
+            }
+
+            if (mode == CharacterPresentationMode.LaunchFlight)
+            {
+                return new CharacterPresentationFrame(
+                    mode,
+                    playbackSpeedMultiplier: 1f,
+                    normalizedLaunchPower: _launchFlightNormalizedPower,
+                    normalizedLaunchOffset: _launchFlightNormalizedOffset);
             }
 
             return new CharacterPresentationFrame(mode, CalculatePlaybackSpeed(mode, coursePlanarSpeed));

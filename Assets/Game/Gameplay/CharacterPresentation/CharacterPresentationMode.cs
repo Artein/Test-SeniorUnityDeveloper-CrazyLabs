@@ -9,6 +9,7 @@ namespace Game.Gameplay.CharacterPresentation
         Run = 4,
         Airborne = 5,
         Victory = 6,
-        Defeat = 7
+        Defeat = 7,
+        LaunchFlight = 8
     }
 }
