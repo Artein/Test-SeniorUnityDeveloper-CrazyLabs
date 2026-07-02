@@ -34,8 +34,11 @@ namespace Game.Gameplay
         private bool _isDisposed;
         private bool _hasLaunchApplied;
         private bool _isSteeringActive;
+        private bool _hasLaunchBurstPlanarSpeed;
         private float _desiredSteer;
         private float _currentSteer;
+        private float _launchBurstPlanarSpeed;
+        private float _launchBurstElapsedSeconds;
 
         public PlayerSteeringController(
             IUnityInput unityInput,
@@ -100,6 +103,7 @@ namespace Game.Gameplay
             if (_isDisposed || !_isSteeringActive)
                 return;
 
+            AdvanceLaunchBurstElapsed();
             UpdateSmoothedSteer();
             ApplySteering();
         }
@@ -131,6 +135,7 @@ namespace Game.Gameplay
 
             _hasLaunchApplied = true;
             _steeringUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
+            CaptureLaunchBurstPlanarSpeed(launchApplied.VelocityChange, _steeringUp);
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
                 ActivateSteering();
@@ -150,6 +155,7 @@ namespace Game.Gameplay
             }
 
             _hasLaunchApplied = false;
+            ClearLaunchBurst();
             DeactivateSteering();
         }
 
@@ -239,7 +245,7 @@ namespace Game.Gameplay
             if (planarSpeed < Mathf.Max(0f, _config.MinimumSteerSpeed))
                 return;
 
-            var maximumPlanarSpeed = ResolveMaximumPlanarSpeed();
+            var maximumPlanarSpeed = ResolveEffectiveMaximumPlanarSpeed(ResolveMaximumPlanarSpeed());
 
             if (planarSpeed > maximumPlanarSpeed)
                 planarVelocity = planarVelocity.normalized * maximumPlanarSpeed;
@@ -251,6 +257,75 @@ namespace Game.Gameplay
             var targetRotation = Quaternion.LookRotation(steeredPlanarVelocity.normalized, upDirection);
 
             _steeringTarget.ApplySteering(steeredVelocity, targetRotation);
+        }
+
+        private void CaptureLaunchBurstPlanarSpeed(Vector3 velocityChange, Vector3 upDirection)
+        {
+            var safeUpDirection = GetValidUpDirection(upDirection);
+            var planarVelocityChange = velocityChange - Vector3.Project(velocityChange, safeUpDirection);
+            var planarSpeed = planarVelocityChange.magnitude;
+
+            if (planarSpeed <= 0.000001f || float.IsNaN(planarSpeed) || float.IsInfinity(planarSpeed))
+            {
+                ClearLaunchBurst();
+                return;
+            }
+
+            _launchBurstPlanarSpeed = planarSpeed;
+            _launchBurstElapsedSeconds = 0f;
+            _hasLaunchBurstPlanarSpeed = true;
+        }
+
+        private void AdvanceLaunchBurstElapsed()
+        {
+            if (!_hasLaunchBurstPlanarSpeed)
+                return;
+
+            _launchBurstElapsedSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
+        }
+
+        private float ResolveEffectiveMaximumPlanarSpeed(float maximumPlanarSpeed)
+        {
+            if (!_hasLaunchBurstPlanarSpeed)
+                return maximumPlanarSpeed;
+
+            var multiplier = Mathf.Max(1f, _config.LaunchBurstMaximumPlanarSpeedMultiplier);
+            var burstMaximumPlanarSpeed = maximumPlanarSpeed * multiplier;
+            var peakBurstPlanarSpeed = Mathf.Min(_launchBurstPlanarSpeed, burstMaximumPlanarSpeed);
+
+            if (peakBurstPlanarSpeed <= maximumPlanarSpeed)
+                return maximumPlanarSpeed;
+
+            var graceSeconds = Mathf.Max(0f, _config.LaunchBurstPlanarSpeedGraceSeconds);
+
+            if (_launchBurstElapsedSeconds <= graceSeconds)
+                return peakBurstPlanarSpeed;
+
+            var recoverySeconds = Mathf.Max(0f, _config.LaunchBurstPlanarSpeedRecoverySeconds);
+
+            if (recoverySeconds <= 0f)
+            {
+                ClearLaunchBurst();
+                return maximumPlanarSpeed;
+            }
+
+            var recoveryElapsedSeconds = _launchBurstElapsedSeconds - graceSeconds;
+
+            if (recoveryElapsedSeconds >= recoverySeconds)
+            {
+                ClearLaunchBurst();
+                return maximumPlanarSpeed;
+            }
+
+            var recoveryProgress = Mathf.Clamp01(recoveryElapsedSeconds / recoverySeconds);
+            return Mathf.Lerp(peakBurstPlanarSpeed, maximumPlanarSpeed, recoveryProgress);
+        }
+
+        private void ClearLaunchBurst()
+        {
+            _hasLaunchBurstPlanarSpeed = false;
+            _launchBurstPlanarSpeed = 0f;
+            _launchBurstElapsedSeconds = 0f;
         }
 
         private Vector3 GetValidUpDirection(Vector3 upDirection)

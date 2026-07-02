@@ -15,6 +15,16 @@ namespace Game.Gameplay
             _runSteeringFrameUngroundedGraceSeconds = ungroundedGraceSeconds;
             _runSteeringFrameSuspectNormalConfirmationSeconds = suspectNormalConfirmationSeconds;
         }
+
+        internal void SetLaunchBurstForTests(
+            float graceSeconds,
+            float recoverySeconds,
+            float maximumPlanarSpeedMultiplier)
+        {
+            _launchBurstPlanarSpeedGraceSeconds = graceSeconds;
+            _launchBurstPlanarSpeedRecoverySeconds = recoverySeconds;
+            _launchBurstMaximumPlanarSpeedMultiplier = maximumPlanarSpeedMultiplier;
+        }
     }
 }
 

@@ -30,6 +30,9 @@ public sealed class PlayerSteeringConfigTests
         Assert.That(_config.FallbackDpi, Is.EqualTo(326f));
         Assert.That(_config.MinimumAcceptedDpi, Is.EqualTo(1f));
         Assert.That(_config.MaximumAcceptedDpi, Is.EqualTo(1000f));
+        Assert.That(_config.LaunchBurstPlanarSpeedGraceSeconds, Is.EqualTo(0.35f));
+        Assert.That(_config.LaunchBurstPlanarSpeedRecoverySeconds, Is.EqualTo(0.65f));
+        Assert.That(_config.LaunchBurstMaximumPlanarSpeedMultiplier, Is.EqualTo(3f));
         Assert.That(_config.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(180f));
         Assert.That(_config.RunSteeringFrameSnapDegrees, Is.EqualTo(60f));
         Assert.That(_config.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.08f));
@@ -49,6 +52,19 @@ public sealed class PlayerSteeringConfigTests
         Assert.That(_config.RunSteeringFrameSnapDegrees, Is.EqualTo(180f));
         Assert.That(_config.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.08f));
         Assert.That(_config.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.04f));
+    }
+
+    [Test]
+    public void LaunchBurstValues_InvalidAuthoredValues_ResolveDefensively()
+    {
+        _configObject.SetLaunchBurstForTests(
+            graceSeconds: float.NaN,
+            recoverySeconds: -1f,
+            maximumPlanarSpeedMultiplier: 0.5f);
+
+        Assert.That(_config.LaunchBurstPlanarSpeedGraceSeconds, Is.EqualTo(0.35f));
+        Assert.That(_config.LaunchBurstPlanarSpeedRecoverySeconds, Is.EqualTo(0.65f));
+        Assert.That(_config.LaunchBurstMaximumPlanarSpeedMultiplier, Is.EqualTo(1f));
     }
 
     [TestCase(1f)]

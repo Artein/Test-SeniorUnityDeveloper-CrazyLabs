@@ -63,6 +63,9 @@ public abstract class PlayerSteeringControllerTestFixture
             MaximumTurnDegreesPerSecond = 90f,
             MinimumSteerSpeed = 0.25f,
             MaximumPlanarSpeed = DefaultPlanarSpeed,
+            LaunchBurstPlanarSpeedGraceSeconds = 0.35f,
+            LaunchBurstPlanarSpeedRecoverySeconds = 0.65f,
+            LaunchBurstMaximumPlanarSpeedMultiplier = 3f,
             RunSteeringFrameNormalSlewDegreesPerSecond = 180f,
             RunSteeringFrameSnapDegrees = 60f,
             RunSteeringFrameUngroundedGraceSeconds = 0.08f,
@@ -113,12 +116,26 @@ public abstract class PlayerSteeringControllerTestFixture
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
     }
 
+    protected void ActivateSteeringWithLaunchVelocity(Vector3 launchVelocityChange)
+    {
+        _stateService.ChangeTo(_runningStateId);
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up, launchVelocityChange));
+        Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+    }
+
     protected void FixedTick()
     {
         ((IFixedTickable)_controller).FixedTick();
     }
 
     protected SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 upDirection)
+    {
+        return CreateLaunchAppliedEvent(
+            upDirection,
+            Vector3.forward * DefaultPlanarSpeed + upDirection.normalized * DefaultVerticalSpeed);
+    }
+
+    protected SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 upDirection, Vector3 velocityChange)
     {
         var request = new SlingshotLaunchRequest(
             pullStrength: 1f,
@@ -131,7 +148,7 @@ public abstract class PlayerSteeringControllerTestFixture
 
         return new SlingshotLaunchAppliedEvent(
             request,
-            velocityChange: Vector3.forward * DefaultPlanarSpeed + upDirection.normalized * DefaultVerticalSpeed,
+            velocityChange,
             launchDirection: Vector3.forward,
             launchUpDirection: upDirection.normalized);
     }
@@ -326,6 +343,9 @@ public abstract class PlayerSteeringControllerTestFixture
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
         public float MaximumPlanarSpeed { get; set; }
+        public float LaunchBurstPlanarSpeedGraceSeconds { get; set; }
+        public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; }
+        public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; }
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
         public float RunSteeringFrameSnapDegrees { get; set; }
         public float RunSteeringFrameUngroundedGraceSeconds { get; set; }

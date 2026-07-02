@@ -15,6 +15,9 @@ namespace Game.Gameplay
         float MaximumTurnDegreesPerSecond { get; }
         float MinimumSteerSpeed { get; }
         float MaximumPlanarSpeed { get; }
+        float LaunchBurstPlanarSpeedGraceSeconds { get; }
+        float LaunchBurstPlanarSpeedRecoverySeconds { get; }
+        float LaunchBurstMaximumPlanarSpeedMultiplier { get; }
         float RunSteeringFrameNormalSlewDegreesPerSecond { get; }
         float RunSteeringFrameSnapDegrees { get; }
         float RunSteeringFrameUngroundedGraceSeconds { get; }
@@ -65,6 +68,18 @@ namespace Game.Gameplay
              "Maximum planar speed before steering clamps movement speed. This base value can be raised by max-speed upgrades. Common base range: 8-10.")]
         private float _maximumPlanarSpeed = 10f;
 
+        [SerializeField, Min(0f),
+         Tooltip("Seconds after launch where steering preserves launch planar over-speed before recovering toward normal max speed.")]
+        private float _launchBurstPlanarSpeedGraceSeconds = 0.35f;
+
+        [SerializeField, Min(0f),
+         Tooltip("Seconds after launch-burst grace used to fade the steering planar speed cap back to normal max speed.")]
+        private float _launchBurstPlanarSpeedRecoverySeconds = 0.65f;
+
+        [SerializeField, Min(1f),
+         Tooltip("Maximum launch-burst planar speed as a multiplier of resolved Player Max Speed.")]
+        private float _launchBurstMaximumPlanarSpeedMultiplier = 3f;
+
         [Header("Run Steering Frame Stability")]
         [SerializeField, Min(0f),
          Tooltip(
@@ -95,6 +110,15 @@ namespace Game.Gameplay
         float IPlayerSteeringConfig.MaximumTurnDegreesPerSecond => _maximumTurnDegreesPerSecond;
         float IPlayerSteeringConfig.MinimumSteerSpeed => _minimumSteerSpeed;
         float IPlayerSteeringConfig.MaximumPlanarSpeed => _maximumPlanarSpeed;
+
+        float IPlayerSteeringConfig.LaunchBurstPlanarSpeedGraceSeconds =>
+            _launchBurstPlanarSpeedGraceSeconds.GetNonNegativeOrDefault(0.35f);
+
+        float IPlayerSteeringConfig.LaunchBurstPlanarSpeedRecoverySeconds =>
+            _launchBurstPlanarSpeedRecoverySeconds.GetNonNegativeOrDefault(0.65f);
+
+        float IPlayerSteeringConfig.LaunchBurstMaximumPlanarSpeedMultiplier =>
+            Mathf.Max(1f, _launchBurstMaximumPlanarSpeedMultiplier.GetPositiveOrDefault(3f));
 
         float IPlayerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond =>
             _runSteeringFrameNormalSlewDegreesPerSecond.GetNonNegativeOrDefault(180f);

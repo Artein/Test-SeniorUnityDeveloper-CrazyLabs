@@ -161,12 +161,98 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     public void FixedTick_PlayerMaxSpeedModifier_ClampsPlanarSpeed()
     {
         _statResolver.SetResolvedValue(_playerMaxSpeedStatId, 5f);
-        ActivateSteering();
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 5f));
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, DefaultPlanarSpeed);
 
         FixedTick();
 
         Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
         AssertPlanarSpeed(_steeringTarget.LinearVelocity, 5f);
+    }
+
+    [Test]
+    public void FixedTick_LaunchBurstWithinGrace_PreservesLaunchPlanarSpeedAbovePlayerMaxSpeed()
+    {
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 24f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 24f));
+
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 24f);
+    }
+
+    [Test]
+    public void FixedTick_LaunchBurstAboveMultiplier_ClampsToBurstMultiplierCap()
+    {
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 60f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 60f));
+
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 30f);
+    }
+
+    [Test]
+    public void FixedTick_LaunchBurstAfterGrace_DecaysCapTowardPlayerMaxSpeed()
+    {
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 30f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 30f));
+        _clock.FixedDeltaTime = _config.LaunchBurstPlanarSpeedGraceSeconds + (_config.LaunchBurstPlanarSpeedRecoverySeconds * 0.5f);
+
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 20f);
+    }
+
+    [Test]
+    public void FixedTick_LaunchBurstAfterRecovery_ClampsToPlayerMaxSpeed()
+    {
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 30f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 30f));
+        _clock.FixedDeltaTime = _config.LaunchBurstPlanarSpeedGraceSeconds + _config.LaunchBurstPlanarSpeedRecoverySeconds + 0.01f;
+
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, DefaultPlanarSpeed);
+    }
+
+    [Test]
+    public void LeavingRunning_ClearsLaunchBurstAllowance()
+    {
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 24f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 24f));
+
+        _stateService.ChangeTo(_preLaunchStateId);
+        _stateService.ChangeTo(_runningStateId);
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up));
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 24f);
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, DefaultPlanarSpeed);
+    }
+
+    [Test]
+    public void FixedTick_NonLaunchOverspeed_ClampsImmediately()
+    {
+        ActivateSteering();
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 24f);
+
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, DefaultPlanarSpeed);
+    }
+
+    [Test]
+    public void FixedTick_UpgradedPlayerMaxSpeed_RaisesNormalAndBurstCaps()
+    {
+        _statResolver.SetResolvedValue(_playerMaxSpeedStatId, 15f);
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 60f);
+        ActivateSteeringWithLaunchVelocity(new Vector3(0f, DefaultVerticalSpeed, 60f));
+
+        FixedTick();
+
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 45f);
     }
 
     [Test]
