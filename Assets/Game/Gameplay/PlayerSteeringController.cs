@@ -39,6 +39,7 @@ namespace Game.Gameplay
         private bool _hasLaunchBurstPlanarSpeed;
         private bool _isLaunchLandingStabilizationArmed;
         private bool _isLaunchLandingStabilizationActive;
+        private bool _hasObservedPostLaunchUngroundedSurface;
         private float _desiredSteer;
         private float _currentSteer;
         private float _launchBurstPlanarSpeed;
@@ -278,6 +279,7 @@ namespace Game.Gameplay
         private bool HasMeaningfulVelocityChange(Vector3 previousVelocity, Vector3 nextVelocity)
         {
             var deltaSqrMagnitude = (nextVelocity - previousVelocity).sqrMagnitude;
+
             return deltaSqrMagnitude > _velocityChangeSqrTolerance
                    && !float.IsNaN(deltaSqrMagnitude)
                    && !float.IsInfinity(deltaSqrMagnitude);
@@ -356,6 +358,7 @@ namespace Game.Gameplay
         {
             _isLaunchLandingStabilizationArmed = true;
             _isLaunchLandingStabilizationActive = false;
+            _hasObservedPostLaunchUngroundedSurface = false;
             _launchLandingStabilizationElapsedSeconds = 0f;
         }
 
@@ -371,6 +374,12 @@ namespace Game.Gameplay
             if (_isLaunchLandingStabilizationArmed)
             {
                 if (!HasValidGroundedSurface(surfaceContext))
+                {
+                    _hasObservedPostLaunchUngroundedSurface = true;
+                    return velocity;
+                }
+
+                if (!_hasObservedPostLaunchUngroundedSurface)
                     return velocity;
 
                 _isLaunchLandingStabilizationArmed = false;
@@ -438,6 +447,7 @@ namespace Game.Gameplay
         {
             _isLaunchLandingStabilizationArmed = false;
             _isLaunchLandingStabilizationActive = false;
+            _hasObservedPostLaunchUngroundedSurface = false;
             _launchLandingStabilizationElapsedSeconds = 0f;
         }
 

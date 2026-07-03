@@ -261,11 +261,30 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         SetGroundedSurface(Vector3.up);
         _steeringTarget.LinearVelocity = new Vector3(3f, 4f, 12f);
         ActivateSteeringWithLaunchVelocity(new Vector3(3f, 4f, 12f));
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(Vector3.up);
 
         FixedTick();
 
         Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
         AssertPlanarSpeed(_steeringTarget.LinearVelocity, new Vector3(3f, 0f, 12f).magnitude);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchStaleGroundedBeforeTakeoff_PreservesLiftVelocity()
+    {
+        SetGroundedSurface(Vector3.up);
+        var expectedVelocity = new Vector3(3f, 4f, 12f);
+        _steeringTarget.LinearVelocity = expectedVelocity;
+        ActivateSteeringWithLaunchVelocity(expectedVelocity);
+
+        FixedTick();
+
+        AssertVectorEqual(_steeringTarget.LinearVelocity, expectedVelocity);
     }
 
     [Test]
@@ -275,6 +294,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         var lowTangentLiftVelocity = new Vector3(0f, 3f, 0.1f);
         _steeringTarget.LinearVelocity = lowTangentLiftVelocity;
         ActivateSteeringWithLaunchVelocity(lowTangentLiftVelocity);
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(Vector3.up);
 
         FixedTick();
 
@@ -294,6 +319,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         SetGroundedSurface(groundNormal);
         _steeringTarget.LinearVelocity = tangentVelocity + liftVelocity;
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(groundNormal);
 
         FixedTick();
 
@@ -309,6 +340,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         SetGroundedSurface(groundNormal);
         _steeringTarget.LinearVelocity = expectedVelocity;
         ActivateSteeringWithLaunchVelocity(expectedVelocity);
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(groundNormal);
 
         FixedTick();
 
@@ -350,6 +387,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
         FixedTick();
 
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(Vector3.up);
+        FixedTick();
+
         _clock.FixedDeltaTime = _config.LaunchLandingStabilizationSeconds + 0.01f;
         _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
         FixedTick();
@@ -364,6 +407,13 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         SetGroundedSurface(Vector3.up);
         _steeringTarget.LinearVelocity = new Vector3(0f, 4f, 8f);
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        var applyCallCountBeforeLeaving = _steeringTarget.ApplyCallCount;
+        var applyVelocityCallCountBeforeLeaving = _steeringTarget.ApplyVelocityCallCount;
 
         _stateService.ChangeTo(_preLaunchStateId);
         _stateService.ChangeTo(_runningStateId);
@@ -371,7 +421,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         FixedTick();
 
         Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(4f).Within(0.0001f));
-        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        Assert.That(_steeringTarget.ApplyCallCount, Is.EqualTo(applyCallCountBeforeLeaving));
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(applyVelocityCallCountBeforeLeaving));
     }
 
     [Test]
@@ -380,6 +431,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         SetGroundedSurface(Vector3.up);
         _steeringTarget.LinearVelocity = new Vector3(0f, 5f, 60f);
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+        FixedTick();
+
+        SetUngroundedSurface();
+        FixedTick();
+
+        SetGroundedSurface(Vector3.up);
 
         FixedTick();
 
