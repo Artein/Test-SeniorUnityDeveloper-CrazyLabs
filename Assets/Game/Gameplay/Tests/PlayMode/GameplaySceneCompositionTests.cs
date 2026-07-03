@@ -228,6 +228,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedCharacterPresentationTuning.MeaningfulGroundedMovementThreshold, Is.EqualTo(0.5f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.LaunchFlightMaximumGroundedWaitSeconds, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
         Assert.That(resolvedCharacterVisualTargetPoseSource, Is.Not.Null);
         Assert.That(resolvedCharacterVisualTargetPoseSource.CurrentPose.Position, Is.EqualTo(launchTarget.transform.position));

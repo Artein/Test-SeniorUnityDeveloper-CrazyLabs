@@ -206,6 +206,22 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_LaunchFlightOnGroundedMeaningfulMovement_ReturnsLaunchFlight()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.LaunchFlight,
+            hasLaunchPush: true,
+            hasLaunchFlight: true,
+            surfaceContext: GroundedDownhill(0f),
+            coursePlanarSpeed: 10f,
+            courseForwardSpeed: 10f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
+    }
+
+    [Test]
     public void Classify_LaunchPushAtMinimumOnGroundedMeaningfulMovement_ReturnsSlide()
     {
         var input = CreateInput(
@@ -555,6 +571,7 @@ public sealed class CharacterPresentationModeClassifierTests
             Assert.That(view.MeaningfulGroundedMovementThreshold, Is.EqualTo(0.5f).Within(0.0001f));
             Assert.That(view.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
             Assert.That(view.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
+            Assert.That(view.LaunchFlightMaximumGroundedWaitSeconds, Is.EqualTo(0.35f).Within(0.0001f));
             Assert.That(view.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
         }
         finally
@@ -681,6 +698,7 @@ public sealed class CharacterPresentationModeClassifierTests
         public float MeaningfulGroundedMovementThreshold { get; set; } = 0.5f;
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
+        public float LaunchFlightMaximumGroundedWaitSeconds { get; set; } = 0.35f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;
         public float MaximumPlaybackSpeedMultiplier { get; set; } = 1.5f;

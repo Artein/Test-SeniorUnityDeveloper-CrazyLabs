@@ -22,6 +22,7 @@ public sealed class CharacterPresenterTests
     private FakeRunProgressService _progressService;
     private FakeRunSurfaceContextSource _surfaceContextSource;
     private FakeSlingshotPresentationContextSource _slingshotPresentationContextSource;
+    private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakeRunResultNotifier _runResultNotifier;
     private FakeCharacterPresentationModeClassifier _classifier;
     private FakeCharacterPresentationView _view;
@@ -54,6 +55,7 @@ public sealed class CharacterPresenterTests
             Current = new RunSurfaceContext(true, Vector3.up, 12f)
         };
         _slingshotPresentationContextSource = new FakeSlingshotPresentationContextSource();
+        _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _runResultNotifier = new FakeRunResultNotifier();
 
         _classifier = new FakeCharacterPresentationModeClassifier
@@ -124,7 +126,7 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
-    public void Tick_LaunchPush_CopiesLaunchValuesAndZerosPullValues()
+    public void Tick_LaunchPushFromLaunchContext_AppliesLaunchFlight()
     {
         _classifier.NextMode = CharacterPresentationMode.LaunchPush;
 
@@ -140,11 +142,47 @@ public sealed class CharacterPresenterTests
         ((ITickable)_presenter).Tick();
 
         var frame = _view.AppliedFrames[0];
-        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.LaunchPush));
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
         Assert.That(frame.NormalizedPull, Is.Zero);
         Assert.That(frame.NormalizedPullOffset, Is.Zero);
         Assert.That(frame.NormalizedLaunchPower, Is.EqualTo(0.8f).Within(0.0001f));
         Assert.That(frame.NormalizedLaunchOffset, Is.EqualTo(0.5f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_LaunchPushWhileLaunchFlightQueued_AppliesLaunchFlight()
+    {
+        _classifier.NextMode = CharacterPresentationMode.LaunchPush;
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.8f,
+            normalizedPullOffset: -0.4f,
+            hasLaunchPush: false,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0f,
+            normalizedLaunchOffset: 0f);
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
+        _view.AppliedFrames.Clear();
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: -0.4f);
+
+        ((ITickable)_presenter).Tick();
+
+        var frame = _view.AppliedFrames[0];
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
+        Assert.That(frame.NormalizedPull, Is.Zero);
+        Assert.That(frame.NormalizedPullOffset, Is.Zero);
+        Assert.That(frame.NormalizedLaunchPower, Is.EqualTo(0.8f).Within(0.0001f));
+        Assert.That(frame.NormalizedLaunchOffset, Is.EqualTo(-0.4f).Within(0.0001f));
     }
 
     [Test]
@@ -364,7 +402,7 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
-    public void Tick_PostLaunchGroundedBeforeObservedUngrounded_ArmsLaunchFlightWithoutForwardingIt()
+    public void Tick_PostLaunchGroundedBeforeObservedUngrounded_ForwardsLaunchFlightImmediately()
     {
         _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
 
@@ -377,6 +415,141 @@ public sealed class CharacterPresenterTests
             normalizedLaunchPower: 0.8f,
             normalizedLaunchOffset: 0.5f);
 
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
+    public void Tick_PostLaunchGroundedWithLargeDelta_ForwardsLaunchFlightOnStartTick()
+    {
+        _clock.DeltaTime = _tuning.LaunchFlightMaximumGroundedWaitSeconds + 1f;
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds + 0.01f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
+    public void LaunchApplied_InPreLaunch_StartsLaunchFlightWhenRunningBegins()
+    {
+        _stateService.ChangeTo(_preLaunchStateId);
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _slingshotPresentationContextSource.Current = default;
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
+        ((ITickable)_presenter).Tick();
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        _stateService.ChangeTo(_runningStateId);
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
+    public void Tick_LaunchPushObservedInPreLaunchWithoutLaunchApplied_StartsLaunchFlightWhenRunningBegins()
+    {
+        _stateService.ChangeTo(_preLaunchStateId);
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
+
+        _stateService.ChangeTo(_runningStateId);
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
+    public void LaunchApplied_BeforePresentationContextAdvances_StartsLaunchFlightImmediately()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _slingshotPresentationContextSource.Current = default;
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
+    public void LaunchApplied_BeforeNextTick_AppliesLaunchFlightFrameImmediately()
+    {
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: true,
+            normalizedPull: 0.8f,
+            normalizedPullOffset: -0.4f,
+            hasLaunchPush: false,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0f,
+            normalizedLaunchOffset: 0f);
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
+
+        Assert.That(_view.AppliedFrames, Has.Count.EqualTo(1));
+
+        var frame = _view.AppliedFrames[0];
+        Assert.That(frame.Mode, Is.EqualTo(CharacterPresentationMode.LaunchFlight));
+        Assert.That(frame.PlaybackSpeedMultiplier, Is.EqualTo(1f));
+        Assert.That(frame.NormalizedPull, Is.Zero);
+        Assert.That(frame.NormalizedPullOffset, Is.Zero);
+        Assert.That(frame.NormalizedLaunchPower, Is.EqualTo(0.8f).Within(0.0001f));
+        Assert.That(frame.NormalizedLaunchOffset, Is.EqualTo(-0.4f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_PostLaunchGroundedPastMaximumWait_ClearsLaunchFlightAndDoesNotResurrectOnLaterUngrounded()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: 0f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        ((ITickable)_presenter).Tick();
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+
+        _clock.DeltaTime = _tuning.LaunchFlightMaximumGroundedWaitSeconds;
+        ((ITickable)_presenter).Tick();
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
+        Assert.That(_classifier.LastInput.HasLaunchPush, Is.False);
+
+        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
@@ -450,6 +623,8 @@ public sealed class CharacterPresenterTests
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
+        Assert.That(_classifier.LastInput.HasLaunchPush, Is.False);
+        Assert.That(_view.AppliedFrames[^1].Mode, Is.Not.EqualTo(CharacterPresentationMode.LaunchPush));
     }
 
     [Test]
@@ -495,7 +670,7 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
-    public void Tick_NewLaunchAfterPreviousLaunchEnded_ResetsObservedUngroundedAndStartsLaunchFlight()
+    public void Tick_NewLaunchAfterPreviousLaunchEnded_ResetsObservedUngroundedAndStartsLaunchFlightImmediately()
     {
         _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
             hasActivePull: false,
@@ -522,11 +697,6 @@ public sealed class CharacterPresenterTests
             normalizedLaunchPower: 0.9f,
             normalizedLaunchOffset: -0.25f);
         _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
-        ((ITickable)_presenter).Tick();
-
-        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.False);
-
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
@@ -589,6 +759,7 @@ public sealed class CharacterPresenterTests
             _progressService,
             _surfaceContextSource,
             _slingshotPresentationContextSource,
+            _launchAppliedNotifier,
             _runResultNotifier,
             _classifier,
             _view,
@@ -608,6 +779,24 @@ public sealed class CharacterPresenterTests
             Vector3.zero,
             3f,
             new RunRewardBreakdown(Array.Empty<RunRewardSourceAmount>()));
+    }
+
+    private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
+    {
+        var request = new SlingshotLaunchRequest(
+            pullStrength: 0.8f,
+            pullDistance: 1f,
+            pullOffset: 0.25f,
+            normalizedLateralPull: 0.25f,
+            finalPullPoint: Vector3.zero,
+            launchFrameForward: Vector3.forward,
+            launchFrameUp: Vector3.up);
+
+        return new SlingshotLaunchAppliedEvent(
+            request,
+            velocityChange: Vector3.forward,
+            launchDirection: Vector3.forward,
+            launchUpDirection: Vector3.up);
     }
 
     private RunProgressFrameSnapshot CreateSnapshot()
@@ -708,6 +897,16 @@ public sealed class CharacterPresenterTests
         public SlingshotPresentationContext Current { get; set; }
     }
 
+    private sealed class FakeSlingshotLaunchAppliedNotifier : ISlingshotLaunchAppliedNotifier
+    {
+        public event Action<SlingshotLaunchAppliedEvent> LaunchApplied;
+
+        public void Apply(SlingshotLaunchAppliedEvent launchApplied)
+        {
+            LaunchApplied?.Invoke(launchApplied);
+        }
+    }
+
     private sealed class FakeRunResultNotifier : IRunResultNotifier
     {
         public event Action<RunResult> RunResultAccepted;
@@ -749,6 +948,7 @@ public sealed class CharacterPresenterTests
         public float MeaningfulGroundedMovementThreshold { get; set; } = 0.5f;
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
+        public float LaunchFlightMaximumGroundedWaitSeconds { get; set; } = 0.35f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;
         public float MaximumPlaybackSpeedMultiplier { get; set; } = 1.5f;

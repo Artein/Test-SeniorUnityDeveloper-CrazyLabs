@@ -69,7 +69,6 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
         IRunSurfaceContextSource surfaceContextSource,
         ISlingshotPresentationContextSource slingshotPresentationContextSource)
     {
-        var sawLaunchPush = false;
         var sawLaunchFlight = false;
         var sawSlideAfterLaunchFlight = false;
         var observedMovingGroundedFrames = 0;
@@ -107,13 +106,14 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
 
             previousMode = mode;
             Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.Run), $"frame {frameIndex}");
+            Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.LaunchPush), $"normal slingshot launch should go straight to LaunchFlight, frame {frameIndex}");
             Assert.That(characterAnimator.applyRootMotion, Is.False, $"frame {frameIndex}");
 
-            sawLaunchPush |= mode == CharacterPresentationMode.LaunchPush;
             sawLaunchFlight |= mode == CharacterPresentationMode.LaunchFlight;
 
             if (mode == CharacterPresentationMode.Slide)
             {
+                Assert.That(sawLaunchFlight, Is.True, $"Slide should not appear before LaunchFlight after slingshot release, frame {frameIndex}");
                 Assert.That(characterAnimator.GetFloat(PlaybackSpeedParameterName), Is.InRange(0.5f, 1.5f), $"frame {frameIndex}");
                 sawSlideAfterLaunchFlight |= sawLaunchFlight;
             }
@@ -122,17 +122,12 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
             {
                 observedMovingGroundedFrames += 1;
 
-                if (mode != CharacterPresentationMode.LaunchPush && mode != CharacterPresentationMode.LaunchFlight)
+                if (mode != CharacterPresentationMode.LaunchFlight)
                     Assert.That(mode, Is.EqualTo(CharacterPresentationMode.Slide), $"frame {frameIndex}");
             }
         }
 
         var diagnostics = CreatePostLaunchDiagnostics(modeCounts, trace);
-
-        Assert.That(
-            sawLaunchPush,
-            Is.True,
-            $"Expected launch release to drive the launch-push presentation before sliding.{diagnostics}");
 
         Assert.That(
             sawLaunchFlight,

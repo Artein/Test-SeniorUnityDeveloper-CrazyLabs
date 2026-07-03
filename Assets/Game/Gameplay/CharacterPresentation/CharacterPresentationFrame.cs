@@ -42,6 +42,7 @@ namespace Game.Gameplay.CharacterPresentation
         float MeaningfulGroundedMovementThreshold { get; }
         float MinimumLocomotionModeDuration { get; }
         float LaunchPushMinimumSeconds { get; }
+        float LaunchFlightMaximumGroundedWaitSeconds { get; }
         float SlideReferenceSpeed { get; }
         float MinimumPlaybackSpeedMultiplier { get; }
         float MaximumPlaybackSpeedMultiplier { get; }
