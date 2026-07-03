@@ -325,10 +325,7 @@ public sealed class RunSurfaceSteeringFrameSourceTests
         public float MaximumAcceptedDpi { get; set; } = 1000f;
         public float MaximumTurnDegreesPerSecond { get; set; } = 120f;
         public float MinimumSteerSpeed { get; set; } = 0.25f;
-        public float MaximumPlanarSpeed { get; set; } = 10f;
-        public float LaunchBurstPlanarSpeedGraceSeconds { get; set; } = 0.35f;
-        public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; } = 0.65f;
-        public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; } = 3f;
+        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
         public float LaunchLandingStabilizationSeconds { get; set; } = 0.3f;
         public float LaunchLandingMaximumLiftSpeed { get; set; } = 0f;
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }

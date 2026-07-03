@@ -212,8 +212,11 @@ internal static class GameplaySceneDirectMaxPullBandShapeAssertions
         var middleWrapOffset = ProjectOffset(middleWrapPoint, context.Geometry);
         var middleWrapDepth = ProjectDepth(middleWrapPoint, context.Geometry);
         var bandCenterOffset = ProjectOffset(context.BandCenter.transform.position, context.Geometry);
-        var bandCenterDepth = ProjectDepth(context.BandCenter.transform.position, context.Geometry);
+        var directPullSideContactDepth = GetDirectPullSideRenderedContactDepth(context);
         var lateralTolerance = GetMaximumRenderedBandRadius(context.BandLineRenderer) + 0.04f;
+
+        var depthTolerance = Mathf.Max(0.15f,
+            GetMaximumRenderedBandRadius(context.BandLineRenderer) + context.SlingshotConfig.BandContactPadding + 0.04f);
 
         Assert.That(
             Mathf.Abs(middleWrapOffset - bandCenterOffset),
@@ -221,9 +224,35 @@ internal static class GameplaySceneDirectMaxPullBandShapeAssertions
             $"{phase} middle wrap should stay laterally aligned with the held Band Center.\n{diagnostics}");
 
         Assert.That(
-            Mathf.Abs(middleWrapDepth - bandCenterDepth),
-            Is.LessThanOrEqualTo(0.15f),
-            $"{phase} middle wrap should stay on the direct-pull side near the held Band Center depth.\n{diagnostics}");
+            Mathf.Abs(middleWrapDepth - directPullSideContactDepth),
+            Is.LessThanOrEqualTo(depthTolerance),
+            $"{phase} middle wrap should stay on the direct-pull side near the rendered contact depth.\n{diagnostics}");
+    }
+
+    private static float GetDirectPullSideRenderedContactDepth(GameplaySceneBandShapePlayModeTestContext context)
+    {
+        var renderedClearance = context.SlingshotConfig.BandContactPadding + GetMaximumRenderedBandRadius(context.BandLineRenderer);
+
+        return GetMaximumProjectedBoundsDepth(context.TargetCollider.bounds, context.Geometry) + renderedClearance;
+    }
+
+    private static float GetMaximumProjectedBoundsDepth(Bounds bounds, SlingshotGeometrySnapshot geometry)
+    {
+        var maximumDepth = float.NegativeInfinity;
+
+        for (var xSign = -1; xSign <= 1; xSign += 2)
+        {
+            for (var ySign = -1; ySign <= 1; ySign += 2)
+            {
+                for (var zSign = -1; zSign <= 1; zSign += 2)
+                {
+                    var corner = bounds.center + Vector3.Scale(bounds.extents, new Vector3(xSign, ySign, zSign));
+                    maximumDepth = Mathf.Max(maximumDepth, ProjectDepth(corner, geometry));
+                }
+            }
+        }
+
+        return maximumDepth;
     }
 
     private static void AssertBandPathOffsetsAreMonotonic(

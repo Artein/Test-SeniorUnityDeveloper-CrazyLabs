@@ -25,8 +25,9 @@ namespace Game.Gameplay
         private readonly ITime _clock;
         private readonly IScreen _screen;
         private readonly IRunSteeringGesture _runSteeringGesture;
+        private readonly IPostLaunchSteeringGate _postLaunchSteeringGate = new PostLaunchSteeringGate();
+        private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly GameplayStateId _runningStateId;
-        private readonly GameplayStatId _playerMaxSpeedStatId;
         private readonly GameplayStatId _playerSteeringResponsivenessStatId;
         private readonly float _velocityChangeSqrTolerance = 0.00000001f;
 
@@ -36,14 +37,11 @@ namespace Game.Gameplay
         private bool _isDisposed;
         private bool _hasLaunchApplied;
         private bool _isSteeringActive;
-        private bool _hasLaunchBurstPlanarSpeed;
         private bool _isLaunchLandingStabilizationArmed;
         private bool _isLaunchLandingStabilizationActive;
         private bool _hasObservedPostLaunchUngroundedSurface;
         private float _desiredSteer;
         private float _currentSteer;
-        private float _launchBurstPlanarSpeed;
-        private float _launchBurstElapsedSeconds;
         private float _launchLandingStabilizationElapsedSeconds;
 
         public PlayerSteeringController(
@@ -61,8 +59,6 @@ namespace Game.Gameplay
             IRunSteeringGesture runSteeringGesture,
             [Key(InjectKey.GameplayStateId.Running)]
             GameplayStateId runningStateId,
-            [Key(InjectKey.GameplayStatId.PlayerMaxSpeed)]
-            GameplayStatId playerMaxSpeedStatId,
             [Key(InjectKey.GameplayStatId.PlayerSteeringResponsiveness)]
             GameplayStatId playerSteeringResponsivenessStatId)
         {
@@ -79,10 +75,6 @@ namespace Game.Gameplay
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
-
-            _playerMaxSpeedStatId = playerMaxSpeedStatId != null
-                ? playerMaxSpeedStatId
-                : throw new ArgumentNullException(nameof(playerMaxSpeedStatId));
 
             _playerSteeringResponsivenessStatId = playerSteeringResponsivenessStatId != null
                 ? playerSteeringResponsivenessStatId
@@ -111,7 +103,6 @@ namespace Game.Gameplay
             if (_isDisposed || !_isSteeringActive)
                 return;
 
-            AdvanceLaunchBurstElapsed();
             UpdateSmoothedSteer();
             ApplySteering();
         }
@@ -143,7 +134,7 @@ namespace Game.Gameplay
 
             _hasLaunchApplied = true;
             _steeringUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
-            CaptureLaunchBurstPlanarSpeed(launchApplied.VelocityChange, _steeringUp);
+            _postLaunchSteeringGate.Arm();
             ArmLaunchLandingStabilization();
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
@@ -164,7 +155,7 @@ namespace Game.Gameplay
             }
 
             _hasLaunchApplied = false;
-            ClearLaunchBurst();
+            _postLaunchSteeringGate.Clear();
             ClearLaunchLandingStabilization();
             DeactivateSteering();
         }
@@ -246,26 +237,37 @@ namespace Game.Gameplay
 
         private void ApplySteering()
         {
-            var velocity = _steeringTarget.LinearVelocity;
+            var rawVelocity = _steeringTarget.LinearVelocity;
+            var sanityResult = _velocitySanityGuard.Sanitize(rawVelocity, _config.RunBodySpeedSanityGuardMetersPerSecond);
+            var velocity = sanityResult.Velocity;
             var stabilizedVelocity = ApplyLaunchLandingStabilization(velocity);
-            var hasStabilizedVelocityChange = HasMeaningfulVelocityChange(velocity, stabilizedVelocity);
+            var hasVelocityCorrection = sanityResult.WasCorrected || HasMeaningfulVelocityChange(velocity, stabilizedVelocity);
+            var surfaceContext = _surfaceContextSource.Current;
+
+            if (_postLaunchSteeringGate.ShouldBlockSteering(
+                    surfaceContext,
+                    stabilizedVelocity,
+                    _config.LaunchLandingMaximumLiftSpeed))
+            {
+                if (hasVelocityCorrection)
+                    _steeringTarget.ApplyVelocity(stabilizedVelocity);
+
+                return;
+            }
+
             var upDirection = GetValidUpDirection(_steeringFrameSource.GetUpDirection(_steeringUp), _steeringUp);
+
             var verticalVelocity = Vector3.Project(stabilizedVelocity, upDirection);
             var planarVelocity = stabilizedVelocity - verticalVelocity;
             var planarSpeed = planarVelocity.magnitude;
 
             if (planarSpeed < Mathf.Max(0f, _config.MinimumSteerSpeed))
             {
-                if (hasStabilizedVelocityChange)
+                if (hasVelocityCorrection)
                     _steeringTarget.ApplyVelocity(stabilizedVelocity);
 
                 return;
             }
-
-            var maximumPlanarSpeed = ResolveEffectiveMaximumPlanarSpeed(ResolveMaximumPlanarSpeed());
-
-            if (planarSpeed > maximumPlanarSpeed)
-                planarVelocity = planarVelocity.normalized * maximumPlanarSpeed;
 
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
             var turnAngle = _currentSteer * Mathf.Max(0f, _config.MaximumTurnDegreesPerSecond) * fixedDeltaTime;
@@ -283,75 +285,6 @@ namespace Game.Gameplay
             return deltaSqrMagnitude > _velocityChangeSqrTolerance
                    && !float.IsNaN(deltaSqrMagnitude)
                    && !float.IsInfinity(deltaSqrMagnitude);
-        }
-
-        private void CaptureLaunchBurstPlanarSpeed(Vector3 velocityChange, Vector3 upDirection)
-        {
-            var safeUpDirection = GetValidUpDirection(upDirection);
-            var planarVelocityChange = velocityChange - Vector3.Project(velocityChange, safeUpDirection);
-            var planarSpeed = planarVelocityChange.magnitude;
-
-            if (planarSpeed <= 0.000001f || float.IsNaN(planarSpeed) || float.IsInfinity(planarSpeed))
-            {
-                ClearLaunchBurst();
-                return;
-            }
-
-            _launchBurstPlanarSpeed = planarSpeed;
-            _launchBurstElapsedSeconds = 0f;
-            _hasLaunchBurstPlanarSpeed = true;
-        }
-
-        private void AdvanceLaunchBurstElapsed()
-        {
-            if (!_hasLaunchBurstPlanarSpeed)
-                return;
-
-            _launchBurstElapsedSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
-        }
-
-        private float ResolveEffectiveMaximumPlanarSpeed(float maximumPlanarSpeed)
-        {
-            if (!_hasLaunchBurstPlanarSpeed)
-                return maximumPlanarSpeed;
-
-            var multiplier = Mathf.Max(1f, _config.LaunchBurstMaximumPlanarSpeedMultiplier);
-            var burstMaximumPlanarSpeed = maximumPlanarSpeed * multiplier;
-            var peakBurstPlanarSpeed = Mathf.Min(_launchBurstPlanarSpeed, burstMaximumPlanarSpeed);
-
-            if (peakBurstPlanarSpeed <= maximumPlanarSpeed)
-                return maximumPlanarSpeed;
-
-            var graceSeconds = Mathf.Max(0f, _config.LaunchBurstPlanarSpeedGraceSeconds);
-
-            if (_launchBurstElapsedSeconds <= graceSeconds)
-                return peakBurstPlanarSpeed;
-
-            var recoverySeconds = Mathf.Max(0f, _config.LaunchBurstPlanarSpeedRecoverySeconds);
-
-            if (recoverySeconds <= 0f)
-            {
-                ClearLaunchBurst();
-                return maximumPlanarSpeed;
-            }
-
-            var recoveryElapsedSeconds = _launchBurstElapsedSeconds - graceSeconds;
-
-            if (recoveryElapsedSeconds >= recoverySeconds)
-            {
-                ClearLaunchBurst();
-                return maximumPlanarSpeed;
-            }
-
-            var recoveryProgress = Mathf.Clamp01(recoveryElapsedSeconds / recoverySeconds);
-            return Mathf.Lerp(peakBurstPlanarSpeed, maximumPlanarSpeed, recoveryProgress);
-        }
-
-        private void ClearLaunchBurst()
-        {
-            _hasLaunchBurstPlanarSpeed = false;
-            _launchBurstPlanarSpeed = 0f;
-            _launchBurstElapsedSeconds = 0f;
         }
 
         private void ArmLaunchLandingStabilization()
@@ -475,11 +408,6 @@ namespace Game.Gameplay
         private float ResolveSteeringResponsiveness()
         {
             return Mathf.Max(0f, _statResolver.Resolve(_playerSteeringResponsivenessStatId, _config.RunSteeringResponsiveness));
-        }
-
-        private float ResolveMaximumPlanarSpeed()
-        {
-            return Mathf.Max(0.0001f, _statResolver.Resolve(_playerMaxSpeedStatId, _config.MaximumPlanarSpeed));
         }
     }
 }

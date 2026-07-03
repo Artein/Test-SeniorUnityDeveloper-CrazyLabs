@@ -58,6 +58,7 @@ namespace Game.Gameplay.Slingshot
         private bool _hasPreviousState;
         private bool _previousIsKinematic;
         private RigidbodyConstraints _previousConstraints;
+        private RigidbodyInterpolation _previousInterpolation;
 
         void ILaunchTarget.Hold()
         {
@@ -71,6 +72,7 @@ namespace Game.Gameplay.Slingshot
 
             _rigidbody.ClearVelocityIfDynamic();
             _rigidbody.isKinematic = true;
+            DisableInterpolationWhileHeld();
         }
 
         void ILaunchTarget.Launch(Vector3 velocity)
@@ -82,6 +84,7 @@ namespace Game.Gameplay.Slingshot
             if (_isHeld)
             {
                 _rigidbody.isKinematic = _previousIsKinematic;
+                _rigidbody.interpolation = _previousInterpolation;
                 launchBaseConstraints = _previousConstraints;
                 _isHeld = false;
             }
@@ -296,6 +299,7 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
+            DisableInterpolationWhileHeld();
             _rigidbody.constraints = _previousConstraints;
             _rigidbody.transform.SetPositionAndRotation(position, rotation);
             _rigidbody.position = position;
@@ -314,6 +318,7 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
+            DisableInterpolationWhileHeld();
             _rigidbody.transform.SetPositionAndRotation(position, _rigidbody.rotation);
             _rigidbody.position = position;
             Physics.SyncTransforms();
@@ -332,7 +337,13 @@ namespace Game.Gameplay.Slingshot
 
             _previousIsKinematic = _rigidbody.isKinematic;
             _previousConstraints = _rigidbody.constraints;
+            _previousInterpolation = _rigidbody.interpolation;
             _hasPreviousState = true;
+        }
+
+        private void DisableInterpolationWhileHeld()
+        {
+            _rigidbody.interpolation = RigidbodyInterpolation.None;
         }
 
         private void ThrowIfInvalidReferences()

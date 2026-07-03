@@ -22,32 +22,47 @@ public sealed class GameplaySlingshotLaunchTests
     }
 
     [Test]
-    public void Calculate_MinPull_UsesMinimumForwardAndUpwardImpulse()
+    public void Calculate_MinPull_UsesMinimumForwardAndNoUpwardImpulse()
     {
-        var config = CreateConfig(minimumForwardImpulse: 4f, maximumForwardImpulse: 12f, upwardImpulse: 1.5f);
+        var config = CreateConfig(minimumForwardImpulse: 8f, maximumForwardImpulse: 35f, upwardImpulse: 3f);
         var calculator = new SlingshotLaunchImpulseCalculator();
         var request = CreateRequest(pullStrength: 0f, normalizedLateralPull: 0f);
 
         var impulse = calculator.Calculate(request, config, slingshotLaunchPower: 1f);
 
-        Assert.That(impulse.ForwardImpulse, Is.EqualTo(4f).Within(0.0001f));
-        Assert.That(impulse.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
+        Assert.That(impulse.ForwardImpulse, Is.EqualTo(8f).Within(0.0001f));
+        Assert.That(impulse.UpwardImpulse, Is.EqualTo(0f).Within(0.0001f));
         AssertVector3(impulse.LaunchDirection, Vector3.forward);
         AssertVector3(impulse.LaunchUpDirection, Vector3.up);
-        AssertVector3(impulse.VelocityChange, new Vector3(0f, 1.5f, 4f));
+        AssertVector3(impulse.VelocityChange, new Vector3(0f, 0f, 8f));
     }
 
     [Test]
     public void Calculate_MaxPull_UsesMaximumForwardImpulse()
     {
-        var config = CreateConfig(minimumForwardImpulse: 4f, maximumForwardImpulse: 12f, upwardImpulse: 1.5f);
+        var config = CreateConfig(minimumForwardImpulse: 8f, maximumForwardImpulse: 35f, upwardImpulse: 3f);
         var calculator = new SlingshotLaunchImpulseCalculator();
         var request = CreateRequest(pullStrength: 1f, normalizedLateralPull: 0f);
 
         var impulse = calculator.Calculate(request, config, slingshotLaunchPower: 1f);
 
-        Assert.That(impulse.ForwardImpulse, Is.EqualTo(12f).Within(0.0001f));
-        AssertVector3(impulse.VelocityChange, new Vector3(0f, 1.5f, 12f));
+        Assert.That(impulse.ForwardImpulse, Is.EqualTo(35f).Within(0.0001f));
+        Assert.That(impulse.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
+        AssertVector3(impulse.VelocityChange, new Vector3(0f, 3f, 35f));
+    }
+
+    [Test]
+    public void Calculate_MidPull_ScalesForwardAndUpwardImpulseBetweenMinimumAndMaximum()
+    {
+        var config = CreateConfig(minimumForwardImpulse: 8f, maximumForwardImpulse: 35f, upwardImpulse: 3f);
+        var calculator = new SlingshotLaunchImpulseCalculator();
+        var request = CreateRequest(pullStrength: 0.5f, normalizedLateralPull: 0f);
+
+        var impulse = calculator.Calculate(request, config, slingshotLaunchPower: 1f);
+
+        Assert.That(impulse.ForwardImpulse, Is.EqualTo(21.5f).Within(0.0001f));
+        Assert.That(impulse.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
+        AssertVector3(impulse.VelocityChange, new Vector3(0f, 1.5f, 21.5f));
     }
 
     [Test]
@@ -72,15 +87,15 @@ public sealed class GameplaySlingshotLaunchTests
     [Test]
     public void Calculate_LaunchPowerMultiplier_ScalesForwardAndUpwardImpulse()
     {
-        var config = CreateConfig(minimumForwardImpulse: 4f, maximumForwardImpulse: 12f, upwardImpulse: 1.5f);
+        var config = CreateConfig(minimumForwardImpulse: 8f, maximumForwardImpulse: 35f, upwardImpulse: 3f);
         var calculator = new SlingshotLaunchImpulseCalculator();
         var request = CreateRequest(pullStrength: 1f, normalizedLateralPull: 0f);
 
         var impulse = calculator.Calculate(request, config, slingshotLaunchPower: 2f);
 
-        Assert.That(impulse.ForwardImpulse, Is.EqualTo(24f).Within(0.0001f));
-        Assert.That(impulse.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
-        AssertVector3(impulse.VelocityChange, new Vector3(0f, 3f, 24f));
+        Assert.That(impulse.ForwardImpulse, Is.EqualTo(70f).Within(0.0001f));
+        Assert.That(impulse.UpwardImpulse, Is.EqualTo(6f).Within(0.0001f));
+        AssertVector3(impulse.VelocityChange, new Vector3(0f, 6f, 70f));
     }
 
     [Test]

@@ -30,7 +30,6 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeRunSteeringFrameSource _steeringFrameSource;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
-    protected GameplayStatId _playerMaxSpeedStatId;
     protected GameplayStatId _playerSteeringResponsivenessStatId;
     private PlayerSteeringController _controller;
     private IRunSteeringGesture _runSteeringGesture;
@@ -40,7 +39,6 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         _preLaunchStateId = CreateStateId("PreLaunch");
         _runningStateId = CreateStateId("Running");
-        _playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
         _playerSteeringResponsivenessStatId = CreateStatId("PlayerSteeringResponsiveness");
         _input = new FakeUnityInput();
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
@@ -63,10 +61,7 @@ public abstract class PlayerSteeringControllerTestFixture
             MaximumAcceptedDpi = 1000f,
             MaximumTurnDegreesPerSecond = 90f,
             MinimumSteerSpeed = 0.25f,
-            MaximumPlanarSpeed = DefaultPlanarSpeed,
-            LaunchBurstPlanarSpeedGraceSeconds = 0.35f,
-            LaunchBurstPlanarSpeedRecoverySeconds = 0.65f,
-            LaunchBurstMaximumPlanarSpeedMultiplier = 3f,
+            RunBodySpeedSanityGuardMetersPerSecond = 250f,
             LaunchLandingStabilizationSeconds = 0.3f,
             LaunchLandingMaximumLiftSpeed = 0f,
             RunSteeringFrameNormalSlewDegreesPerSecond = 180f,
@@ -122,6 +117,7 @@ public abstract class PlayerSteeringControllerTestFixture
         _stateService.ChangeTo(_runningStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(launchUpDirection));
         Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+        SettleLaunchStateForSteadySteering(launchUpDirection);
     }
 
     protected void ActivateSteeringWithLaunchVelocity(Vector3 launchVelocityChange)
@@ -134,6 +130,32 @@ public abstract class PlayerSteeringControllerTestFixture
     protected void FixedTick()
     {
         ((IFixedTickable)_controller).FixedTick();
+    }
+
+    private void SettleLaunchStateForSteadySteering(Vector3 launchUpDirection)
+    {
+        var previousFixedDeltaTime = _clock.FixedDeltaTime;
+        var previousSurfaceContext = _surfaceContextSource.Current;
+        var previousVelocity = _steeringTarget.LinearVelocity;
+        var previousRotation = _steeringTarget.Rotation;
+
+        SetGroundedSurface(launchUpDirection);
+        FixedTick();
+        SetUngroundedSurface();
+        FixedTick();
+        SetGroundedSurface(launchUpDirection);
+        FixedTick();
+
+        _clock.FixedDeltaTime = _config.LaunchLandingStabilizationSeconds + 0.01f;
+
+        FixedTick();
+
+        _clock.FixedDeltaTime = previousFixedDeltaTime;
+        _surfaceContextSource.Current = previousSurfaceContext;
+        _steeringTarget.LinearVelocity = previousVelocity;
+        _steeringTarget.Rotation = previousRotation;
+        _steeringTarget.ResetApplyCallCounts();
+        _steeringFrameSource.ResetFixedTickCallCounts();
     }
 
     protected SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 upDirection)
@@ -216,7 +238,7 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
             _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
-            _playerMaxSpeedStatId, _playerSteeringResponsivenessStatId);
+            _playerSteeringResponsivenessStatId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -355,6 +377,12 @@ public abstract class PlayerSteeringControllerTestFixture
             Rotation = rotation;
             ApplyCallCount += 1;
         }
+
+        public void ResetApplyCallCounts()
+        {
+            ApplyVelocityCallCount = 0;
+            ApplyCallCount = 0;
+        }
     }
 
     protected sealed class FakePlayerSteeringConfig : IPlayerSteeringConfig
@@ -367,10 +395,7 @@ public abstract class PlayerSteeringControllerTestFixture
         public float MaximumAcceptedDpi { get; set; }
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
-        public float MaximumPlanarSpeed { get; set; }
-        public float LaunchBurstPlanarSpeedGraceSeconds { get; set; }
-        public float LaunchBurstPlanarSpeedRecoverySeconds { get; set; }
-        public float LaunchBurstMaximumPlanarSpeedMultiplier { get; set; }
+        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
         public float LaunchLandingStabilizationSeconds { get; set; }
         public float LaunchLandingMaximumLiftSpeed { get; set; }
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
@@ -465,6 +490,12 @@ public abstract class PlayerSteeringControllerTestFixture
         {
             LastResetLaunchUpDirection = launchUpDirection;
             ResetCallCount += 1;
+        }
+
+        public void ResetFixedTickCallCounts()
+        {
+            LastFallbackUpDirection = Vector3.zero;
+            GetUpDirectionCallCount = 0;
         }
     }
 }

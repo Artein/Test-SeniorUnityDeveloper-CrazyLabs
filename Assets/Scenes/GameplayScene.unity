@@ -1415,114 +1415,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &209486984
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 209486985}
-  - component: {fileID: 209486989}
-  - component: {fileID: 209486988}
-  - component: {fileID: 209486987}
-  m_Layer: 8
-  m_Name: Band 4 Section 13 Optional Bank Ramp Surface
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
-  m_IsActive: 1
---- !u!4 &209486985
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 209486984}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.6, y: -36.039986, z: 310}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2400000001}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &209486987
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 209486984}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4ef25617562d4fc29ce86fffba9952d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunContact
-  _category: 0
---- !u!154 &209486988
-TerrainCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 209486984}
-  m_Material: {fileID: 13400000, guid: 804c65ef423ea46738ef4f2ea26e59f0, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_TerrainData: {fileID: 15600000, guid: c63a63166994c4b6ba8c00d53aebd119, type: 2}
-  m_EnableTreeColliders: 1
---- !u!218 &209486989
-Terrain:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 209486984}
-  m_Enabled: 1
-  serializedVersion: 6
-  m_TerrainData: {fileID: 15600000, guid: c63a63166994c4b6ba8c00d53aebd119, type: 2}
-  m_TreeDistance: 5000
-  m_TreeBillboardDistance: 50
-  m_TreeCrossFadeLength: 5
-  m_TreeMaximumFullLODCount: 50
-  m_DetailObjectDistance: 80
-  m_DetailObjectDensity: 1
-  m_HeightmapPixelError: 5
-  m_SplatMapDistance: 1000
-  m_HeightmapMinimumLODSimplification: 0
-  m_HeightmapMaximumLOD: 0
-  m_ShadowCastingMode: 2
-  m_DrawHeightmap: 1
-  m_DrawInstanced: 1
-  m_DrawTreesAndFoliage: 1
-  m_StaticShadowCaster: 0
-  m_IgnoreQualitySettings: 0
-  m_ReflectionProbeUsage: 1
-  m_MaterialTemplate: {fileID: 2100000, guid: 594ea882c5a793440b60ff72d896021e, type: 2}
-  m_BakeLightProbesForTrees: 1
-  m_PreserveTreePrototypeLayers: 0
-  m_DeringLightProbesForTrees: 1
-  m_ReceiveGI: 1
-  m_ScaleInLightmap: 1
-  m_LightmapParameters: {fileID: 15203, guid: 0000000000000000f000000000000000, type: 0}
-  m_GroupingID: 0
-  m_RenderingLayerMask: 1
-  m_AllowAutoConnect: 0
-  m_EnableHeightmapRayTracing: 1
-  m_EnableTreesAndDetailsRayTracing: 0
-  m_EnableHeightmapLODFrustumCulling: 1
-  m_TreeMotionVectorModeOverride: 3
 --- !u!1001 &212813973
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6554,7 +6446,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -31.914045
+      value: -33.09
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -7220,7 +7112,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4349022027582955123, guid: 8305d055df02d4c29bc79b2a6212ea74, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.62
+      value: -0.51
       objectReference: {fileID: 0}
     - target: {fileID: 4349022027582955123, guid: 8305d055df02d4c29bc79b2a6212ea74, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8038,7 +7930,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -34.56193
+      value: -34.66
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -10952,7 +10844,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -32.690422
+      value: -33.45
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -11909,8 +11801,20 @@ PrefabInstance:
       value: Band 2 Obstacle 01 Center AC Blocker
       objectReference: {fileID: 0}
     - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.61
       objectReference: {fileID: 0}
     - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
       propertyPath: m_LocalPosition.y
@@ -11931,6 +11835,10 @@ PrefabInstance:
     - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8231386761817374658, guid: f65d20b5aabf840d1ac03da6b14808c2, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -12543,8 +12451,20 @@ PrefabInstance:
       value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.05
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
       propertyPath: m_LocalPosition.y
@@ -12552,7 +12472,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 135
+      value: 134.15
       objectReference: {fileID: 0}
     - target: {fileID: 8582207116706254732, guid: acce53b9ecea44c77bc55816d3a2f941, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -13305,7 +13225,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -33.565887
+      value: -34.16
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -13463,7 +13383,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -31.159317
+      value: -32.42
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -15104,7 +15024,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -30.613436
+      value: -31.79
       objectReference: {fileID: 0}
     - target: {fileID: 8608336747017343412, guid: 359d6177390b46019affa3bb43f791d9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -16434,7 +16354,6 @@ Transform:
   - {fileID: 1675694926}
   - {fileID: 381235867}
   - {fileID: 81015910}
-  - {fileID: 209486985}
   - {fileID: 517832207}
   - {fileID: 246647181}
   - {fileID: 1886325236}

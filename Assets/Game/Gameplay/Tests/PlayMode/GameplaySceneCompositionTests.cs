@@ -312,9 +312,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
         Assert.That(playerSteeringConfig, Is.Not.Null);
-        Assert.That(playerSteeringConfig.LaunchBurstPlanarSpeedGraceSeconds, Is.EqualTo(0.35f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.LaunchBurstPlanarSpeedRecoverySeconds, Is.EqualTo(0.65f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.LaunchBurstMaximumPlanarSpeedMultiplier, Is.EqualTo(3f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
         Assert.That(playerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(120f).Within(0.0001f));
@@ -323,9 +321,13 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
-        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(30f).Within(0.0001f));
-        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(100f).Within(0.0001f));
-        Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(1.5f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(8f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(35f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
+        Assert.That(
+            playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond,
+            Is.GreaterThan(gameplaySlingshotLaunchConfig.MaximumForwardImpulse * 4f));
+
         Assert.That(gameplaySlingshotLaunchConfig.MaximumLateralLaunchAngleDegrees, Is.EqualTo(35f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.HasMinimumTotalImpulse, Is.False);
         Assert.That(gameplaySlingshotLaunchConfig.HasMaximumTotalImpulse, Is.False);
@@ -345,8 +347,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
         Assert.That(playerRigidbody.collisionDetectionMode, Is.EqualTo(CollisionDetectionMode.ContinuousDynamic));
-        Assert.That(playerRigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
         Assert.That(playerRigidbody.isKinematic, Is.True);
+        Assert.That(playerRigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
         Assert.That(bandCenter.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
         Assert.That(bandCenter.transform.position.y, Is.EqualTo(geometry.RestPoint.y).Within(0.01f));

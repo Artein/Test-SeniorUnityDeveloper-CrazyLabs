@@ -5,19 +5,19 @@ Character Presentation covers how the visible character appears in response to g
 ## Language
 
 **Character**:
-The visible avatar presented for the controlled **Launch Target**.
-_Avoid_: Player, Launch Target, skin
+The visible avatar presented for the controlled gameplay object.
+_Avoid_: Player, Launch Target, Run Body, skin
 
 **Source Character Asset**:
 An imported model, skeleton, material, texture, audio, effect, or animation source used to build a project-owned **Character**.
 _Avoid_: Character, gameplay object, composition root
 
 **Character Visual Anchor**:
-The presentation-space transform role that positions and orients the **Character** relative to the controlled **Launch Target**.
+The presentation-space transform role that positions and orients the **Character** relative to the controlled gameplay object.
 _Avoid_: Launch Target child, Collider root, Band Center, model root
 
 **Character Visual Follower**:
-The presentation coordinator that keeps the **Character Visual Anchor** visually following the **Launch Target** render pose with bounded smoothing.
+The presentation coordinator that keeps the **Character Visual Anchor** visually following the controlled gameplay object's render pose with bounded smoothing.
 _Avoid_: Movement controller, Rigidbody follower, gameplay pose source, camera smoother
 
 **Character Visual Follow Tuning**:
@@ -48,6 +48,10 @@ _Avoid_: Pull Hint, drag state, Launch Push
 The **Character Presentation Mode** used immediately after an accepted **Launch**.
 _Avoid_: Band recoil, Running, Pull Anticipation
 
+**Launch Flight**:
+The **Character Presentation Mode** used for fired-by-slingshot unsupported motion before first real post-launch landing.
+_Avoid_: Airborne, falling, speed recovery, launch movement state
+
 **Slide**:
 The grounded locomotion **Character Presentation Mode** for momentum-driven movement across a **Run Surface**, including downhill sliding and flat coasting.
 _Avoid_: Gameplay State, Run Surface, skid effect, downhill-only mode, stalled movement
@@ -73,8 +77,8 @@ A serialized or asset-backed **Character Presentation Mode** retained to avoid c
 _Avoid_: Active mode, cleanup target, gameplay state
 
 **Airborne**:
-The **Character Presentation Mode** used when the character is not supported by a **Run Surface**.
-_Avoid_: Jump state, falling result, Lost Momentum
+The **Character Presentation Mode** used for real falling after normal support loss and presentation fall-intent gating.
+_Avoid_: Launch Flight, jump state, falling result, Lost Momentum
 
 **Victory**:
 The terminal **Character Presentation Mode** for a successful **Run Result**.
@@ -113,7 +117,7 @@ The passive view boundary that receives **Character Presentation Frames**.
 _Avoid_: Classifier, presenter, gameplay controller
 
 **Run Surface Context**:
-Continuous facts about the **Run Surface** currently supporting or near the **Launch Target**.
+Continuous facts about the **Run Surface** currently supporting or near the controlled gameplay object.
 _Avoid_: Contact event, ground tag, raw hit
 
 **Run Surface Context Source**:
@@ -158,19 +162,22 @@ _Avoid_: Gameplay State, animation mode, run result
 
 ## Relationships
 
-- A **Character** visually represents the **Launch Target** but does not replace it.
+- A **Character** visually represents the controlled gameplay object but does not replace it.
 - **Character Visual Anchor** belongs to visual mounting, not transform hierarchy, gameplay contact, or band alignment.
-- **Character Visual Follower** smooths only the **Character Visual Anchor**; it must not move the **Launch Target**, Rigidbody, colliders, camera source, progress source, or surface probes.
-- **Character Visual Follower** samples the **Launch Target** Transform render pose in the presentation late update phase, not raw Rigidbody position, so the visible **Character** follows Unity's interpolated render pose.
+- **Character Visual Follower** smooths only the **Character Visual Anchor**; it must not move the controlled gameplay object, Rigidbody, colliders, camera source, progress source, or surface probes.
+- **Character Visual Follower** samples the controlled gameplay object's Transform render pose in the presentation late update phase, not raw Rigidbody position, so the visible **Character** follows Unity's interpolated render pose.
 - **Smoothed Character Pose** is presentation-only and must not become gameplay truth or an input to physics, steering, progress, collision, or camera systems.
 - **Character Visual Follow Tuning** belongs to the **Character Presentation View** scene or prefab authoring; it is not gameplay movement, upgrade, or economy tuning.
 - **Character Visual Follower** is owned by the composition root as a presentation entry point; the view remains passive and should not own a standalone `LateUpdate` loop.
 - **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; distance and angle snap thresholds prevent visible lag after teleports, run resets, and terminal state changes.
 - **Character Model Root** handles source-asset alignment under a **Character**.
 - **Character Presentation Mode** is appearance language, not **Gameplay State**.
+- **Character Presentation Mode** changes must not change **Run Body** velocity, steering state, speed recovery, contact response, or run distance.
 - **Character Presenter** gathers facts and applies one **Character Presentation Frame** to the **Character Presentation View**.
 - **Character Presentation Mode Classifier** returns one **Character Presentation Classification Result**.
 - **Run Surface Context** helps choose grounded **Slide**, **Idle**, and **Airborne** presentation.
+- **Launch Flight** describes slingshot-fired unsupported appearance; it must not clamp or recover **Run Body** speed when it starts, ends, or transitions to **Airborne**.
+- **Airborne** describes real falling appearance; entering **Airborne** must not change **Run Body** speed.
 - **Slide** covers both downhill sliding and flatter **Coast** flavor; slope may affect **Slide Flavor** but not the canonical mode.
 - The first **Slide** implementation uses the existing **Slide** presentation for all **Meaningful Grounded Movement**; **Coast** does not require a separate clip or blend.
 - **Idle** covers true stopped or stalled grounded presentation; **Slide** requires **Meaningful Grounded Movement**.
@@ -186,23 +193,26 @@ _Avoid_: Gameplay State, animation mode, run result
 
 ## Example dialogue
 
-> **Dev:** "Is Ladybug the new **Launch Target**?"
-> **Domain expert:** "No - Ladybug is the **Character**; the controlled gameplay object remains the **Launch Target**."
+> **Dev:** "Is Ladybug the new **Run Body**?"
+> **Domain expert:** "No - Ladybug is the **Character**; the controlled gameplay object remains separate."
 
-> **Dev:** "Does the **Character Visual Anchor** need to be parented under the **Launch Target**?"
-> **Domain expert:** "No - it is the presentation pose for the **Character** relative to the **Launch Target**, not a gameplay hierarchy requirement."
+> **Dev:** "Does the **Character Visual Anchor** need to be parented under the controlled gameplay object?"
+> **Domain expert:** "No - it is the presentation pose for the **Character**, not a gameplay hierarchy requirement."
 
 > **Dev:** "Can gameplay systems read the **Smoothed Character Pose**?"
-> **Domain expert:** "No - gameplay reads the **Launch Target** and its Rigidbody-backed facts; the smoothed pose is visual-only."
+> **Domain expert:** "No - gameplay reads the controlled gameplay object and its physics facts; the smoothed pose is visual-only."
 
 > **Dev:** "Should the **Character Visual Follower** smooth raw Rigidbody position?"
-> **Domain expert:** "No - it follows the **Launch Target** Transform render pose during presentation late update, after Rigidbody interpolation has produced the visible pose."
+> **Domain expert:** "No - it follows the controlled gameplay object's Transform render pose during presentation late update, after Rigidbody interpolation has produced the visible pose."
 
 > **Dev:** "Should sliding and running be separate **Gameplay States**?"
 > **Domain expert:** "No - **Slide** is a **Character Presentation Mode**, while **Run** is gameplay language or reserved presentation compatibility."
 
 > **Dev:** "Should flat coasting switch from **Slide** to **Run**?"
 > **Domain expert:** "No - flat coasting is still **Slide** presentation, possibly with a calmer **Coast** flavor."
+
+> **Dev:** "Should ending **Launch Flight** slow down the gameplay object?"
+> **Domain expert:** "No - **Launch Flight** is visual presentation only; **Run Body** speed changes come from gameplay physics and contact behavior."
 
 > **Dev:** "Should we delete the old **Run** enum and Animator state now?"
 > **Domain expert:** "No - keep **Run** as a **Reserved Presentation Mode** for compatibility, but normal runtime classification should not produce it."
@@ -234,7 +244,7 @@ _Avoid_: Gameplay State, animation mode, run result
 ## Flagged ambiguities
 
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** for appearance language.
-- "Visual mount", "visual child", and "character parent" resolve to **Character Visual Anchor**; the term does not imply Unity transform parenting under the **Launch Target**.
+- "Visual mount", "visual child", and "character parent" resolve to **Character Visual Anchor**; the term does not imply Unity transform parenting under the controlled gameplay object.
 - "Visual smoothing", "presentation follower", "visual follower", and "character smoothing" resolve to **Character Visual Follower**.
 - "Smoothed pose", "visual pose", and "follower pose" resolve to **Smoothed Character Pose** and must not be treated as gameplay truth.
 - "Visual follow tuning", "anchor smoothing values", and "jitter smoothing settings" resolve to **Character Visual Follow Tuning**.
@@ -245,11 +255,12 @@ _Avoid_: Gameplay State, animation mode, run result
 - "Run reference speed" and `RunReferenceSpeed` resolve to **Slide Reference Speed** or compatibility fallback, not normal tuning.
 - "Slope threshold", "downhill threshold", "flat threshold", `SlideEnterDownhillDegrees`, `SlideExitDownhillDegrees`, and `RunFlatMaximumAbsSlopeDegrees` resolve to **Slide Flavor Tuning** or diagnostics, not **Character Presentation Mode** selection.
 - "Run" resolves to gameplay **Run** unless explicitly discussing the **Reserved Presentation Mode** kept for compatibility.
-- "Airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
+- "Launch flight", "Airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
+- "Launch Flight ended" and "Airborne started" do not imply any gameplay velocity clamp, speed recovery, or movement-state transition.
 - "Air time" resolves to gameplay **Run Air Time** when discussing metrics or rewards.
 - "Held" resolves to **Idle** unless an **Active Pull** requires **Pull Anticipation**.
 - "Ground probe", "surface probe", and "slope source" resolve to **Run Surface Context Source**.
 - "Slope math" resolves to **Run Surface Slope Calculator**.
 - "Move speed" and raw speed values resolve to presenter facts unless a view-facing term is explicitly needed.
 - "Steer" resolves to gameplay control language; use **Lateral Lean** only for visual character tilt.
-- "Root motion" means visual-only authored motion, not movement of the **Launch Target**.
+- "Root motion" means visual-only authored motion, not movement of the controlled gameplay object.

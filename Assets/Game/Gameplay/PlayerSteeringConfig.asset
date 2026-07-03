@@ -20,10 +20,7 @@ MonoBehaviour:
   _maximumAcceptedDpi: 1000
   _maximumTurnDegreesPerSecond: 30
   _minimumSteerSpeed: 0.25
-  _maximumPlanarSpeed: 10
-  _launchBurstPlanarSpeedGraceSeconds: 0.35
-  _launchBurstPlanarSpeedRecoverySeconds: 0.65
-  _launchBurstMaximumPlanarSpeedMultiplier: 3
+  _runBodySpeedSanityGuardMetersPerSecond: 250
   _launchLandingStabilizationSeconds: 0.3
   _launchLandingMaximumLiftSpeed: 0
   _runSteeringFrameNormalSlewDegreesPerSecond: 120

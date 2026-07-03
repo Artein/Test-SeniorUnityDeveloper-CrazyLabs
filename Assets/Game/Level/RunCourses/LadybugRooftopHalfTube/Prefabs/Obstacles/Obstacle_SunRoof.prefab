@@ -92,6 +92,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8965694653075356165, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
       propertyPath: m_Name
       value: Obstacle_SunRoof Visual

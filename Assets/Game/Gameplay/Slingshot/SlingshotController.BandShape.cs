@@ -6,7 +6,12 @@ namespace Game.Gameplay.Slingshot
     {
         private const float BandTargetClearanceProbeMargin = 0.02f;
         private const int SimpleBandVisualStandOffSearchStepCount = 8;
+        private const int ReleaseRecoilSimpleBandVisualStandOffSearchStepCount = 16;
+        private const float SimpleBandVisualStandOffMaximumExtraProbeRadiusMultiplier = 4f;
+        private const float ReleaseRecoilSimpleBandVisualStandOffMaximumExtraProbeRadiusMultiplier = 12f;
         private const float SimpleBandVisualStandOffComparisonTolerance = 0.0001f;
+        private const float MinimumBandPathAdjacentDirectionDot = 0.2f;
+        private const float MinimumBandPathSegmentSqrMagnitude = 0.000001f;
 
         private void InitializeBandShapeBuffers()
         {
@@ -33,6 +38,9 @@ namespace Game.Gameplay.Slingshot
             if (!TryWriteBandShape(pullPoint, _inactiveActiveBandShapeBuffer))
                 return false;
 
+            if (!IsBandPathVisuallySane(_inactiveActiveBandShapeBuffer))
+                return false;
+
             var candidateBandShape = new SlingshotBandShape(_inactiveActiveBandShapeBuffer, true);
 
             if (!IsBandShapeClear(candidateBandShape, pullPoint))
@@ -49,6 +57,56 @@ namespace Game.Gameplay.Slingshot
             var renderedBandRadius = GetRenderedBandRadius();
             var solved = _renderedBandShapeProvider.TryCreateRenderedBandShape(shapeQuery, renderedBandRadius, buffer, out var pointCount);
             return solved && pointCount == buffer.Length;
+        }
+
+        private bool IsBandPathVisuallySane(Vector3[] bandShapePoints)
+        {
+            return BandPathOffsetsAreMonotonic(bandShapePoints) && BandPathHasNoSharpFolds(bandShapePoints);
+        }
+
+        private bool BandPathOffsetsAreMonotonic(Vector3[] bandShapePoints)
+        {
+            var tolerance = Mathf.Max(0f, _view.VisibleBandRadius) + 0.01f;
+            var previousOffset = Vector3.Dot(bandShapePoints[0] - _geometry.RestPoint, _geometry.LaunchFrameRight);
+
+            for (var pointIndex = 1; pointIndex < bandShapePoints.Length; pointIndex += 1)
+            {
+                var offset = Vector3.Dot(bandShapePoints[pointIndex] - _geometry.RestPoint, _geometry.LaunchFrameRight);
+
+                if (offset < previousOffset - tolerance)
+                    return false;
+
+                previousOffset = Mathf.Max(previousOffset, offset);
+            }
+
+            return true;
+        }
+
+        private bool BandPathHasNoSharpFolds(Vector3[] bandShapePoints)
+        {
+            for (var pointIndex = 1; pointIndex < bandShapePoints.Length - 1; pointIndex += 1)
+            {
+                var previousSegment = ProjectToPullPlane(bandShapePoints[pointIndex] - bandShapePoints[pointIndex - 1]);
+                var nextSegment = ProjectToPullPlane(bandShapePoints[pointIndex + 1] - bandShapePoints[pointIndex]);
+
+                if (previousSegment.sqrMagnitude <= MinimumBandPathSegmentSqrMagnitude
+                    || nextSegment.sqrMagnitude <= MinimumBandPathSegmentSqrMagnitude)
+                {
+                    continue;
+                }
+
+                if (Vector2.Dot(previousSegment.normalized, nextSegment.normalized) < MinimumBandPathAdjacentDirectionDot)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private Vector2 ProjectToPullPlane(Vector3 vector)
+        {
+            return new Vector2(
+                Vector3.Dot(vector, _geometry.LaunchFrameRight),
+                Vector3.Dot(vector, -_geometry.LaunchFrameForward));
         }
 
         private float GetRenderedBandRadius()
@@ -189,9 +247,20 @@ namespace Game.Gameplay.Slingshot
         private SlingshotBandShape CreateReleaseRecoilBandShape(float progress)
         {
             var recoilPullPoint = GetReleaseRecoilPullPoint(progress, out var wasDepthClamped);
-            TryUpdateReleaseRecoilBandShape(recoilPullPoint, wasDepthClamped);
+            RecoverReleaseRecoilBandShape(recoilPullPoint, wasDepthClamped);
 
             return CreateCurrentActiveBandShape();
+        }
+
+        private void RecoverReleaseRecoilBandShape(Vector3 recoilPullPoint, bool wasDepthClamped)
+        {
+            if (TryUpdateReleaseRecoilBandShape(recoilPullPoint, wasDepthClamped))
+                return;
+
+            if (TryKeepCurrentActiveBandShapeIfClear(recoilPullPoint))
+                return;
+
+            TryUpdateExtendedReleaseRecoilClearSimpleBandShape(recoilPullPoint);
         }
 
         private bool TryUpdateReleaseRecoilBandShape(Vector3 recoilPullPoint, bool wasDepthClamped)
@@ -207,6 +276,11 @@ namespace Game.Gameplay.Slingshot
 
             // Keep the last valid active shape if recoil cannot solve a clear intermediate shape.
             return false;
+        }
+
+        private bool TryKeepCurrentActiveBandShapeIfClear(Vector3 pullPoint)
+        {
+            return _hasLastValidActiveBandShape && IsBandShapeClear(CreateCurrentActiveBandShape(), pullPoint);
         }
 
         private Vector3 GetReleaseRecoilPullPoint(float progress, out bool wasDepthClamped)
@@ -244,6 +318,28 @@ namespace Game.Gameplay.Slingshot
 
         private bool TryUpdateAdaptiveClearSimpleBandShape(Vector3 pullPoint, Vector3 initialVisualCenterPoint)
         {
+            return TryUpdateAdaptiveClearSimpleBandShape(
+                pullPoint,
+                initialVisualCenterPoint,
+                SimpleBandVisualStandOffSearchStepCount,
+                SimpleBandVisualStandOffMaximumExtraProbeRadiusMultiplier);
+        }
+
+        private bool TryUpdateExtendedReleaseRecoilClearSimpleBandShape(Vector3 pullPoint)
+        {
+            return TryUpdateAdaptiveClearSimpleBandShape(
+                pullPoint,
+                GetSimpleBandVisualCenterPoint(pullPoint),
+                ReleaseRecoilSimpleBandVisualStandOffSearchStepCount,
+                ReleaseRecoilSimpleBandVisualStandOffMaximumExtraProbeRadiusMultiplier);
+        }
+
+        private bool TryUpdateAdaptiveClearSimpleBandShape(
+            Vector3 pullPoint,
+            Vector3 initialVisualCenterPoint,
+            int searchStepCount,
+            float maximumExtraProbeRadiusMultiplier)
+        {
             if (!_bandShapeDepthProvider.TryGetSilhouetteDepthSpan(
                     CreateBandShapeQuery(pullPoint),
                     out _,
@@ -260,18 +356,20 @@ namespace Game.Gameplay.Slingshot
                 maximumDepth + GetBandShapeClearanceProbeRadius());
 
             var maximumExtraStandOff = Mathf.Max(
-                _config.BandContactPadding * 4f,
-                GetBandShapeClearanceProbeRadius() * 4f);
+                _config.BandContactPadding * maximumExtraProbeRadiusMultiplier,
+                GetBandShapeClearanceProbeRadius() * maximumExtraProbeRadiusMultiplier);
             var maximumSearchDepth = initialDepth + maximumExtraStandOff;
 
             if (minimumSearchDepth > maximumSearchDepth)
                 maximumSearchDepth = minimumSearchDepth;
 
-            for (var stepIndex = 0; stepIndex < SimpleBandVisualStandOffSearchStepCount; stepIndex += 1)
+            var safeSearchStepCount = Mathf.Max(1, searchStepCount);
+
+            for (var stepIndex = 0; stepIndex < safeSearchStepCount; stepIndex += 1)
             {
-                var progress = SimpleBandVisualStandOffSearchStepCount <= 1
+                var progress = safeSearchStepCount <= 1
                     ? 1f
-                    : (float)stepIndex / (SimpleBandVisualStandOffSearchStepCount - 1);
+                    : (float)stepIndex / (safeSearchStepCount - 1);
                 var candidateDepth = Mathf.Lerp(minimumSearchDepth, maximumSearchDepth, progress);
                 var visualCenterPoint = GetSimpleBandVisualCenterPointAtDepth(pullPoint, candidateDepth);
 

@@ -65,8 +65,8 @@ The boundary that applies a resolved **Launch Impulse** to the **Launch Target**
 _Avoid_: Launch math, pull interpreter
 
 **Launch Target**:
-The gameplay object held by the **Slingshot**, launched by **Launch Impulse**, and controlled during a **Run**.
-_Avoid_: Character, avatar, player model
+The slingshot-facing role of the gameplay object while held by the **Slingshot** and receiving **Launch Impulse**.
+_Avoid_: Run Body, Character, avatar, player model
 
 **Band Center**:
 The alignment point on the **Launch Target** used by the **Band** while held.
@@ -128,6 +128,7 @@ _Avoid_: Launch Push, active pull, run movement
 - **Pull Strength** and **Pull Offset** describe interpreted pull facts, not final launch results.
 - **Pull Release** may become an accepted **Launch**, but not every release launches.
 - **Launch Impulse Calculator** resolves the push; **Launch Impulse Application** applies it.
+- The **Launch Target** becomes the Gameplay **Run Body** after **Launch** starts **Running**.
 - **Band Shape** is presentation, not launch force.
 - A taut **Band Shape** may include **Band Contact Points** and **Band Wrap**.
 - **Pulled Side** follows the current **Pull** direction.

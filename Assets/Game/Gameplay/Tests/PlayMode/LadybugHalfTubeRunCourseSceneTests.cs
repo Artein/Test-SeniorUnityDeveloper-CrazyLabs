@@ -27,10 +27,11 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         var pickupLayer = GetRequiredLayer(_pickupLayerName);
 
         AssertTerrainSurfaceContracts(scene, courseRoot, cameraTerrainLayer);
+        AssertAuthoredMeshSurfaceContracts(scene, courseRoot, cameraTerrainLayer);
         AssertObstacleContracts(scene, courseRoot, cameraObstacleLayer);
         AssertPickupContracts(scene, courseRoot, pickupLayer);
         AssertSingleRunFinishContact(scene, courseRoot);
         AssertCourseRendererMaterialsAreValid(courseRoot);
-        AssertNoGeneratedMeshCourseSurfaces(scene, courseRoot);
+        AssertNoGeneratedMeshCourseSections(scene, courseRoot);
     }
 }

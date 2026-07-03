@@ -10,6 +10,7 @@ using VContainer.Unity;
 public sealed class SlingshotControllerTests
 {
     private const float ExpectedBandTargetClearanceProbeMargin = 0.02f;
+    private const float ExpectedSimpleBandVisualStandOffComparisonTolerance = 0.0001f;
 
     private readonly List<string> _observations = new();
     private FakeSlingshotConfig _config;
@@ -865,7 +866,7 @@ public sealed class SlingshotControllerTests
     }
 
     [Test]
-    public void LaunchApplied_RecoilSolveFailsBeforeClearance_KeepsLastValidLiveBandShape()
+    public void LaunchApplied_RecoilSolveFailsBeforeClearance_KeepsLastValidLiveBandShapeWhenStillClear()
     {
         using var controller = CreateInitializedController();
         StartActivePull(1);
@@ -878,23 +879,62 @@ public sealed class SlingshotControllerTests
         controller.LaunchRequested += request => launchRequest = request;
 
         _input.Release(1, releaseScreenPosition);
-        _bandShapeProvider.IsBandShapeClear = false;
         _launchAppliedNotifier.Apply(launchRequest);
-        ((ITickable)controller).Tick();
-
-        var expectedLastValidShape = (Vector3[])_bandShapeProvider.ShapePoints.Clone();
-        AssertBandShapeEquals(_view.LastBandShape, expectedLastValidShape);
-        _observations.Clear();
-
-        _bandShapeProvider.IsBandShapeClear = false;
         _bandShapeProvider.ShouldFail = true;
+        _bandShapeProvider.ClearanceResults.Enqueue(false);
+        _bandShapeProvider.ClearanceResults.Enqueue(true);
+        _observations.Clear();
+        var expectedLastValidShape = (Vector3[])_bandShapeProvider.ShapePoints.Clone();
 
         ((ITickable)controller).Tick();
 
         Assert.That(
             _observations,
-            Is.EqualTo(new[] { "band-clearance", "band-depth-span", "band-shape", "band-clearance", "band-depth-span", "view-loaded-release" }));
+            Is.EqualTo(new[] { "band-depth-span", "band-shape", "band-clearance", "band-depth-span", "band-clearance", "view-loaded-release" }));
         AssertBandShapeEquals(_view.LastBandShape, expectedLastValidShape);
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilLastValidShapeBlocked_UsesExtendedClearSimpleFallback()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        var finalPullPoint = new Vector3(0.5f, 0f, -1f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(75f, 10f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        _bandShapeProvider.ShouldFail = true;
+        _bandShapeProvider.SilhouetteMaximumDepth = 0.45f;
+
+        for (var blockedClearanceIndex = 0; blockedClearanceIndex < 10; blockedClearanceIndex += 1)
+            _bandShapeProvider.ClearanceResults.Enqueue(false);
+
+        _bandShapeProvider.ClearanceResults.Enqueue(true);
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
+
+        var expectedFallbackDepth = -Vector3.Dot(
+                                        GetExpectedSimpleBandVisualCenterPoint(expectedRecoilPullPoint) - _view.Geometry.RestPoint,
+                                        _view.Geometry.LaunchFrameForward)
+                                    + ExpectedSimpleBandVisualStandOffComparisonTolerance;
+
+        var expectedFallbackOffset = Vector3.Dot(expectedRecoilPullPoint - _view.Geometry.RestPoint, _view.Geometry.LaunchFrameRight);
+
+        var expectedFallbackCenterPoint = _view.Geometry.RestPoint
+                                          + (_view.Geometry.LaunchFrameRight * expectedFallbackOffset)
+                                          - (_view.Geometry.LaunchFrameForward * expectedFallbackDepth);
+
+        Assert.That(_bandShapeProvider.ClearanceQueries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, expectedFallbackCenterPoint);
     }
 
     [Test]
@@ -922,6 +962,32 @@ public sealed class SlingshotControllerTests
         Assert.That(_observations, Is.EqualTo(new[] { "band-depth-span", "band-shape", "band-clearance", "view-loaded-release" }));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
         Assert.That(_bandShapeProvider.ClearanceQueries[^1].PullPoint, Is.EqualTo(expectedRecoilPullPoint));
+        AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, GetExpectedSimpleBandVisualCenterPoint(expectedRecoilPullPoint));
+    }
+
+    [Test]
+    public void LaunchApplied_RecoilTautShapeBacktracks_UsesClearSimpleRecoilFallback()
+    {
+        using var controller = CreateInitializedController();
+        StartActivePull(1);
+        var releaseScreenPosition = new Vector2(75f, 80f);
+        var finalPullPoint = new Vector3(0.5f, 0f, -1f);
+        _projector.SetScreenToWorld(releaseScreenPosition, finalPullPoint);
+        _projector.SetWorldToScreen(finalPullPoint, new Vector2(75f, 10f));
+        SlingshotLaunchRequest launchRequest = default;
+
+        controller.LaunchRequested += request => launchRequest = request;
+
+        _input.Release(1, releaseScreenPosition);
+        _launchAppliedNotifier.Apply(launchRequest);
+        _bandShapeProvider.ShapePoints = CreateBacktrackingBandShape();
+        _bandShapeProvider.ClearanceResults.Enqueue(true);
+        _observations.Clear();
+
+        ((ITickable)controller).Tick();
+
+        var expectedRecoilPullPoint = Vector3.Lerp(finalPullPoint, _view.Geometry.RestPoint, 0.5f);
+        Assert.That(_observations, Is.EqualTo(new[] { "band-depth-span", "band-shape", "band-clearance", "view-loaded-release" }));
         AssertBandShapeEqualsRawTwoSpan(_view.LastBandShape, GetExpectedSimpleBandVisualCenterPoint(expectedRecoilPullPoint));
     }
 
@@ -1079,6 +1145,22 @@ public sealed class SlingshotControllerTests
     private float GetExpectedRenderedBandRadius()
     {
         return _view.VisibleBandRadius + ExpectedBandTargetClearanceProbeMargin;
+    }
+
+    private Vector3[] CreateBacktrackingBandShape()
+    {
+        return new[]
+        {
+            _view.Geometry.LeftAnchorPosition,
+            new Vector3(-0.1f, 0f, -0.6f),
+            new Vector3(-0.22f, 0f, -0.5f),
+            new Vector3(-0.28f, 0f, -0.35f),
+            new Vector3(-0.24f, 0f, -0.2f),
+            new Vector3(-0.1f, 0f, -0.05f),
+            new Vector3(0.12f, 0f, -0.05f),
+            new Vector3(0.5f, 0f, -0.1f),
+            _view.Geometry.RightAnchorPosition
+        };
     }
 
     private float GetMinimumAllowedPullOffset()

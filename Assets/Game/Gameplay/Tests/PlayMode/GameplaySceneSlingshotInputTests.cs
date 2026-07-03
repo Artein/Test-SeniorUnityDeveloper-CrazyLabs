@@ -256,6 +256,36 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
         }
     }
 
+    [UnityTest]
+    public IEnumerator given_GameplayScene_when_EditorMousePullsSmallAndMax_then_MaxLaunchPayloadIsMeaningfullyLarger()
+    {
+        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Pull Strength Mouse");
+        var smallPullLaunch = default(SlingshotLaunchAppliedEvent);
+        var maxPullLaunch = default(SlingshotLaunchAppliedEvent);
+
+        try
+        {
+            yield return LaunchAndCaptureAppliedLaunch(mouse, 0f, 0.35f, launch => smallPullLaunch = launch);
+            yield return LaunchAndCaptureAppliedLaunch(mouse, 0f, 3f, launch => maxPullLaunch = launch);
+
+            var smallForwardSpeed = Vector3.Dot(smallPullLaunch.VelocityChange, smallPullLaunch.LaunchDirection);
+            var smallUpwardSpeed = Vector3.Dot(smallPullLaunch.VelocityChange, smallPullLaunch.LaunchUpDirection);
+            var maxForwardSpeed = Vector3.Dot(maxPullLaunch.VelocityChange, maxPullLaunch.LaunchDirection);
+            var maxUpwardSpeed = Vector3.Dot(maxPullLaunch.VelocityChange, maxPullLaunch.LaunchUpDirection);
+
+            Assert.That(smallPullLaunch.Request.PullDistance, Is.GreaterThan(0.25f));
+            Assert.That(smallForwardSpeed, Is.InRange(8f, 12f));
+            Assert.That(smallUpwardSpeed, Is.InRange(0f, 0.5f));
+            Assert.That(maxForwardSpeed, Is.EqualTo(35f).Within(0.75f));
+            Assert.That(maxUpwardSpeed, Is.EqualTo(3f).Within(0.2f));
+            Assert.That(maxForwardSpeed, Is.GreaterThan(smallForwardSpeed * 3f));
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
+    }
+
     private IEnumerator LoadGameplayScene()
     {
         yield return LoadGameplaySceneWithIsolatedSaves(CanReuseGameplayScene);

@@ -67,6 +67,29 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         }
     }
 
+    private void AssertAuthoredMeshSurfaceContracts(Scene scene, GameObject courseRoot, int cameraTerrainLayer)
+    {
+        var meshSurfaceColliders = FindComponentsInScene<MeshCollider>(scene)
+            .Where(collider => collider.transform.IsChildOf(courseRoot.transform))
+            .Where(collider => collider.gameObject.layer == cameraTerrainLayer)
+            .ToArray();
+
+        foreach (var meshCollider in meshSurfaceColliders)
+        {
+            var meshSurface = meshCollider.gameObject;
+            var runContact = meshSurface.GetComponent<RunContact>();
+
+            Assert.That(meshSurface.scene, Is.EqualTo(scene), meshSurface.name);
+            Assert.That(meshSurface.name.Contains("Generated", StringComparison.OrdinalIgnoreCase), Is.False, meshSurface.name);
+            Assert.That(runContact, Is.Not.Null, meshSurface.name);
+            Assert.That(runContact!.Category, Is.EqualTo(RunContactCategory.Surface), meshSurface.name);
+            Assert.That(meshCollider.enabled, Is.True, meshSurface.name);
+            Assert.That(meshCollider.isTrigger, Is.False, meshSurface.name);
+            Assert.That(meshCollider.sharedMesh, Is.Not.Null, meshSurface.name);
+            Assert.That(meshCollider.sharedMaterial, Is.Not.Null, meshSurface.name);
+        }
+    }
+
     private void AssertSingleRunFinishContact(Scene scene, GameObject courseRoot)
     {
         var finishContacts = FindComponentsInScene<RunContact>(scene)
@@ -88,20 +111,14 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
         Assert.That(candidate.Reason, Is.EqualTo(RunEndReason.Finished), finishContact.name);
     }
 
-    private void AssertNoGeneratedMeshCourseSurfaces(Scene scene, GameObject courseRoot)
+    private void AssertNoGeneratedMeshCourseSections(Scene scene, GameObject courseRoot)
     {
-        var generatedMeshSurfaceNames = FindComponentsInScene<RunContact>(scene)
-            .Where(contact => contact.transform.IsChildOf(courseRoot.transform))
-            .Where(contact => contact.Category == RunContactCategory.Surface)
-            .Where(contact =>
-                contact.GetComponent<MeshFilter>() != null ||
-                contact.GetComponent<MeshRenderer>() != null ||
-                contact.GetComponent<MeshCollider>() != null ||
-                contact.name.Contains("Generated", StringComparison.OrdinalIgnoreCase))
-            .Select(contact => contact.name)
+        var generatedSectionNames = courseRoot.GetComponentsInChildren<Transform>(true)
+            .Where(child => child.name.Contains("Generated", StringComparison.OrdinalIgnoreCase))
+            .Select(child => child.name)
             .ToArray();
 
-        Assert.That(generatedMeshSurfaceNames, Is.Empty, "Play Mode should use authored Terrain surfaces, not generated mesh sections.");
+        Assert.That(generatedSectionNames, Is.Empty, "Play Mode should use authored surfaces, not generated mesh sections.");
     }
 
     private T FindSingleInScene<T>(Scene scene, string objectDescription)

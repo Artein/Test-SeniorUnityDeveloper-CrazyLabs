@@ -791,47 +791,7 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
 
     private IEnumerator LoadGameplayScene()
     {
-        yield return LoadGameplaySceneWithIsolatedSaves(CanReuseGameplayScene);
-    }
-
-    private bool CanReuseGameplayScene(Scene scene)
-    {
-        if (!scene.IsValid() || scene.path != TestAssets.GameplaySceneRef.Path)
-            return false;
-
-        var slingshotViews = FindComponentsInScene<SlingshotView>(scene);
-        var launchTargets = FindComponentsInScene<RigidbodyLaunchTarget>(scene);
-
-        if (slingshotViews.Length != 1 || launchTargets.Length != 1)
-            return false;
-
-        var playerRigidbody = launchTargets[0].GetComponent<Rigidbody>();
-
-        if (playerRigidbody == null || !playerRigidbody.isKinematic)
-            return false;
-
-        if (!TryFindGameObjectByName(scene, "Band Center", out var bandCenter))
-            return false;
-
-        var geometry = slingshotViews[0].CreateGeometrySnapshot();
-
-        if (Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) > 0.05f)
-            return false;
-
-        var bandLineRenderer = slingshotViews[0].GetComponent<LineRenderer>();
-
-        if (bandLineRenderer == null || bandLineRenderer.positionCount < 2)
-            return false;
-
-        var targetColliders = launchTargets[0].GetComponentsInChildren<Collider>(true);
-
-        if (targetColliders.Length != 1)
-            return false;
-
-        var bandPositions = ReadWorldLinePositions(bandLineRenderer);
-
-        return DoesBandShapeMatchRawTwoSpan(bandPositions, geometry, geometry.RestPoint, 0.01f)
-               && IsBandShapeClearOfCollider(bandPositions, bandLineRenderer, targetColliders[0]);
+        yield return LoadGameplaySceneWithIsolatedSaves();
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
@@ -894,7 +854,8 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)
     {
         QueueMouse(mouse, screenPosition, isPressed);
-        yield break;
+        yield return null;
+        yield return new WaitForEndOfFrame();
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)

@@ -16,22 +16,17 @@ namespace Game.Gameplay
             _runSteeringFrameSuspectNormalConfirmationSeconds = suspectNormalConfirmationSeconds;
         }
 
-        internal void SetLaunchBurstForTests(
-            float graceSeconds,
-            float recoverySeconds,
-            float maximumPlanarSpeedMultiplier)
-        {
-            _launchBurstPlanarSpeedGraceSeconds = graceSeconds;
-            _launchBurstPlanarSpeedRecoverySeconds = recoverySeconds;
-            _launchBurstMaximumPlanarSpeedMultiplier = maximumPlanarSpeedMultiplier;
-        }
-
         internal void SetLaunchLandingStabilizationForTests(
             float stabilizationSeconds,
             float maximumLiftSpeed)
         {
             _launchLandingStabilizationSeconds = stabilizationSeconds;
             _launchLandingMaximumLiftSpeed = maximumLiftSpeed;
+        }
+
+        internal void SetRunBodySpeedSanityGuardForTests(float metersPerSecond)
+        {
+            _runBodySpeedSanityGuardMetersPerSecond = metersPerSecond;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Game.Gameplay
             var pullStrength = Mathf.Clamp01(request.PullStrength);
             var pullCurveValue = Mathf.Clamp01(config.PullStrengthCurve.Evaluate(pullStrength));
             var forwardImpulse = Mathf.Lerp(config.MinimumForwardImpulse, config.MaximumForwardImpulse, pullCurveValue) * launchPower;
-            var upwardImpulse = config.UpwardImpulse * launchPower;
+            var upwardImpulse = config.UpwardImpulse * pullCurveValue * launchPower;
             var launchDirection = GetLaunchDirection(request, config);
             var velocityChange = (launchDirection * forwardImpulse) + (request.LaunchFrameUp * upwardImpulse);
             velocityChange = ApplyTotalImpulseClamps(velocityChange, request, config);
