@@ -18,49 +18,10 @@ MonoBehaviour:
   _description: Increases how quickly player steering reaches the requested direction.
   _icon: {fileID: 21300000, guid: 3c59a1bb80794a3fa9ef0be35e290333, type: 3}
   _targetStatId: {fileID: 11400000, guid: 7f7400176b24474fac9e40fef52bb7e5, type: 2}
-  _maxLevel: 20
+  _maxLevel: 10
   _costProgression:
-    _minimumValue: 60
-    _maximumValue: 3200
-    _curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0.7
-        outSlope: 0.7
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.5
-        value: 0.35
-        inSlope: 1.3
-        outSlope: 1.3
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 1.3
-        outSlope: 1.3
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    _roundingMode: 3
-    _stepSize: 5
-    _exactOverrides: []
-  _effectProgression:
-    _minimumValue: 1
-    _maximumValue: 2.2
+    _minimumValue: 150
+    _maximumValue: 2500
     _curve:
       serializedVersion: 2
       m_Curve:
@@ -87,7 +48,77 @@ MonoBehaviour:
       m_RotationOrder: 4
     _roundingMode: 0
     _stepSize: 0
-    _exactOverrides: []
+    _exactOverrides:
+    - _level: 1
+      _value: 150
+    - _level: 2
+      _value: 250
+    - _level: 3
+      _value: 350
+    - _level: 4
+      _value: 500
+    - _level: 5
+      _value: 700
+    - _level: 6
+      _value: 950
+    - _level: 7
+      _value: 1250
+    - _level: 8
+      _value: 1600
+    - _level: 9
+      _value: 2000
+    - _level: 10
+      _value: 2500
+  _effectProgression:
+    _minimumValue: 1
+    _maximumValue: 2
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    _roundingMode: 0
+    _stepSize: 0
+    _exactOverrides:
+    - _level: 1
+      _value: 1.1
+    - _level: 2
+      _value: 1.2
+    - _level: 3
+      _value: 1.3
+    - _level: 4
+      _value: 1.4
+    - _level: 5
+      _value: 1.5
+    - _level: 6
+      _value: 1.6
+    - _level: 7
+      _value: 1.7
+    - _level: 8
+      _value: 1.8
+    - _level: 9
+      _value: 1.9
+    - _level: 10
+      _value: 2
   _operationType: 2
   _valueFormat: 2
   _displayDecimalPlaces: 1

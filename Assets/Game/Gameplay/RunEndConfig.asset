@@ -18,5 +18,5 @@ MonoBehaviour:
   _lostMomentumPlanarSpeedThreshold: 1
   _lostMomentumProgressThreshold: 0.5
   _runEndedAcknowledgeGuardDuration: 0.25
-  _distanceBonusCoinsPerMeter: 1
-  _airTimeBonusCoinsPerSecond: 1
+  _distanceBonusCoinsPerMeter: 0.5
+  _airTimeBonusCoinsPerSecond: 5

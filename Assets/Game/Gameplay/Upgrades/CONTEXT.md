@@ -85,6 +85,7 @@ _Avoid_: Upgrade system, config reader, source registry
 - An **Upgrade Catalog** contains **Upgrade Definitions** and has one **Purchase Currency**.
 - An **Upgrade Definition** has cost and effect **Upgrade Progressions**.
 - **Upgrade Preview** is read-only and does not mutate **Upgrade Levels**.
+- A purchased **Upgrade Level** should change the player-facing **Upgrade Preview** instead of becoming hidden micro-progression.
 - **Upgrade Purchase Service** is the purchase mutator for **Upgrade Levels**.
 - A **Runtime Modifier** targets one **Gameplay Stat Id** and has one **Modifier Operation**.
 - **Run Modifier Snapshot** is created before **Pre-Launch** and remains stable for the following **Run**.
@@ -101,10 +102,14 @@ _Avoid_: Upgrade system, config reader, source registry
 > **Dev:** "Can the UI spend coins directly?"
 > **Domain expert:** "No - it requests **Upgrade Purchase Service**, which owns the currency-spend and level-change operation."
 
+> **Dev:** "Can an upgrade purchase leave the shown effect unchanged because the effect rounded to the same value?"
+> **Domain expert:** "No - a purchased **Upgrade Level** should make the **Upgrade Preview** visibly advance."
+
 ## Flagged ambiguities
 
 - "Powerup" resolves to **Upgrade** only for owned run-to-run progression; temporary effects resolve to **Modifier Source**.
 - "Level one" is not the baseline; **Upgrade Level** zero is the baseline owned state.
 - "Upgrade value" may mean cost, effect, preview text, or owned level; use the precise term.
+- "Meaningful upgrade" resolves to an **Upgrade Level** that changes both **Upgrade Preview** and future **Run Modifier Snapshot** outcomes.
 - "Stat" resolves to **Gameplay Stat Id** when authoring modifier targets.
 - "Snapshot" in upgrade language resolves to **Run Modifier Snapshot**, not save data.
