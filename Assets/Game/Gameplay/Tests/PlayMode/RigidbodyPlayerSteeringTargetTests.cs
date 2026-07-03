@@ -37,6 +37,26 @@ public sealed class RigidbodyPlayerSteeringTargetTests
         Assert.That(((IPlayerSteeringTarget)_target).LinearVelocity, Is.EqualTo(velocity));
     }
 
+    [Test]
+    public void ApplyVelocity_FiniteVelocity_SetsLinearVelocity()
+    {
+        var velocity = new Vector3(2f, -1f, 4f);
+
+        ((IPlayerSteeringTarget)_target).ApplyVelocity(velocity);
+
+        Assert.That(_rigidbody.linearVelocity.x, Is.EqualTo(velocity.x).Within(0.0001f));
+        Assert.That(_rigidbody.linearVelocity.y, Is.EqualTo(velocity.y).Within(0.0001f));
+        Assert.That(_rigidbody.linearVelocity.z, Is.EqualTo(velocity.z).Within(0.0001f));
+    }
+
+    [Test]
+    public void ApplyVelocity_NonFiniteVelocity_Throws()
+    {
+        Assert.That(
+            () => ((IPlayerSteeringTarget)_target).ApplyVelocity(new Vector3(float.NaN, 0f, 1f)),
+            Throws.TypeOf<ArgumentException>().With.Message.Contains("Steering velocity"));
+    }
+
     [UnityTest]
     public IEnumerator ApplySteering_FiniteVelocity_SetsLinearVelocityAndMovesRotation()
     {

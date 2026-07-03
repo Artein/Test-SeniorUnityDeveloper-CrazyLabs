@@ -269,6 +269,23 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void FixedTick_PostLaunchLandingBelowMinimumSteerSpeed_SuppressesLiftWithoutSteeringRotation()
+    {
+        SetGroundedSurface(Vector3.up);
+        var lowTangentLiftVelocity = new Vector3(0f, 3f, 0.1f);
+        _steeringTarget.LinearVelocity = lowTangentLiftVelocity;
+        ActivateSteeringWithLaunchVelocity(lowTangentLiftVelocity);
+
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 0.1f);
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(1));
+        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        Assert.That(_steeringTarget.Rotation, Is.EqualTo(Quaternion.identity));
+    }
+
+    [Test]
     public void FixedTick_PostLaunchTiltedSurfaceLanding_UsesRunSurfaceNormal()
     {
         var groundNormal = new Vector3(0f, 1f, 1f).normalized;
@@ -479,6 +496,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Move(1, new Vector2(600f, 100f));
         FixedTick();
 
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
     }
 }

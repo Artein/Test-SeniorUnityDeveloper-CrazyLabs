@@ -340,7 +340,14 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         public Vector3 LinearVelocity { get; set; }
         public Quaternion Rotation { get; set; }
+        public int ApplyVelocityCallCount { get; private set; }
         public int ApplyCallCount { get; private set; }
+
+        public void ApplyVelocity(Vector3 linearVelocity)
+        {
+            LinearVelocity = linearVelocity;
+            ApplyVelocityCallCount += 1;
+        }
 
         public void ApplySteering(Vector3 linearVelocity, Quaternion rotation)
         {

@@ -28,6 +28,7 @@ namespace Game.Gameplay
         private readonly GameplayStateId _runningStateId;
         private readonly GameplayStatId _playerMaxSpeedStatId;
         private readonly GameplayStatId _playerSteeringResponsivenessStatId;
+        private readonly float _velocityChangeSqrTolerance = 0.00000001f;
 
         private IDisposable _inputEnableHandle;
         private Vector3 _steeringUp = Vector3.up;
@@ -245,13 +246,20 @@ namespace Game.Gameplay
         private void ApplySteering()
         {
             var velocity = _steeringTarget.LinearVelocity;
+            var stabilizedVelocity = ApplyLaunchLandingStabilization(velocity);
+            var hasStabilizedVelocityChange = HasMeaningfulVelocityChange(velocity, stabilizedVelocity);
             var upDirection = GetValidUpDirection(_steeringFrameSource.GetUpDirection(_steeringUp), _steeringUp);
-            var verticalVelocity = Vector3.Project(velocity, upDirection);
-            var planarVelocity = velocity - verticalVelocity;
+            var verticalVelocity = Vector3.Project(stabilizedVelocity, upDirection);
+            var planarVelocity = stabilizedVelocity - verticalVelocity;
             var planarSpeed = planarVelocity.magnitude;
 
             if (planarSpeed < Mathf.Max(0f, _config.MinimumSteerSpeed))
+            {
+                if (hasStabilizedVelocityChange)
+                    _steeringTarget.ApplyVelocity(stabilizedVelocity);
+
                 return;
+            }
 
             var maximumPlanarSpeed = ResolveEffectiveMaximumPlanarSpeed(ResolveMaximumPlanarSpeed());
 
@@ -261,10 +269,18 @@ namespace Game.Gameplay
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
             var turnAngle = _currentSteer * Mathf.Max(0f, _config.MaximumTurnDegreesPerSecond) * fixedDeltaTime;
             var steeredPlanarVelocity = Quaternion.AngleAxis(turnAngle, upDirection) * planarVelocity;
-            var steeredVelocity = ApplyLaunchLandingStabilization(steeredPlanarVelocity + verticalVelocity);
+            var steeredVelocity = steeredPlanarVelocity + verticalVelocity;
             var targetRotation = Quaternion.LookRotation(steeredPlanarVelocity.normalized, upDirection);
 
             _steeringTarget.ApplySteering(steeredVelocity, targetRotation);
+        }
+
+        private bool HasMeaningfulVelocityChange(Vector3 previousVelocity, Vector3 nextVelocity)
+        {
+            var deltaSqrMagnitude = (nextVelocity - previousVelocity).sqrMagnitude;
+            return deltaSqrMagnitude > _velocityChangeSqrTolerance
+                   && !float.IsNaN(deltaSqrMagnitude)
+                   && !float.IsInfinity(deltaSqrMagnitude);
         }
 
         private void CaptureLaunchBurstPlanarSpeed(Vector3 velocityChange, Vector3 upDirection)
