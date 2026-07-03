@@ -324,6 +324,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(8f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(35f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
+
         Assert.That(
             playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond,
             Is.GreaterThan(gameplaySlingshotLaunchConfig.MaximumForwardImpulse * 4f));
@@ -349,6 +350,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerRigidbody.collisionDetectionMode, Is.EqualTo(CollisionDetectionMode.ContinuousDynamic));
         Assert.That(playerRigidbody.isKinematic, Is.True);
         Assert.That(playerRigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
+        Assert.That(launchTarget.HasPreviousStateForTests, Is.True);
+        Assert.That(launchTarget.PreviousInterpolationForTests, Is.EqualTo(RigidbodyInterpolation.Interpolate));
         Assert.That(bandCenter.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(bandCenter.transform.position.x, Is.EqualTo(geometry.RestPoint.x).Within(0.01f));
         Assert.That(bandCenter.transform.position.y, Is.EqualTo(geometry.RestPoint.y).Within(0.01f));

@@ -186,6 +186,7 @@ public sealed class SlingshotLaunchRequestedTests
         _clock.DeltaTime = _config.BandRecoilDuration;
         _observations.Clear();
         var clearanceQueryCountBeforeTick = _bandShapeProvider.ClearanceQueries.Count;
+        var depthSpanQueryCountBeforeTick = _bandShapeProvider.DepthSpanQueries.Count;
 
         ((ITickable)controller).Tick();
 
@@ -198,13 +199,28 @@ public sealed class SlingshotLaunchRequestedTests
                 "band-clearance",
                 "band-clearance",
                 "band-depth-span",
+                "band-clearance",
+                "band-depth-span",
                 "view-loaded-release"
             }));
-        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(clearanceQueryCountBeforeTick + 3));
+        Assert.That(_bandShapeProvider.ClearanceQueries, Has.Count.EqualTo(clearanceQueryCountBeforeTick + 4));
+        Assert.That(_bandShapeProvider.DepthSpanQueries, Has.Count.EqualTo(depthSpanQueryCountBeforeTick + 3));
         Assert.That(_bandShapeProvider.Queries[^1].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
-        Assert.That(_bandShapeProvider.ClearanceQueries[clearanceQueryCountBeforeTick].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
-        Assert.That(_bandShapeProvider.ClearanceQueries[clearanceQueryCountBeforeTick + 1].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
-        Assert.That(_bandShapeProvider.ClearanceQueries[clearanceQueryCountBeforeTick + 2].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
+
+        for (var queryIndex = clearanceQueryCountBeforeTick;
+             queryIndex < clearanceQueryCountBeforeTick + 4;
+             queryIndex += 1)
+        {
+            Assert.That(_bandShapeProvider.ClearanceQueries[queryIndex].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
+        }
+
+        for (var queryIndex = depthSpanQueryCountBeforeTick;
+             queryIndex < depthSpanQueryCountBeforeTick + 3;
+             queryIndex += 1)
+        {
+            Assert.That(_bandShapeProvider.DepthSpanQueries[queryIndex].PullPoint, Is.EqualTo(_view.Geometry.RestPoint));
+        }
+
         Assert.That(_bandShapeProvider.ClearanceRadii, Is.All.EqualTo(GetExpectedBandShapeClearanceRadius()));
         AssertBandShapeEquals(_view.LastBandShape, _bandShapeProvider.ShapePoints);
     }
