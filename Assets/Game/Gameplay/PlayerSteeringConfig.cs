@@ -13,6 +13,7 @@ namespace Game.Gameplay
         float MinimumAcceptedDpi { get; }
         float MaximumAcceptedDpi { get; }
         float MaximumTurnDegreesPerSecond { get; }
+        float RunAirSteeringMaximumTurnDegreesPerSecond { get; }
         float MinimumSteerSpeed { get; }
         float RunBodySpeedSanityGuardMetersPerSecond { get; }
         float LaunchLandingStabilizationSeconds { get; }
@@ -59,6 +60,10 @@ namespace Game.Gameplay
         private float _maximumTurnDegreesPerSecond = 120f;
 
         [SerializeField, Min(0f),
+         Tooltip("Maximum in-air turn rate at full steer, in degrees per second. Lower than grounded steering to keep airborne agency gentle.")]
+        private float _runAirSteeringMaximumTurnDegreesPerSecond = 45f;
+
+        [SerializeField, Min(0f),
          Tooltip("Minimum planar speed required before steering is applied. Prevents steering while nearly stopped. Common range: 0.20-0.50.")]
         private float _minimumSteerSpeed = 0.25f;
 
@@ -103,25 +108,20 @@ namespace Game.Gameplay
             Mathf.Max(((IPlayerSteeringConfig)this).MinimumAcceptedDpi, _maximumAcceptedDpi.GetPositiveOrDefault(1000f));
 
         float IPlayerSteeringConfig.MaximumTurnDegreesPerSecond => _maximumTurnDegreesPerSecond;
+
+        float IPlayerSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond =>
+            _runAirSteeringMaximumTurnDegreesPerSecond.GetNonNegativeOrDefault(45f);
+
         float IPlayerSteeringConfig.MinimumSteerSpeed => _minimumSteerSpeed;
-
-        float IPlayerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond =>
-            _runBodySpeedSanityGuardMetersPerSecond.GetPositiveOrDefault(250f);
-
-        float IPlayerSteeringConfig.LaunchLandingStabilizationSeconds =>
-            _launchLandingStabilizationSeconds.GetNonNegativeOrDefault(0.3f);
-
-        float IPlayerSteeringConfig.LaunchLandingMaximumLiftSpeed =>
-            _launchLandingMaximumLiftSpeed.GetNonNegativeOrDefault(0f);
+        float IPlayerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond => _runBodySpeedSanityGuardMetersPerSecond.GetPositiveOrDefault(250f);
+        float IPlayerSteeringConfig.LaunchLandingStabilizationSeconds => _launchLandingStabilizationSeconds.GetNonNegativeOrDefault(0.3f);
+        float IPlayerSteeringConfig.LaunchLandingMaximumLiftSpeed => _launchLandingMaximumLiftSpeed.GetNonNegativeOrDefault(0f);
 
         float IPlayerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond =>
             _runSteeringFrameNormalSlewDegreesPerSecond.GetNonNegativeOrDefault(180f);
 
-        float IPlayerSteeringConfig.RunSteeringFrameSnapDegrees =>
-            Mathf.Clamp(_runSteeringFrameSnapDegrees.GetNonNegativeOrDefault(60f), 0f, 180f);
-
-        float IPlayerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds =>
-            _runSteeringFrameUngroundedGraceSeconds.GetNonNegativeOrDefault(0.08f);
+        float IPlayerSteeringConfig.RunSteeringFrameSnapDegrees => Mathf.Clamp(_runSteeringFrameSnapDegrees.GetNonNegativeOrDefault(60f), 0f, 180f);
+        float IPlayerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds => _runSteeringFrameUngroundedGraceSeconds.GetNonNegativeOrDefault(0.08f);
 
         float IPlayerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds =>
             _runSteeringFrameSuspectNormalConfirmationSeconds.GetNonNegativeOrDefault(0.04f);

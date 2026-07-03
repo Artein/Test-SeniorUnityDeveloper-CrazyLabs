@@ -38,6 +38,8 @@ namespace Game.Gameplay.CharacterPresentation
         [SerializeField] private float _minimumLocomotionModeDuration = 0.35f;
         [SerializeField, Min(0f)] private float _launchPushMinimumSeconds = 0.25f;
         [SerializeField, Min(0f)] private float _launchFlightMaximumGroundedWaitSeconds = 0.35f;
+        [SerializeField, Min(0f)] private float _presentationSupportMaximumSurfaceLiftSpeed = 0.35f;
+        [SerializeField, Min(0f)] private float _presentationSupportReacquireSeconds = 0.08f;
         [SerializeField] private float _slideReferenceSpeed = 8f;
         [SerializeField] private float _minimumPlaybackSpeedMultiplier = 0.5f;
         [SerializeField] private float _maximumPlaybackSpeedMultiplier = 1.5f;
@@ -56,6 +58,8 @@ namespace Game.Gameplay.CharacterPresentation
         public float MinimumLocomotionModeDuration => Mathf.Max(0f, _minimumLocomotionModeDuration);
         public float LaunchPushMinimumSeconds => Mathf.Max(0f, _launchPushMinimumSeconds);
         public float LaunchFlightMaximumGroundedWaitSeconds => Mathf.Max(0f, _launchFlightMaximumGroundedWaitSeconds);
+        public float PresentationSupportMaximumSurfaceLiftSpeed => Mathf.Max(0f, _presentationSupportMaximumSurfaceLiftSpeed);
+        public float PresentationSupportReacquireSeconds => Mathf.Max(0f, _presentationSupportReacquireSeconds);
         public float SlideReferenceSpeed => Mathf.Max(0.0001f, _slideReferenceSpeed);
         public float MinimumPlaybackSpeedMultiplier => Mathf.Max(0f, _minimumPlaybackSpeedMultiplier);
         public float MaximumPlaybackSpeedMultiplier => Mathf.Max(MinimumPlaybackSpeedMultiplier, _maximumPlaybackSpeedMultiplier);

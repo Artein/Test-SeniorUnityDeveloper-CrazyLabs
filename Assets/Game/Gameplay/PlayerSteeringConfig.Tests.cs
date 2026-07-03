@@ -28,6 +28,11 @@ namespace Game.Gameplay
         {
             _runBodySpeedSanityGuardMetersPerSecond = metersPerSecond;
         }
+
+        internal void SetRunAirSteeringMaximumTurnDegreesPerSecondForTests(float degreesPerSecond)
+        {
+            _runAirSteeringMaximumTurnDegreesPerSecond = degreesPerSecond;
+        }
     }
 }
 

@@ -60,6 +60,7 @@ public abstract class PlayerSteeringControllerTestFixture
             MinimumAcceptedDpi = 1f,
             MaximumAcceptedDpi = 1000f,
             MaximumTurnDegreesPerSecond = 90f,
+            RunAirSteeringMaximumTurnDegreesPerSecond = 30f,
             MinimumSteerSpeed = 0.25f,
             RunBodySpeedSanityGuardMetersPerSecond = 250f,
             LaunchLandingStabilizationSeconds = 0.3f,
@@ -187,7 +188,7 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         Assert.That(
             _statResolver.ResolveRequests.Exists(request =>
-                ReferenceEquals(request.StatId, statId) &&
+                request.StatId == statId &&
                 Mathf.Abs(request.BaseValue - baseValue) <= 0.0001f),
             Is.True);
     }
@@ -330,7 +331,7 @@ public abstract class PlayerSteeringControllerTestFixture
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return CurrentStateId == stateId;
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)
@@ -394,6 +395,7 @@ public abstract class PlayerSteeringControllerTestFixture
         public float MinimumAcceptedDpi { get; set; }
         public float MaximumAcceptedDpi { get; set; }
         public float MaximumTurnDegreesPerSecond { get; set; }
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
         public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
         public float LaunchLandingStabilizationSeconds { get; set; }

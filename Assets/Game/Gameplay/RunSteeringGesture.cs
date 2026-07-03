@@ -6,6 +6,7 @@ namespace Game.Gameplay
 {
     internal interface IRunSteeringGesture
     {
+        bool IsActive { get; }
         float RequestedSteering { get; }
 
         bool TryBegin(PointerInput pointerInput, float rawDpi);
@@ -18,7 +19,7 @@ namespace Game.Gameplay
     internal sealed class RunSteeringGesture : IRunSteeringGesture
     {
         private readonly IPlayerSteeringConfig _config;
-        
+
         internal bool isActive;
         internal Vector2 origin;
         private int _activePointerId;
@@ -27,6 +28,7 @@ namespace Game.Gameplay
         private float _requestedSteering;
 
         public float RequestedSteering => _requestedSteering;
+        bool IRunSteeringGesture.IsActive => isActive;
 
         public RunSteeringGesture(IPlayerSteeringConfig config)
         {

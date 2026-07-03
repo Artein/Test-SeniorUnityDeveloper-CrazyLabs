@@ -110,8 +110,9 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         var surfaceUp = new Vector3(0f, 1f, 1f).normalized;
         var initialPlanarVelocity = ProjectPlanar(Vector3.forward, surfaceUp).normalized * DefaultPlanarSpeed;
         _steeringFrameSource.UpDirection = surfaceUp;
-        _steeringTarget.LinearVelocity = initialPlanarVelocity + surfaceUp * DefaultVerticalSpeed;
-        ActivateSteering();
+        ActivateSteering(surfaceUp);
+        SetGroundedSurface(surfaceUp);
+        _steeringTarget.LinearVelocity = initialPlanarVelocity;
 
         _input.Press(1, new Vector2(500f, 100f));
         _input.Move(1, new Vector2(600f, 100f));
@@ -120,7 +121,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         var steeredPlanarVelocity = ProjectPlanar(_steeringTarget.LinearVelocity, surfaceUp);
         Assert.That(_steeringFrameSource.GetUpDirectionCallCount, Is.EqualTo(1));
         Assert.That(Vector3.Dot(steeredPlanarVelocity.normalized, initialPlanarVelocity.normalized), Is.LessThan(0.9999f));
-        AssertSpeedComponentsPreservedAround(_steeringTarget.LinearVelocity, surfaceUp);
+        Assert.That(Vector3.Dot(_steeringTarget.LinearVelocity, surfaceUp), Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(steeredPlanarVelocity.magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(0.0001f));
         Assert.That(Vector3.Dot(_steeringTarget.Rotation * Vector3.up, surfaceUp), Is.GreaterThan(0.999f));
     }
 
@@ -171,7 +173,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_PostLaunchUngroundedFlightAboveNormalSpeed_DoesNotClampOrWriteVelocity()
+    public void FixedTick_AirWithoutActiveGesture_DoesNotWriteVelocityOrFacing()
     {
         SetUngroundedSurface();
         var launchVelocity = new Vector3(0f, DefaultVerticalSpeed, 35f);
@@ -186,7 +188,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_PostLaunchUngroundedFlight_DoesNotApplySteeringRotationBeforeLanding()
+    public void FixedTick_AirWithActiveGesture_SteersDirectionAndPreservesSpeedComponents()
     {
         SetUngroundedSurface();
         var launchVelocity = new Vector3(0f, DefaultVerticalSpeed, 35f);
@@ -197,27 +199,60 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         FixedTick();
 
-        AssertVectorEqual(_steeringTarget.LinearVelocity, launchVelocity);
-        Assert.That(_steeringTarget.Rotation, Is.EqualTo(Quaternion.identity));
-        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        Assert.That(_steeringTarget.LinearVelocity.x, Is.GreaterThan(0f));
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 35f);
+        Assert.That(_steeringTarget.ApplyCallCount, Is.EqualTo(1));
     }
 
     [Test]
-    public void FixedTick_PostLaunchStaleGroundedSample_DoesNotEnableSteeringBeforeUnsupportedSample()
+    public void FixedTick_AirWithActiveGesture_UsesAirTurnAuthority()
+    {
+        SetUngroundedSurface();
+        var launchVelocity = new Vector3(0f, DefaultVerticalSpeed, DefaultPlanarSpeed);
+        _steeringTarget.LinearVelocity = launchVelocity;
+        ActivateSteeringWithLaunchVelocity(launchVelocity);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+
+        FixedTick();
+
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.RunAirSteeringMaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
+    }
+
+    [Test]
+    public void FixedTick_GroundedWithActiveGesture_UsesGroundedTurnAuthority()
+    {
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = new Vector3(0f, 0f, DefaultPlanarSpeed);
+        ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+
+        FixedTick();
+
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.MaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
+    }
+
+    [Test]
+    public void FixedTick_PostLaunchStaleGroundedWithPositiveLift_UsesAirSteeringBeforeUnsupportedSample()
     {
         SetGroundedSurface(Vector3.up);
         var launchVelocity = new Vector3(0f, DefaultVerticalSpeed, 35f);
         _steeringTarget.LinearVelocity = launchVelocity;
         ActivateSteeringWithLaunchVelocity(launchVelocity);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
 
         FixedTick();
 
-        SetUngroundedSurface();
-        FixedTick();
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 35f);
 
-        AssertVectorEqual(_steeringTarget.LinearVelocity, launchVelocity);
-        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
-        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.RunAirSteeringMaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
     }
 
     [Test]
@@ -265,21 +300,26 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_NoTakeoffGroundedWithoutLift_EnablesSteeringImmediately()
+    public void FixedTick_NoTakeoffGroundedWithoutLift_UsesGroundedSteeringImmediately()
     {
         SetGroundedSurface(Vector3.up);
         var launchVelocity = new Vector3(0f, 0f, 12f);
         _steeringTarget.LinearVelocity = launchVelocity;
         ActivateSteeringWithLaunchVelocity(launchVelocity);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
 
         FixedTick();
 
         AssertPlanarSpeed(_steeringTarget.LinearVelocity, 12f);
         Assert.That(_steeringTarget.ApplyCallCount, Is.EqualTo(1));
+
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.MaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
     }
 
     [Test]
-    public void FixedTick_NoTakeoffGroundedWithPositiveLift_RemainsBlockedAfterTimePasses()
+    public void FixedTick_NoTakeoffGroundedWithPositiveLiftWithoutGesture_DoesNotApplyHiddenGuidance()
     {
         SetGroundedSurface(Vector3.up);
         var launchVelocity = new Vector3(0f, 2f, 12f);
@@ -296,18 +336,41 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_PostLaunchInvalidGroundedSurface_DoesNotEnableSteering()
+    public void FixedTick_InvalidGroundedSurfaceWithActiveGesture_UsesAirSteering()
     {
         _surfaceContextSource.Current = new Game.Gameplay.RunSurfaceContext(true, Vector3.zero, 0f);
         var launchVelocity = new Vector3(0f, 0f, 12f);
         _steeringTarget.LinearVelocity = launchVelocity;
         ActivateSteeringWithLaunchVelocity(launchVelocity);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
 
         FixedTick();
 
-        AssertVectorEqual(_steeringTarget.LinearVelocity, launchVelocity);
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, 12f);
         Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
-        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+        Assert.That(_steeringTarget.ApplyCallCount, Is.EqualTo(1));
+
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.RunAirSteeringMaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
+    }
+
+    [Test]
+    public void FixedTick_NonLaunchUnsupportedRunningBump_UsesAirSteering()
+    {
+        ActivateSteering();
+        SetUngroundedSurface();
+        _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, DefaultPlanarSpeed);
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+
+        FixedTick();
+
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, DefaultPlanarSpeed);
+
+        AssertPlanarTurnAngleAround(Vector3.forward, _steeringTarget.LinearVelocity, Vector3.up,
+            _config.RunAirSteeringMaximumTurnDegreesPerSecond * _clock.FixedDeltaTime);
     }
 
     [Test]
@@ -558,6 +621,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _config.RunSteeringResponsiveness = 5f;
         _statResolver.SetResolvedValue(_playerSteeringResponsivenessStatId, 20f);
         ActivateSteering();
+        SetGroundedSurface(Vector3.up);
+        _steeringTarget.LinearVelocity = Vector3.forward * DefaultPlanarSpeed;
 
         _input.Press(1, new Vector2(500f, 100f));
         _input.Move(1, new Vector2(600f, 100f));
@@ -565,7 +630,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         AssertResolved(_playerSteeringResponsivenessStatId, 5f);
         Assert.That(_steeringTarget.LinearVelocity.x, Is.GreaterThan(0.1f));
-        AssertPlanarAndVerticalSpeedPreserved(_steeringTarget.LinearVelocity);
+        Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
+        AssertPlanarSpeed(_steeringTarget.LinearVelocity, DefaultPlanarSpeed);
     }
 
     [Test]
@@ -663,5 +729,17 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+    }
+
+    private void AssertPlanarTurnAngleAround(
+        Vector3 originalPlanarDirection,
+        Vector3 steeredVelocity,
+        Vector3 upDirection,
+        float expectedDegrees)
+    {
+        var originalPlanar = ProjectPlanar(originalPlanarDirection, upDirection).normalized;
+        var steeredPlanar = ProjectPlanar(steeredVelocity, upDirection).normalized;
+
+        Assert.That(Vector3.Angle(originalPlanar, steeredPlanar), Is.EqualTo(expectedDegrees).Within(0.001f));
     }
 }

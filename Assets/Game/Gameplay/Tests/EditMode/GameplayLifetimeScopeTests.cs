@@ -325,6 +325,7 @@ public sealed class GameplayLifetimeScopeTests
         var characterVisualPoseSmoother = container.Resolve<ICharacterVisualPoseSmoother>();
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
         var finishPresentationView = container.Resolve<IFinishPresentationView>();
+        var presentationSupportTracker = container.Resolve<ICharacterPresentationSupportTracker>();
         var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
         var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
         var resolvedRunningState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.Running);
@@ -445,6 +446,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(characterVisualPoseSmoother, Is.Not.Null);
         Assert.That(presentationClassifier, Is.Not.Null);
         Assert.That(finishPresentationView, Is.SameAs(fixture.FinishPresentationView));
+        Assert.That(presentationSupportTracker, Is.Not.Null);
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(resolvedRunningState, Is.SameAs(fixture.RunningStateId));

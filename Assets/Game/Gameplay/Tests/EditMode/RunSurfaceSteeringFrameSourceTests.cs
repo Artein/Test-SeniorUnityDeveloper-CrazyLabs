@@ -324,6 +324,7 @@ public sealed class RunSurfaceSteeringFrameSourceTests
         public float MinimumAcceptedDpi { get; set; } = 1f;
         public float MaximumAcceptedDpi { get; set; } = 1000f;
         public float MaximumTurnDegreesPerSecond { get; set; } = 120f;
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 45f;
         public float MinimumSteerSpeed { get; set; } = 0.25f;
         public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
         public float LaunchLandingStabilizationSeconds { get; set; } = 0.3f;

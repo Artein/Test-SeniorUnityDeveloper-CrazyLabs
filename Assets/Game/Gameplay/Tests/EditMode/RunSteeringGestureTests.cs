@@ -202,6 +202,7 @@ public sealed class RunSteeringGestureTests
         public float MinimumAcceptedDpi { get; set; }
         public float MaximumAcceptedDpi { get; set; }
         public float MaximumTurnDegreesPerSecond { get; set; }
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
         public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
         public float LaunchLandingStabilizationSeconds { get; set; }
