@@ -12,33 +12,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: Obstacle_Billboard Mesh
       objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
+    - target: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -59,8 +35,53 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4421961945766357335}
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6394125917197600795}
   m_SourcePrefab: {fileID: 100100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+--- !u!1 &3423949055354628486 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
+  m_PrefabInstance: {fileID: 3423949055354728230}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &4421961945766357335
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3423949055354628486}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 41.02438, y: 4.33441, z: 37.899002}
+  m_Center: {x: 0, y: 0, z: 17.582}
+--- !u!114 &6394125917197600795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3423949055354628486}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4ef25617562d4fc29ce86fffba9952d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunContact
+  _category: 1
 --- !u!4 &3423949055354860966 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: 567715536d229c9479dba658f9d1ce24, type: 3}
@@ -77,6 +98,10 @@ PrefabInstance:
     - target: {fileID: 1253982947914640385, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
       propertyPath: m_Name
       value: Obstacle_Billboard
+      objectReference: {fileID: 0}
+    - target: {fileID: 1253982947914640385, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
       propertyPath: m_LocalPosition.x
@@ -122,7 +147,13 @@ PrefabInstance:
       propertyPath: m_Name
       value: Obstacle_Billboard Visual
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 8965694653075356165, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 1354504512469946723, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+    - {fileID: 2852030308856019939, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 1316807900598932141, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
