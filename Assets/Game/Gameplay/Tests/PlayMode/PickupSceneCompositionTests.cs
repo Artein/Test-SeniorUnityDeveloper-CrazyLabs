@@ -62,8 +62,8 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
             AssertPickupAuthoring(configuredPickup, pickupLayer);
         }
 
-        var regularCoinPickup = FindConfiguredPickup(configuredPickups, 1, "regular coin pickup");
-        var bigCoinPickup = FindConfiguredPickup(configuredPickups, 5, "big coin pickup");
+        var regularCoinPickup = FindConfiguredPickup(configuredPickups, 5, "regular coin pickup");
+        var bigCoinPickup = FindConfiguredPickup(configuredPickups, 25, "big coin pickup");
 
         Assert.That(regularCoinPickup.Definition.CurrencyDefinition, Is.SameAs(bigCoinPickup.Definition.CurrencyDefinition));
 
@@ -91,7 +91,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
         Assert.That(pickup.gameObject.activeSelf, Is.True, pickup.name);
         Assert.That(pickup.gameObject.layer, Is.EqualTo(pickupLayer), pickup.name);
         Assert.That(pickup.Definition, Is.Not.Null, pickup.name);
-        Assert.That(new[] { 1, 5 }, Does.Contain(pickup.Definition.Amount), pickup.name);
+        Assert.That(new[] { 5, 25 }, Does.Contain(pickup.Definition.Amount), pickup.name);
         Assert.That(pickup.Definition.CurrencyDefinition, Is.Not.Null, pickup.name);
         Assert.That(colliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
 

@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: BigCoinPickupDef
   m_EditorClassIdentifier: 
   _currencyDefinition: {fileID: 11400000, guid: ca56e342366748b59c0ed798b20864f1, type: 2}
-  _amount: 5
+  _amount: 25
