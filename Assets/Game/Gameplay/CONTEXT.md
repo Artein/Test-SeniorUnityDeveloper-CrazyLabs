@@ -64,9 +64,13 @@ _Avoid_: Input polling rate, touch sampling rate
 The gameplay orientation used by **Run Steering Control** to steer the **Run Body** during **Running**.
 _Avoid_: Ground normal, support frame, locomotion frame, physics normal
 
-**Post-Launch Steering Gate**:
-The temporary rule that keeps **Run Steering Control** inactive during fired-by-slingshot unsupported motion and enables it after first valid post-launch **Run Surface** landing or grounded no-lift launch contact.
-_Avoid_: launch speed bypass, speed recovery, launch cap grace, no-takeoff timeout
+**Run Air Steering Control**:
+The weaker **Run Steering Control** behavior used while the **Run Body** is unsupported by a valid **Run Surface** during **Running**.
+_Avoid_: Launch steering, air driving, Character Presentation Mode
+
+**Run Steering Mode Selector**:
+The **Running** control boundary that chooses between grounded **Run Steering Control** and **Run Air Steering Control** from current support and motion facts.
+_Avoid_: Post-Launch Steering Gate, launch speed bypass, speed recovery, launch cap grace, no-takeoff timeout
 
 **Launch Landing Stabilization**:
 The post-launch contact correction that removes unwanted lift away from the first real **Run Surface** landing while preserving surface-tangent **Run Body** speed.
@@ -224,12 +228,32 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Run Steering Frame** may be derived from **Run Surface** traversal facts without being identical to a raw contact normal.
 - **Run Steering Control** uses horizontal displacement; vertical displacement has no steering meaning.
 - **Run Steering Control** preserves player-facing **Run Body** speed while changing steering direction.
-- **Post-Launch Steering Gate** can delay steering input after **Launch**, but it must not change **Run Body** speed.
-- **Post-Launch Steering Gate** keeps steering inactive during fired-by-slingshot unsupported motion.
-- **Post-Launch Steering Gate** enables steering on the first valid post-launch **Run Surface** landing.
-- **Post-Launch Steering Gate** enables steering immediately for a weak grounded **Launch** when current support is a valid **Run Surface** and **Run Body** velocity has no positive surface-normal lift.
-- **Post-Launch Steering Gate** must not use a no-takeoff timeout to enable steering.
+- **Run Air Steering Control** belongs to **Running**, not **Slingshot** or **Character Presentation**.
+- **Run Air Steering Control** applies when the **Run Body** is unsupported by a valid **Run Surface**.
+- **Run Air Steering Control** applies during any unsupported **Running** motion before **Run Ended**.
+- **Run Air Steering Control** may also apply during stale post-launch support samples when the **Run Body** is moving away from the reported **Run Surface**.
+- **Run Air Steering Control** uses the **Run Steering Frame** rather than raw support normals or **Character Presentation Mode**.
+- **Run Air Steering Control** uses the active **Run Steering Control** gesture with separately tuned, weaker turn authority than grounded steering.
+- **Run Air Steering Control** shares **Run Steering Responsiveness** with grounded **Run Steering Control**.
+- **Run Air Steering Control** does nothing without an active **Run Steering Control** gesture.
+- **Run Air Steering Control** rotates current air-frame planar velocity direction while preserving planar speed and vertical velocity.
+- **Run Air Steering Control** rotates the **Run Body** to face the steered air-frame planar velocity when steering is applied.
+- **Run Air Steering Control** must not add forward speed, reduce launch speed, apply player-facing speed caps, or drive toward a target velocity.
+- **Run Air Steering Control** does not add pitch, roll, banking, or **Character Presentation Mode** rotation.
+- **Run Air Steering Control** is not selected from **Launch Flight**, **Airborne**, or any other **Character Presentation Mode**.
+- **Run Air Steering Control** stops when **Running** ends.
+- **Run Steering Mode Selector** chooses between grounded **Run Steering Control** and **Run Air Steering Control** during **Running**.
+- **Run Steering Mode Selector** selects steering behavior; it does not rotate velocity, write **Run Body** pose, or change **Run Body** speed.
+- **Run Steering Mode Selector** has no blocked or inactive selection; low speed, invalid velocity, and missing input are separate **Run Steering Control** gates.
+- **Run Steering Mode Selector** selects **Run Air Steering Control** when current support is not a valid **Run Surface**.
+- **Run Steering Mode Selector** selects **Run Air Steering Control** when the **Run Body** is moving away from a reported **Run Surface** above the accepted lift tolerance.
+- **Run Steering Mode Selector** may delay grounded steering selection after **Launch**, but it must not change **Run Body** speed.
+- **Run Steering Mode Selector** must not disable **Run Air Steering Control** during unsupported post-launch motion.
+- **Run Steering Mode Selector** selects grounded steering on the first valid post-launch **Run Surface** landing.
+- **Run Steering Mode Selector** selects grounded steering immediately for a weak grounded **Launch** when current support is a valid **Run Surface** and **Run Body** velocity has no positive surface-normal lift.
+- **Run Steering Mode Selector** must not use a no-takeoff timeout to enable grounded steering.
 - **Launch Landing Stabilization** can remove positive surface-normal lift after first real post-launch landing, but it must preserve surface-tangent **Run Body** speed.
+- **Launch Landing Stabilization** may correct post-launch lift before grounded **Run Steering Control** resumes.
 - Ordinary **Run Body** slowdown comes from **Run Surface Contact Slowdown**, not from **Run Steering Control**.
 - **Run Surface Contact Slowdown** should be tuned through authored **Run Surface** behavior before adding a separate gameplay resistance owner.
 - **Run Body Speed Sanity Guard** catches impossible velocities without shaping normal launch distance or sliding feel.
@@ -290,13 +314,13 @@ _Avoid_: Character pivot, camera target, follow transform
 > **Domain expert:** "No - it steers direction; **Run Surface Contact Slowdown** slows the **Run Body**, with only a defensive **Run Body Speed Sanity Guard** for impossible values."
 
 > **Dev:** "Do we still need launch speed recovery after removing the steering speed cap?"
-> **Domain expert:** "No - **Post-Launch Steering Gate** and **Launch Landing Stabilization** may still exist, but neither is a speed recovery system."
+> **Domain expert:** "No - **Run Steering Mode Selector** and **Launch Landing Stabilization** may still exist, but neither is a speed recovery system."
 
 > **Dev:** "Can the player steer while the slingshot shot is still flying?"
-> **Domain expert:** "No - **Post-Launch Steering Gate** keeps **Run Steering Control** inactive until first valid post-launch **Run Surface** landing."
+> **Domain expert:** "Yes - unsupported fired motion uses **Run Air Steering Control**, while grounded steering waits for valid **Run Surface** support."
 
 > **Dev:** "Should a weak grounded launch start steering because a timer expired?"
-> **Domain expert:** "No - **Post-Launch Steering Gate** should be event or condition driven, not timeout driven."
+> **Domain expert:** "No - **Run Steering Mode Selector** should be event or condition driven, not timeout driven."
 
 > **Dev:** "If a weak launch stays grounded, when can steering start?"
 > **Domain expert:** "When the **Run Body** is supported by a valid **Run Surface** and has no positive lift away from that surface."
@@ -312,8 +336,14 @@ _Avoid_: Character pivot, camera target, follow transform
 - "Responsiveness" resolves to **Run Steering Responsiveness**, not input polling or touch sampling.
 - "Ground normal", "support frame", and "locomotion frame" resolve to **Run Steering Frame** only when discussing player steering orientation.
 - "Steering frame" resolves to **Run Steering Frame**, not **Run Progress Frame**.
+- "In-flight steering", "air control", and "launch steering" resolve to **Run Air Steering Control** during **Running** movement discussion.
+- "Falling steering" resolves to **Run Air Steering Control** while the **Gameplay State** is still **Running**.
+- "Air stabilization" resolves to no **Run Air Steering Control** behavior unless an active **Run Steering Control** gesture exists.
+- "Stale grounded support" resolves to **Run Air Steering Control** when the **Run Body** is moving away from the reported **Run Surface** above the accepted lift tolerance.
+- "Post-launch steering gate" resolves to **Run Steering Mode Selector**; the selector is not a rule that disables air steering.
+- "Blocked steering mode" resolves to a **Run Steering Control** gate, not a **Run Steering Mode Selector** selection.
 - "Launch speed bypass", "burst cap", and "speed recovery" resolve to obsolete speed-cap workarounds once **Run Steering Control** no longer caps normal **Run Body** speed.
-- "No-takeoff timeout" should not be used to enable **Run Steering Control** after **Launch**.
+- "No-takeoff timeout" should not be used to enable grounded steering after **Launch**.
 - "Landing stabilization" resolves to **Launch Landing Stabilization**, not slowdown, downforce, or speed recovery.
 - "Speed cap" resolves to **Run Body Speed Sanity Guard** only when discussing impossible velocity validation; normal sliding speed should not be capped by **Run Steering Control**.
 - "Friction", "drag", and "slowdown" resolve first to **Run Surface Contact Slowdown** for ordinary sliding speed loss.

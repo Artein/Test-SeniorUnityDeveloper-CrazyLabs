@@ -25,6 +25,7 @@ public sealed class CharacterPresenterTests
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakeRunResultNotifier _runResultNotifier;
     private FakeCharacterPresentationModeClassifier _classifier;
+    private ICharacterPresentationSupportTracker _supportTracker;
     private FakeCharacterPresentationView _view;
     private FakeCharacterPresentationTuning _tuning;
     private FakeTime _clock;
@@ -62,6 +63,7 @@ public sealed class CharacterPresenterTests
         {
             NextMode = CharacterPresentationMode.Slide
         };
+        _supportTracker = new CharacterPresentationSupportTracker();
         _view = new FakeCharacterPresentationView();
         _tuning = new FakeCharacterPresentationTuning();
         _clock = new FakeTime { DeltaTime = 0.1f };
@@ -384,6 +386,36 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
+    public void Tick_GroundedWithSurfaceLiftAbovePresentationThreshold_ForwardsUnsupportedSurface()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _motionSource.LinearVelocity = new Vector3(0f, 0.5f, 8f);
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.SurfaceContext.IsGrounded, Is.False);
+        Assert.That(_classifier.LastInput.UngroundedElapsedSeconds, Is.EqualTo(_clock.DeltaTime).Within(0.0001f));
+    }
+
+    [Test]
+    public void Tick_GroundedFlickerBeforePresentationReacquire_DoesNotResetUngroundedTiming()
+    {
+        _clock.DeltaTime = 0.02f;
+        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        _motionSource.Position = new Vector3(0f, 3f, 0f);
+        ((ITickable)_presenter).Tick();
+
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _motionSource.Position = new Vector3(0f, 2.9f, 0f);
+        _motionSource.LinearVelocity = new Vector3(0f, -0.1f, 8f);
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.SurfaceContext.IsGrounded, Is.False);
+        Assert.That(_classifier.LastInput.UngroundedElapsedSeconds, Is.EqualTo(0.04f).Within(0.0001f));
+        Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(-0.1f).Within(0.0001f));
+    }
+
+    [Test]
     public void Tick_NeutralPresentationState_ResetsUngroundedSeparation()
     {
         _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
@@ -577,6 +609,30 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
+    public void Tick_PostLaunchGroundedWithLiftAfterObservedUngrounded_PreservesLaunchFlight()
+    {
+        _slingshotPresentationContextSource.Current = new SlingshotPresentationContext(
+            hasActivePull: false,
+            normalizedPull: 0f,
+            normalizedPullOffset: 0f,
+            hasLaunchPush: true,
+            launchPushElapsedSeconds: _tuning.LaunchPushMinimumSeconds + 0.01f,
+            normalizedLaunchPower: 0.8f,
+            normalizedLaunchOffset: 0.5f);
+
+        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        ((ITickable)_presenter).Tick();
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+
+        _slingshotPresentationContextSource.Current = default;
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _motionSource.LinearVelocity = new Vector3(0f, 0.5f, 8f);
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(_classifier.LastInput.HasLaunchFlight, Is.True);
+    }
+
+    [Test]
     public void Tick_LaunchPushFlagDropsBeforeLanding_PreservesLaunchFlightAndLaunchValues()
     {
         _classifier.NextMode = CharacterPresentationMode.LaunchFlight;
@@ -762,6 +818,7 @@ public sealed class CharacterPresenterTests
             _launchAppliedNotifier,
             _runResultNotifier,
             _classifier,
+            _supportTracker,
             _view,
             _tuning,
             _clock,
@@ -832,7 +889,7 @@ public sealed class CharacterPresenterTests
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return CurrentStateId == stateId;
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)
@@ -949,6 +1006,8 @@ public sealed class CharacterPresenterTests
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float LaunchFlightMaximumGroundedWaitSeconds { get; set; } = 0.35f;
+        public float PresentationSupportMaximumSurfaceLiftSpeed { get; set; } = 0.35f;
+        public float PresentationSupportReacquireSeconds { get; set; } = 0.08f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;
         public float MaximumPlaybackSpeedMultiplier { get; set; } = 1.5f;

@@ -229,6 +229,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedCharacterPresentationTuning.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.LaunchFlightMaximumGroundedWaitSeconds, Is.EqualTo(0.35f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.PresentationSupportMaximumSurfaceLiftSpeed, Is.EqualTo(0.35f).Within(0.0001f));
+        Assert.That(resolvedCharacterPresentationTuning.PresentationSupportReacquireSeconds, Is.EqualTo(0.08f).Within(0.0001f));
         Assert.That(resolvedCharacterPresentationTuning.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
         Assert.That(resolvedCharacterVisualTargetPoseSource, Is.Not.Null);
         Assert.That(resolvedCharacterVisualTargetPoseSource.CurrentPose.Position, Is.EqualTo(launchTarget.transform.position));
@@ -280,6 +282,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
 #if UNITY_EDITOR
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.LaunchFlight, 0.08f);
+        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Airborne, 0.22f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Victory, 0.24f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Defeat, 0.2f);
         AssertLaunchPushUsesSlideMotion(characterAnimator);
@@ -312,6 +315,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
         Assert.That(playerSteeringConfig, Is.Not.Null);
+        Assert.That(playerSteeringConfig.MaximumTurnDegreesPerSecond, Is.EqualTo(30f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(12f).Within(0.0001f));
+        Assert.That(playerSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.LessThan(playerSteeringConfig.MaximumTurnDegreesPerSecond));
         Assert.That(playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f).Within(0.0001f));
         Assert.That(playerSteeringConfig.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
@@ -321,8 +327,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(playerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
-        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(8f).Within(0.0001f));
-        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(35f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(10f).Within(0.0001f));
+        Assert.That(gameplaySlingshotLaunchConfig.MaximumForwardImpulse, Is.EqualTo(25f).Within(0.0001f));
         Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
 
         Assert.That(

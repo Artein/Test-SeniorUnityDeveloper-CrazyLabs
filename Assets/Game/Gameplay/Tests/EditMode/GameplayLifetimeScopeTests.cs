@@ -322,6 +322,7 @@ public sealed class GameplayLifetimeScopeTests
         var characterVisualFollowTuning = container.Resolve<ICharacterVisualFollowTuning>();
         var characterVisualPoseSmoother = container.Resolve<ICharacterVisualPoseSmoother>();
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
+        var presentationSupportTracker = container.Resolve<ICharacterPresentationSupportTracker>();
         var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
         var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
         var resolvedRunningState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.Running);
@@ -439,6 +440,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(characterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
         Assert.That(characterVisualPoseSmoother, Is.Not.Null);
         Assert.That(presentationClassifier, Is.Not.Null);
+        Assert.That(presentationSupportTracker, Is.Not.Null);
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(resolvedRunningState, Is.SameAs(fixture.RunningStateId));

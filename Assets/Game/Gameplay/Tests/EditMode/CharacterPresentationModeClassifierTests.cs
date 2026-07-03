@@ -319,6 +319,20 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_GroundedWithDownwardCourseVerticalSpeed_ReturnsSlide()
+    {
+        var input = CreateInput(
+            surfaceContext: GroundedDownhill(20f),
+            coursePlanarSpeed: 3f,
+            courseForwardSpeed: 3f,
+            courseVerticalSpeed: -_tuning.FallEnterMinimumDownwardSpeed);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
     public void Classify_GroundedBelowMeaningfulPlanarMovementThreshold_ReturnsIdle()
     {
         var input = CreateInput(
@@ -572,6 +586,8 @@ public sealed class CharacterPresentationModeClassifierTests
             Assert.That(view.MinimumLocomotionModeDuration, Is.EqualTo(0.35f).Within(0.0001f));
             Assert.That(view.LaunchPushMinimumSeconds, Is.EqualTo(0.25f).Within(0.0001f));
             Assert.That(view.LaunchFlightMaximumGroundedWaitSeconds, Is.EqualTo(0.35f).Within(0.0001f));
+            Assert.That(view.PresentationSupportMaximumSurfaceLiftSpeed, Is.EqualTo(0.35f).Within(0.0001f));
+            Assert.That(view.PresentationSupportReacquireSeconds, Is.EqualTo(0.08f).Within(0.0001f));
             Assert.That(view.SlideReferenceSpeed, Is.EqualTo(8f).Within(0.0001f));
         }
         finally
@@ -699,6 +715,8 @@ public sealed class CharacterPresentationModeClassifierTests
         public float MinimumLocomotionModeDuration { get; set; } = 0.35f;
         public float LaunchPushMinimumSeconds { get; set; } = 0.25f;
         public float LaunchFlightMaximumGroundedWaitSeconds { get; set; } = 0.35f;
+        public float PresentationSupportMaximumSurfaceLiftSpeed { get; set; } = 0.35f;
+        public float PresentationSupportReacquireSeconds { get; set; } = 0.08f;
         public float SlideReferenceSpeed { get; set; } = 8f;
         public float MinimumPlaybackSpeedMultiplier { get; set; } = 0.5f;
         public float MaximumPlaybackSpeedMultiplier { get; set; } = 1.5f;

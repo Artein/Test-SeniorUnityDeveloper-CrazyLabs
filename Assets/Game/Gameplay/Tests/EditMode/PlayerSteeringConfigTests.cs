@@ -30,6 +30,8 @@ public sealed class PlayerSteeringConfigTests
         Assert.That(_config.FallbackDpi, Is.EqualTo(326f));
         Assert.That(_config.MinimumAcceptedDpi, Is.EqualTo(1f));
         Assert.That(_config.MaximumAcceptedDpi, Is.EqualTo(1000f));
+        Assert.That(_config.MaximumTurnDegreesPerSecond, Is.EqualTo(120f));
+        Assert.That(_config.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(45f));
         Assert.That(_config.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f));
         Assert.That(_config.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f));
         Assert.That(_config.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f));
@@ -73,6 +75,16 @@ public sealed class PlayerSteeringConfigTests
 
         Assert.That(_config.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f));
         Assert.That(_config.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f));
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(-1f)]
+    [TestCase(float.PositiveInfinity)]
+    public void RunAirSteeringMaximumTurnDegreesPerSecond_InvalidAuthoredValue_ResolvesDefensively(float authoredValue)
+    {
+        _configObject.SetRunAirSteeringMaximumTurnDegreesPerSecondForTests(authoredValue);
+
+        Assert.That(_config.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(45f));
     }
 
     [TestCase(1f)]

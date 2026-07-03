@@ -25,11 +25,12 @@ namespace Game.Gameplay
         private readonly ITime _clock;
         private readonly IScreen _screen;
         private readonly IRunSteeringGesture _runSteeringGesture;
-        private readonly IPostLaunchSteeringGate _postLaunchSteeringGate = new PostLaunchSteeringGate();
+        private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
         private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly GameplayStateId _runningStateId;
         private readonly GameplayStatId _playerSteeringResponsivenessStatId;
         private readonly float _velocityChangeSqrTolerance = 0.00000001f;
+        private readonly float _minimumAirSteerMagnitude = 0.0001f;
 
         private IDisposable _inputEnableHandle;
         private Vector3 _steeringUp = Vector3.up;
@@ -134,7 +135,6 @@ namespace Game.Gameplay
 
             _hasLaunchApplied = true;
             _steeringUp = GetValidUpDirection(launchApplied.LaunchUpDirection);
-            _postLaunchSteeringGate.Arm();
             ArmLaunchLandingStabilization();
 
             if (_gameplayStateService.IsCurrent(_runningStateId))
@@ -146,7 +146,7 @@ namespace Game.Gameplay
             if (_isDisposed)
                 return;
 
-            if (ReferenceEquals(nextStateId, _runningStateId))
+            if (nextStateId == _runningStateId)
             {
                 if (_hasLaunchApplied)
                     ActivateSteering();
@@ -155,7 +155,6 @@ namespace Game.Gameplay
             }
 
             _hasLaunchApplied = false;
-            _postLaunchSteeringGate.Clear();
             ClearLaunchLandingStabilization();
             DeactivateSteering();
         }
@@ -243,17 +242,7 @@ namespace Game.Gameplay
             var stabilizedVelocity = ApplyLaunchLandingStabilization(velocity);
             var hasVelocityCorrection = sanityResult.WasCorrected || HasMeaningfulVelocityChange(velocity, stabilizedVelocity);
             var surfaceContext = _surfaceContextSource.Current;
-
-            if (_postLaunchSteeringGate.ShouldBlockSteering(
-                    surfaceContext,
-                    stabilizedVelocity,
-                    _config.LaunchLandingMaximumLiftSpeed))
-            {
-                if (hasVelocityCorrection)
-                    _steeringTarget.ApplyVelocity(stabilizedVelocity);
-
-                return;
-            }
+            var steeringMode = _steeringModeSelector.Select(surfaceContext, stabilizedVelocity, _config.LaunchLandingMaximumLiftSpeed);
 
             var upDirection = GetValidUpDirection(_steeringFrameSource.GetUpDirection(_steeringUp), _steeringUp);
 
@@ -269,13 +258,35 @@ namespace Game.Gameplay
                 return;
             }
 
+            if (steeringMode == RunSteeringMode.Air && !ShouldApplyAirSteering())
+            {
+                if (hasVelocityCorrection)
+                    _steeringTarget.ApplyVelocity(stabilizedVelocity);
+
+                return;
+            }
+
             var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
-            var turnAngle = _currentSteer * Mathf.Max(0f, _config.MaximumTurnDegreesPerSecond) * fixedDeltaTime;
+            var turnAngle = _currentSteer * GetMaximumTurnDegreesPerSecond(steeringMode) * fixedDeltaTime;
             var steeredPlanarVelocity = Quaternion.AngleAxis(turnAngle, upDirection) * planarVelocity;
             var steeredVelocity = steeredPlanarVelocity + verticalVelocity;
             var targetRotation = Quaternion.LookRotation(steeredPlanarVelocity.normalized, upDirection);
 
             _steeringTarget.ApplySteering(steeredVelocity, targetRotation);
+        }
+
+        private bool ShouldApplyAirSteering()
+        {
+            return _runSteeringGesture.IsActive && Mathf.Abs(_currentSteer) > _minimumAirSteerMagnitude;
+        }
+
+        private float GetMaximumTurnDegreesPerSecond(RunSteeringMode steeringMode)
+        {
+            var maximumTurnDegreesPerSecond = steeringMode == RunSteeringMode.Air
+                ? _config.RunAirSteeringMaximumTurnDegreesPerSecond
+                : _config.MaximumTurnDegreesPerSecond;
+
+            return Mathf.Max(0f, maximumTurnDegreesPerSecond);
         }
 
         private bool HasMeaningfulVelocityChange(Vector3 previousVelocity, Vector3 nextVelocity)

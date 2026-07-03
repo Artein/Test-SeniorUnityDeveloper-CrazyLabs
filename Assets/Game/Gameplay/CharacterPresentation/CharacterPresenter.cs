@@ -22,6 +22,7 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly ICharacterPresentationView _view;
         private readonly ICharacterPresentationTuning _tuning;
         private readonly ITime _clock;
+        private readonly ICharacterPresentationSupportTracker _supportTracker;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
@@ -32,9 +33,6 @@ namespace Game.Gameplay.CharacterPresentation
         private bool _hasAcceptedRunResult;
         private bool _acceptedRunResultSucceeded;
         private float _currentModeElapsedSeconds;
-        private float _ungroundedElapsedSeconds;
-        private bool _hasUngroundedStartPosition;
-        private Vector3 _ungroundedStartPosition;
         private bool _previousHasLaunchPush;
         private bool _hasPendingLaunchFlight;
         private bool _hasActiveLaunchFlight;
@@ -54,6 +52,7 @@ namespace Game.Gameplay.CharacterPresentation
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IRunResultNotifier runResultNotifier,
             ICharacterPresentationModeClassifier classifier,
+            ICharacterPresentationSupportTracker supportTracker,
             ICharacterPresentationView view,
             ICharacterPresentationTuning tuning,
             ITime clock,
@@ -74,6 +73,7 @@ namespace Game.Gameplay.CharacterPresentation
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _runResultNotifier = runResultNotifier ?? throw new ArgumentNullException(nameof(runResultNotifier));
             _classifier = classifier ?? throw new ArgumentNullException(nameof(classifier));
+            _supportTracker = supportTracker ?? throw new ArgumentNullException(nameof(supportTracker));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -133,21 +133,17 @@ namespace Game.Gameplay.CharacterPresentation
 
             courseVerticalSpeed = GetCourseVerticalSpeed(linearVelocity, courseUpDirection);
 
-            var ungroundedVerticalSeparation = UpdateUngroundedState(
-                surfaceContext,
-                deltaTime,
-                isNeutralPresentationState,
-                currentPosition,
-                courseUpDirection);
-            var hasLaunchFlight = UpdateLaunchFlightState(slingshotContext, surfaceContext, isRunPreparation, isPreLaunch, deltaTime);
+            var supportSample = _supportTracker.Update(surfaceContext, currentPosition, linearVelocity, courseUpDirection, _tuning, deltaTime,
+                isNeutralPresentationState);
+            var presentationSurfaceContext = supportSample.SurfaceContext;
+            var hasLaunchFlight = UpdateLaunchFlightState(slingshotContext, presentationSurfaceContext, isRunPreparation, isPreLaunch, deltaTime);
             var hasLaunchPushForClassification = slingshotContext.HasLaunchPush && !_suppressConsumedLaunchPushForClassification;
             var launchPushElapsedSeconds = hasLaunchPushForClassification ? slingshotContext.LaunchPushElapsedSeconds : 0f;
 
-            var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, _ungroundedElapsedSeconds, isPreLaunch,
-                isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull, hasLaunchPushForClassification,
-                hasLaunchFlight, launchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed,
-                courseVerticalSpeed,
-                ungroundedVerticalSeparation, linearVelocity);
+            var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, supportSample.UngroundedElapsedSeconds,
+                isPreLaunch, isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull,
+                hasLaunchPushForClassification, hasLaunchFlight, launchPushElapsedSeconds, presentationSurfaceContext, coursePlanarSpeed,
+                courseForwardSpeed, courseVerticalSpeed, supportSample.UngroundedVerticalSeparation, linearVelocity);
 
             var result = _classifier.Classify(input);
             var mode = NormalizePresentationMode(result.Mode);
@@ -162,11 +158,8 @@ namespace Game.Gameplay.CharacterPresentation
 
             _isDisposed = true;
 
-            if (_isInitialized)
-            {
-                _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
-                _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
-            }
+            _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
+            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
         }
 
         private void OnRunResultAccepted(RunResult result)
@@ -195,33 +188,6 @@ namespace Game.Gameplay.CharacterPresentation
 
             _hasAcceptedRunResult = false;
             _acceptedRunResultSucceeded = false;
-        }
-
-        private float UpdateUngroundedState(
-            RunSurfaceContext surfaceContext,
-            float deltaTime,
-            bool isNeutralPresentationState,
-            Vector3 currentPosition,
-            Vector3 courseUpDirection)
-        {
-            if (isNeutralPresentationState || surfaceContext.IsGrounded)
-            {
-                _ungroundedElapsedSeconds = 0f;
-                _hasUngroundedStartPosition = false;
-                _ungroundedStartPosition = Vector3.zero;
-                return 0f;
-            }
-
-            if (!_hasUngroundedStartPosition)
-            {
-                _hasUngroundedStartPosition = true;
-                _ungroundedStartPosition = GetFiniteOrZero(currentPosition);
-            }
-
-            _ungroundedElapsedSeconds += deltaTime;
-            var positionDelta = GetFiniteOrZero(currentPosition) - _ungroundedStartPosition;
-            var separation = Vector3.Dot(positionDelta, GetSafeUpDirection(courseUpDirection));
-            return float.IsFinite(separation) ? separation : 0f;
         }
 
         private bool UpdateLaunchFlightState(
@@ -403,11 +369,6 @@ namespace Game.Gameplay.CharacterPresentation
 
             var normalized = upDirection.normalized;
             return normalized.IsFinite() ? normalized : Vector3.up;
-        }
-
-        private static Vector3 GetFiniteOrZero(Vector3 position)
-        {
-            return position.IsFinite() ? position : Vector3.zero;
         }
 
         private void UpdateModeElapsed(CharacterPresentationMode nextMode, float deltaTime)
