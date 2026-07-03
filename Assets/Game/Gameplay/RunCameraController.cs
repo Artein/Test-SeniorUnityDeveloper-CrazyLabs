@@ -127,21 +127,21 @@ namespace Game.Gameplay
 
         private void ApplyCameraForState(GameplayStateId nextStateId)
         {
-            if (ReferenceEquals(nextStateId, _runPreparationStateId))
+            if (nextStateId == _runPreparationStateId)
             {
-                ClearRunCameraGate();
+                ResetRunCameraForNeutralState();
                 _rig.ActivateRunPreparationCamera();
                 return;
             }
 
-            if (ReferenceEquals(nextStateId, _preLaunchStateId))
+            if (nextStateId == _preLaunchStateId)
             {
-                ClearRunCameraGate();
+                ResetRunCameraForNeutralState();
                 _rig.ActivatePreLaunchCamera();
                 return;
             }
 
-            if (ReferenceEquals(nextStateId, _runningStateId))
+            if (nextStateId == _runningStateId)
             {
                 if (_hasLaunchApplied)
                     ActivateRunCamera();
@@ -149,7 +149,7 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (ReferenceEquals(nextStateId, _runEndedStateId))
+            if (nextStateId == _runEndedStateId)
             {
                 if (_hasLaunchApplied)
                     ActivateRunCamera();
@@ -157,7 +157,7 @@ namespace Game.Gameplay
                 return;
             }
 
-            ClearRunCameraGate();
+            ResetRunCameraForNeutralState();
             _rig.ActivateRunPreparationCamera();
         }
 
@@ -165,22 +165,34 @@ namespace Game.Gameplay
         {
             if (_isRunCameraActive)
                 return;
-
-            UpdateAnchorPose(0f, true);
+            
+            UpdateAnchorPose(0f, true, false);
             _rig.ActivateRunCamera();
             _isRunCameraActive = true;
         }
 
-        private void ClearRunCameraGate()
+        private void ResetRunCameraForNeutralState()
         {
             _hasLaunchApplied = false;
             _isRunCameraActive = false;
+            _hasAnchorPose = false;
+            _cameraUp = Vector3.up;
+            _lastValidYaw = Quaternion.identity;
+            UpdateAnchorPose(0f, true, false);
         }
 
         private void UpdateAnchorPose(float deltaTime, bool snap)
         {
-            var targetPosition = GetTargetPosition();
-            var targetYaw = GetTargetYaw();
+            UpdateAnchorPose(deltaTime, snap, true);
+        }
+
+        private void UpdateAnchorPose(float deltaTime, bool snap, bool acceptVelocityYaw)
+        {
+            var sourcePosition = GetSourcePosition();
+            var sourceVelocity = _source.LinearVelocity;
+            var targetPosition = sourcePosition + _config.AnchorOffset;
+            var yawDecision = GetTargetYawDecision(sourceVelocity, acceptVelocityYaw);
+            var targetYaw = yawDecision.TargetYaw;
             var nextPosition = GetNextPosition(targetPosition, deltaTime, snap);
             var nextYaw = GetNextYaw(targetYaw, deltaTime, snap);
 
@@ -188,24 +200,30 @@ namespace Game.Gameplay
             _hasAnchorPose = true;
         }
 
-        private Vector3 GetTargetPosition()
+        private Vector3 GetSourcePosition()
         {
             var sourcePosition = _source.Position;
 
             if (!sourcePosition.IsFinite())
                 sourcePosition = _anchor.Position.IsFinite() ? _anchor.Position : Vector3.zero;
 
-            return sourcePosition + _config.AnchorOffset;
+            return sourcePosition;
         }
 
-        private Quaternion GetTargetYaw()
+        private RunCameraYawDecision GetTargetYawDecision(Vector3 sourceVelocity, bool acceptVelocityYaw)
         {
-            var planarVelocity = Vector3.ProjectOnPlane(_source.LinearVelocity, _cameraUp);
+            var planarVelocity = Vector3.ProjectOnPlane(sourceVelocity, _cameraUp);
+            var planarSpeed = planarVelocity.IsFinite() ? planarVelocity.magnitude : 0f;
+            var acceptedVelocityYaw = acceptVelocityYaw && planarVelocity.IsFinite() && planarSpeed >= _config.MinimumYawSpeed;
 
-            if (planarVelocity.IsFinite() && planarVelocity.magnitude >= _config.MinimumYawSpeed)
+            if (acceptedVelocityYaw)
                 _lastValidYaw = Quaternion.LookRotation(planarVelocity.normalized, _cameraUp);
 
-            return _lastValidYaw;
+            return new RunCameraYawDecision(
+                planarVelocity,
+                planarSpeed,
+                acceptedVelocityYaw,
+                _lastValidYaw);
         }
 
         private Vector3 GetNextPosition(Vector3 targetPosition, float deltaTime, bool snap)
@@ -242,6 +260,26 @@ namespace Game.Gameplay
                 return Vector3.up;
 
             return upDirection.normalized;
+        }
+
+        private readonly struct RunCameraYawDecision
+        {
+            public Vector3 PlanarVelocity { get; }
+            public float PlanarSpeed { get; }
+            public bool AcceptedVelocityYaw { get; }
+            public Quaternion TargetYaw { get; }
+
+            public RunCameraYawDecision(
+                Vector3 planarVelocity,
+                float planarSpeed,
+                bool acceptedVelocityYaw,
+                Quaternion targetYaw)
+            {
+                PlanarVelocity = planarVelocity;
+                PlanarSpeed = planarSpeed;
+                AcceptedVelocityYaw = acceptedVelocityYaw;
+                TargetYaw = targetYaw;
+            }
         }
     }
 }
