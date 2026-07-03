@@ -736,11 +736,11 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(baseMap.wrapModeU, Is.EqualTo(TextureWrapMode.Repeat));
         Assert.That(baseMap.wrapModeV, Is.EqualTo(TextureWrapMode.Repeat));
         Assert.That(baseMapScale.x, Is.GreaterThan(1f));
-        Assert.That(baseMapScale.x, Is.EqualTo(16f).Within(0.001f));
+        Assert.That(baseMapScale.x, Is.EqualTo(20f).Within(0.001f));
         Assert.That(baseMapScale.y, Is.EqualTo(2f).Within(0.001f));
-        Assert.That(material.GetFloat(FinishThresholdBottomAlphaPropertyName), Is.EqualTo(0.85f).Within(0.001f));
+        Assert.That(material.GetFloat(FinishThresholdBottomAlphaPropertyName), Is.EqualTo(0.5f).Within(0.001f));
         Assert.That(material.GetFloat(FinishThresholdTopAlphaPropertyName), Is.EqualTo(0f).Within(0.001f));
-        Assert.That(material.GetFloat(FinishThresholdFadeExponentPropertyName), Is.EqualTo(1.2f).Within(0.001f));
+        Assert.That(material.GetFloat(FinishThresholdFadeExponentPropertyName), Is.EqualTo(3f).Within(0.001f));
 
 #if UNITY_EDITOR
         AssertFinishThresholdTextureImporter(baseMap);
