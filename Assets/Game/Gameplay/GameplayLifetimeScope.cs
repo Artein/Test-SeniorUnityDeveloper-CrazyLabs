@@ -53,6 +53,7 @@ namespace Game.Gameplay
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
+        [SerializeField] private FinishPresentationView _finishPresentationView;
         [SerializeField] [TagSelector] private string _playerTag = "Player";
         [SerializeField] private string _playerLayerName = "Player";
         [SerializeField] private string _pickupLayerName = "Pickup";
@@ -103,12 +104,14 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunSurfaceContextSource>(_runSurfaceContextSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
+            builder.RegisterInstance<IRunCameraLens>(new TransformRunCameraLens(_inputCamera.transform));
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
             builder.RegisterInstance<ICharacterPresentationView>(_characterPresentationView);
             builder.RegisterInstance<ICharacterPresentationTuning>(_characterPresentationView);
             builder.RegisterInstance<ICharacterVisualFollowView>(_characterPresentationView);
             builder.RegisterInstance<ICharacterVisualFollowTuning>(_characterPresentationView);
             builder.RegisterInstance<ICharacterVisualTargetPoseSource>(new TransformCharacterVisualTargetPoseSource(_launchTarget.transform));
+            builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
@@ -195,6 +198,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
+            builder.RegisterEntryPoint<FinishCelebrationPresenter>();
         }
 
         private IReadOnlyList<Pickup> GetLevelPickups()
