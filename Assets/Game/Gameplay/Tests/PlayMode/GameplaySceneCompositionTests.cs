@@ -302,6 +302,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(bandShapeSolved, Is.True);
         Assert.That(bandShapePointCount, Is.EqualTo(bandShapeProvider.BandShapePointCount));
         Assert.That(bandShapePointCount, Is.GreaterThan(3));
+        Assert.That(bandShapeProvider, Is.TypeOf<SlingshotBandShapeProvider>());
+        Assert.That(((SlingshotBandShapeProvider)bandShapeProvider).UsesLaunchTargetBandShapeClearanceSourceForTests, Is.True);
         Assert.That(assignedPlayerSteeringConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunCameraConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunEndConfigs, Has.Length.EqualTo(1));

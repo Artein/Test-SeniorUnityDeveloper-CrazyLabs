@@ -13,6 +13,9 @@ using VContainer;
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayModeFixture
 {
+    private const int BandClearanceSegmentSampleCount = 24;
+    private const float BandClearanceSamplingSafetyMargin = 0.002f;
+
     [UnityTest]
     public IEnumerator given_GameplayScene_when_LoadedIntoPrelaunch_then_CaptureIdleBandShapeStaysOutsideTargetCollider()
     {
@@ -91,7 +94,8 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
             var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
             var targetCollider = GetSingleTargetCollider(launchTarget);
-            var bandCenter = FindGameObjectByName(activeScene, "Band Center");
+            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+            var slingshotConfig = lifetimeScope.Container.Resolve<ISlingshotConfig>();
             var geometry = slingshotView.CreateGeometrySnapshot();
             var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
 
@@ -108,7 +112,13 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
 
             Assert.That(activeBandPositions, Has.Length.GreaterThan(3));
 
-            AssertSimpleBandVisualCenterMatchesBandCenter(visualCenterPoint, bandCenter.transform.position, bandLineRenderer, geometry, "Tiny Pull");
+            AssertSimpleBandVisualCenterTracksPullPoint(
+                visualCenterPoint,
+                tinyPullWorldPosition,
+                bandLineRenderer,
+                geometry,
+                slingshotConfig.BandContactPadding,
+                "Tiny Pull");
             AssertBandShapeMatchesRawTwoSpan(activeBandPositions, geometry, visualCenterPoint, 0.01f, "Tiny Pull");
             AssertBandSamplesStayOutsideCollider(activeBandPositions, bandLineRenderer, targetCollider, "Tiny Pull");
 
@@ -464,7 +474,7 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
     }
 
     [UnityTest]
-    public IEnumerator given_GameplayScene_when_EditorMousePullsSideways_then_PulledWrapStaysAlignedWithBandCenter()
+    public IEnumerator given_GameplayScene_when_EditorMousePullsSideways_then_PulledWrapStaysOnPulledSideAndClear()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Band Center Wrap Mouse");
 
@@ -477,10 +487,10 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
             yield return WaitUntilPlayerIsHeld(context);
             yield return SendMouse(mouse, context.PressScreenPosition, true);
 
-            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, 0.75f, 1.25f, "Right Deep Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, -0.75f, 1.25f, "Left Deep Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, 0.75f, 2.25f, "Right Long Pull");
-            yield return AssertPulledWrapAlignsWithBandCenter(context, mouse, -0.75f, 2.25f, "Left Long Pull");
+            yield return AssertPulledWrapStaysOnPulledSideAndClear(context, mouse, 0.75f, 1.25f, "Right Deep Pull");
+            yield return AssertPulledWrapStaysOnPulledSideAndClear(context, mouse, -0.75f, 1.25f, "Left Deep Pull");
+            yield return AssertPulledWrapStaysOnPulledSideAndClear(context, mouse, 0.75f, 2.25f, "Right Long Pull");
+            yield return AssertPulledWrapStaysOnPulledSideAndClear(context, mouse, -0.75f, 2.25f, "Left Long Pull");
 
             yield return SendMouse(mouse, context.PressScreenPosition, false);
         }
@@ -628,7 +638,7 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
             phase);
     }
 
-    private IEnumerator AssertPulledWrapAlignsWithBandCenter(
+    private IEnumerator AssertPulledWrapStaysOnPulledSideAndClear(
         GameplaySceneContext context,
         Mouse mouse,
         float pullOffset,
@@ -644,25 +654,27 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
         var activeBandPositions = ReadWorldLinePositions(context.BandLineRenderer);
         Assert.That(activeBandPositions.Length % 2, Is.EqualTo(1), $"{phase} Band Shape should have an explicit middle wrap point.");
 
-        var actualBandCenterOffset = Vector3.Dot(context.BandCenter.transform.position - context.Geometry.RestPoint,
-            context.Geometry.LaunchFrameRight);
+        AssertBandShapeDoesNotMatchRawTwoSpan(activeBandPositions, context.Geometry, phase);
+        AssertPulledSideWrap(activeBandPositions, pullWorldPosition, context.Geometry.LaunchFrameRight, pullOffset);
 
-        var actualBandCenterDepth = Vector3.Dot(context.BandCenter.transform.position - context.Geometry.RestPoint,
-            -context.Geometry.LaunchFrameForward);
-        var middleWrapPoint = activeBandPositions[(activeBandPositions.Length - 1) / 2];
-        var middleWrapOffset = Vector3.Dot(middleWrapPoint - context.Geometry.RestPoint, context.Geometry.LaunchFrameRight);
-        var middleWrapDepth = Vector3.Dot(middleWrapPoint - context.Geometry.RestPoint, -context.Geometry.LaunchFrameForward);
-        var renderedTolerance = GetMaximumRenderedBandRadius(context.BandLineRenderer) + 0.04f;
+        AssertTargetColliderWithinRenderedAnchorSpan(
+            context.TargetCollider,
+            context.BandCenter.transform.position,
+            context.BandLineRenderer,
+            context.Geometry,
+            phase);
+        AssertBandCenterlineWithinAnchorSpan(activeBandPositions, context.Geometry, phase);
 
-        Assert.That(
-            Mathf.Abs(middleWrapOffset - actualBandCenterOffset),
-            Is.LessThanOrEqualTo(renderedTolerance),
-            $"{phase} pulled Band wrap should stay laterally aligned with the authored Band Center.");
-
-        Assert.That(
-            Mathf.Abs(middleWrapDepth - actualBandCenterDepth),
-            Is.LessThanOrEqualTo(0.15f),
-            $"{phase} pulled Band wrap should stay near the authored Band Center depth.");
+        AssertAnchorSideHalfStaysOnPulledSide(
+            activeBandPositions,
+            context.BandLineRenderer,
+            context.BandCenter.transform.position,
+            context.Geometry,
+            pullOffset,
+            phase);
+        AssertBandPathOffsetsAreMonotonic(activeBandPositions, context.BandLineRenderer, context.Geometry, phase);
+        AssertBandPathHasNoSharpFolds(activeBandPositions, context.Geometry, phase);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, phase);
     }
 
     private IEnumerator AssertShallowLateralBandShape(GameplaySceneContext context, Mouse mouse, float pullOffset, float pullDepth)
@@ -678,15 +690,19 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
 
         var visualCenterPoint = activeBandPositions[(activeBandPositions.Length - 1) / 2];
 
-        AssertSimpleBandVisualCenterMatchesBandCenter(
+        var phase = $"Shallow Lateral Pull offset {pullOffset} depth {pullDepth}";
+
+        AssertSimpleBandVisualCenterKeepsSmallContactStandOff(
             visualCenterPoint,
-            context.BandCenter.transform.position,
+            pullDepth,
             context.BandLineRenderer,
             context.Geometry,
-            $"Shallow Lateral Pull offset {pullOffset} depth {pullDepth}");
+            context.SlingshotConfig.BandContactPadding,
+            phase);
 
-        AssertBandShapeMatchesRawTwoSpan(activeBandPositions, context.Geometry, visualCenterPoint, 0.01f,
-            $"Shallow Lateral Pull offset {pullOffset} depth {pullDepth}");
+        AssertBandShapeMatchesRawTwoSpan(activeBandPositions, context.Geometry, visualCenterPoint, 0.01f, phase);
+        AssertBandCenterlineWithinAnchorSpan(activeBandPositions, context.Geometry, phase);
+        AssertBandSamplesStayOutsideCollider(activeBandPositions, context.BandLineRenderer, context.TargetCollider, phase);
     }
 
     private IEnumerator AssertTargetColliderClampsInsideAnchorSpan(GameplaySceneContext context, Mouse mouse, float lateralSign)
@@ -798,7 +814,24 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
             return false;
 
         var geometry = slingshotViews[0].CreateGeometrySnapshot();
-        return Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) <= 0.05f;
+
+        if (Vector3.Distance(bandCenter.transform.position, geometry.RestPoint) > 0.05f)
+            return false;
+
+        var bandLineRenderer = slingshotViews[0].GetComponent<LineRenderer>();
+
+        if (bandLineRenderer == null || bandLineRenderer.positionCount < 2)
+            return false;
+
+        var targetColliders = launchTargets[0].GetComponentsInChildren<Collider>(true);
+
+        if (targetColliders.Length != 1)
+            return false;
+
+        var bandPositions = ReadWorldLinePositions(bandLineRenderer);
+
+        return DoesBandShapeMatchRawTwoSpan(bandPositions, geometry, geometry.RestPoint, 0.01f)
+               && IsBandShapeClearOfCollider(bandPositions, bandLineRenderer, targetColliders[0]);
     }
 
     private IEnumerator WaitUntilPlayerIsHeld(Scene scene)
@@ -911,35 +944,43 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
         Collider targetCollider,
         string phase)
     {
-        const float samplingSafetyMargin = 0.002f;
-        var requiredClearance = GetMaximumRenderedBandRadius(bandLineRenderer) + samplingSafetyMargin;
+        var requiredClearance = GetRequiredBandClearance(bandLineRenderer);
 
         for (var pointIndex = 0; pointIndex < bandPositions.Length - 1; pointIndex += 1)
         {
-            for (var sampleIndex = 0; sampleIndex <= 24; sampleIndex += 1)
+            for (var sampleIndex = 0; sampleIndex <= BandClearanceSegmentSampleCount; sampleIndex += 1)
             {
-                var samplePoint = Vector3.Lerp(bandPositions[pointIndex], bandPositions[pointIndex + 1], sampleIndex / 24f);
+                var samplePoint = Vector3.Lerp(
+                    bandPositions[pointIndex],
+                    bandPositions[pointIndex + 1],
+                    (float)sampleIndex / BandClearanceSegmentSampleCount);
                 var closestPoint = targetCollider.ClosestPoint(samplePoint);
                 var surfaceDistance = Vector3.Distance(samplePoint, closestPoint);
 
                 Assert.That(
                     surfaceDistance,
                     Is.GreaterThan(requiredClearance),
-                    $"{phase} Band rendered radius intersects the Launch Target Collider.");
+                    $"{phase} Band rendered radius intersects the Launch Target Collider. "
+                    + $"Segment={pointIndex}, Sample={sampleIndex}, "
+                    + $"SamplePoint={samplePoint}, ClosestPoint={closestPoint}, "
+                    + $"SurfaceDistance={surfaceDistance}, RequiredClearance={requiredClearance}, "
+                    + $"ColliderBoundsCenter={targetCollider.bounds.center}.");
             }
         }
     }
 
     private bool IsBandShapeClearOfCollider(Vector3[] bandPositions, LineRenderer bandLineRenderer, Collider targetCollider)
     {
-        const float samplingSafetyMargin = 0.002f;
-        var requiredClearance = GetMaximumRenderedBandRadius(bandLineRenderer) + samplingSafetyMargin;
+        var requiredClearance = GetRequiredBandClearance(bandLineRenderer);
 
         for (var pointIndex = 0; pointIndex < bandPositions.Length - 1; pointIndex += 1)
         {
-            for (var sampleIndex = 0; sampleIndex <= 24; sampleIndex += 1)
+            for (var sampleIndex = 0; sampleIndex <= BandClearanceSegmentSampleCount; sampleIndex += 1)
             {
-                var samplePoint = Vector3.Lerp(bandPositions[pointIndex], bandPositions[pointIndex + 1], sampleIndex / 24f);
+                var samplePoint = Vector3.Lerp(
+                    bandPositions[pointIndex],
+                    bandPositions[pointIndex + 1],
+                    (float)sampleIndex / BandClearanceSegmentSampleCount);
                 var closestPoint = targetCollider.ClosestPoint(samplePoint);
                 var surfaceDistance = Vector3.Distance(samplePoint, closestPoint);
 
@@ -949,6 +990,11 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
         }
 
         return true;
+    }
+
+    private float GetRequiredBandClearance(LineRenderer lineRenderer)
+    {
+        return GetMaximumRenderedBandRadius(lineRenderer) + BandClearanceSamplingSafetyMargin;
     }
 
     private float GetMaximumRenderedBandRadius(LineRenderer lineRenderer)
@@ -1199,6 +1245,62 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
             visualCenterDepth,
             Is.LessThanOrEqualTo(bandCenterDepth + 0.08f),
             $"{phase} simple Band visual center should only use a small contact stand-off.");
+    }
+
+    private void AssertSimpleBandVisualCenterTracksPullPoint(
+        Vector3 visualCenterPoint,
+        Vector3 pullPoint,
+        LineRenderer lineRenderer,
+        SlingshotGeometrySnapshot geometry,
+        float bandContactPadding,
+        string phase)
+    {
+        var visualCenterOffset = Vector3.Dot(visualCenterPoint - geometry.RestPoint, geometry.LaunchFrameRight);
+        var pullOffset = Vector3.Dot(pullPoint - geometry.RestPoint, geometry.LaunchFrameRight);
+
+        Assert.That(
+            visualCenterOffset,
+            Is.EqualTo(pullOffset).Within(0.01f),
+            $"{phase} simple Band visual center should stay laterally aligned with the accepted Pull Point.");
+
+        var pullDepth = Vector3.Dot(pullPoint - geometry.RestPoint, -geometry.LaunchFrameForward);
+
+        AssertSimpleBandVisualCenterKeepsSmallContactStandOff(
+            visualCenterPoint,
+            pullDepth,
+            lineRenderer,
+            geometry,
+            bandContactPadding,
+            phase);
+    }
+
+    private void AssertSimpleBandVisualCenterKeepsSmallContactStandOff(
+        Vector3 visualCenterPoint,
+        float pullDepth,
+        LineRenderer lineRenderer,
+        SlingshotGeometrySnapshot geometry,
+        float bandContactPadding,
+        string phase)
+    {
+        var visualCenterDepth = Vector3.Dot(visualCenterPoint - geometry.RestPoint, -geometry.LaunchFrameForward);
+        var renderedBandRadius = GetMaximumRenderedBandRadius(lineRenderer);
+        var depthTolerance = Mathf.Max(0.005f, renderedBandRadius * 0.25f);
+        var maximumVisualStandOff = Mathf.Max(0.25f, bandContactPadding + renderedBandRadius * 8f);
+
+        Assert.That(
+            visualCenterDepth,
+            Is.GreaterThanOrEqualTo(pullDepth + renderedBandRadius + 0.005f),
+            $"{phase} simple Band visual center should leave rendered-band clearance from the accepted Pull Point.");
+
+        Assert.That(
+            visualCenterDepth,
+            Is.GreaterThanOrEqualTo(pullDepth + bandContactPadding - depthTolerance),
+            $"{phase} simple Band visual center should not move in front of the configured contact stand-off.");
+
+        Assert.That(
+            visualCenterDepth,
+            Is.LessThanOrEqualTo(pullDepth + maximumVisualStandOff),
+            $"{phase} simple Band visual center should only add bounded visual stand-off when needed for collider clearance.");
     }
 
     private void GetProjectedColliderSpan(Collider targetCollider, Vector3 origin, Vector3 axis, out float minimumOffset, out float maximumOffset)

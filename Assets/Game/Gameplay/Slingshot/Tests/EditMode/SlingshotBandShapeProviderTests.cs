@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Slingshot.Tests.EditMode;
 using NUnit.Framework;
@@ -144,6 +145,25 @@ public sealed class SlingshotBandShapeProviderTests
     }
 
     [Test]
+    public void TryCheckBandShapeClearance_ClearanceSourceAvailable_UsesActualClearanceWithoutSamplingSilhouette()
+    {
+        var source = new FakeLaunchTargetBandShapeClearanceSource(CreateSquareSamples()) { IsBandShapeClear = false };
+        var provider = new SlingshotBandShapeProvider(source, CreateValidConfig());
+
+        var checkedClearance = provider.TryCheckBandShapeClearance(
+            CreateQuery(),
+            new[] { new Vector3(-3f, 0f, 1f), new Vector3(3f, 0f, 1f) },
+            0.25f,
+            out var isClear);
+
+        Assert.That(checkedClearance, Is.True);
+        Assert.That(isClear, Is.False);
+        Assert.That(source.Queries, Is.Zero);
+        Assert.That(source.ClearanceQueries, Is.EqualTo(1));
+        Assert.That(source.ClearanceRadii, Is.EqualTo(new[] { 0.25f }));
+    }
+
+    [Test]
     public void TryCheckBandShapeClearance_SourceFailure_ReturnsFalseWithoutThrowing()
     {
         var source = new FakeLaunchTargetSilhouetteSource(Array.Empty<Vector3>()) { ShouldFail = true };
@@ -277,6 +297,47 @@ public sealed class SlingshotBandShapeProviderTests
             }
 
             sampleCount = _samples.Length;
+            return true;
+        }
+    }
+
+    private sealed class FakeLaunchTargetBandShapeClearanceSource :
+        ILaunchTargetSilhouetteSource,
+        ILaunchTargetBandShapeClearanceSource
+    {
+        private readonly Vector3[] _samples;
+
+        public int Queries { get; private set; }
+        public int ClearanceQueries { get; private set; }
+        public List<float> ClearanceRadii { get; } = new();
+        public bool IsBandShapeClear { get; set; } = true;
+
+        public FakeLaunchTargetBandShapeClearanceSource(params Vector3[] samples)
+        {
+            _samples = samples;
+        }
+
+        public bool TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount)
+        {
+            Queries += 1;
+
+            if (outputSamples.Length < _samples.Length)
+                throw new ArgumentException("Output buffer is too small.", nameof(outputSamples));
+
+            for (var i = 0; i < _samples.Length; i += 1)
+            {
+                outputSamples[i] = _samples[i];
+            }
+
+            sampleCount = _samples.Length;
+            return true;
+        }
+
+        public bool TryCheckBandShapeClearance(IReadOnlyList<Vector3> bandShapePoints, float clearanceRadius, out bool isClear)
+        {
+            ClearanceQueries += 1;
+            ClearanceRadii.Add(clearanceRadius);
+            isClear = IsBandShapeClear;
             return true;
         }
     }

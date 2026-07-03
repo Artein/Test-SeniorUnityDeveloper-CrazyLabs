@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Gameplay.Slingshot
@@ -5,6 +6,11 @@ namespace Game.Gameplay.Slingshot
     public interface ILaunchTargetSilhouetteSource
     {
         bool TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount);
+    }
+
+    internal interface ILaunchTargetBandShapeClearanceSource
+    {
+        bool TryCheckBandShapeClearance(IReadOnlyList<Vector3> bandShapePoints, float clearanceRadius, out bool isClear);
     }
 
     public readonly struct LaunchTargetSilhouetteQuery
