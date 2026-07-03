@@ -165,7 +165,7 @@ namespace Game.Gameplay
         {
             if (_isRunCameraActive)
                 return;
-            
+
             UpdateAnchorPose(0f, true, false);
             _rig.ActivateRunCamera();
             _isRunCameraActive = true;

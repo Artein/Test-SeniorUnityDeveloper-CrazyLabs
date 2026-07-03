@@ -15,12 +15,20 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.Animations;
 #endif
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFixture
 {
+    private const string FinishThresholdMaterialName = "FinishThresholdCheckered";
+    private const string FinishThresholdShaderName = "Game/Level/Finish Threshold Tiled Fade";
+    private const string FinishThresholdBaseMapPropertyName = "_BaseMap";
+    private const string FinishThresholdBottomAlphaPropertyName = "_BottomAlpha";
+    private const string FinishThresholdTopAlphaPropertyName = "_TopAlpha";
+    private const string FinishThresholdFadeExponentPropertyName = "_FadeExponent";
+
     [UnityTest]
     public IEnumerator given_GameplayScene_when_Loaded_then_SlingshotPrelaunchCompositionIsReady()
     {
@@ -53,9 +61,13 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var surface = FindGameObjectByName(activeScene, "Surface");
         var surfaceContact = surface.GetComponent<RunContact>();
         var runContactsRoot = FindGameObjectByName(activeScene, "Run Contacts");
-        var runFinish = FindGameObjectByName(activeScene, "Run Finish");
+        TryFindGameObjectByName(activeScene, "Run Finish", out var legacyRunFinish);
         var runSafetyNet = FindGameObjectByName(activeScene, "Run Safety Net");
         var runObstacle = FindGameObjectByName(activeScene, "Run Obstacle");
+        var authoritativeRunFinish = FindGameObjectByName(activeScene, "Band 5 Run Finish");
+        var finishPresentationRoot = FindGameObjectByName(activeScene, "Finish Presentation");
+        var finishThresholdVisual = FindGameObjectByName(activeScene, "Finish Threshold Visual");
+        var finishPresentationView = FindSingleInScene<FinishPresentationView>(activeScene, "FinishPresentationView");
         var canvas = FindSingleInScene<Canvas>(activeScene, "Gameplay UI Canvas");
         var bandLineRenderer = slingshotView.GetComponent<LineRenderer>();
         var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
@@ -108,6 +120,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedCharacterVisualTargetPoseSource = lifetimeScope.Container.Resolve<ICharacterVisualTargetPoseSource>();
         var resolvedCharacterVisualFollowView = lifetimeScope.Container.Resolve<ICharacterVisualFollowView>();
         var resolvedCharacterVisualFollowTuning = lifetimeScope.Container.Resolve<ICharacterVisualFollowTuning>();
+        var resolvedFinishPresentationView = lifetimeScope.Container.Resolve<IFinishPresentationView>();
         var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
         var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
@@ -148,6 +161,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runProgressFrameSource, Is.Not.Null);
         Assert.That(runSurfaceContextSource, Is.Not.Null);
         Assert.That(characterPresentationView, Is.Not.Null);
+        Assert.That(finishPresentationView, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.Not.Null);
         Assert.That(runCameraRig, Is.Not.Null);
         Assert.That(brain, Is.Not.Null);
@@ -245,6 +259,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedCharacterVisualFollowTuning.VisualMaxPositionLag, Is.EqualTo(0.06f).Within(0.0001f));
         Assert.That(resolvedCharacterVisualFollowTuning.VisualSnapDistance, Is.EqualTo(0.75f).Within(0.0001f));
         Assert.That(resolvedCharacterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
+        Assert.That(resolvedFinishPresentationView, Is.SameAs(finishPresentationView));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
@@ -348,9 +363,15 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(frameSnapshot.ForwardDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
         Assert.That(frameSnapshot.RightDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
         Assert.That(frameSnapshot.UpDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
-        AssertRunContactPlaceholder(runContactsRoot, runFinish, RunContactCategory.Finish, true);
+        AssertLegacyRunFinishIsNonAuthoritative(runContactsRoot, legacyRunFinish);
         AssertRunContactPlaceholder(runContactsRoot, runSafetyNet, RunContactCategory.SafetyNet, true);
         AssertRunContactPlaceholder(runContactsRoot, runObstacle, RunContactCategory.Obstacle, false);
+
+        AssertFinishPresentationContracts(
+            finishPresentationRoot,
+            finishThresholdVisual,
+            authoritativeRunFinish,
+            finishPresentationView);
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
         Assert.That(playerRigidbody.collisionDetectionMode, Is.EqualTo(CollisionDetectionMode.ContinuousDynamic));
@@ -650,6 +671,114 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(contact, Is.Not.Null, placeholder.name);
         Assert.That(contact.Category, Is.EqualTo(expectedCategory), placeholder.name);
         Assert.That(contact.gameObject, Is.SameAs(collider.gameObject), placeholder.name);
+    }
+
+    private void AssertLegacyRunFinishIsNonAuthoritative(GameObject runContactsRoot, GameObject legacyRunFinish)
+    {
+        if (legacyRunFinish == null)
+            return;
+
+        Assert.That(legacyRunFinish.transform.IsChildOf(runContactsRoot.transform), Is.True, legacyRunFinish.name);
+        Assert.That(legacyRunFinish.activeInHierarchy, Is.False, "Legacy Run Contacts/Run Finish must stay disabled.");
+
+        var collider = legacyRunFinish.GetComponent<Collider>();
+        var contact = legacyRunFinish.GetComponent<RunContact>();
+
+        if (collider != null)
+            Assert.That(collider.enabled && legacyRunFinish.activeInHierarchy, Is.False, legacyRunFinish.name);
+
+        if (contact != null)
+            Assert.That(contact.enabled && legacyRunFinish.activeInHierarchy, Is.False, legacyRunFinish.name);
+    }
+
+    private void AssertFinishPresentationContracts(
+        GameObject finishPresentationRoot,
+        GameObject finishThresholdVisual,
+        GameObject authoritativeRunFinish,
+        FinishPresentationView finishPresentationView)
+    {
+        Assert.That(finishPresentationView.transform.IsChildOf(finishPresentationRoot.transform), Is.True);
+        Assert.That(finishThresholdVisual.transform.IsChildOf(finishPresentationRoot.transform), Is.True);
+        Assert.That(finishThresholdVisual.GetComponent<Collider>(), Is.Null);
+        Assert.That(finishThresholdVisual.GetComponent<RunContact>(), Is.Null);
+
+        var thresholdRenderer = finishThresholdVisual.GetComponent<Renderer>();
+        Assert.That(thresholdRenderer, Is.Not.Null);
+        Assert.That(thresholdRenderer.enabled, Is.True);
+        Assert.That(thresholdRenderer.sharedMaterial, Is.Not.Null);
+        AssertFinishThresholdMaterial(thresholdRenderer.sharedMaterial);
+        Assert.That(finishPresentationView.ThresholdRendererForTests, Is.SameAs(thresholdRenderer));
+        Assert.That(finishPresentationView.SuccessParticlesForTests, Has.Length.GreaterThanOrEqualTo(1));
+        Assert.That(finishPresentationView.SuccessParticlesForTests.All(particle => particle != null), Is.True);
+        AssertLegacyFinishMarkerInactive(finishPresentationRoot, "Finish Marker Top Bar");
+        AssertLegacyFinishMarkerInactive(finishPresentationRoot, "Finish Marker Left Post");
+        AssertLegacyFinishMarkerInactive(finishPresentationRoot, "Finish Marker Right Post");
+
+        Assert.That(
+            finishPresentationView.SuccessParticlesForTests.Any(particle => particle.name.Contains("Confetti_Hearts")),
+            Is.True,
+            "Finish Celebration should use Ladybug Confetti_Hearts as the first-pass VFX source.");
+
+        Assert.That(
+            Mathf.Abs(finishThresholdVisual.transform.position.z - authoritativeRunFinish.transform.position.z),
+            Is.LessThanOrEqualTo(0.5f));
+    }
+
+    private void AssertFinishThresholdMaterial(Material material)
+    {
+        Assert.That(material.name, Is.EqualTo(FinishThresholdMaterialName));
+        Assert.That(material.shader, Is.Not.Null);
+        Assert.That(material.shader.name, Is.EqualTo(FinishThresholdShaderName));
+        Assert.That(material.HasProperty(FinishThresholdBaseMapPropertyName), Is.True);
+        Assert.That(material.HasProperty(FinishThresholdBottomAlphaPropertyName), Is.True);
+        Assert.That(material.HasProperty(FinishThresholdTopAlphaPropertyName), Is.True);
+        Assert.That(material.HasProperty(FinishThresholdFadeExponentPropertyName), Is.True);
+
+        var baseMap = material.GetTexture(FinishThresholdBaseMapPropertyName);
+        var baseMapScale = material.GetTextureScale(FinishThresholdBaseMapPropertyName);
+
+        Assert.That(baseMap, Is.Not.Null);
+        Assert.That(baseMap.width, Is.EqualTo(128));
+        Assert.That(baseMap.height, Is.EqualTo(128));
+        Assert.That(baseMap.mipmapCount, Is.GreaterThan(1));
+        Assert.That(baseMap.wrapModeU, Is.EqualTo(TextureWrapMode.Repeat));
+        Assert.That(baseMap.wrapModeV, Is.EqualTo(TextureWrapMode.Repeat));
+        Assert.That(baseMapScale.x, Is.GreaterThan(1f));
+        Assert.That(baseMapScale.x, Is.EqualTo(20f).Within(0.001f));
+        Assert.That(baseMapScale.y, Is.EqualTo(2f).Within(0.001f));
+        Assert.That(material.GetFloat(FinishThresholdBottomAlphaPropertyName), Is.EqualTo(0.5f).Within(0.001f));
+        Assert.That(material.GetFloat(FinishThresholdTopAlphaPropertyName), Is.EqualTo(0f).Within(0.001f));
+        Assert.That(material.GetFloat(FinishThresholdFadeExponentPropertyName), Is.EqualTo(3f).Within(0.001f));
+
+#if UNITY_EDITOR
+        AssertFinishThresholdTextureImporter(baseMap);
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void AssertFinishThresholdTextureImporter(Texture texture)
+    {
+        var texturePath = AssetDatabase.GetAssetPath(texture);
+        Assert.That(texturePath, Is.Not.Empty);
+
+        var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+        Assert.That(importer, Is.Not.Null);
+        Assert.That(importer.textureType, Is.EqualTo(TextureImporterType.Default));
+        Assert.That(importer.spriteImportMode, Is.EqualTo(SpriteImportMode.None));
+        Assert.That(importer.mipmapEnabled, Is.True);
+        Assert.That(importer.wrapModeU, Is.EqualTo(TextureWrapMode.Repeat));
+        Assert.That(importer.wrapModeV, Is.EqualTo(TextureWrapMode.Repeat));
+    }
+#endif
+
+    private void AssertLegacyFinishMarkerInactive(GameObject finishPresentationRoot, string markerName)
+    {
+        var marker = finishPresentationRoot.transform.Find(markerName);
+
+        if (marker == null)
+            return;
+
+        Assert.That(marker.gameObject.activeInHierarchy, Is.False, $"{markerName} must not render over the checkered finish threshold.");
     }
 
     private void AssertRunSurfacePhysicsMaterial(Scene scene, string materialName, float expectedFriction)

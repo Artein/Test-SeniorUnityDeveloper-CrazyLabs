@@ -96,6 +96,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Run Ended View")
                 .And.Message.Contains("Launch Target")
                 .And.Message.Contains("Character Presentation View")
+                .And.Message.Contains("Finish Presentation View")
                 .And.Message.Contains("Level Pickup")
                 .And.Message.Contains("Player Pickup Contact Collider"));
     }
@@ -313,6 +314,7 @@ public sealed class GameplayLifetimeScopeTests
         var levelPickupState = container.Resolve<ILevelPickupState>();
         var pickupCollectionNotifier = container.Resolve<IPickupCollectionNotifier>();
         var runCameraAnchor = container.Resolve<IRunCameraAnchor>();
+        var runCameraLens = container.Resolve<IRunCameraLens>();
         var runCameraRig = container.Resolve<IRunCameraRig>();
         var bandShapeProvider = container.Resolve<ISlingshotBandShapeProvider>();
         var presentationView = container.Resolve<ICharacterPresentationView>();
@@ -322,6 +324,7 @@ public sealed class GameplayLifetimeScopeTests
         var characterVisualFollowTuning = container.Resolve<ICharacterVisualFollowTuning>();
         var characterVisualPoseSmoother = container.Resolve<ICharacterVisualPoseSmoother>();
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
+        var finishPresentationView = container.Resolve<IFinishPresentationView>();
         var presentationSupportTracker = container.Resolve<ICharacterPresentationSupportTracker>();
         var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
         var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
@@ -356,7 +359,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(19));
+        Assert.That(initializables.Count, Is.EqualTo(20));
         Assert.That(tickables.Count, Is.EqualTo(4));
         Assert.That(fixedTickables.Count, Is.EqualTo(6));
         Assert.That(lateTickables.Count, Is.EqualTo(2));
@@ -421,6 +424,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(levelPickupState.IsAvailable(fixture.LevelPickup), Is.True);
         Assert.That(pickupCollectionNotifier, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.SameAs(fixture.RunCameraAnchor));
+        Assert.That(runCameraLens, Is.Not.Null);
+        Assert.That(runCameraLens.Position, Is.EqualTo(fixture.InputCamera.transform.position));
         Assert.That(runCameraRig, Is.SameAs(fixture.RunCameraRig));
         Assert.That(bandShapeProvider, Is.Not.Null);
         Assert.That(presentationView, Is.SameAs(fixture.CharacterPresentationView));
@@ -440,6 +445,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(characterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
         Assert.That(characterVisualPoseSmoother, Is.Not.Null);
         Assert.That(presentationClassifier, Is.Not.Null);
+        Assert.That(finishPresentationView, Is.SameAs(fixture.FinishPresentationView));
         Assert.That(presentationSupportTracker, Is.Not.Null);
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
@@ -495,6 +501,7 @@ public sealed class GameplayLifetimeScopeTests
         runCameraRig.SetReferencesForTests(runPreparationCamera, preLaunchCamera, runCamera);
         var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
         var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
+        var finishPresentationView = CreateGameObject("Finish Presentation View").AddComponent<FinishPresentationView>();
         var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
         playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
         playerPickupContactCollider.gameObject.tag = "Player";
@@ -541,6 +548,7 @@ public sealed class GameplayLifetimeScopeTests
             runEndedView,
             launchTarget,
             characterPresentationView,
+            finishPresentationView,
             levelPickups,
             playerPickupContactColliders,
             playerTag,
@@ -573,10 +581,12 @@ public sealed class GameplayLifetimeScopeTests
             RunSurfaceContextSource = runSurfaceContextSource,
             ContactNotifier = contactNotifier,
             RunCameraAnchor = runCameraAnchor,
+            InputCamera = camera,
             RunCameraRig = runCameraRig,
             PullHintView = pullHintView,
             RunEndedView = runEndedView,
             CharacterPresentationView = characterPresentationView,
+            FinishPresentationView = finishPresentationView,
             PlayerTag = playerTag
         };
     }
@@ -856,10 +866,12 @@ public sealed class GameplayLifetimeScopeTests
         public PhysicsRunSurfaceContextSource RunSurfaceContextSource { get; set; }
         public RigidbodyContactNotifier ContactNotifier { get; set; }
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
+        public Camera InputCamera { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
         public PullHintView PullHintView { get; set; }
         public RunEndedUIView RunEndedView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
+        public FinishPresentationView FinishPresentationView { get; set; }
         public string PlayerTag { get; set; }
     }
 }

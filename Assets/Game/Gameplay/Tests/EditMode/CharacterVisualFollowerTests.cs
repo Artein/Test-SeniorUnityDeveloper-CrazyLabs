@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Game.Foundation.Time;
+using Game.Gameplay;
 using Game.Gameplay.CharacterPresentation;
+using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
@@ -18,6 +20,8 @@ public sealed class CharacterVisualFollowerTests
     private GameplayStateId _runEndedStateId;
     private FakeGameplayStateService _stateService;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+    private FakeRunResultNotifier _runResultNotifier;
+    private FakeRunCameraLens _runCameraLens;
     private FakeCharacterVisualTargetPoseSource _targetPoseSource;
     private FakeCharacterVisualFollowView _view;
     private FakeCharacterVisualFollowTuning _tuning;
@@ -34,11 +38,15 @@ public sealed class CharacterVisualFollowerTests
         _runEndedStateId = CreateStateId("RunEnded");
         _stateService = new FakeGameplayStateService(_runPreparationStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
+        _runResultNotifier = new FakeRunResultNotifier();
+        _runCameraLens = new FakeRunCameraLens();
 
         _targetPoseSource = new FakeCharacterVisualTargetPoseSource
         {
             CurrentPose = new CharacterVisualPose(new Vector3(1f, 2f, 3f), Quaternion.Euler(0f, 15f, 0f))
         };
+        _runCameraLens.Position = _targetPoseSource.CurrentPose.Position + Vector3.right * 4f;
+        _runCameraLens.Rotation = Quaternion.identity;
 
         _view = new FakeCharacterVisualFollowView
         {
@@ -152,6 +160,57 @@ public sealed class CharacterVisualFollowerTests
     }
 
     [Test]
+    public void RunResultAccepted_SuccessfulResult_BlendsVisualFrontTowardRunCamera()
+    {
+        ((IInitializable)_follower).Initialize();
+        _stateService.ChangeTo(_runningStateId);
+        _tuning.VisualSnapAngleDegrees = 180f;
+        _tuning.VisualHeadingResponseRate = 1f;
+        var poseBeforeResult = _view.CurrentVisualPose;
+        var frontFacingCameraRotation = GetFrontFacingCameraRotation(_targetPoseSource.CurrentPose);
+
+        _runResultNotifier.Raise(CreateRunResult(RunEndReason.Finished));
+        ((ILateTickable)_follower).LateTick();
+
+        Assert.That(_view.CurrentVisualPose.Position, Is.EqualTo(_targetPoseSource.CurrentPose.Position));
+
+        Assert.That(
+            Quaternion.Angle(_view.CurrentVisualPose.Rotation, frontFacingCameraRotation),
+            Is.LessThan(Quaternion.Angle(poseBeforeResult.Rotation, frontFacingCameraRotation)));
+        Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, frontFacingCameraRotation), Is.GreaterThan(0.1f));
+        Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, poseBeforeResult.Rotation), Is.GreaterThan(0.1f));
+    }
+
+    [Test]
+    public void RunResultAccepted_FailedResult_KeepsTargetHeading()
+    {
+        ((IInitializable)_follower).Initialize();
+        _stateService.ChangeTo(_runningStateId);
+        var poseBeforeResult = _view.CurrentVisualPose;
+
+        _runResultNotifier.Raise(CreateRunResult(RunEndReason.ObstacleHit));
+        ((ILateTickable)_follower).LateTick();
+
+        AssertPose(_view.CurrentVisualPose, poseBeforeResult);
+    }
+
+    [Test]
+    public void GameplayStateChanged_ToRunPreparation_AfterVictoryFacing_SnapsBackToTargetPose()
+    {
+        ((IInitializable)_follower).Initialize();
+        _stateService.ChangeTo(_runningStateId);
+        _tuning.VisualSnapAngleDegrees = 180f;
+        _tuning.VisualHeadingResponseRate = 1f;
+        _runResultNotifier.Raise(CreateRunResult(RunEndReason.Finished));
+        ((ILateTickable)_follower).LateTick();
+        Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, _targetPoseSource.CurrentPose.Rotation), Is.GreaterThan(0.1f));
+
+        _stateService.ChangeTo(_runPreparationStateId);
+
+        AssertPose(_view.CurrentVisualPose, _targetPoseSource.CurrentPose);
+    }
+
+    [Test]
     public void RepeatedInitialize_DoesNotSubscribeTwice()
     {
         ((IInitializable)_follower).Initialize();
@@ -184,6 +243,8 @@ public sealed class CharacterVisualFollowerTests
         return new CharacterVisualFollower(
             _stateService,
             _launchAppliedNotifier,
+            _runResultNotifier,
+            _runCameraLens,
             _targetPoseSource,
             _view,
             _tuning,
@@ -197,6 +258,24 @@ public sealed class CharacterVisualFollowerTests
     {
         var request = new SlingshotLaunchRequest(1f, 1f, 0f, 0f, Vector3.zero, Vector3.forward, Vector3.up);
         return new SlingshotLaunchAppliedEvent(request, Vector3.forward, Vector3.forward, Vector3.up);
+    }
+
+    private RunResult CreateRunResult(RunEndReason reason)
+    {
+        return new RunResult(
+            reason,
+            elapsedTime: 1f,
+            distanceTravelled: 10f,
+            finalPosition: Vector3.forward,
+            finalSpeed: 2f,
+            rewardBreakdown: new RunRewardBreakdown(Array.Empty<RunRewardSourceAmount>()));
+    }
+
+    private Quaternion GetFrontFacingCameraRotation(CharacterVisualPose targetPose)
+    {
+        var up = targetPose.Rotation * Vector3.up;
+        var directionToCamera = Vector3.ProjectOnPlane(_runCameraLens.Position - targetPose.Position, up).normalized;
+        return Quaternion.LookRotation(directionToCamera, up);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -255,6 +334,22 @@ public sealed class CharacterVisualFollowerTests
         {
             LaunchApplied?.Invoke(launchApplied);
         }
+    }
+
+    private sealed class FakeRunResultNotifier : IRunResultNotifier
+    {
+        public event Action<RunResult> RunResultAccepted;
+
+        public void Raise(RunResult result)
+        {
+            RunResultAccepted?.Invoke(result);
+        }
+    }
+
+    private sealed class FakeRunCameraLens : IRunCameraLens
+    {
+        public Vector3 Position { get; set; }
+        public Quaternion Rotation { get; set; }
     }
 
     private sealed class FakeCharacterVisualTargetPoseSource : ICharacterVisualTargetPoseSource

@@ -84,6 +84,10 @@ _Avoid_: Launch Flight, jump state, falling result, Lost Momentum
 The terminal **Character Presentation Mode** for a successful **Run Result**.
 _Avoid_: UI title, Run Finish, reward state
 
+**Victory Facing**:
+A presentation-only orientation override that turns the visible **Character** toward the **Run Camera** during successful **Victory**.
+_Avoid_: Run Body rotation, Rigidbody rotation, camera source rotation
+
 **Defeat**:
 The terminal **Character Presentation Mode** for a failed **Run Result**.
 _Avoid_: Death reason, failure title, obstacle hit
@@ -190,6 +194,12 @@ _Avoid_: Gameplay State, animation mode, run result
 - **Run Surface Slope Calculator** must not decide between **Slide** and **Run**; it can only support **Slide Flavor** or diagnostics.
 - Old slope threshold mode-selection tuning should be removed from the classifier path; any future slope tuning must be explicitly named as **Slide Flavor Tuning** and left unwired from canonical mode selection until a flavor pass needs it.
 - **Victory** and **Defeat** come from the accepted **Run Result**, not from **Run Ended** alone.
+- **Victory Facing** belongs to successful **Victory** presentation, not **Run Finish** contact handling or **Run End Pose Lock**.
+- **Victory Facing** is driven by the accepted successful **Run Result**, not by raw **Run Finish** contact entry.
+- **Victory Facing** may rotate the visible **Character** or **Character Visual Anchor** toward the **Run Camera**, but must not rotate the **Run Body**, Rigidbody, colliders, camera source, progress source, or surface probes.
+- **Victory Facing** should face the actual rendered **Run Camera** lens, not the Cinemachine tracking anchor or camera source transform.
+- **Victory Facing** should blend through the start of **Victory** presentation, so the turn reads as part of the victory animation rather than a separate correction.
+- **Victory Facing** must reset when returning to **Run Preparation** so the next **Run** starts from normal **Character Visual Follower** orientation.
 
 ## Example dialogue
 
@@ -241,6 +251,15 @@ _Avoid_: Gameplay State, animation mode, run result
 > **Dev:** "Does **Run Ended** alone tell us whether to play victory or defeat?"
 > **Domain expert:** "No - terminal character presentation uses the accepted **Run Result**."
 
+> **Dev:** "Can the finish victory turn rotate the gameplay object toward the camera?"
+> **Domain expert:** "No - **Victory Facing** rotates only the visible **Character** presentation, and it resets before the next **Run Preparation**."
+
+> **Dev:** "Should **Victory Facing** be a separate snap before the victory animation?"
+> **Domain expert:** "No - it should blend through the start of **Victory** so the turn and animation read as one presentation."
+
+> **Dev:** "Should touching the finish contact rotate the character toward the camera?"
+> **Domain expert:** "No - **Victory Facing** waits for the accepted successful **Run Result**."
+
 ## Flagged ambiguities
 
 - "Ladybug", "avatar", "skin", and "player model" resolve to **Character** for appearance language.
@@ -256,6 +275,8 @@ _Avoid_: Gameplay State, animation mode, run result
 - "Slope threshold", "downhill threshold", "flat threshold", `SlideEnterDownhillDegrees`, `SlideExitDownhillDegrees`, and `RunFlatMaximumAbsSlopeDegrees` resolve to **Slide Flavor Tuning** or diagnostics, not **Character Presentation Mode** selection.
 - "Run" resolves to gameplay **Run** unless explicitly discussing the **Reserved Presentation Mode** kept for compatibility.
 - "Launch flight", "Airborne", "victory", and "death" resolve to **Character Presentation Mode** when discussing appearance.
+- "Face the camera", "turn toward camera", and "victory pose rotation" resolve to **Victory Facing** when discussing successful terminal character presentation.
+- "Beginning of victory animation", "victory entry", and "opening victory blend" resolve to **Victory Facing** when discussing camera-facing orientation.
 - "Launch Flight ended" and "Airborne started" do not imply any gameplay velocity clamp, speed recovery, or movement-state transition.
 - "Air time" resolves to gameplay **Run Air Time** when discussing metrics or rewards.
 - "Held" resolves to **Idle** unless an **Active Pull** requires **Pull Anticipation**.

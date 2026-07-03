@@ -12,6 +12,8 @@ namespace Game.Gameplay.CharacterPresentation
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+        private readonly IRunResultNotifier _runResultNotifier;
+        private readonly IRunCameraLens _runCameraLens;
         private readonly ICharacterVisualTargetPoseSource _targetPoseSource;
         private readonly ICharacterVisualFollowView _view;
         private readonly ICharacterVisualFollowTuning _tuning;
@@ -22,10 +24,13 @@ namespace Game.Gameplay.CharacterPresentation
 
         private bool _isInitialized;
         private bool _isDisposed;
+        private bool _shouldFaceRunCamera;
 
         public CharacterVisualFollower(
             IGameplayStateService gameplayStateService,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
+            IRunResultNotifier runResultNotifier,
+            IRunCameraLens runCameraLens,
             ICharacterVisualTargetPoseSource targetPoseSource,
             ICharacterVisualFollowView view,
             ICharacterVisualFollowTuning tuning,
@@ -38,6 +43,8 @@ namespace Game.Gameplay.CharacterPresentation
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
+            _runResultNotifier = runResultNotifier ?? throw new ArgumentNullException(nameof(runResultNotifier));
+            _runCameraLens = runCameraLens ?? throw new ArgumentNullException(nameof(runCameraLens));
             _targetPoseSource = targetPoseSource ?? throw new ArgumentNullException(nameof(targetPoseSource));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
@@ -59,6 +66,7 @@ namespace Game.Gameplay.CharacterPresentation
                 return;
 
             _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
+            _runResultNotifier.RunResultAccepted += OnRunResultAccepted;
             _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
             _isInitialized = true;
             SnapToTargetPose();
@@ -80,6 +88,7 @@ namespace Game.Gameplay.CharacterPresentation
             _isDisposed = true;
 
             _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
+            _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
             _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
         }
 
@@ -88,7 +97,16 @@ namespace Game.Gameplay.CharacterPresentation
             if (_isDisposed)
                 return;
 
+            _shouldFaceRunCamera = false;
             SnapToTargetPose();
+        }
+
+        private void OnRunResultAccepted(RunResult result)
+        {
+            if (_isDisposed)
+                return;
+
+            _shouldFaceRunCamera = result.IsSuccess;
         }
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
@@ -99,6 +117,7 @@ namespace Game.Gameplay.CharacterPresentation
             if (ReferenceEquals(nextStateId, _runPreparationStateId)
                 || ReferenceEquals(nextStateId, _preLaunchStateId))
             {
+                _shouldFaceRunCamera = false;
                 SnapToTargetPose();
             }
         }
@@ -111,8 +130,25 @@ namespace Game.Gameplay.CharacterPresentation
 
         private void ApplyTargetPose(float deltaTime, bool snap)
         {
-            var nextPose = _smoother.Update(_view.CurrentVisualPose, _targetPoseSource.CurrentPose, _tuning, deltaTime, snap);
+            var targetPose = _shouldFaceRunCamera
+                ? CreateCameraFacingPose(_targetPoseSource.CurrentPose)
+                : _targetPoseSource.CurrentPose;
+
+            var nextPose = _smoother.Update(_view.CurrentVisualPose, targetPose, _tuning, deltaTime, snap);
             _view.ApplyVisualPose(nextPose);
+        }
+
+        private CharacterVisualPose CreateCameraFacingPose(CharacterVisualPose targetPose)
+        {
+            var up = targetPose.Rotation * Vector3.up;
+            var directionToCamera = Vector3.ProjectOnPlane(_runCameraLens.Position - targetPose.Position, up);
+
+            if (directionToCamera.sqrMagnitude <= Mathf.Epsilon)
+                return targetPose;
+
+            return new CharacterVisualPose(
+                targetPose.Position,
+                Quaternion.LookRotation(directionToCamera.normalized, up));
         }
     }
 }

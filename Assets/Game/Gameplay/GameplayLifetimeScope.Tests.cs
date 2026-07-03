@@ -24,6 +24,7 @@ namespace Game.Gameplay
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
         internal PhysicsRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
+        internal FinishPresentationView FinishPresentationViewForTests => _finishPresentationView;
         internal IReadOnlyList<Pickup> LevelPickupsForTests => GetLevelPickups();
         internal IReadOnlyList<Collider> PlayerPickupContactCollidersForTests => GetPlayerPickupContactColliders();
         internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
@@ -62,6 +63,7 @@ namespace Game.Gameplay
             RunEndedUIView runEndedView,
             RigidbodyLaunchTarget launchTarget,
             CharacterPresentationView characterPresentationView,
+            FinishPresentationView finishPresentationView,
             Pickup[] levelPickups,
             Collider[] playerPickupContactColliders,
             string playerTag,
@@ -101,6 +103,7 @@ namespace Game.Gameplay
             _runEndedView = runEndedView;
             _launchTarget = launchTarget;
             _characterPresentationView = characterPresentationView;
+            _finishPresentationView = finishPresentationView;
             _levelPickups = levelPickups;
             _playerPickupContactColliders = playerPickupContactColliders;
             _playerTag = playerTag;

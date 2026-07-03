@@ -131,6 +131,9 @@ namespace Game.Gameplay
             if (_characterPresentationView == null)
                 yield return "GameplayLifetimeScope requires a Character Presentation View reference.";
 
+            if (_finishPresentationView == null)
+                yield return "GameplayLifetimeScope requires a Finish Presentation View reference.";
+
             foreach (var error in GetPickupSetupValidationErrors())
                 yield return error;
 
