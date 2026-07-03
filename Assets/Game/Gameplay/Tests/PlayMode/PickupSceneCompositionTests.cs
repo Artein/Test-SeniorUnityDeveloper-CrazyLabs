@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Game.Foundation.Physics;
 using Game.Foundation.Presentation;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
@@ -87,19 +88,37 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
     private void AssertPickupAuthoring(Pickup pickup, int pickupLayer)
     {
         var colliders = pickup.GetComponentsInChildren<Collider>(true);
+        var triggerNotifier = pickup.TriggerNotifierForTests;
 
         Assert.That(pickup.gameObject.activeSelf, Is.True, pickup.name);
         Assert.That(pickup.gameObject.layer, Is.EqualTo(pickupLayer), pickup.name);
         Assert.That(pickup.Definition, Is.Not.Null, pickup.name);
         Assert.That(new[] { 5, 25 }, Does.Contain(pickup.Definition.Amount), pickup.name);
         Assert.That(pickup.Definition.CurrencyDefinition, Is.Not.Null, pickup.name);
+        Assert.That(triggerNotifier, Is.Not.Null, pickup.name);
+        Assert.That(triggerNotifier.transform.IsChildOf(pickup.transform), Is.True, pickup.name);
         Assert.That(colliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
 
         pickup.Definition.Validate();
+        AssertNotifierColliderAuthoring(pickup, triggerNotifier, pickupLayer);
         AssertPickupVisualAuthoring(pickup);
 
         foreach (var collider in colliders)
         {
+            Assert.That(collider.isTrigger, Is.True, collider.name);
+            Assert.That(collider.gameObject.layer, Is.EqualTo(pickupLayer), collider.name);
+        }
+    }
+
+    private void AssertNotifierColliderAuthoring(Pickup pickup, TriggerNotifier triggerNotifier, int pickupLayer)
+    {
+        var notifierColliders = triggerNotifier.GetComponents<Collider>();
+
+        Assert.That(notifierColliders, Has.Length.GreaterThanOrEqualTo(1), pickup.name);
+
+        foreach (var collider in notifierColliders)
+        {
+            Assert.That(collider.enabled, Is.True, collider.name);
             Assert.That(collider.isTrigger, Is.True, collider.name);
             Assert.That(collider.gameObject.layer, Is.EqualTo(pickupLayer), collider.name);
         }

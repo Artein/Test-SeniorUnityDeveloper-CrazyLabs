@@ -9,6 +9,7 @@ using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
+using Game.Foundation.Physics;
 using Game.Gameplay.CharacterPresentation;
 using NUnit.Framework;
 using TMPro;
@@ -710,10 +711,15 @@ public sealed class GameplayLifetimeScopeTests
     private Pickup CreatePickup(string objectName, PickupDefinition definition)
     {
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
+        pickup.gameObject.layer = GetRequiredLayer("Pickup");
         pickup.SetDefinitionForTests(definition);
-        var collider = pickup.gameObject.AddComponent<SphereCollider>();
+        var triggerObject = CreateGameObject($"{objectName} Trigger");
+        triggerObject.transform.SetParent(pickup.transform, false);
+        triggerObject.layer = GetRequiredLayer("Pickup");
+        var notifier = triggerObject.AddComponent<TriggerNotifier>();
+        var collider = triggerObject.AddComponent<SphereCollider>();
         collider.isTrigger = true;
-        collider.gameObject.layer = GetRequiredLayer("Pickup");
+        pickup.SetTriggerNotifierForTests(notifier);
         return pickup;
     }
 

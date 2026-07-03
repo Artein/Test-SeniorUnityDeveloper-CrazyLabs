@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
+using Game.Foundation.Physics;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -234,7 +235,16 @@ public sealed class PickupCollectionControllerTests
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.SetDefinitionForTests(CreatePickupDefinition(_coins, amount));
+        pickup.SetTriggerNotifierForTests(CreateTriggerNotifier(pickup.transform, $"{objectName} Trigger"));
         return pickup;
+    }
+
+    private TriggerNotifier CreateTriggerNotifier(Transform parent, string objectName)
+    {
+        var triggerObject = CreateGameObject(objectName);
+        triggerObject.transform.SetParent(parent, false);
+        triggerObject.AddComponent<SphereCollider>().isTrigger = true;
+        return triggerObject.AddComponent<TriggerNotifier>();
     }
 
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)

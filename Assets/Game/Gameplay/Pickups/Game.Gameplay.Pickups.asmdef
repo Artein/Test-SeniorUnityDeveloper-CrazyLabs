@@ -2,6 +2,7 @@
   "name": "Game.Gameplay.Pickups",
   "rootNamespace": "",
   "references": [
+    "Game.Foundation",
     "Game.Gameplay.Economy",
     "Game.Gameplay.GameplayState",
     "Game.Utils.Invocation",

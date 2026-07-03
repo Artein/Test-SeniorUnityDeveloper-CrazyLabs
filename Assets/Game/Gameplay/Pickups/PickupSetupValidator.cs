@@ -81,7 +81,7 @@ namespace Game.Gameplay.Pickups
                     errors.Add($"GameplayLifetimeScope contains duplicate Level Pickup reference '{pickup.name}'.");
 
                 ValidatePickupDefinition(pickup, errors);
-                ValidatePickupColliders(pickup, pickupLayer, pickupLayerName, errors);
+                ValidatePickupTriggerNotifier(pickup, pickupLayer, pickupLayerName, errors);
             }
         }
 
@@ -89,7 +89,10 @@ namespace Game.Gameplay.Pickups
         {
             try
             {
-                pickup.Validate();
+                if (pickup.Definition == null)
+                    throw new InvalidOperationException($"Pickup '{pickup.name}' requires a Pickup Definition reference.");
+
+                pickup.Definition.Validate();
             }
             catch (Exception exception)
             {
@@ -97,22 +100,37 @@ namespace Game.Gameplay.Pickups
             }
         }
 
-        private void ValidatePickupColliders(
+        private void ValidatePickupTriggerNotifier(
             Pickup pickup,
             int pickupLayer,
             string pickupLayerName,
             ICollection<string> errors)
         {
-            var colliders = pickup.GetComponentsInChildren<Collider>(true);
+            var triggerNotifier = pickup.TriggerNotifierForValidation;
+
+            if (triggerNotifier == null)
+            {
+                errors.Add($"Pickup '{pickup.name}' requires a Trigger Notifier reference.");
+                return;
+            }
+
+            if (!triggerNotifier.transform.IsChildOf(pickup.transform))
+                errors.Add($"Pickup '{pickup.name}' Trigger Notifier '{triggerNotifier.name}' must be inside the pickup hierarchy.");
+
+            var colliders = triggerNotifier.GetComponents<Collider>();
 
             if (colliders.Length <= 0)
             {
-                errors.Add($"Pickup '{pickup.name}' requires at least one trigger Collider.");
+                errors.Add(
+                    $"Pickup '{pickup.name}' Trigger Notifier '{triggerNotifier.name}' requires at least one trigger Collider on the same GameObject.");
                 return;
             }
 
             foreach (var collider in colliders)
             {
+                if (!collider.enabled)
+                    errors.Add($"Pickup '{pickup.name}' collider '{collider.name}' must be enabled.");
+
                 if (!collider.isTrigger)
                     errors.Add($"Pickup '{pickup.name}' collider '{collider.name}' must be marked as Trigger.");
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Foundation.Physics;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
@@ -57,7 +58,7 @@ public sealed class PickupPhysicsIntegrationTests
     }
 
     [UnityTest]
-    public IEnumerator given_RunningStateAndTaggedPlayerCollider_when_PlayerEntersPickupTrigger_then_PickupIsCollectedOnce()
+    public IEnumerator given_RunningStateAndTaggedPlayerCollider_when_PlayerEntersChildPickupTrigger_then_PickupIsCollectedOnce()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         var controllerFixture = CreateControllerFixture(new[] { pickup });
@@ -209,9 +210,16 @@ public sealed class PickupPhysicsIntegrationTests
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.gameObject.layer = GetRequiredLayer(PickupLayerName);
-        var collider = pickup.gameObject.AddComponent<SphereCollider>();
+
+        var triggerObject = CreateGameObject($"{objectName} Visual Trigger");
+        triggerObject.transform.SetParent(pickup.transform, false);
+        triggerObject.layer = GetRequiredLayer(PickupLayerName);
+        var notifier = triggerObject.AddComponent<TriggerNotifier>();
+        var collider = triggerObject.AddComponent<SphereCollider>();
         collider.isTrigger = true;
+
         pickup.SetDefinitionForTests(CreatePickupDefinition(_coins, amount));
+        pickup.SetTriggerNotifierForTests(notifier);
         return pickup;
     }
 
@@ -275,7 +283,7 @@ public sealed class PickupPhysicsIntegrationTests
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return CurrentStateId == stateId;
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)
