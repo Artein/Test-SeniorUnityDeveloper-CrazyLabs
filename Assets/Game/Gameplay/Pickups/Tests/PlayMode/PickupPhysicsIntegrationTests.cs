@@ -207,7 +207,9 @@ public sealed class PickupPhysicsIntegrationTests
 
     private Pickup CreatePickup(string objectName, int amount, Vector3 position)
     {
-        var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
+        var pickupObject = CreateGameObject(objectName);
+        pickupObject.SetActive(false);
+        var pickup = pickupObject.AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.gameObject.layer = GetRequiredLayer(PickupLayerName);
 
@@ -220,6 +222,7 @@ public sealed class PickupPhysicsIntegrationTests
 
         pickup.SetDefinitionForTests(CreatePickupDefinition(_coins, amount));
         pickup.SetTriggerNotifierForTests(notifier);
+        pickupObject.SetActive(true);
         return pickup;
     }
 

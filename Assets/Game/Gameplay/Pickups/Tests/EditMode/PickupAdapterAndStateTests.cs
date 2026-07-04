@@ -54,10 +54,9 @@ public sealed class PickupAdapterAndStateTests
     }
 
     [Test]
-    public void TriggerEntered_NotifierContact_PublishesPickupAndCollider()
+    public void TriggerEntered_DirectPickupContact_PublishesPickupAndCollider()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var notifier = pickup.TriggerNotifierForTests;
         var collider = CreateCollider("Player Contact");
         Pickup observedPickup = null;
         Collider observedCollider = null;
@@ -68,7 +67,7 @@ public sealed class PickupAdapterAndStateTests
             observedCollider = other;
         };
 
-        notifier.NotifyTriggerEnteredForTests(collider);
+        pickup.RaiseTriggerEnteredForTests(collider);
 
         Assert.That(observedPickup, Is.SameAs(pickup));
         Assert.That(observedCollider, Is.SameAs(collider));
@@ -78,13 +77,12 @@ public sealed class PickupAdapterAndStateTests
     public void TriggerEntered_DisabledPickup_DoesNotPublishContact()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
-        var notifier = pickup.TriggerNotifierForTests;
         var collider = CreateCollider("Player Contact");
         var eventCount = 0;
         pickup.TriggerEntered += (_, _) => eventCount += 1;
         pickup.SetAvailable(false);
 
-        notifier.NotifyTriggerEnteredForTests(collider);
+        pickup.RaiseTriggerEnteredForTests(collider);
 
         Assert.That(eventCount, Is.Zero);
     }

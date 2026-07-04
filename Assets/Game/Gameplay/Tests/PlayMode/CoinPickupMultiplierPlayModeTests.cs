@@ -93,7 +93,9 @@ public sealed class CoinPickupMultiplierPlayModeTests
 
     private Pickup CreatePickup(string objectName, CurrencyDefinition currencyDefinition, int amount, Vector3 position)
     {
-        var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
+        var pickupObject = CreateGameObject(objectName);
+        pickupObject.SetActive(false);
+        var pickup = pickupObject.AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.gameObject.layer = GetRequiredLayer(PickupLayerName);
         var triggerObject = CreateGameObject($"{objectName} Visual Trigger");
@@ -104,6 +106,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
         collider.isTrigger = true;
         pickup.SetDefinitionForTests(CreatePickupDefinition(currencyDefinition, amount));
         pickup.SetTriggerNotifierForTests(notifier);
+        pickupObject.SetActive(true);
         return pickup;
     }
 
