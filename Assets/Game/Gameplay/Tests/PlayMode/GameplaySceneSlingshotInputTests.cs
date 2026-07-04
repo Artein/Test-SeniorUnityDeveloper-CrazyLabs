@@ -268,17 +268,28 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             yield return LaunchAndCaptureAppliedLaunch(mouse, 0f, 0.35f, launch => smallPullLaunch = launch);
             yield return LaunchAndCaptureAppliedLaunch(mouse, 0f, 3f, launch => maxPullLaunch = launch);
 
+            var activeScene = SceneManager.GetActiveScene();
+            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+            var slingshotConfig = lifetimeScope.Container.Resolve<ISlingshotConfig>();
+            var launchConfig = lifetimeScope.Container.Resolve<IGameplaySlingshotLaunchConfig>();
+            var configuredForwardRange = launchConfig.MaximumForwardImpulse - launchConfig.MinimumForwardImpulse;
             var smallForwardSpeed = Vector3.Dot(smallPullLaunch.VelocityChange, smallPullLaunch.LaunchDirection);
             var smallUpwardSpeed = Vector3.Dot(smallPullLaunch.VelocityChange, smallPullLaunch.LaunchUpDirection);
             var maxForwardSpeed = Vector3.Dot(maxPullLaunch.VelocityChange, maxPullLaunch.LaunchDirection);
             var maxUpwardSpeed = Vector3.Dot(maxPullLaunch.VelocityChange, maxPullLaunch.LaunchUpDirection);
 
-            Assert.That(smallPullLaunch.Request.PullDistance, Is.GreaterThan(0.25f));
-            Assert.That(smallForwardSpeed, Is.InRange(8f, 12f));
-            Assert.That(smallUpwardSpeed, Is.InRange(0f, 0.5f));
-            Assert.That(maxForwardSpeed, Is.EqualTo(35f).Within(0.75f));
-            Assert.That(maxUpwardSpeed, Is.EqualTo(3f).Within(0.2f));
-            Assert.That(maxForwardSpeed, Is.GreaterThan(smallForwardSpeed * 3f));
+            Assert.That(configuredForwardRange, Is.GreaterThan(0f));
+            Assert.That(smallPullLaunch.Request.PullDistance, Is.GreaterThan(slingshotConfig.MinimumPullDistance));
+
+            Assert.That(
+                smallForwardSpeed,
+                Is.InRange(
+                    launchConfig.MinimumForwardImpulse,
+                    launchConfig.MinimumForwardImpulse + (configuredForwardRange * 0.25f)));
+            Assert.That(smallUpwardSpeed, Is.InRange(0f, Mathf.Max(0.1f, launchConfig.UpwardImpulse * 0.25f)));
+            Assert.That(maxForwardSpeed, Is.EqualTo(launchConfig.MaximumForwardImpulse).Within(0.75f));
+            Assert.That(maxUpwardSpeed, Is.EqualTo(launchConfig.UpwardImpulse).Within(0.2f));
+            Assert.That(maxForwardSpeed - smallForwardSpeed, Is.GreaterThan(configuredForwardRange * 0.75f));
         }
         finally
         {
