@@ -113,14 +113,6 @@ Current source scan:
 
 Recommended verification:
 
-```bash
-.unity-ai-agent-connector/bin/uaiac compile
-.unity-ai-agent-connector/bin/uaiac tests list --include selectors
-.unity-ai-agent-connector/bin/uaiac tests run changed
-```
-
-If the local AI Agent Connector is not installed or not running, use Unity Test Runner instead:
-
 - EditMode: run project EditMode tests first.
 - PlayMode: run focused scene/pickup/slingshot tests when validating gameplay scene behavior.
 
