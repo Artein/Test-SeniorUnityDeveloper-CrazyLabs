@@ -19,5 +19,12 @@ MonoBehaviour:
   _minimumAcceptedDpi: 1
   _maximumAcceptedDpi: 1000
   _maximumTurnDegreesPerSecond: 30
+  _runAirSteeringMaximumTurnDegreesPerSecond: 12
   _minimumSteerSpeed: 0.25
-  _maximumPlanarSpeed: 10
+  _runBodySpeedSanityGuardMetersPerSecond: 250
+  _launchLandingStabilizationSeconds: 0.3
+  _launchLandingMaximumLiftSpeed: 0
+  _runSteeringFrameNormalSlewDegreesPerSecond: 120
+  _runSteeringFrameSnapDegrees: 60
+  _runSteeringFrameUngroundedGraceSeconds: 0.12
+  _runSteeringFrameSuspectNormalConfirmationSeconds: 0.6

@@ -35,6 +35,10 @@ namespace Game.Gameplay.Slingshot
         ISlingshotCaptureLifecycleNotifier,
         ISlingshotGeometrySnapshotSource
     {
+        private const int ActivePullClearanceSearchStepCount = 16;
+        private const float PullOffsetComparisonTolerance = 0.0001f;
+        private const float HeldTargetPoseComparisonToleranceSqr = 0.0000000001f;
+
         private readonly IUnityInput _unityInput;
         private readonly ISlingshotView _view;
         private readonly ISlingshotInputProjector _inputProjector;
@@ -61,12 +65,14 @@ namespace Game.Gameplay.Slingshot
         private SlingshotGeometrySnapshot _geometry;
         private SlingshotLaunchRequest _pendingLaunchRequest;
         private Vector3 _committedHeldTargetPosition;
+        private Vector3 _lastHeldTargetPosition;
         private float _releaseRecoilElapsed;
         private bool _isInitialized;
         private bool _isDisposed;
         private bool _isCaptureEnabled;
         private bool _hasActivePointer;
         private bool _hasCommittedHeldTargetPosition;
+        private bool _hasLastHeldTargetPosition;
         private bool _hasLastValidActiveBandShape;
         private bool _isCurrentPullBandShapeValid;
         private bool _isLaunchHandoffPending;
@@ -363,9 +369,7 @@ namespace Game.Gameplay.Slingshot
             var normalizedTime = Mathf.Clamp01(_releaseRecoilElapsed / _config.BandRecoilDuration);
             var isRecoilComplete = normalizedTime >= 1f;
 
-            if (isRecoilComplete
-                && IsDetachedRestBandShapeClear()
-                && HasTargetSilhouettePassedRestBandShape())
+            if (isRecoilComplete && IsDetachedRestBandShapeClear())
             {
                 _isReleaseRecoilActive = false;
                 _view.ShowInactiveIdle(CreateDetachedRestBandShape());
@@ -476,27 +480,114 @@ namespace Game.Gameplay.Slingshot
                 PoseHeldTargetForPullSolve(clampedPullPoint);
             }
 
-            if (!_inputProjector.TryProjectWorldToScreen(clampedPullPoint, out var touchIndicatorScreenPosition))
+            if (!TryResolveClearActivePullPose(
+                    pullDistance,
+                    pullOffset,
+                    out clampedPullPoint,
+                    out pullOffset,
+                    out var touchIndicatorScreenPosition))
             {
+                _isCurrentPullBandShapeValid = false;
                 RestoreCommittedHeldTargetPosition();
-                pullVisual = default;
-                return false;
+
+                if (!_hasLastValidActiveBandShape || !TryCreateCommittedPullVisual(out pullVisual))
+                {
+                    pullVisual = default;
+                    return false;
+                }
+
+                _isCurrentPullBandShapeValid = true;
+                return true;
             }
 
             var normalizedPull = Mathf.Clamp01(pullDistance / _config.MaximumPullDistance);
-            _isCurrentPullBandShapeValid = TryUpdateActiveBandShape(clampedPullPoint);
-
-            if (!_isCurrentPullBandShapeValid && !_hasLastValidActiveBandShape)
-            {
-                RestoreCommittedHeldTargetPosition();
-                pullVisual = default;
-                return false;
-            }
-
-            var shape = new SlingshotBandShape(_currentActiveBandShapeBuffer, true);
+            _isCurrentPullBandShapeValid = true;
+            var shape = CreateCurrentActiveBandShape();
             var normalizedPullOffset = _pullOffsetNormalizer.Normalize(_geometry, pullDistance, pullOffset);
             pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull, normalizedPullOffset);
             CommitHeldTargetPosition(clampedPullPoint);
+            return true;
+        }
+
+        private bool TryResolveClearActivePullPose(
+            float pullDistance,
+            float requestedPullOffset,
+            out Vector3 resolvedPullPoint,
+            out float resolvedPullOffset,
+            out Vector2 touchIndicatorScreenPosition)
+        {
+            if (TryAcceptActivePullPose(
+                    pullDistance,
+                    requestedPullOffset,
+                    out resolvedPullPoint,
+                    out touchIndicatorScreenPosition))
+            {
+                resolvedPullOffset = requestedPullOffset;
+                return true;
+            }
+
+            if (Mathf.Abs(requestedPullOffset) <= PullOffsetComparisonTolerance)
+            {
+                resolvedPullOffset = requestedPullOffset;
+                return false;
+            }
+
+            for (var stepIndex = 1; stepIndex <= ActivePullClearanceSearchStepCount; stepIndex += 1)
+            {
+                var progress = (float)stepIndex / ActivePullClearanceSearchStepCount;
+                var candidatePullOffset = Mathf.Lerp(requestedPullOffset, 0f, progress);
+
+                if (!TryAcceptActivePullPose(
+                        pullDistance,
+                        candidatePullOffset,
+                        out resolvedPullPoint,
+                        out touchIndicatorScreenPosition))
+                {
+                    continue;
+                }
+
+                resolvedPullOffset = candidatePullOffset;
+                return true;
+            }
+
+            resolvedPullPoint = GetPullPoint(pullDistance, requestedPullOffset);
+            resolvedPullOffset = requestedPullOffset;
+            touchIndicatorScreenPosition = default;
+            return false;
+        }
+
+        private bool TryAcceptActivePullPose(
+            float pullDistance,
+            float pullOffset,
+            out Vector3 pullPoint,
+            out Vector2 touchIndicatorScreenPosition)
+        {
+            pullPoint = GetPullPoint(pullDistance, pullOffset);
+
+            if (!_inputProjector.TryProjectWorldToScreen(pullPoint, out touchIndicatorScreenPosition))
+                return false;
+
+            PoseHeldTargetForPullSolve(pullPoint);
+            return TryUpdateActiveBandShape(pullPoint);
+        }
+
+        private bool TryCreateCommittedPullVisual(out SlingshotPullVisual pullVisual)
+        {
+            pullVisual = default;
+
+            if (!_hasCommittedHeldTargetPosition
+                || !_inputProjector.TryProjectWorldToScreen(_committedHeldTargetPosition, out var touchIndicatorScreenPosition))
+            {
+                return false;
+            }
+
+            var delta = _committedHeldTargetPosition - _geometry.RestPoint;
+            var pullDistance = Mathf.Clamp(-Vector3.Dot(delta, _geometry.LaunchFrameForward), 0f, _config.MaximumPullDistance);
+            var pullOffset = Vector3.Dot(delta, _geometry.LaunchFrameRight);
+            var normalizedPull = Mathf.Clamp01(pullDistance / _config.MaximumPullDistance);
+            var normalizedPullOffset = _pullOffsetNormalizer.Normalize(_geometry, pullDistance, pullOffset);
+            var shape = CreateCurrentActiveBandShape();
+            pullVisual = new SlingshotPullVisual(shape, touchIndicatorScreenPosition, pullDistance, pullOffset, normalizedPull, normalizedPullOffset);
             return true;
         }
 
@@ -517,12 +608,15 @@ namespace Game.Gameplay.Slingshot
 
         private void PoseHeldTargetForPullSolve(Vector3 position)
         {
-            _heldLaunchTarget.SetHeldPosition(position);
+            if (IsHeldTargetAlreadyAt(position))
+                return;
+
+            SetHeldTargetPosition(position);
         }
 
         private void SetCommittedHeldTargetPosition(Vector3 position)
         {
-            _heldLaunchTarget.SetHeldPosition(position);
+            SetHeldTargetPosition(position);
             CommitHeldTargetPosition(position);
         }
 
@@ -534,10 +628,23 @@ namespace Game.Gameplay.Slingshot
 
         private void RestoreCommittedHeldTargetPosition()
         {
-            _heldLaunchTarget.SetHeldPosition(
+            SetHeldTargetPosition(
                 _hasCommittedHeldTargetPosition
                     ? _committedHeldTargetPosition
                     : _geometry.RestPoint);
+        }
+
+        private void SetHeldTargetPosition(Vector3 position)
+        {
+            _heldLaunchTarget.SetHeldPosition(position);
+            _lastHeldTargetPosition = position;
+            _hasLastHeldTargetPosition = true;
+        }
+
+        private bool IsHeldTargetAlreadyAt(Vector3 position)
+        {
+            return _hasLastHeldTargetPosition
+                   && Vector3.SqrMagnitude(_lastHeldTargetPosition - position) <= HeldTargetPoseComparisonToleranceSqr;
         }
 
         private Vector3 GetPullPoint(float pullDistance, float pullOffset)
@@ -579,7 +686,7 @@ namespace Game.Gameplay.Slingshot
 
         private float GetRenderedAnchorCorridorClearance()
         {
-            return GetBandTargetClearanceRadius() * 3f;
+            return GetBandTargetClearanceProbeRadius() * 3f;
         }
 
         private float GetLateralPullScale(float pullDistance)

@@ -18,49 +18,10 @@ MonoBehaviour:
   _description: Multiplies coin currency granted by gameplay pickup definitions.
   _icon: {fileID: 21300000, guid: 4dc2e91acb884236991ab45ca1754444, type: 3}
   _targetStatId: {fileID: 11400000, guid: 6d2b3c99a75a4cedabb1878c9513dab1, type: 2}
-  _maxLevel: 15
+  _maxLevel: 10
   _costProgression:
-    _minimumValue: 150
-    _maximumValue: 25000
-    _curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0.4
-        outSlope: 0.4
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.5
-        value: 0.2
-        inSlope: 1.6
-        outSlope: 1.6
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 1.6
-        outSlope: 1.6
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    _roundingMode: 3
-    _stepSize: 25
-    _exactOverrides: []
-  _effectProgression:
-    _minimumValue: 1
-    _maximumValue: 10
+    _minimumValue: 300
+    _maximumValue: 5000
     _curve:
       serializedVersion: 2
       m_Curve:
@@ -89,11 +50,75 @@ MonoBehaviour:
     _stepSize: 0
     _exactOverrides:
     - _level: 1
-      _value: 1.1
+      _value: 300
+    - _level: 2
+      _value: 500
+    - _level: 3
+      _value: 700
+    - _level: 4
+      _value: 1000
     - _level: 5
-      _value: 1.5
-    - _level: 15
-      _value: 10
+      _value: 1400
+    - _level: 6
+      _value: 1900
+    - _level: 7
+      _value: 2500
+    - _level: 8
+      _value: 3200
+    - _level: 9
+      _value: 4000
+    - _level: 10
+      _value: 5000
+  _effectProgression:
+    _minimumValue: 1
+    _maximumValue: 3
+    _curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    _roundingMode: 0
+    _stepSize: 0
+    _exactOverrides:
+    - _level: 1
+      _value: 1.2
+    - _level: 2
+      _value: 1.4
+    - _level: 3
+      _value: 1.6
+    - _level: 4
+      _value: 1.8
+    - _level: 5
+      _value: 2
+    - _level: 6
+      _value: 2.2
+    - _level: 7
+      _value: 2.4
+    - _level: 8
+      _value: 2.6
+    - _level: 9
+      _value: 2.8
+    - _level: 10
+      _value: 3
   _operationType: 2
   _valueFormat: 2
   _displayDecimalPlaces: 1

@@ -78,6 +78,63 @@ public sealed class LaunchTargetSilhouetteSourceTests
     }
 
     [UnityTest]
+    public IEnumerator TryCheckBandShapeClearance_AfterHeldPosition_UsesAssignedColliderCurrentPose()
+    {
+        var pullPoint = new Vector3(0.25f, 1.05f, -1.25f);
+        ((ILaunchTarget)_target).Hold();
+        ((IHeldLaunchTarget)_target).SetHeldPosition(pullPoint);
+
+        yield return null;
+
+        var clearanceSource = (ILaunchTargetBandShapeClearanceSource)_target;
+        var colliderCenter = _collider.bounds.center;
+
+        var blockedShape = new[]
+        {
+            colliderCenter + Vector3.left,
+            colliderCenter + Vector3.right
+        };
+
+        var clearShape = new[]
+        {
+            colliderCenter + Vector3.left + Vector3.forward,
+            colliderCenter + Vector3.right + Vector3.forward
+        };
+
+        var checkedBlocked = clearanceSource.TryCheckBandShapeClearance(blockedShape, 0.01f, out var blockedIsClear);
+        var checkedClear = clearanceSource.TryCheckBandShapeClearance(clearShape, 0.01f, out var clearIsClear);
+
+        Assert.That(checkedBlocked, Is.True);
+        Assert.That(blockedIsClear, Is.False);
+        Assert.That(checkedClear, Is.True);
+        Assert.That(clearIsClear, Is.True);
+    }
+
+    [UnityTest]
+    public IEnumerator TryCheckBandShapeClearance_ImmediatelyAfterHeldPosition_UsesAssignedColliderCurrentPose()
+    {
+        var pullPoint = new Vector3(2f, 1.05f, -2f);
+        var expectedColliderCenter = pullPoint + (_colliderObject.transform.localPosition - _bandCenterObject.transform.localPosition);
+        ((ILaunchTarget)_target).Hold();
+
+        ((IHeldLaunchTarget)_target).SetHeldPosition(pullPoint);
+
+        var clearanceSource = (ILaunchTargetBandShapeClearanceSource)_target;
+
+        var blockedShape = new[]
+        {
+            expectedColliderCenter + Vector3.left,
+            expectedColliderCenter + Vector3.right
+        };
+
+        var checkedBlocked = clearanceSource.TryCheckBandShapeClearance(blockedShape, 0.01f, out var blockedIsClear);
+
+        Assert.That(checkedBlocked, Is.True);
+        Assert.That(blockedIsClear, Is.False);
+        yield break;
+    }
+
+    [UnityTest]
     public IEnumerator SetHeldPosition_AfterHold_AlignsAssignedBandCenterToHeldPointAndPreservesRotation()
     {
         var originalRotation = Quaternion.Euler(0f, 35f, 0f);

@@ -30,6 +30,61 @@ public sealed class PlayerSteeringConfigTests
         Assert.That(_config.FallbackDpi, Is.EqualTo(326f));
         Assert.That(_config.MinimumAcceptedDpi, Is.EqualTo(1f));
         Assert.That(_config.MaximumAcceptedDpi, Is.EqualTo(1000f));
+        Assert.That(_config.MaximumTurnDegreesPerSecond, Is.EqualTo(120f));
+        Assert.That(_config.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(45f));
+        Assert.That(_config.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f));
+        Assert.That(_config.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f));
+        Assert.That(_config.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f));
+        Assert.That(_config.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(180f));
+        Assert.That(_config.RunSteeringFrameSnapDegrees, Is.EqualTo(60f));
+        Assert.That(_config.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.08f));
+        Assert.That(_config.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.04f));
+    }
+
+    [Test]
+    public void RunSteeringFrameStabilityValues_InvalidAuthoredValues_ResolveDefensively()
+    {
+        _configObject.SetRunSteeringFrameStabilityForTests(
+            normalSlewDegreesPerSecond: float.NaN,
+            snapDegrees: 240f,
+            ungroundedGraceSeconds: -1f,
+            suspectNormalConfirmationSeconds: float.PositiveInfinity);
+
+        Assert.That(_config.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(180f));
+        Assert.That(_config.RunSteeringFrameSnapDegrees, Is.EqualTo(180f));
+        Assert.That(_config.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.08f));
+        Assert.That(_config.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.04f));
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(0f)]
+    [TestCase(-1f)]
+    public void RunBodySpeedSanityGuard_InvalidAuthoredValue_ResolvesDefensively(float authoredValue)
+    {
+        _configObject.SetRunBodySpeedSanityGuardForTests(authoredValue);
+
+        Assert.That(_config.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f));
+    }
+
+    [Test]
+    public void LaunchLandingStabilizationValues_InvalidAuthoredValues_ResolveDefensively()
+    {
+        _configObject.SetLaunchLandingStabilizationForTests(
+            stabilizationSeconds: float.NaN,
+            maximumLiftSpeed: -1f);
+
+        Assert.That(_config.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f));
+        Assert.That(_config.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f));
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(-1f)]
+    [TestCase(float.PositiveInfinity)]
+    public void RunAirSteeringMaximumTurnDegreesPerSecond_InvalidAuthoredValue_ResolvesDefensively(float authoredValue)
+    {
+        _configObject.SetRunAirSteeringMaximumTurnDegreesPerSecondForTests(authoredValue);
+
+        Assert.That(_config.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(45f));
     }
 
     [TestCase(1f)]

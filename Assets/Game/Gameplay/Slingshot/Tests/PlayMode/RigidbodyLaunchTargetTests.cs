@@ -42,6 +42,7 @@ public sealed class RigidbodyLaunchTargetTests
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX;
+        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         _rigidbody.linearVelocity = new Vector3(3f, 4f, 5f);
         _rigidbody.angularVelocity = new Vector3(1f, 2f, 3f);
 
@@ -49,8 +50,21 @@ public sealed class RigidbodyLaunchTargetTests
 
         Assert.That(_rigidbody.isKinematic, Is.True);
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    [Test]
+    public void Hold_AlreadyKinematic_DoesNotWriteVelocityToKinematicBody()
+    {
+        _rigidbody.isKinematic = true;
+
+        ((ILaunchTarget)_target).Hold();
+
+        Assert.That(_rigidbody.isKinematic, Is.True);
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]
@@ -58,6 +72,7 @@ public sealed class RigidbodyLaunchTargetTests
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX;
+        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         ((ILaunchTarget)_target).Hold();
 
         ((ILaunchTarget)_target).Launch(new Vector3(1f, 2f, 3f));
@@ -65,6 +80,7 @@ public sealed class RigidbodyLaunchTargetTests
 
         Assert.That(_rigidbody.isKinematic, Is.False);
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
         AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(1f, 2f, 3f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
@@ -87,6 +103,7 @@ public sealed class RigidbodyLaunchTargetTests
             Is.EqualTo(RigidbodyConstraints.FreezeRotationY | PostLaunchStabilizationConstraints));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 1f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]
@@ -112,6 +129,7 @@ public sealed class RigidbodyLaunchTargetTests
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezePositionX;
+        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         _rigidbody.linearVelocity = new Vector3(3f, 4f, 5f);
         _rigidbody.angularVelocity = new Vector3(1f, 2f, 3f);
         _rigidbody.position = new Vector3(-2f, 1f, 0.5f);
@@ -123,10 +141,12 @@ public sealed class RigidbodyLaunchTargetTests
 
         Assert.That(_rigidbody.isKinematic, Is.True);
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionX));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
         Assert.That(_rigidbody.position, Is.EqualTo(preLaunchPosition));
         AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+        LogAssert.NoUnexpectedReceived();
     }
 
     [Test]
@@ -141,6 +161,27 @@ public sealed class RigidbodyLaunchTargetTests
 
         AssertPositionEquals(heldPosition, _bandCenter.position);
         AssertRotationEquals(preLaunchRotation, _rigidbody.rotation);
+        LogAssert.NoUnexpectedReceived();
+    }
+
+    [Test]
+    public void RunEndPoseLock_HoldAndRelease_DoesNotWriteVelocityToKinematicBody()
+    {
+        _rigidbody.isKinematic = false;
+        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+        _rigidbody.linearVelocity = new Vector3(4f, 5f, 6f);
+        _rigidbody.angularVelocity = new Vector3(7f, 8f, 9f);
+        var runEndPosition = new Vector3(3f, 2f, 1f);
+
+        ((IRunEndPoseLockTarget)_target).HoldRunEndPose(runEndPosition);
+        ((IRunEndPoseLockTarget)_target).ReleaseRunEndPose();
+
+        Assert.That(_rigidbody.isKinematic, Is.True);
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
+        Assert.That(_rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+        Assert.That(_rigidbody.position, Is.EqualTo(runEndPosition));
+        LogAssert.NoUnexpectedReceived();
     }
 
     [UnityTest]
@@ -148,17 +189,21 @@ public sealed class RigidbodyLaunchTargetTests
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezePositionY;
+        _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         ((ILaunchTarget)_target).Hold();
         ((ILaunchTarget)_target).Launch(Vector3.forward);
         yield return new WaitForFixedUpdate();
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionY | PostLaunchStabilizationConstraints));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
 
         ((ILaunchTargetPreLaunchReset)_target).ResetToPreLaunchPose(Vector3.one, Quaternion.Euler(0f, 25f, 0f));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.None));
         ((ILaunchTarget)_target).Launch(new Vector3(2f, 0f, 0f));
         yield return new WaitForFixedUpdate();
 
         Assert.That(_rigidbody.isKinematic, Is.False);
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionY | PostLaunchStabilizationConstraints));
+        Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 0f)));
     }
 

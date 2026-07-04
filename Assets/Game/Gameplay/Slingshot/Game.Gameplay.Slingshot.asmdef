@@ -6,6 +6,7 @@
     "Game.Foundation.Input",
     "Game.Utils.Invocation",
     "Game.Utils.Mathematics",
+    "Game.Utils.Physics",
     "Unity.Mathematics",
     "VContainer"
   ],

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Foundation.Physics;
 using Game.Gameplay;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
@@ -92,12 +93,20 @@ public sealed class CoinPickupMultiplierPlayModeTests
 
     private Pickup CreatePickup(string objectName, CurrencyDefinition currencyDefinition, int amount, Vector3 position)
     {
-        var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
+        var pickupObject = CreateGameObject(objectName);
+        pickupObject.SetActive(false);
+        var pickup = pickupObject.AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.gameObject.layer = GetRequiredLayer(PickupLayerName);
-        var collider = pickup.gameObject.AddComponent<SphereCollider>();
+        var triggerObject = CreateGameObject($"{objectName} Visual Trigger");
+        triggerObject.transform.SetParent(pickup.transform, false);
+        triggerObject.layer = GetRequiredLayer(PickupLayerName);
+        var notifier = triggerObject.AddComponent<TriggerNotifier>();
+        var collider = triggerObject.AddComponent<SphereCollider>();
         collider.isTrigger = true;
         pickup.SetDefinitionForTests(CreatePickupDefinition(currencyDefinition, amount));
+        pickup.SetTriggerNotifierForTests(notifier);
+        pickupObject.SetActive(true);
         return pickup;
     }
 
@@ -194,7 +203,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return CurrentStateId == stateId;
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)

@@ -138,6 +138,25 @@ public sealed class RunCameraControllerTests
     }
 
     [Test]
+    public void PreLaunchAfterRunning_ResetsStaleAnchorPoseAndYaw()
+    {
+        ActivateRunCamera();
+        _source.Position = new Vector3(20f, 0f, 30f);
+        _source.LinearVelocity = Vector3.right * 8f;
+        ((ILateTickable)_controller).LateTick();
+        AssertForward(_anchor.Rotation, Vector3.right);
+
+        _source.Position = new Vector3(-4f, 0.5f, -7f);
+        _source.LinearVelocity = Vector3.right * 8f;
+
+        _stateService.ChangeTo(_preLaunchStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.PreLaunch));
+        AssertPosition(_anchor.Position, _source.Position + _config.AnchorOffset);
+        AssertForward(_anchor.Rotation, Vector3.forward);
+    }
+
+    [Test]
     public void RunEndedAfterRunning_KeepsRunCameraActiveAndLaunchGate()
     {
         ActivateRunCamera();
@@ -158,6 +177,55 @@ public sealed class RunCameraControllerTests
         _stateService.ChangeTo(_runningStateId);
 
         Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
+    }
+
+    [Test]
+    public void RunPreparationAfterRunEnded_ResetsStaleAnchorPoseAndYaw()
+    {
+        ActivateRunCamera();
+        _source.Position = new Vector3(12f, 0f, 9f);
+        _source.LinearVelocity = Vector3.right * 8f;
+        ((ILateTickable)_controller).LateTick();
+        AssertForward(_anchor.Rotation, Vector3.right);
+
+        _source.Position = new Vector3(-2f, 0.25f, -5f);
+        _source.LinearVelocity = Vector3.right * 8f;
+
+        _stateService.ChangeTo(_runEndedStateId);
+        _stateService.ChangeTo(_runPreparationStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
+        AssertPosition(_anchor.Position, _source.Position + _config.AnchorOffset);
+        AssertForward(_anchor.Rotation, Vector3.forward);
+
+        _stateService.ChangeTo(_runningStateId);
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.RunPreparation));
+    }
+
+    [Test]
+    public void SecondLaunchAfterRunPreparation_UsesNewLaunchYawBeforeVelocityYaw()
+    {
+        ActivateRunCamera();
+        _source.LinearVelocity = Vector3.left * 8f;
+        ((ILateTickable)_controller).LateTick();
+        AssertForward(_anchor.Rotation, Vector3.left);
+
+        _stateService.ChangeTo(_runEndedStateId);
+        _source.Position = new Vector3(3f, 0f, 6f);
+        _source.LinearVelocity = Vector3.right * 12f;
+        _stateService.ChangeTo(_runPreparationStateId);
+        _stateService.ChangeTo(_runningStateId);
+
+        _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.forward, Vector3.up));
+
+        Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.Run));
+        AssertPosition(_anchor.Position, _source.Position + _config.AnchorOffset);
+        AssertForward(_anchor.Rotation, Vector3.forward);
+
+        ((ILateTickable)_controller).LateTick();
+
+        AssertForward(_anchor.Rotation, Vector3.right);
     }
 
     [Test]
@@ -288,6 +356,13 @@ public sealed class RunCameraControllerTests
         Assert.That(Vector3.Dot(rotation * Vector3.forward, expectedForward.normalized), Is.GreaterThan(0.999f));
     }
 
+    private void AssertPosition(Vector3 actualPosition, Vector3 expectedPosition)
+    {
+        Assert.That(actualPosition.x, Is.EqualTo(expectedPosition.x).Within(0.0001f));
+        Assert.That(actualPosition.y, Is.EqualTo(expectedPosition.y).Within(0.0001f));
+        Assert.That(actualPosition.z, Is.EqualTo(expectedPosition.z).Within(0.0001f));
+    }
+
     private sealed class FakeGameplayStateService : IGameplayStateService
     {
         public GameplayStateId CurrentStateId { get; private set; }
@@ -302,7 +377,7 @@ public sealed class RunCameraControllerTests
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return CurrentStateId == stateId;
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)

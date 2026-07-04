@@ -35,15 +35,17 @@ namespace Game.Gameplay.CharacterPresentation
 
     public interface ICharacterPresentationTuning
     {
-        float AirborneDelaySeconds { get; }
-        float SlideEnterDownhillDegrees { get; }
-        float SlideExitDownhillDegrees { get; }
-        float RunFlatMaximumAbsSlopeDegrees { get; }
-        float RunMinimumForwardSpeed { get; }
+        float FallEnterMinimumUngroundedSeconds { get; }
+        float FallEnterMinimumDownwardSpeed { get; }
+        float FallEnterMinimumVerticalSeparation { get; }
+        float FallEnterHardUngroundedSeconds { get; }
+        float MeaningfulGroundedMovementThreshold { get; }
         float MinimumLocomotionModeDuration { get; }
         float LaunchPushMinimumSeconds { get; }
+        float LaunchFlightMaximumGroundedWaitSeconds { get; }
+        float PresentationSupportMaximumSurfaceLiftSpeed { get; }
+        float PresentationSupportReacquireSeconds { get; }
         float SlideReferenceSpeed { get; }
-        float RunReferenceSpeed { get; }
         float MinimumPlaybackSpeedMultiplier { get; }
         float MaximumPlaybackSpeedMultiplier { get; }
     }

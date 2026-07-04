@@ -33,11 +33,15 @@ The accepted release that starts a **Run**.
 _Avoid_: Pull release, shot preview, impulse value
 
 **Running**:
-The **Gameplay State** where the **Launch Target** is moving through the **Run Course**.
+The **Gameplay State** where the **Run Body** is moving through the **Run Course**.
 _Avoid_: Sliding state, animation run
 
+**Run Body**:
+The gameplay role of the controlled object while it travels through a **Run** after **Launch**.
+_Avoid_: Launch Target, Character, player model
+
 **Run Steering Control**:
-The player touch control used during **Running** to steer the **Launch Target**.
+The player touch control used during **Running** to steer the **Run Body**.
 _Avoid_: Virtual joystick, screen steering, Pull
 
 **Run Steering Origin**:
@@ -53,8 +57,28 @@ The neutral portion of **Run Steering Range** near the **Run Steering Origin** t
 _Avoid_: Screen center deadzone, input delay, response smoothing
 
 **Run Steering Responsiveness**:
-How quickly the **Launch Target** responds to requested **Run Steering Control** during **Running**.
+How quickly the **Run Body** responds to requested **Run Steering Control** during **Running**.
 _Avoid_: Input polling rate, touch sampling rate
+
+**Run Steering Frame**:
+The gameplay orientation used by **Run Steering Control** to steer the **Run Body** during **Running**.
+_Avoid_: Ground normal, support frame, locomotion frame, physics normal
+
+**Run Air Steering Control**:
+The weaker **Run Steering Control** behavior used while the **Run Body** is unsupported by a valid **Run Surface** during **Running**.
+_Avoid_: Launch steering, air driving, Character Presentation Mode
+
+**Run Steering Mode Selector**:
+The **Running** control boundary that chooses between grounded **Run Steering Control** and **Run Air Steering Control** from current support and motion facts.
+_Avoid_: Post-Launch Steering Gate, launch speed bypass, speed recovery, launch cap grace, no-takeoff timeout
+
+**Launch Landing Stabilization**:
+The post-launch contact correction that removes unwanted lift away from the first real **Run Surface** landing while preserving surface-tangent **Run Body** speed.
+_Avoid_: downforce, speed recovery, bounce damping, slowdown
+
+**Run Body Speed Sanity Guard**:
+A defensive validation limit for impossible **Run Body** velocities during **Running**, not a player-facing movement cap.
+_Avoid_: PlayerMaxSpeed, steering cap, balance speed limit
 
 **Run Ended**:
 The **Gameplay State** after one **Run Result** is accepted and before **Acknowledge Run Result** returns to **Run Preparation**.
@@ -89,7 +113,7 @@ The UI-facing whole-meter presentation of distance reached by a **Run Result**.
 _Avoid_: Raw meters, rounded-up progress, world position
 
 **Run Air Time**:
-The duration during **Running** when the **Launch Target** is not supported by a **Run Surface**.
+The duration during **Running** when the **Run Body** is not supported by a **Run Surface**.
 _Avoid_: Airborne animation, jump state, total scene time
 
 **Run Ended UI**:
@@ -121,7 +145,7 @@ The input gate that prevents **Acknowledge Run Result** until **Run Reward Revea
 _Avoid_: Auto-continue delay, global input debounce
 
 **Run End Pose Lock**:
-The hold applied to the **Launch Target** during **Run Ended** so it stays at the accepted **Run Result** pose.
+The hold applied to the **Run Body** during **Run Ended** so it stays at the accepted **Run Result** pose.
 _Avoid_: Visual-only freeze, continued physics drift
 
 **Run Progress Frame**:
@@ -136,6 +160,10 @@ _Avoid_: Collider type, physics layer, tag
 A **Run Contact Category** that allows traversal without ending the **Run**.
 _Avoid_: Ground, floor, ramp
 
+**Run Surface Contact Slowdown**:
+The ordinary loss of **Run Body** speed caused by contact with a **Run Surface**.
+_Avoid_: steering speed cap, hidden drag, PlayerMaxSpeed
+
 **Run Obstacle**:
 A **Run Contact Category** that can end a **Run** through **Obstacle Impact**.
 _Avoid_: Wall tag, hard mesh, visual prop
@@ -149,7 +177,7 @@ A **Run End Reason** caused by sustained lack of meaningful progress.
 _Avoid_: Stopped, idle, one-frame low speed
 
 **Run Safety Net**:
-A **Run Contact Category** that ends a **Run** when the **Launch Target** falls below the playable course.
+A **Run Contact Category** that ends a **Run** when the **Run Body** falls below the playable course.
 _Avoid_: Boundary, guard rail, invisible wall
 
 **Run Finish**:
@@ -165,11 +193,11 @@ The camera behavior that frames the **Slingshot** before **Launch**.
 _Avoid_: Run Preparation Camera, aiming overlay
 
 **Run Camera**:
-The camera behavior that follows the **Launch Target** during **Running** and **Run Ended**.
+The camera behavior that follows the **Run Body** during **Running** and **Run Ended**.
 _Avoid_: Main camera, level camera
 
 **Run Camera Anchor**:
-The camera-facing reference point derived from the **Launch Target** for **Run Camera** framing.
+The camera-facing reference point derived from the **Run Body** for **Run Camera** framing.
 _Avoid_: Character pivot, camera target, follow transform
 
 ## Relationships
@@ -180,8 +208,9 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Continue** occurs during **Run Preparation**.
 - **Pre-Launch** accepts a **Pull** and may lead to **Launch**.
 - **Launch** starts **Running**.
+- The slingshot-facing **Launch Target** becomes the **Run Body** when **Launch** starts **Running**.
 - **Run Steering Control** belongs to **Running**, not **Pre-Launch**.
-- **Run Steering Control** steers the **Launch Target** during **Running**.
+- **Run Steering Control** steers the **Run Body** during **Running**.
 - **Run Steering Control** may begin from any touch during **Running**.
 - One active **Run Steering Control** gesture has one **Run Steering Origin**.
 - Only one **Run Steering Control** gesture is active at a time.
@@ -192,9 +221,45 @@ _Avoid_: Character pivot, camera target, follow transform
 - **Run Steering Range** remains a strict physical distance when **Run Steering Origin** is near a screen edge.
 - **Run Steering Deadzone** ignores a small initial portion of **Run Steering Range** near the **Run Steering Origin**.
 - **Run Steering Deadzone** does not reduce full steering; the remaining **Run Steering Range** still reaches full steering.
-- **Run Steering Responsiveness** affects how quickly the **Launch Target** responds to requested **Run Steering Control**.
+- **Run Steering Responsiveness** affects how quickly the **Run Body** responds to requested **Run Steering Control**.
 - **Run Steering Responsiveness** does not affect how often input is sampled.
+- **Run Steering Frame** defines the orientation used by **Run Steering Control**.
+- **Run Steering Frame** is a gameplay control concept, not a **Run Progress Frame** metric reference.
+- **Run Steering Frame** may be derived from **Run Surface** traversal facts without being identical to a raw contact normal.
 - **Run Steering Control** uses horizontal displacement; vertical displacement has no steering meaning.
+- **Run Steering Control** preserves player-facing **Run Body** speed while changing steering direction.
+- **Run Air Steering Control** belongs to **Running**, not **Slingshot** or **Character Presentation**.
+- **Run Air Steering Control** applies when the **Run Body** is unsupported by a valid **Run Surface**.
+- **Run Air Steering Control** applies during any unsupported **Running** motion before **Run Ended**.
+- **Run Air Steering Control** may also apply during stale post-launch support samples when the **Run Body** is moving away from the reported **Run Surface**.
+- **Run Air Steering Control** uses the **Run Steering Frame** rather than raw support normals or **Character Presentation Mode**.
+- **Run Air Steering Control** uses the active **Run Steering Control** gesture with separately tuned, weaker turn authority than grounded steering.
+- **Run Air Steering Control** shares **Run Steering Responsiveness** with grounded **Run Steering Control**.
+- **Run Air Steering Control** does nothing without an active **Run Steering Control** gesture.
+- **Run Air Steering Control** rotates current air-frame planar velocity direction while preserving planar speed and vertical velocity.
+- **Run Air Steering Control** rotates the **Run Body** to face the steered air-frame planar velocity when steering is applied.
+- **Run Air Steering Control** must not add forward speed, reduce launch speed, apply player-facing speed caps, or drive toward a target velocity.
+- **Run Air Steering Control** does not add pitch, roll, banking, or **Character Presentation Mode** rotation.
+- **Run Air Steering Control** is not selected from **Launch Flight**, **Airborne**, or any other **Character Presentation Mode**.
+- **Run Air Steering Control** stops when **Running** ends.
+- **Run Steering Mode Selector** chooses between grounded **Run Steering Control** and **Run Air Steering Control** during **Running**.
+- **Run Steering Mode Selector** selects steering behavior; it does not rotate velocity, write **Run Body** pose, or change **Run Body** speed.
+- **Run Steering Mode Selector** has no blocked or inactive selection; low speed, invalid velocity, and missing input are separate **Run Steering Control** gates.
+- **Run Steering Mode Selector** selects **Run Air Steering Control** when current support is not a valid **Run Surface**.
+- **Run Steering Mode Selector** selects **Run Air Steering Control** when the **Run Body** is moving away from a reported **Run Surface** above the accepted lift tolerance.
+- **Run Steering Mode Selector** may delay grounded steering selection after **Launch**, but it must not change **Run Body** speed.
+- **Run Steering Mode Selector** must not disable **Run Air Steering Control** during unsupported post-launch motion.
+- **Run Steering Mode Selector** selects grounded steering on the first valid post-launch **Run Surface** landing.
+- **Run Steering Mode Selector** selects grounded steering immediately for a weak grounded **Launch** when current support is a valid **Run Surface** and **Run Body** velocity has no positive surface-normal lift.
+- **Run Steering Mode Selector** must not use a no-takeoff timeout to enable grounded steering.
+- **Launch Landing Stabilization** can remove positive surface-normal lift after first real post-launch landing, but it must preserve surface-tangent **Run Body** speed.
+- **Launch Landing Stabilization** may correct post-launch lift before grounded **Run Steering Control** resumes.
+- Ordinary **Run Body** slowdown comes from **Run Surface Contact Slowdown**, not from **Run Steering Control**.
+- **Run Surface Contact Slowdown** should be tuned through authored **Run Surface** behavior before adding a separate gameplay resistance owner.
+- **Run Body Speed Sanity Guard** catches impossible velocities without shaping normal launch distance or sliding feel.
+- **Run Body Speed Sanity Guard** must be unreachable by normal **Launch**, upgrades, and authored **Run Surface** traversal.
+- **Run Body Speed Sanity Guard** is allowed to log or clamp impossible velocities, not to define expected run distance.
+- Removing player-facing **Run Steering Control** speed caps removes the need for launch speed bypass or speed recovery.
 - **Running** ends with one **Run Result**.
 - **Run End Flow** produces one accepted **Run Result** per ended **Run**.
 - **Run Result** may include a **Run Reward Breakdown** that explains its run-earned currency.
@@ -237,20 +302,51 @@ _Avoid_: Character pivot, camera target, follow transform
 > **Domain expert:** "No - **Continue** leaves **Run Preparation**, while **Acknowledge Run Result** leaves **Run Ended**."
 
 > **Dev:** "Is the **Run Steering Control** the same thing as a **Pull**?"
-> **Domain expert:** "No - a **Pull** prepares **Launch** during **Pre-Launch**, while **Run Steering Control** steers the **Launch Target** during **Running**."
+> **Domain expert:** "No - a **Pull** prepares **Launch** during **Pre-Launch**, while **Run Steering Control** steers the **Run Body** during **Running**."
 
 > **Dev:** "Does **Run Steering Control** use screen center as neutral?"
 > **Domain expert:** "No - the **Run Steering Origin** is the initial touch position for that gesture."
 
+> **Dev:** "Is the **Run Steering Frame** the same as the **Run Progress Frame**?"
+> **Domain expert:** "No - **Run Steering Frame** orients player control, while **Run Progress Frame** defines run metrics."
+
+> **Dev:** "Should **Run Steering Control** cap how fast the **Run Body** can slide?"
+> **Domain expert:** "No - it steers direction; **Run Surface Contact Slowdown** slows the **Run Body**, with only a defensive **Run Body Speed Sanity Guard** for impossible values."
+
+> **Dev:** "Do we still need launch speed recovery after removing the steering speed cap?"
+> **Domain expert:** "No - **Run Steering Mode Selector** and **Launch Landing Stabilization** may still exist, but neither is a speed recovery system."
+
+> **Dev:** "Can the player steer while the slingshot shot is still flying?"
+> **Domain expert:** "Yes - unsupported fired motion uses **Run Air Steering Control**, while grounded steering waits for valid **Run Surface** support."
+
+> **Dev:** "Should a weak grounded launch start steering because a timer expired?"
+> **Domain expert:** "No - **Run Steering Mode Selector** should be event or condition driven, not timeout driven."
+
+> **Dev:** "If a weak launch stays grounded, when can steering start?"
+> **Domain expert:** "When the **Run Body** is supported by a valid **Run Surface** and has no positive lift away from that surface."
+
 ## Flagged ambiguities
 
 - "State" resolves to one current **Gameplay State**, not tags or simultaneous flags.
-- "Player" and "target" resolve to **Launch Target** when discussing the controlled run object.
+- "Player" and "target" resolve to **Launch Target** during **Pre-Launch** slingshot discussion, and to **Run Body** during **Running** movement discussion.
 - "Virtual joystick" resolves to **Run Steering Control** when discussing **Running**, not to **Pull** or a visible joystick asset.
 - "Center" resolves to **Run Steering Origin** for **Run Steering Control**, not screen center.
 - "Size limit" resolves to **Run Steering Range**, where physical displacement beyond the range clamps to full steering.
 - "Deadzone" resolves to **Run Steering Deadzone** for **Run Steering Control**, not screen center distance.
 - "Responsiveness" resolves to **Run Steering Responsiveness**, not input polling or touch sampling.
+- "Ground normal", "support frame", and "locomotion frame" resolve to **Run Steering Frame** only when discussing player steering orientation.
+- "Steering frame" resolves to **Run Steering Frame**, not **Run Progress Frame**.
+- "In-flight steering", "air control", and "launch steering" resolve to **Run Air Steering Control** during **Running** movement discussion.
+- "Falling steering" resolves to **Run Air Steering Control** while the **Gameplay State** is still **Running**.
+- "Air stabilization" resolves to no **Run Air Steering Control** behavior unless an active **Run Steering Control** gesture exists.
+- "Stale grounded support" resolves to **Run Air Steering Control** when the **Run Body** is moving away from the reported **Run Surface** above the accepted lift tolerance.
+- "Post-launch steering gate" resolves to **Run Steering Mode Selector**; the selector is not a rule that disables air steering.
+- "Blocked steering mode" resolves to a **Run Steering Control** gate, not a **Run Steering Mode Selector** selection.
+- "Launch speed bypass", "burst cap", and "speed recovery" resolve to obsolete speed-cap workarounds once **Run Steering Control** no longer caps normal **Run Body** speed.
+- "No-takeoff timeout" should not be used to enable grounded steering after **Launch**.
+- "Landing stabilization" resolves to **Launch Landing Stabilization**, not slowdown, downforce, or speed recovery.
+- "Speed cap" resolves to **Run Body Speed Sanity Guard** only when discussing impossible velocity validation; normal sliding speed should not be capped by **Run Steering Control**.
+- "Friction", "drag", and "slowdown" resolve first to **Run Surface Contact Slowdown** for ordinary sliding speed loss.
 - "Joystick" does not imply two-dimensional movement for **Run Steering Control**.
 - "Stops" resolves to **Lost Momentum**, not arbitrary one-frame low velocity.
 - "Boundary" resolves to **Run Safety Net** only when it catches the below-course failure case.

@@ -18,7 +18,7 @@ This slice should wire the new runtime dependencies through DI and add tests pro
 - [ ] Presenter copies normalized pull and launch values into the outgoing Character presentation frame.
 - [ ] PullAnticipation frames carry live pull values and zero launch values.
 - [ ] LaunchPush frames carry frozen launch values and zero pull values.
-- [ ] Idle, Slide, Run, Airborne, Victory, and Defeat frames zero all slingshot-specific float values.
+- [ ] Idle, Slide, reserved Run compatibility, Airborne, Victory, and Defeat frames zero all slingshot-specific float values.
 - [ ] Character presentation view exposes serialized Animator float parameter fields for all new normalized values.
 - [ ] Animator parameter fields use dropdown attributes where the existing inspector tooling supports them.
 - [ ] Character presentation view writes Animator parameters only and continues to disable root motion.

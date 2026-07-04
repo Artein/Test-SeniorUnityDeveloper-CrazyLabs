@@ -51,6 +51,7 @@ namespace Game.Gameplay.Slingshot
         ISlingshotRenderedBandShapeProvider
     {
         private readonly ILaunchTargetSilhouetteSource _silhouetteSource;
+        private readonly ILaunchTargetBandShapeClearanceSource _bandShapeClearanceSource;
         private readonly ISlingshotConfig _config;
         private readonly PullPlaneTautBandSolver _solver;
         private readonly PullPlaneBandShapeClearance _clearance;
@@ -62,9 +63,14 @@ namespace Game.Gameplay.Slingshot
 
         public int BandShapePointCount { get; }
 
+#if UNITY_INCLUDE_TESTS
+        internal bool UsesLaunchTargetBandShapeClearanceSourceForTests => _bandShapeClearanceSource != null;
+#endif // UNITY_INCLUDE_TESTS
+
         public SlingshotBandShapeProvider(ILaunchTargetSilhouetteSource silhouetteSource, ISlingshotConfig config)
         {
             _silhouetteSource = silhouetteSource ?? throw new ArgumentNullException(nameof(silhouetteSource));
+            _bandShapeClearanceSource = silhouetteSource as ILaunchTargetBandShapeClearanceSource;
             _config = config ?? throw new ArgumentNullException(nameof(config));
             ValidateConfig(config);
 
@@ -158,9 +164,6 @@ namespace Game.Gameplay.Slingshot
             if (bandShapePoints.Count < 2 || bandShapePoints.Count > _clearanceBandShapePoints.Length)
                 return false;
 
-            if (!TryWriteSilhouetteSamplesToPullPlane(query, out var silhouetteSampleCount))
-                return false;
-
             for (var pointIndex = 0; pointIndex < bandShapePoints.Count; pointIndex += 1)
             {
                 var point = bandShapePoints[pointIndex];
@@ -170,6 +173,12 @@ namespace Game.Gameplay.Slingshot
 
                 _clearanceBandShapePoints[pointIndex] = ToPullPlane(point, query);
             }
+
+            if (_bandShapeClearanceSource != null)
+                return _bandShapeClearanceSource.TryCheckBandShapeClearance(bandShapePoints, clearanceRadius, out isClear);
+
+            if (!TryWriteSilhouetteSamplesToPullPlane(query, out var silhouetteSampleCount))
+                return false;
 
             isClear = _clearance.IsClear(_clearanceBandShapePoints, bandShapePoints.Count, _solverSilhouetteSamples, silhouetteSampleCount,
                 clearanceRadius);

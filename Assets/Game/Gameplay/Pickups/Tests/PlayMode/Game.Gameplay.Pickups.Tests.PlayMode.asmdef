@@ -2,6 +2,7 @@
   "name": "Game.Gameplay.Pickups.Tests.PlayMode",
   "rootNamespace": "",
   "references": [
+    "Game.Foundation",
     "Game.Gameplay.Economy",
     "Game.Gameplay.Pickups",
     "Game.Gameplay.GameplayState",

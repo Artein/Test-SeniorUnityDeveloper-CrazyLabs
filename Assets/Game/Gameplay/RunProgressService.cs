@@ -13,6 +13,7 @@ namespace Game.Gameplay
         RunProgressFrameSnapshot Snapshot { get; }
         float CurrentForwardProgress { get; }
         float MaximumForwardProgress { get; }
+        RunProgressSample CurrentSample { get; }
         bool TryBeginRun(Vector3 origin, out string error);
         void SamplePosition(Vector3 position);
         void Reset();
@@ -32,6 +33,13 @@ namespace Game.Gameplay
         public RunProgressFrameSnapshot Snapshot { get; private set; }
         public float CurrentForwardProgress { get; private set; }
         public float MaximumForwardProgress { get; private set; }
+
+        public RunProgressSample CurrentSample => new(
+            HasValidSnapshot,
+            SnapshotError,
+            Snapshot,
+            CurrentForwardProgress,
+            MaximumForwardProgress);
 
         public RunProgressService(
             IRunProgressFrameSource frameSource,

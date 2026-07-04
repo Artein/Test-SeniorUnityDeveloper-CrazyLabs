@@ -53,6 +53,7 @@ namespace Game.Gameplay
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
+        [SerializeField] private FinishPresentationView _finishPresentationView;
         [SerializeField] [TagSelector] private string _playerTag = "Player";
         [SerializeField] private string _playerLayerName = "Player";
         [SerializeField] private string _pickupLayerName = "Pickup";
@@ -103,8 +104,14 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunSurfaceContextSource>(_runSurfaceContextSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
+            builder.RegisterInstance<IRunCameraLens>(new TransformRunCameraLens(_inputCamera.transform));
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
-            builder.RegisterInstance<ICharacterPresentationView, ICharacterPresentationTuning>(_characterPresentationView);
+            builder.RegisterInstance<ICharacterPresentationView>(_characterPresentationView);
+            builder.RegisterInstance<ICharacterPresentationTuning>(_characterPresentationView);
+            builder.RegisterInstance<ICharacterVisualFollowView>(_characterPresentationView);
+            builder.RegisterInstance<ICharacterVisualFollowTuning>(_characterPresentationView);
+            builder.RegisterInstance<ICharacterVisualTargetPoseSource>(new TransformCharacterVisualTargetPoseSource(_launchTarget.transform));
+            builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
@@ -135,7 +142,11 @@ namespace Game.Gameplay
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+
+            builder.Register<IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
+            builder.Register<ICharacterPresentationSupportTracker, CharacterPresentationSupportTracker>(Lifetime.Singleton);
+            builder.Register<ICharacterVisualPoseSmoother, CharacterVisualPoseSmoother>(Lifetime.Transient);
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
             builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
             builder.Register<RunRewardSourceCatalog>(Lifetime.Singleton);
@@ -177,6 +188,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunProgressService>();
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
+            builder.RegisterEntryPoint<CharacterVisualFollower>();
             builder.RegisterEntryPoint<RunAirTimeTracker>();
             builder.RegisterEntryPoint<RunEndFlow>();
             builder.RegisterEntryPoint<RunEndPoseLockController>();
@@ -187,6 +199,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
+            builder.RegisterEntryPoint<FinishCelebrationPresenter>();
         }
 
         private IReadOnlyList<Pickup> GetLevelPickups()

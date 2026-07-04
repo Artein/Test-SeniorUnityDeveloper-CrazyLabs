@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 400000}
   - component: {fileID: 11400000}
-  - component: {fileID: 13500000}
   m_Layer: 11
   m_Name: PickupBase
   m_TagString: Untagged
@@ -47,27 +46,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Game.Gameplay.Pickups::Game.Gameplay.Pickups.Pickup
   _definition: {fileID: 0}
---- !u!135 &13500000
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100000}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
+  _triggerNotifier: {fileID: 11400002}
 --- !u!1 &100001
 GameObject:
   m_ObjectHideFlags: 0
@@ -80,6 +59,7 @@ GameObject:
   - component: {fileID: 3300000}
   - component: {fileID: 2300000}
   - component: {fileID: 11400001}
+  - component: {fileID: 11400002}
   m_Layer: 11
   m_Name: Visual
   m_TagString: Untagged
@@ -102,23 +82,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 400000}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &11400001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cf5a00c676d41cfb2c7055ea5fef936, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Presentation.Spinner
-  _target: {fileID: 0}
-  _localAxis: {x: 0, y: 1, z: 0}
-  _degreesPerSecond: 180
-  _useDeterministicInitialPhase: 1
-  _authoredInitialPhaseOffsetDegrees: 0
 --- !u!33 &3300000
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -140,7 +103,7 @@ MeshRenderer:
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
-  m_LightProbeUsage: 1
+  m_LightProbeUsage: 0
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 0
   m_RayTraceProcedural: 0
@@ -176,3 +139,32 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &11400001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cf5a00c676d41cfb2c7055ea5fef936, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Presentation.Spinner
+  _target: {fileID: 0}
+  _localAxis: {x: 0, y: 1, z: 0}
+  _degreesPerSecond: 180
+  _useDeterministicInitialPhase: 1
+  _authoredInitialPhaseOffsetDegrees: 0
+--- !u!114 &11400002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier

@@ -35,7 +35,8 @@ namespace Game.Gameplay
             IRunEndCandidateReceiver candidateReceiver,
             IRunEndConfig config,
             ITime clock,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
@@ -67,15 +68,15 @@ namespace Game.Gameplay
 
             var fixedDeltaTime = Math.Max(0f, _clock.FixedDeltaTime);
             _elapsedSinceLaunch += fixedDeltaTime;
-            _progressService.SamplePosition(_motionSource.Position);
+            var progressSample = _progressService.CurrentSample;
 
-            if (!_progressService.HasValidSnapshot || _elapsedSinceLaunch < _config.LostMomentumLaunchGraceDuration)
+            if (!progressSample.HasValidSnapshot || _elapsedSinceLaunch < _config.LostMomentumLaunchGraceDuration)
             {
                 ResetLowMomentumWindow();
                 return;
             }
 
-            if (!IsLowMomentum())
+            if (!IsLowMomentum(progressSample))
             {
                 ResetLowMomentumWindow();
                 return;
@@ -151,10 +152,10 @@ namespace Game.Gameplay
             _windowStartMaximumProgress = 0f;
         }
 
-        private bool IsLowMomentum()
+        private bool IsLowMomentum(RunProgressSample progressSample)
         {
-            var planarSpeed = _progressService.Snapshot.GetCoursePlanarSpeed(_motionSource.LinearVelocity);
-            var progressDelta = _progressService.MaximumForwardProgress - _windowStartMaximumProgress;
+            var planarSpeed = progressSample.Snapshot.GetCoursePlanarSpeed(_motionSource.LinearVelocity);
+            var progressDelta = progressSample.MaximumForwardProgress - _windowStartMaximumProgress;
 
             return planarSpeed <= _config.LostMomentumPlanarSpeedThreshold
                    && progressDelta <= _config.LostMomentumProgressThreshold;
@@ -163,7 +164,7 @@ namespace Game.Gameplay
         private void ResetLowMomentumWindow()
         {
             _lowMomentumElapsed = 0f;
-            _windowStartMaximumProgress = _progressService.MaximumForwardProgress;
+            _windowStartMaximumProgress = _progressService.CurrentSample.MaximumForwardProgress;
         }
     }
 }

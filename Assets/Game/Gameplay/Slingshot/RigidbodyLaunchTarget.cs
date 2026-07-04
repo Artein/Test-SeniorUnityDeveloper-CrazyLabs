@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using Game.Utils.Mathematics;
+using Game.Utils.Physics;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -33,8 +35,16 @@ namespace Game.Gameplay.Slingshot
         ILaunchTargetPreLaunchReset,
         IRunEndPoseLockTarget,
         ILaunchTargetSilhouetteSource,
+        ILaunchTargetBandShapeClearanceSource,
         ILaunchTargetBandOcclusionSource
     {
+        private const int MinimumBandShapeClearanceSegmentSampleCount = 64;
+        private const int MaximumBandShapeClearanceSegmentSampleCount = 2048;
+        private const int BandShapeClearanceHitBufferSize = 16;
+        private const float MinimumBandShapeClearanceSampleSpacing = 0.0005f;
+        private const float MaximumBandShapeClearanceSampleSpacing = 0.0025f;
+        private const float MinimumBandShapeClearanceSegmentLength = 0.0001f;
+
         private const RigidbodyConstraints PostLaunchStabilizationConstraints =
             RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
@@ -43,10 +53,12 @@ namespace Game.Gameplay.Slingshot
         [SerializeField] private Transform _bandCenter;
 
         private readonly LaunchFrameValidator _launchFrameValidator = new();
+        private readonly RaycastHit[] _bandShapeClearanceHits = new RaycastHit[BandShapeClearanceHitBufferSize];
         private bool _isHeld;
         private bool _hasPreviousState;
         private bool _previousIsKinematic;
         private RigidbodyConstraints _previousConstraints;
+        private RigidbodyInterpolation _previousInterpolation;
 
         void ILaunchTarget.Hold()
         {
@@ -58,8 +70,9 @@ namespace Game.Gameplay.Slingshot
                 _isHeld = true;
             }
 
+            _rigidbody.ClearVelocityIfDynamic();
             _rigidbody.isKinematic = true;
-            ClearVelocity();
+            DisableInterpolationWhileHeld();
         }
 
         void ILaunchTarget.Launch(Vector3 velocity)
@@ -71,12 +84,13 @@ namespace Game.Gameplay.Slingshot
             if (_isHeld)
             {
                 _rigidbody.isKinematic = _previousIsKinematic;
+                _rigidbody.interpolation = _previousInterpolation;
                 launchBaseConstraints = _previousConstraints;
                 _isHeld = false;
             }
 
             _rigidbody.constraints = launchBaseConstraints | PostLaunchStabilizationConstraints;
-            ClearVelocity();
+            _rigidbody.ClearVelocityIfDynamic();
             _rigidbody.AddForce(velocity, ForceMode.VelocityChange);
         }
 
@@ -97,7 +111,7 @@ namespace Game.Gameplay.Slingshot
             _rigidbody.transform.SetPositionAndRotation(targetPosition, targetRotation);
             _rigidbody.position = targetPosition;
             _rigidbody.rotation = targetRotation;
-            ClearVelocity();
+            Physics.SyncTransforms();
         }
 
         bool ILaunchTargetSilhouetteSource.TryWriteSilhouetteSamples(LaunchTargetSilhouetteQuery query, Vector3[] outputSamples, out int sampleCount)
@@ -125,6 +139,120 @@ namespace Game.Gameplay.Slingshot
 
             sampleCount = query.SampleCount;
             return true;
+        }
+
+        bool ILaunchTargetBandShapeClearanceSource.TryCheckBandShapeClearance(
+            IReadOnlyList<Vector3> bandShapePoints,
+            float clearanceRadius,
+            out bool isClear)
+        {
+            isClear = false;
+            ThrowIfInvalidReferences();
+
+            if (bandShapePoints is null)
+                throw new ArgumentNullException(nameof(bandShapePoints));
+
+            if (!math.isfinite(clearanceRadius) || clearanceRadius < 0f)
+                throw new ArgumentException("Clearance radius must be finite and non-negative.", nameof(clearanceRadius));
+
+            if (!_bandContactCollider.enabled || bandShapePoints.Count < 2)
+                return false;
+
+            Physics.SyncTransforms();
+
+            for (var pointIndex = 0; pointIndex < bandShapePoints.Count; pointIndex += 1)
+            {
+                if (!bandShapePoints[pointIndex].IsFinite())
+                    return false;
+            }
+
+            for (var pointIndex = 0; pointIndex < bandShapePoints.Count - 1; pointIndex += 1)
+            {
+                var start = bandShapePoints[pointIndex];
+                var end = bandShapePoints[pointIndex + 1];
+
+                if (IsBandSegmentTooCloseToContactCollider(start, end, clearanceRadius))
+                    return true;
+            }
+
+            isClear = true;
+            return true;
+        }
+
+        private bool IsBandSegmentTooCloseToContactCollider(Vector3 start, Vector3 end, float clearanceRadius)
+        {
+            if (IsBandPointTooCloseToContactCollider(start, clearanceRadius)
+                || IsBandPointTooCloseToContactCollider(end, clearanceRadius))
+            {
+                return true;
+            }
+
+            var segment = end - start;
+            var segmentLength = segment.magnitude;
+
+            if (segmentLength <= MinimumBandShapeClearanceSegmentLength)
+                return false;
+
+            if (DoesBandSegmentSweepHitContactCollider(start, segment / segmentLength, segmentLength, clearanceRadius))
+                return true;
+
+            var segmentSampleCount = GetBandShapeClearanceSegmentSampleCount(start, end, clearanceRadius);
+
+            for (var sampleIndex = 1; sampleIndex < segmentSampleCount; sampleIndex += 1)
+            {
+                var t = (float)sampleIndex / segmentSampleCount;
+                var samplePoint = Vector3.Lerp(start, end, t);
+
+                if (IsBandPointTooCloseToContactCollider(samplePoint, clearanceRadius))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool DoesBandSegmentSweepHitContactCollider(
+            Vector3 start,
+            Vector3 direction,
+            float distance,
+            float clearanceRadius)
+        {
+            var layerMask = 1 << _bandContactCollider.gameObject.layer;
+
+            var hitCount = Physics.SphereCastNonAlloc(
+                start,
+                clearanceRadius,
+                direction,
+                _bandShapeClearanceHits,
+                distance,
+                layerMask,
+                QueryTriggerInteraction.Collide);
+
+            for (var hitIndex = 0; hitIndex < hitCount; hitIndex += 1)
+            {
+                if (_bandShapeClearanceHits[hitIndex].collider == _bandContactCollider)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool IsBandPointTooCloseToContactCollider(Vector3 point, float clearanceRadius)
+        {
+            var closestPoint = _bandContactCollider.ClosestPoint(point);
+            return Vector3.Distance(point, closestPoint) <= clearanceRadius;
+        }
+
+        private int GetBandShapeClearanceSegmentSampleCount(Vector3 start, Vector3 end, float clearanceRadius)
+        {
+            var segmentLength = Vector3.Distance(start, end);
+            var radiusBasedSpacing = Mathf.Max(MinimumBandShapeClearanceSampleSpacing, clearanceRadius * 0.05f);
+            var sampleSpacing = Mathf.Min(MaximumBandShapeClearanceSampleSpacing, radiusBasedSpacing);
+            var sampleCount = Mathf.CeilToInt(segmentLength / sampleSpacing);
+
+            return Mathf.Clamp(
+                sampleCount,
+                MinimumBandShapeClearanceSegmentSampleCount,
+                MaximumBandShapeClearanceSegmentSampleCount);
         }
 
         bool ILaunchTargetBandOcclusionSource.IsBandPointHiddenFrom(Ray ray, float maxDistance)
@@ -157,12 +285,6 @@ namespace Game.Gameplay.Slingshot
             }
         }
 
-        private void ClearVelocity()
-        {
-            _rigidbody.linearVelocity = Vector3.zero;
-            _rigidbody.angularVelocity = Vector3.zero;
-        }
-
         void ILaunchTargetPreLaunchReset.ResetToPreLaunchPose(Vector3 position, Quaternion rotation)
         {
             ThrowIfInvalidReferences();
@@ -174,13 +296,15 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Pre-Launch rotation must be finite and non-zero.", nameof(rotation));
 
             CapturePreviousStateIfNeeded();
+            _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
+            DisableInterpolationWhileHeld();
             _rigidbody.constraints = _previousConstraints;
             _rigidbody.transform.SetPositionAndRotation(position, rotation);
             _rigidbody.position = position;
             _rigidbody.rotation = rotation;
-            ClearVelocity();
+            Physics.SyncTransforms();
         }
 
         void IRunEndPoseLockTarget.HoldRunEndPose(Vector3 position)
@@ -191,17 +315,19 @@ namespace Game.Gameplay.Slingshot
                 throw new ArgumentException("Run End position must be finite.", nameof(position));
 
             CapturePreviousStateIfNeeded();
+            _rigidbody.ClearVelocityIfDynamic();
             _isHeld = true;
             _rigidbody.isKinematic = true;
+            DisableInterpolationWhileHeld();
             _rigidbody.transform.SetPositionAndRotation(position, _rigidbody.rotation);
             _rigidbody.position = position;
-            ClearVelocity();
+            Physics.SyncTransforms();
         }
 
         void IRunEndPoseLockTarget.ReleaseRunEndPose()
         {
             ThrowIfMissingRigidbody();
-            ClearVelocity();
+            _rigidbody.ClearVelocityIfDynamic();
         }
 
         private void CapturePreviousStateIfNeeded()
@@ -211,7 +337,13 @@ namespace Game.Gameplay.Slingshot
 
             _previousIsKinematic = _rigidbody.isKinematic;
             _previousConstraints = _rigidbody.constraints;
+            _previousInterpolation = _rigidbody.interpolation;
             _hasPreviousState = true;
+        }
+
+        private void DisableInterpolationWhileHeld()
+        {
+            _rigidbody.interpolation = RigidbodyInterpolation.None;
         }
 
         private void ThrowIfInvalidReferences()

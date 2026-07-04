@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Game.Foundation.Physics;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using NUnit.Framework;
@@ -43,7 +44,17 @@ public sealed class PickupAdapterAndStateTests
     }
 
     [Test]
-    public void TriggerEntered_EnabledPickup_PublishesPickupAndCollider()
+    public void Validate_MissingTriggerNotifier_Throws()
+    {
+        var pickup = CreatePickup("Pickup", _pickupDefinition, false);
+
+        Assert.That(
+            pickup.Validate,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Trigger Notifier"));
+    }
+
+    [Test]
+    public void TriggerEntered_DirectPickupContact_PublishesPickupAndCollider()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition);
         var collider = CreateCollider("Player Contact");
@@ -132,11 +143,22 @@ public sealed class PickupAdapterAndStateTests
         Assert.That(state.TryConsume(unknownPickup), Is.False);
     }
 
-    private Pickup CreatePickup(string objectName, PickupDefinition definition)
+    private Pickup CreatePickup(string objectName, PickupDefinition definition, bool wireNotifier = true)
     {
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
         pickup.SetDefinitionForTests(definition);
+
+        if (wireNotifier)
+            pickup.SetTriggerNotifierForTests(CreateTriggerNotifier($"{objectName} Trigger"));
+
         return pickup;
+    }
+
+    private TriggerNotifier CreateTriggerNotifier(string objectName)
+    {
+        var triggerObject = CreateGameObject(objectName);
+        triggerObject.AddComponent<SphereCollider>().isTrigger = true;
+        return triggerObject.AddComponent<TriggerNotifier>();
     }
 
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)

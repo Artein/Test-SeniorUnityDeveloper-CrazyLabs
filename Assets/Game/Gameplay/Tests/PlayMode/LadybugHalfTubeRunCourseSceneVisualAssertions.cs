@@ -46,21 +46,54 @@ public sealed partial class LadybugHalfTubeRunCourseSceneTests
             .ToArray();
 
         foreach (var renderer in enabledRenderers)
+            AssertRendererMaterialsAreValid(renderer);
+    }
+
+    private void AssertRendererMaterialsAreValid(Renderer renderer)
+    {
+        if (renderer is ParticleSystemRenderer particleRenderer)
         {
-            var materials = renderer.sharedMaterials;
-
-            Assert.That(materials, Has.Length.GreaterThanOrEqualTo(1), GetHierarchyPath(renderer.transform));
-
-            for (var materialIndex = 0; materialIndex < materials.Length; materialIndex += 1)
-            {
-                var material = materials[materialIndex];
-                var materialDescription = $"{GetHierarchyPath(renderer.transform)} material {materialIndex}";
-
-                Assert.That(material, Is.Not.Null, materialDescription);
-                Assert.That(material!.shader, Is.Not.Null, materialDescription);
-                Assert.That(material.shader.name, Is.Not.EqualTo("Hidden/InternalErrorShader"), materialDescription);
-            }
+            AssertParticleRendererMaterialsAreValid(particleRenderer);
+            return;
         }
+
+        AssertSharedMaterialsAreValid(renderer);
+    }
+
+    private void AssertParticleRendererMaterialsAreValid(ParticleSystemRenderer renderer)
+    {
+        var rendererPath = GetHierarchyPath(renderer.transform);
+        var particleSystem = renderer.GetComponent<ParticleSystem>();
+
+        Assert.That(particleSystem, Is.Not.Null, $"{rendererPath} particle system");
+        AssertMaterialIsValid(renderer.sharedMaterial, $"{rendererPath} particle material");
+
+        if (particleSystem!.trails.enabled)
+            AssertMaterialIsValid(renderer.trailMaterial, $"{rendererPath} trail material");
+
+        foreach (var material in renderer.sharedMaterials)
+        {
+            if (material != null)
+                AssertMaterialIsValid(material, $"{rendererPath} assigned material");
+        }
+    }
+
+    private void AssertSharedMaterialsAreValid(Renderer renderer)
+    {
+        var materials = renderer.sharedMaterials;
+        var rendererPath = GetHierarchyPath(renderer.transform);
+
+        Assert.That(materials, Has.Length.GreaterThanOrEqualTo(1), rendererPath);
+
+        for (var materialIndex = 0; materialIndex < materials.Length; materialIndex += 1)
+            AssertMaterialIsValid(materials[materialIndex], $"{rendererPath} material {materialIndex}");
+    }
+
+    private static void AssertMaterialIsValid(Material material, string description)
+    {
+        Assert.That(material, Is.Not.Null, description);
+        Assert.That(material!.shader, Is.Not.Null, description);
+        Assert.That(material.shader.name, Is.Not.EqualTo("Hidden/InternalErrorShader"), description);
     }
 
     private string GetHierarchyPath(Transform transform)

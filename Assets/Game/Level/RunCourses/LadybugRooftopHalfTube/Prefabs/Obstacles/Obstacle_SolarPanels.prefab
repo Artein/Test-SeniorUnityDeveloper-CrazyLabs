@@ -12,37 +12,41 @@ PrefabInstance:
       propertyPath: m_Name
       value: Obstacle_SolarPanels Mesh
       objectReference: {fileID: 0}
-    - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
+    - target: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
+      propertyPath: m_LocalScale.x
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
+      propertyPath: m_LocalScale.y
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: -90
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
@@ -50,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 2300000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -59,8 +63,53 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1407550140945780072}
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4343460922697081903}
   m_SourcePrefab: {fileID: 100100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+--- !u!1 &187191851751286348 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
+  m_PrefabInstance: {fileID: 187191851751186668}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1407550140945780072
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187191851751286348}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 12.76, y: 27.27, z: 14.61}
+  m_Center: {x: -0.5, y: 0, z: 6.97}
+--- !u!114 &4343460922697081903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187191851751286348}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4ef25617562d4fc29ce86fffba9952d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunContact
+  _category: 1
 --- !u!4 &187191851751324268 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: 62591677c6629474f876495f4a427b2c, type: 3}
@@ -78,6 +127,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Obstacle_SolarPanels
       objectReference: {fileID: 0}
+    - target: {fileID: 1253982947914640385, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -88,22 +141,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
-      propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4536395974264527031, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
@@ -122,7 +159,13 @@ PrefabInstance:
       propertyPath: m_Name
       value: Obstacle_SolarPanels Visual
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 8965694653075356165, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 1354504512469946723, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
+    - {fileID: 2852030308856019939, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 1316807900598932141, guid: 8a0b96364412f4b4ea4c94d2d9c76a66, type: 3}

@@ -77,8 +77,11 @@ _Avoid_: Saved fraction, balance remainder, rounding error
 - **Run Reward Contributors** supply **Run Reward Sources** before the **Run Reward Breakdown** is shown.
 - **Run Currency Snapshot** remains the total currency amount granted from a **Run Reward Breakdown**.
 - **Distance Bonus** converts reached run distance into currency without replacing **Run Distance Display**.
+- **Distance Bonus** provides repeatable run-progress income across **Runs** in one **Level Session** without making **Coin Pickup Reward** irrelevant.
 - **Air Time Bonus** converts **Run Air Time** into currency without depending on **Character Presentation Mode**.
+- **Air Time Bonus** is a secondary reward source for ramps and airtime, not the main run income path.
 - **Coin Pickup Reward** may differ from the base **Currency Grant**.
+- **Coin Pickup Reward** should be meaningful enough that collected **Coin Pickups** feel worth deliberate route choices.
 - **Coin Pickup Fractional Carry** stays scoped to one **Run**.
 
 ## Example dialogue
@@ -101,8 +104,14 @@ _Avoid_: Saved fraction, balance remainder, rounding error
 > **Dev:** "Should air-time coins use the character's airborne animation?"
 > **Domain expert:** "No - **Air Time Bonus** uses **Run Air Time**."
 
+> **Dev:** "Should airtime replace pickups or distance as the main income path?"
+> **Domain expert:** "No - **Air Time Bonus** is a secondary reward source for ramps and air beats."
+
 > **Dev:** "Does a one-coin pickup with a multiplier always become two coins?"
 > **Domain expert:** "No - **Coin Pickup Reward** uses whole coins and **Coin Pickup Fractional Carry** keeps the remainder for later pickups in the same **Run**."
+
+> **Dev:** "If earlier runs already collected nearby pickups, should a later failed run earn nothing?"
+> **Domain expert:** "No - **Distance Bonus** still gives repeatable run-progress income, while **Coin Pickup Reward** remains the meaningful pickup payout."
 
 ## Flagged ambiguities
 
@@ -114,4 +123,5 @@ _Avoid_: Saved fraction, balance remainder, rounding error
 - "Reward provider" resolves to **Run Reward Contributor** when discussing source extensibility.
 - "Distance reward" resolves to **Distance Bonus**, not **Run Distance Display**.
 - "Air reward" resolves to **Air Time Bonus**, not airborne character presentation.
+- "Pickup income" resolves to meaningful **Coin Pickup Reward** amounts, not one-coin decorative collectibles.
 - "Wallet" resolves to **Currency Balance** when discussing spendable currency.

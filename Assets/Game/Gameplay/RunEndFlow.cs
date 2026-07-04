@@ -125,7 +125,6 @@ namespace Game.Gameplay
             }
 
             _elapsedSinceLaunch += fixedDeltaTime;
-            _progressService.SamplePosition(_motionSource.Position);
             ResolvePendingCandidates();
         }
 
@@ -267,15 +266,20 @@ namespace Game.Gameplay
 
         private float ResolveDistanceTravelled(Vector3 finalPosition)
         {
-            if (_progressService.HasValidSnapshot)
+            var progressSample = _progressService.CurrentSample;
+
+            if (progressSample.HasValidSnapshot)
             {
-                _progressService.SamplePosition(finalPosition);
-                return _progressService.MaximumForwardProgress;
+                var finalForwardProgress = progressSample.Snapshot.GetForwardProgress(finalPosition);
+
+                return progressSample.MaximumForwardProgress > finalForwardProgress
+                    ? progressSample.MaximumForwardProgress
+                    : finalForwardProgress;
             }
 
             Debug.LogError(
                 "Run End Flow accepted degraded Run Result because the Run Progress Frame snapshot is invalid. "
-                + _progressService.SnapshotError);
+                + progressSample.SnapshotError);
 
             return 0f;
         }
@@ -283,6 +287,7 @@ namespace Game.Gameplay
         private RunResult CreateRunResult(RunEndCandidate candidate, Vector3 finalPosition, Vector3 finalVelocity, float distanceTravelled)
         {
             var finalSpeed = finalVelocity.magnitude;
+
             var rewardBreakdown = _runRewardBreakdownBuilder.Build(new RunRewardContributorContext(
                 candidate.Reason,
                 _elapsedSinceLaunch,

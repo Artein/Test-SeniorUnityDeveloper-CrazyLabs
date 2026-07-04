@@ -2,6 +2,7 @@ using System;
 using Game.Foundation.Time;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
+using Game.Utils.Mathematics;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -15,11 +16,13 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly IRunProgressService _progressService;
         private readonly IRunSurfaceContextSource _surfaceContextSource;
         private readonly ISlingshotPresentationContextSource _slingshotPresentationContextSource;
+        private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly IRunResultNotifier _runResultNotifier;
         private readonly ICharacterPresentationModeClassifier _classifier;
         private readonly ICharacterPresentationView _view;
         private readonly ICharacterPresentationTuning _tuning;
         private readonly ITime _clock;
+        private readonly ICharacterPresentationSupportTracker _supportTracker;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
@@ -30,7 +33,15 @@ namespace Game.Gameplay.CharacterPresentation
         private bool _hasAcceptedRunResult;
         private bool _acceptedRunResultSucceeded;
         private float _currentModeElapsedSeconds;
-        private float _ungroundedElapsedSeconds;
+        private bool _previousHasLaunchPush;
+        private bool _hasPendingLaunchFlight;
+        private bool _hasActiveLaunchFlight;
+        private bool _hasConsumedLaunchPushForFlight;
+        private bool _suppressConsumedLaunchPushForClassification;
+        private bool _hasObservedPostLaunchUngrounded;
+        private float _launchFlightElapsedSeconds;
+        private float _launchFlightNormalizedPower;
+        private float _launchFlightNormalizedOffset;
 
         public CharacterPresenter(
             IGameplayStateService gameplayStateService,
@@ -38,8 +49,10 @@ namespace Game.Gameplay.CharacterPresentation
             IRunProgressService progressService,
             IRunSurfaceContextSource surfaceContextSource,
             ISlingshotPresentationContextSource slingshotPresentationContextSource,
+            ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IRunResultNotifier runResultNotifier,
             ICharacterPresentationModeClassifier classifier,
+            ICharacterPresentationSupportTracker supportTracker,
             ICharacterPresentationView view,
             ICharacterPresentationTuning tuning,
             ITime clock,
@@ -57,8 +70,10 @@ namespace Game.Gameplay.CharacterPresentation
 
             _slingshotPresentationContextSource = slingshotPresentationContextSource
                                                   ?? throw new ArgumentNullException(nameof(slingshotPresentationContextSource));
+            _launchAppliedNotifier = launchAppliedNotifier ?? throw new ArgumentNullException(nameof(launchAppliedNotifier));
             _runResultNotifier = runResultNotifier ?? throw new ArgumentNullException(nameof(runResultNotifier));
             _classifier = classifier ?? throw new ArgumentNullException(nameof(classifier));
+            _supportTracker = supportTracker ?? throw new ArgumentNullException(nameof(supportTracker));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -79,6 +94,7 @@ namespace Game.Gameplay.CharacterPresentation
                 return;
 
             _runResultNotifier.RunResultAccepted += OnRunResultAccepted;
+            _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
             _isInitialized = true;
         }
 
@@ -100,25 +116,39 @@ namespace Game.Gameplay.CharacterPresentation
             var surfaceContext = isNeutralPresentationState
                 ? new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f)
                 : _surfaceContextSource.Current;
-            UpdateUngroundedTime(surfaceContext, deltaTime, isNeutralPresentationState);
-
+            var currentPosition = _motionSource.Position;
             var linearVelocity = _motionSource.LinearVelocity;
             var coursePlanarSpeed = 0f;
             var courseForwardSpeed = 0f;
+            var courseVerticalSpeed = 0f;
+            var courseUpDirection = Vector3.up;
 
             if (_progressService.HasValidSnapshot)
             {
-                coursePlanarSpeed = _progressService.Snapshot.GetCoursePlanarSpeed(linearVelocity);
-                courseForwardSpeed = _progressService.Snapshot.GetCourseForwardSpeed(linearVelocity);
+                var snapshot = _progressService.Snapshot;
+                coursePlanarSpeed = snapshot.GetCoursePlanarSpeed(linearVelocity);
+                courseForwardSpeed = snapshot.GetCourseForwardSpeed(linearVelocity);
+                courseUpDirection = snapshot.UpDirection;
             }
 
-            var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, _ungroundedElapsedSeconds, isPreLaunch,
-                isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull, slingshotContext.HasLaunchPush,
-                slingshotContext.LaunchPushElapsedSeconds, surfaceContext, coursePlanarSpeed, courseForwardSpeed, linearVelocity);
+            courseVerticalSpeed = GetCourseVerticalSpeed(linearVelocity, courseUpDirection);
+
+            var supportSample = _supportTracker.Update(surfaceContext, currentPosition, linearVelocity, courseUpDirection, _tuning, deltaTime,
+                isNeutralPresentationState);
+            var presentationSurfaceContext = supportSample.SurfaceContext;
+            var hasLaunchFlight = UpdateLaunchFlightState(slingshotContext, presentationSurfaceContext, isRunPreparation, isPreLaunch, deltaTime);
+            var hasLaunchPushForClassification = slingshotContext.HasLaunchPush && !_suppressConsumedLaunchPushForClassification;
+            var launchPushElapsedSeconds = hasLaunchPushForClassification ? slingshotContext.LaunchPushElapsedSeconds : 0f;
+
+            var input = new CharacterPresentationClassificationInput(_currentMode, _currentModeElapsedSeconds, supportSample.UngroundedElapsedSeconds,
+                isPreLaunch, isRunActive, _hasAcceptedRunResult, _acceptedRunResultSucceeded, slingshotContext.HasActivePull,
+                hasLaunchPushForClassification, hasLaunchFlight, launchPushElapsedSeconds, presentationSurfaceContext, coursePlanarSpeed,
+                courseForwardSpeed, courseVerticalSpeed, supportSample.UngroundedVerticalSeparation, linearVelocity);
 
             var result = _classifier.Classify(input);
-            UpdateModeElapsed(result.Mode, deltaTime);
-            _view.ApplyFrame(CreateFrame(result.Mode, coursePlanarSpeed, slingshotContext));
+            var mode = NormalizePresentationMode(result.Mode);
+            UpdateModeElapsed(mode, deltaTime);
+            _view.ApplyFrame(CreateFrame(mode, coursePlanarSpeed, slingshotContext));
         }
 
         void IDisposable.Dispose()
@@ -128,8 +158,8 @@ namespace Game.Gameplay.CharacterPresentation
 
             _isDisposed = true;
 
-            if (_isInitialized)
-                _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
+            _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
+            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
         }
 
         private void OnRunResultAccepted(RunResult result)
@@ -137,8 +167,18 @@ namespace Game.Gameplay.CharacterPresentation
             if (_isDisposed)
                 return;
 
+            ResetLaunchFlightState();
             _hasAcceptedRunResult = true;
             _acceptedRunResultSucceeded = result.IsSuccess;
+        }
+
+        private void OnLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
+        {
+            if (_isDisposed)
+                return;
+
+            QueueLaunchFlight(_slingshotPresentationContextSource.Current, launchApplied);
+            ApplyImmediateLaunchFlightFrame();
         }
 
         private void ResetTerminalStateIfNeeded(bool isNeutralPresentationState)
@@ -150,15 +190,185 @@ namespace Game.Gameplay.CharacterPresentation
             _acceptedRunResultSucceeded = false;
         }
 
-        private void UpdateUngroundedTime(RunSurfaceContext surfaceContext, float deltaTime, bool isNeutralPresentationState)
+        private bool UpdateLaunchFlightState(
+            SlingshotPresentationContext slingshotContext,
+            RunSurfaceContext surfaceContext,
+            bool isRunPreparation,
+            bool isPreLaunch,
+            float deltaTime)
         {
-            if (isNeutralPresentationState || surfaceContext.IsGrounded)
+            var hasLaunchPush = slingshotContext.HasLaunchPush;
+
+            if (isRunPreparation || _hasAcceptedRunResult)
             {
-                _ungroundedElapsedSeconds = 0f;
-                return;
+                ResetLaunchFlightState();
+                _hasConsumedLaunchPushForFlight = false;
+                _suppressConsumedLaunchPushForClassification = false;
+                _previousHasLaunchPush = false;
+                return false;
             }
 
-            _ungroundedElapsedSeconds += deltaTime;
+            if (isPreLaunch)
+            {
+                if (!_hasPendingLaunchFlight)
+                    ResetLaunchFlightState();
+
+                _hasConsumedLaunchPushForFlight = false;
+                _suppressConsumedLaunchPushForClassification = false;
+
+                if (_hasPendingLaunchFlight && hasLaunchPush)
+                    CacheLaunchValues(slingshotContext);
+
+                _previousHasLaunchPush = hasLaunchPush;
+                return false;
+            }
+
+            if (!hasLaunchPush)
+            {
+                _hasConsumedLaunchPushForFlight = false;
+                _suppressConsumedLaunchPushForClassification = false;
+            }
+
+            var isNewLaunch = hasLaunchPush && !_previousHasLaunchPush;
+            _previousHasLaunchPush = hasLaunchPush;
+
+            var shouldStartLaunchFlight =
+                _hasPendingLaunchFlight
+                || isNewLaunch
+                || (hasLaunchPush && !_hasActiveLaunchFlight && !_hasConsumedLaunchPushForFlight);
+
+            var startedLaunchFlight = false;
+
+            if (shouldStartLaunchFlight)
+            {
+                StartLaunchFlight(slingshotContext);
+                startedLaunchFlight = true;
+            }
+
+            if (_hasActiveLaunchFlight && hasLaunchPush)
+                CacheLaunchValues(slingshotContext);
+
+            if (!_hasActiveLaunchFlight)
+                return false;
+
+            if (!surfaceContext.IsGrounded)
+            {
+                _hasObservedPostLaunchUngrounded = true;
+                return true;
+            }
+
+            if (startedLaunchFlight)
+                return true;
+
+            _launchFlightElapsedSeconds += Mathf.Max(0f, deltaTime);
+
+            if (_hasObservedPostLaunchUngrounded
+                || _launchFlightElapsedSeconds >= Mathf.Max(0f, _tuning.LaunchFlightMaximumGroundedWaitSeconds))
+            {
+                ResetLaunchFlightState(resetLaunchPushSuppression: false);
+                _suppressConsumedLaunchPushForClassification = hasLaunchPush;
+                return false;
+            }
+
+            return true;
+        }
+
+        private void QueueLaunchFlight(SlingshotPresentationContext slingshotContext, SlingshotLaunchAppliedEvent launchApplied)
+        {
+            _hasPendingLaunchFlight = true;
+            _hasActiveLaunchFlight = false;
+            _hasConsumedLaunchPushForFlight = false;
+            _suppressConsumedLaunchPushForClassification = false;
+            _hasObservedPostLaunchUngrounded = false;
+            _launchFlightElapsedSeconds = 0f;
+            CacheLaunchValues(slingshotContext, launchApplied);
+        }
+
+        private void ApplyImmediateLaunchFlightFrame()
+        {
+            UpdateModeElapsed(CharacterPresentationMode.LaunchFlight, 0f);
+
+            _view.ApplyFrame(new CharacterPresentationFrame(
+                CharacterPresentationMode.LaunchFlight,
+                playbackSpeedMultiplier: 1f,
+                normalizedLaunchPower: _launchFlightNormalizedPower,
+                normalizedLaunchOffset: _launchFlightNormalizedOffset));
+        }
+
+        private void StartLaunchFlight(SlingshotPresentationContext slingshotContext)
+        {
+            _hasPendingLaunchFlight = false;
+            _hasActiveLaunchFlight = true;
+            _hasConsumedLaunchPushForFlight |= slingshotContext.HasLaunchPush;
+            _suppressConsumedLaunchPushForClassification = false;
+            _hasObservedPostLaunchUngrounded = false;
+            _launchFlightElapsedSeconds = 0f;
+            CacheLaunchValues(slingshotContext);
+        }
+
+        private void CacheLaunchValues(SlingshotPresentationContext slingshotContext)
+        {
+            _ = TryCacheLaunchValues(slingshotContext);
+        }
+
+        private void CacheLaunchValues(SlingshotPresentationContext slingshotContext, SlingshotLaunchAppliedEvent launchApplied)
+        {
+            if (TryCacheLaunchValues(slingshotContext))
+                return;
+
+            var request = launchApplied.Request;
+            _launchFlightNormalizedPower = float.IsFinite(request.PullStrength) ? Mathf.Clamp01(request.PullStrength) : 0f;
+
+            _launchFlightNormalizedOffset = float.IsFinite(request.NormalizedLateralPull)
+                ? Mathf.Clamp(request.NormalizedLateralPull, -1f, 1f)
+                : 0f;
+        }
+
+        private bool TryCacheLaunchValues(SlingshotPresentationContext slingshotContext)
+        {
+            if (slingshotContext.HasLaunchPush)
+            {
+                _launchFlightNormalizedPower = slingshotContext.NormalizedLaunchPower;
+                _launchFlightNormalizedOffset = slingshotContext.NormalizedLaunchOffset;
+                return true;
+            }
+
+            if (slingshotContext.HasActivePull)
+            {
+                _launchFlightNormalizedPower = slingshotContext.NormalizedPull;
+                _launchFlightNormalizedOffset = slingshotContext.NormalizedPullOffset;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ResetLaunchFlightState(bool resetLaunchPushSuppression = true)
+        {
+            _hasPendingLaunchFlight = false;
+            _hasActiveLaunchFlight = false;
+            _hasObservedPostLaunchUngrounded = false;
+            _launchFlightElapsedSeconds = 0f;
+            _launchFlightNormalizedPower = 0f;
+            _launchFlightNormalizedOffset = 0f;
+
+            if (resetLaunchPushSuppression)
+                _suppressConsumedLaunchPushForClassification = false;
+        }
+
+        private static float GetCourseVerticalSpeed(Vector3 linearVelocity, Vector3 courseUpDirection)
+        {
+            var speed = Vector3.Dot(linearVelocity, GetSafeUpDirection(courseUpDirection));
+            return float.IsFinite(speed) ? speed : 0f;
+        }
+
+        private static Vector3 GetSafeUpDirection(Vector3 upDirection)
+        {
+            if (!upDirection.IsFinite() || upDirection.sqrMagnitude <= 0.000001f)
+                return Vector3.up;
+
+            var normalized = upDirection.normalized;
+            return normalized.IsFinite() ? normalized : Vector3.up;
         }
 
         private void UpdateModeElapsed(CharacterPresentationMode nextMode, float deltaTime)
@@ -175,12 +385,12 @@ namespace Game.Gameplay.CharacterPresentation
 
         private float CalculatePlaybackSpeed(CharacterPresentationMode mode, float coursePlanarSpeed)
         {
-            if (mode != CharacterPresentationMode.Slide && mode != CharacterPresentationMode.Run)
+            var normalizedMode = NormalizeReservedPresentationMode(mode);
+
+            if (normalizedMode != CharacterPresentationMode.Slide)
                 return 1f;
 
-            var referenceSpeed = mode == CharacterPresentationMode.Slide
-                ? _tuning.SlideReferenceSpeed
-                : _tuning.RunReferenceSpeed;
+            var referenceSpeed = _tuning.SlideReferenceSpeed;
 
             if (referenceSpeed <= 0f)
                 return 1f;
@@ -214,7 +424,32 @@ namespace Game.Gameplay.CharacterPresentation
                     normalizedLaunchOffset: slingshotContext.NormalizedLaunchOffset);
             }
 
+            if (mode == CharacterPresentationMode.LaunchFlight)
+            {
+                return new CharacterPresentationFrame(
+                    mode,
+                    playbackSpeedMultiplier: 1f,
+                    normalizedLaunchPower: _launchFlightNormalizedPower,
+                    normalizedLaunchOffset: _launchFlightNormalizedOffset);
+            }
+
             return new CharacterPresentationFrame(mode, CalculatePlaybackSpeed(mode, coursePlanarSpeed));
+        }
+
+        private CharacterPresentationMode NormalizePresentationMode(CharacterPresentationMode mode)
+        {
+            if (mode == CharacterPresentationMode.LaunchPush && (_hasPendingLaunchFlight || _hasActiveLaunchFlight))
+                return CharacterPresentationMode.LaunchFlight;
+
+            if (mode == CharacterPresentationMode.LaunchPush && _suppressConsumedLaunchPushForClassification)
+                return CharacterPresentationMode.Slide;
+
+            return NormalizeReservedPresentationMode(mode);
+        }
+
+        private static CharacterPresentationMode NormalizeReservedPresentationMode(CharacterPresentationMode mode)
+        {
+            return mode == CharacterPresentationMode.Run ? CharacterPresentationMode.Slide : mode;
         }
     }
 }

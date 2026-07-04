@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Game.Gameplay;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
@@ -61,6 +60,9 @@ public sealed class RunProgressServiceTests
 
         Assert.That(_service.CurrentForwardProgress, Is.EqualTo(2f).Within(0.0001f));
         Assert.That(_service.MaximumForwardProgress, Is.EqualTo(7f).Within(0.0001f));
+        Assert.That(_service.CurrentSample.HasValidSnapshot, Is.True);
+        Assert.That(_service.CurrentSample.CurrentForwardProgress, Is.EqualTo(2f).Within(0.0001f));
+        Assert.That(_service.CurrentSample.MaximumForwardProgress, Is.EqualTo(7f).Within(0.0001f));
     }
 
     [Test]

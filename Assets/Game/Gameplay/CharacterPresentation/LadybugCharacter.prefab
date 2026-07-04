@@ -165,23 +165,29 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.CharacterPresentationView
   _animator: {fileID: 8986264095524748893}
+  _visualAnchor: {fileID: 0}
   _modeParameterName: PresentationMode
   _playbackSpeedParameterName: PlaybackSpeedMultiplier
   _normalizedPullParameterName: NormalizedPull
   _normalizedLaunchPowerParameterName: NormalizedLaunchPower
   _normalizedPullOffsetParameterName: NormalizedPullOffset
   _normalizedLaunchOffsetParameterName: NormalizedLaunchOffset
-  _airborneDelaySeconds: 0.12
-  _slideEnterDownhillDegrees: 6
-  _slideExitDownhillDegrees: 3
-  _runFlatMaximumAbsSlopeDegrees: 4
-  _runMinimumForwardSpeed: 0.5
-  _minimumLocomotionModeDuration: 0.15
+  _fallEnterMinimumUngroundedSeconds: 0.3
+  _fallEnterMinimumDownwardSpeed: 1.5
+  _fallEnterMinimumVerticalSeparation: 0.18
+  _fallEnterHardUngroundedSeconds: 0.65
+  _meaningfulGroundedMovementThreshold: 0.5
+  _minimumLocomotionModeDuration: 0.35
   _launchPushMinimumSeconds: 0.25
   _slideReferenceSpeed: 8
-  _runReferenceSpeed: 8
   _minimumPlaybackSpeedMultiplier: 0.5
   _maximumPlaybackSpeedMultiplier: 1.5
+  _visualPositionResponseRate: 60
+  _visualHeadingResponseRate: 45
+  _visualUpTiltResponseRate: 18
+  _visualMaxPositionLag: 0.06
+  _visualSnapDistance: 0.75
+  _visualSnapAngleDegrees: 45
 --- !u!114 &6423808732164892831
 MonoBehaviour:
   m_ObjectHideFlags: 0

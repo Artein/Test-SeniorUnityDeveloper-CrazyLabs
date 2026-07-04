@@ -6,14 +6,14 @@
 
 Move the imported Ladybug source content into the third-party plugin bucket and leave the project with a clear catalog of which imported Ladybug assets are intended for first-slice Character presentation. The move should preserve Unity meta GUIDs so imported clips, avatar references, materials, textures, sounds, VFX, and future prefab composition keep stable references.
 
-This slice should make asset ownership obvious without wiring Ladybug into gameplay yet. It should also record the first-slice animation mapping: Idle, Slide, Run, Airborne, Victory, and Defeat.
+This slice should make asset ownership obvious without wiring Ladybug into gameplay yet. It should also record the first-slice animation mapping: Idle, Slide, reserved Run compatibility, Airborne, Victory, and Defeat.
 
 ## Acceptance criteria
 
 - [ ] Imported Ladybug source content is grouped under the third-party plugin bucket and no duplicate source bucket remains in the old location.
 - [ ] Unity `.meta` files are preserved as renames/moves rather than regenerated replacements.
 - [ ] The imported T-pose Ladybug model/avatar source remains available and is documented as the first-slice character basis.
-- [ ] First-slice clips are cataloged for Idle, Slide, Run, Airborne, Victory, and Defeat.
+- [ ] First-slice clips are cataloged for Idle, Slide, reserved Run compatibility, Airborne, Victory, and Defeat.
 - [ ] Deferred imported content is cataloged separately, including yoyo, transition wipe, slide center rotation, VFX, and audio candidates.
 - [ ] No gameplay scene, runtime Character presentation code, Animator Controller, or project-owned Ladybug prefab is introduced in this slice.
 - [ ] The asset move does not require save data, Addressables, Unity version, package manifest, or signing changes.

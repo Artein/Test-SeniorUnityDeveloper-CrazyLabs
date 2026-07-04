@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b8b4ec8566c54d6eadcbf0520998c89, type: 3}
   m_Name: GameplaySlingshotLaunchConfig
   m_EditorClassIdentifier: 
-  _minimumForwardImpulse: 4
-  _maximumForwardImpulse: 12
+  _minimumForwardImpulse: 10
+  _maximumForwardImpulse: 25
   _pullStrengthCurve:
     serializedVersion: 2
     m_Curve:
@@ -63,7 +63,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  _upwardImpulse: 1.5
+  _upwardImpulse: 3
   _hasMinimumTotalImpulse: 0
   _minimumTotalImpulse: 0
   _hasMaximumTotalImpulse: 0

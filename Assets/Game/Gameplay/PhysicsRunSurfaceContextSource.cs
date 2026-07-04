@@ -9,13 +9,21 @@ namespace Game.Gameplay
 
     public sealed partial class PhysicsRunSurfaceContextSource : MonoBehaviour, IRunSurfaceContextSource
     {
+        private const float SupportProbeSkinWidth = 0.02f;
+        private const float MinimumSupportNormalDot = 0.17f;
+        private const int UngroundedMissThreshold = 2;
+
         [SerializeField] private Collider _supportCollider;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
         [SerializeField] private float _supportProbeDistance = 0.08f;
         [SerializeField] private LayerMask _surfaceMask = Physics.DefaultRaycastLayers;
 
         private readonly RaycastHit[] _supportHits = new RaycastHit[16];
+        private readonly RaycastHit[] _normalProbeHits = new RaycastHit[16];
+        private readonly Collider[] _overlapHits = new Collider[16];
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator = new RunSurfaceSlopeCalculator();
+
+        private int _consecutiveMissedSupportSamples = UngroundedMissThreshold;
 
         public RunSurfaceContext Current { get; private set; } = new(false, Vector3.up, 0f);
 
@@ -44,31 +52,51 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (!TryGetClosestSupportHit(-frame.UpDirection, Mathf.Max(0f, _supportProbeDistance), out var supportHit))
+            if (!TryGetBestSupportHit(frame.UpDirection, Mathf.Max(0f, _supportProbeDistance), out var supportHit))
             {
-                SetUngrounded();
+                RecordMissedSupportSample();
                 return;
             }
 
-            var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(supportHit.normal, frame);
-            Current = new RunSurfaceContext(true, supportHit.normal, downhillDegrees);
+            _consecutiveMissedSupportSamples = 0;
+
+            var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(supportHit.Normal, frame);
+            Current = new RunSurfaceContext(true, supportHit.Normal, downhillDegrees);
         }
 
         private void SetUngrounded()
         {
+            _consecutiveMissedSupportSamples = UngroundedMissThreshold;
             Current = new RunSurfaceContext(false, Vector3.up, 0f);
         }
 
-        private bool TryGetClosestSupportHit(Vector3 direction, float distance, out RaycastHit closestHit)
+        private void RecordMissedSupportSample()
         {
-            closestHit = default;
+            _consecutiveMissedSupportSamples += 1;
 
-            if (distance <= 0f)
+            if (Current.IsGrounded && _consecutiveMissedSupportSamples < UngroundedMissThreshold)
+                return;
+
+            Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        }
+
+        private bool TryGetBestSupportHit(Vector3 upDirection, float supportProbeDistance, out SupportHit bestHit)
+        {
+            bestHit = default;
+
+            if (TryGetOverlapSupport(upDirection, out bestHit))
+                return true;
+
+            if (supportProbeDistance <= 0f)
                 return false;
 
-            var hitCount = CastSupport(direction, distance);
+            var direction = -upDirection;
+            var castOffset = upDirection * SupportProbeSkinWidth;
+            var distance = supportProbeDistance + SupportProbeSkinWidth;
+            var hitCount = CastSupport(castOffset, direction, distance);
             var hasHit = false;
-            var closestDistance = float.PositiveInfinity;
+            var bestNormalDot = float.NegativeInfinity;
+            var bestDistance = float.PositiveInfinity;
 
             for (var hitIndex = 0; hitIndex < hitCount; hitIndex += 1)
             {
@@ -77,30 +105,111 @@ namespace Game.Gameplay
                 if (!IsValidSupportHit(hit))
                     continue;
 
-                if (hit.distance >= closestDistance)
+                if (!TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
                     continue;
 
-                closestDistance = hit.distance;
-                closestHit = hit;
+                var normalDot = Vector3.Dot(normal, upDirection);
+
+                if (normalDot < bestNormalDot
+                    || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
+                {
+                    continue;
+                }
+
+                bestNormalDot = normalDot;
+                bestDistance = hit.distance;
+                bestHit = new SupportHit(normal);
                 hasHit = true;
             }
 
             return hasHit;
         }
 
-        private int CastSupport(Vector3 direction, float distance)
+        private bool TryGetCastSupportNormal(
+            RaycastHit hit,
+            Vector3 upDirection,
+            Vector3 direction,
+            float distance,
+            out Vector3 normal)
+        {
+            normal = default;
+
+            if (!IsValidSupportNormal(hit.normal, upDirection))
+                return false;
+
+            normal = hit.normal.normalized;
+
+            if (!TryProbeSupportSurfaceNormal(hit.collider, upDirection, direction, distance, out var probedNormal))
+                return true;
+
+            normal = probedNormal;
+            return true;
+        }
+
+        private bool TryProbeSupportSurfaceNormal(
+            Collider targetCollider,
+            Vector3 upDirection,
+            Vector3 direction,
+            float distance,
+            out Vector3 normal)
+        {
+            normal = default;
+
+            var probeOrigin = GetSupportProbeOrigin(upDirection);
+
+            var hitCount = Physics.RaycastNonAlloc(
+                probeOrigin,
+                direction,
+                _normalProbeHits,
+                distance,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+            var bestDistance = float.PositiveInfinity;
+            var hasHit = false;
+
+            for (var hitIndex = 0; hitIndex < hitCount; hitIndex += 1)
+            {
+                var hit = _normalProbeHits[hitIndex];
+
+                if (hit.collider != targetCollider || !IsValidSupportHit(hit) || !IsValidSupportNormal(hit.normal, upDirection))
+                    continue;
+
+                if (hit.distance >= bestDistance)
+                    continue;
+
+                bestDistance = hit.distance;
+                normal = hit.normal.normalized;
+                hasHit = true;
+            }
+
+            return hasHit;
+        }
+
+        private Vector3 GetSupportProbeOrigin(Vector3 upDirection)
+        {
+            var bounds = _supportCollider.bounds;
+
+            var projectedExtent =
+                bounds.extents.x * Mathf.Abs(upDirection.x)
+                + bounds.extents.y * Mathf.Abs(upDirection.y)
+                + bounds.extents.z * Mathf.Abs(upDirection.z);
+
+            return bounds.center - (upDirection * projectedExtent) + (upDirection * SupportProbeSkinWidth);
+        }
+
+        private int CastSupport(Vector3 castOffset, Vector3 direction, float distance)
         {
             if (_supportCollider is CapsuleCollider capsule)
-                return CastCapsule(capsule, direction, distance);
+                return CastCapsule(capsule, castOffset, direction, distance);
 
             if (_supportCollider is SphereCollider sphere)
-                return CastSphere(sphere, direction, distance);
+                return CastSphere(sphere, castOffset, direction, distance);
 
             if (_supportCollider is BoxCollider box)
-                return CastBox(box, direction, distance);
+                return CastBox(box, castOffset, direction, distance);
 
             return Physics.RaycastNonAlloc(
-                _supportCollider.bounds.center,
+                _supportCollider.bounds.center + castOffset,
                 direction,
                 _supportHits,
                 distance,
@@ -108,7 +217,7 @@ namespace Game.Gameplay
                 QueryTriggerInteraction.Ignore);
         }
 
-        private int CastCapsule(CapsuleCollider capsule, Vector3 direction, float distance)
+        private int CastCapsule(CapsuleCollider capsule, Vector3 castOffset, Vector3 direction, float distance)
         {
             var capsuleTransform = capsule.transform;
             var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(capsule.direction);
@@ -119,8 +228,8 @@ namespace Game.Gameplay
             var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
 
             return Physics.CapsuleCastNonAlloc(
-                center + (axis * halfSegment),
-                center - (axis * halfSegment),
+                center + (axis * halfSegment) + castOffset,
+                center - (axis * halfSegment) + castOffset,
                 radius,
                 direction,
                 _supportHits,
@@ -129,14 +238,14 @@ namespace Game.Gameplay
                 QueryTriggerInteraction.Ignore);
         }
 
-        private int CastSphere(SphereCollider sphere, Vector3 direction, float distance)
+        private int CastSphere(SphereCollider sphere, Vector3 castOffset, Vector3 direction, float distance)
         {
             var sphereTransform = sphere.transform;
             var scale = Abs(sphereTransform.lossyScale);
             var radius = Mathf.Max(0f, sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
 
             return Physics.SphereCastNonAlloc(
-                sphereTransform.TransformPoint(sphere.center),
+                sphereTransform.TransformPoint(sphere.center) + castOffset,
                 radius,
                 direction,
                 _supportHits,
@@ -145,13 +254,13 @@ namespace Game.Gameplay
                 QueryTriggerInteraction.Ignore);
         }
 
-        private int CastBox(BoxCollider box, Vector3 direction, float distance)
+        private int CastBox(BoxCollider box, Vector3 castOffset, Vector3 direction, float distance)
         {
             var boxTransform = box.transform;
             var halfExtents = Vector3.Scale(box.size * 0.5f, Abs(boxTransform.lossyScale));
 
             return Physics.BoxCastNonAlloc(
-                boxTransform.TransformPoint(box.center),
+                boxTransform.TransformPoint(box.center) + castOffset,
                 halfExtents,
                 direction,
                 _supportHits,
@@ -161,10 +270,130 @@ namespace Game.Gameplay
                 QueryTriggerInteraction.Ignore);
         }
 
+        private bool TryGetOverlapSupport(Vector3 upDirection, out SupportHit supportHit)
+        {
+            supportHit = default;
+
+            var overlapCount = OverlapSupport();
+            var hasHit = false;
+            var bestNormalDot = float.NegativeInfinity;
+            var bestDistance = float.NegativeInfinity;
+
+            for (var overlapIndex = 0; overlapIndex < overlapCount; overlapIndex += 1)
+            {
+                var hitCollider = _overlapHits[overlapIndex];
+
+                if (!IsValidSupportCollider(hitCollider))
+                    continue;
+
+                if (!Physics.ComputePenetration(
+                        _supportCollider,
+                        _supportCollider.transform.position,
+                        _supportCollider.transform.rotation,
+                        hitCollider,
+                        hitCollider.transform.position,
+                        hitCollider.transform.rotation,
+                        out var separationDirection,
+                        out var separationDistance))
+                {
+                    continue;
+                }
+
+                if (!IsValidSupportNormal(separationDirection, upDirection))
+                    continue;
+
+                var normal = separationDirection.normalized;
+                var normalDot = Vector3.Dot(normal, upDirection);
+
+                if (normalDot < bestNormalDot
+                    || (Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance))
+                {
+                    continue;
+                }
+
+                bestNormalDot = normalDot;
+                bestDistance = separationDistance;
+                supportHit = new SupportHit(normal);
+                hasHit = true;
+            }
+
+            return hasHit;
+        }
+
+        private int OverlapSupport()
+        {
+            if (_supportCollider is CapsuleCollider capsule)
+                return OverlapCapsule(capsule);
+
+            if (_supportCollider is SphereCollider sphere)
+                return OverlapSphere(sphere);
+
+            if (_supportCollider is BoxCollider box)
+                return OverlapBox(box);
+
+            return Physics.OverlapBoxNonAlloc(
+                _supportCollider.bounds.center,
+                _supportCollider.bounds.extents,
+                _overlapHits,
+                Quaternion.identity,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        private int OverlapCapsule(CapsuleCollider capsule)
+        {
+            var capsuleTransform = capsule.transform;
+            var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(capsule.direction);
+            var scale = Abs(capsuleTransform.lossyScale);
+            var radius = Mathf.Max(0f, capsule.radius * GetCapsuleRadiusScale(scale, capsule.direction));
+            var height = Mathf.Max(radius * 2f, capsule.height * GetCapsuleHeightScale(scale, capsule.direction));
+            var center = capsuleTransform.TransformPoint(capsule.center);
+            var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
+
+            return Physics.OverlapCapsuleNonAlloc(
+                center + (axis * halfSegment),
+                center - (axis * halfSegment),
+                radius,
+                _overlapHits,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        private int OverlapSphere(SphereCollider sphere)
+        {
+            var sphereTransform = sphere.transform;
+            var scale = Abs(sphereTransform.lossyScale);
+            var radius = Mathf.Max(0f, sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
+
+            return Physics.OverlapSphereNonAlloc(
+                sphereTransform.TransformPoint(sphere.center),
+                radius,
+                _overlapHits,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        private int OverlapBox(BoxCollider box)
+        {
+            var boxTransform = box.transform;
+            var halfExtents = Vector3.Scale(box.size * 0.5f, Abs(boxTransform.lossyScale));
+
+            return Physics.OverlapBoxNonAlloc(
+                boxTransform.TransformPoint(box.center),
+                halfExtents,
+                _overlapHits,
+                boxTransform.rotation,
+                _surfaceMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
         private bool IsValidSupportHit(RaycastHit hit)
         {
-            var hitCollider = hit.collider;
+            return IsValidSupportCollider(hit.collider);
+        }
 
+        private bool IsValidSupportCollider(Collider hitCollider)
+        {
             if (hitCollider == null || hitCollider == _supportCollider || hitCollider.isTrigger)
                 return false;
 
@@ -172,7 +401,22 @@ namespace Game.Gameplay
                 return false;
 
             var supportBody = _supportCollider.attachedRigidbody;
-            return supportBody == null || hitCollider.attachedRigidbody != supportBody;
+
+            if (supportBody != null && hitCollider.attachedRigidbody == supportBody)
+                return false;
+
+            return hitCollider.TryGetComponent(out RunContact runContact)
+                   && runContact.Category == RunContactCategory.Surface;
+        }
+
+        private bool IsValidSupportNormal(Vector3 normal, Vector3 upDirection)
+        {
+            var sqrMagnitude = normal.sqrMagnitude;
+
+            if (sqrMagnitude <= 0.000001f || float.IsNaN(sqrMagnitude) || float.IsInfinity(sqrMagnitude))
+                return false;
+
+            return Vector3.Dot(normal.normalized, upDirection) > MinimumSupportNormalDot;
         }
 
         private Vector3 GetCapsuleLocalAxis(int direction)
@@ -211,6 +455,16 @@ namespace Game.Gameplay
         private Vector3 Abs(Vector3 value)
         {
             return new Vector3(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
+        }
+
+        private readonly struct SupportHit
+        {
+            public Vector3 Normal { get; }
+
+            public SupportHit(Vector3 normal)
+            {
+                Normal = normal;
+            }
         }
     }
 }

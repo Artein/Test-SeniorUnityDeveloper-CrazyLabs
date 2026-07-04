@@ -8,6 +8,7 @@ namespace Game.Gameplay
     {
         internal Collider SupportColliderForTests => _supportCollider;
         internal float SupportProbeDistanceForTests => _supportProbeDistance;
+        internal LayerMask SurfaceMaskForTests => _surfaceMask;
 
         internal void SetReferencesForTests(
             Collider supportCollider,
