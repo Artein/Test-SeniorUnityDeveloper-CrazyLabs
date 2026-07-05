@@ -2,7 +2,7 @@
 
 namespace Game.Gameplay
 {
-    public sealed partial class PhysicsRunSurfaceContextSource
+    internal sealed partial class PhysicsRunSurfaceContextSource
     {
         internal void SampleForTests()
         {

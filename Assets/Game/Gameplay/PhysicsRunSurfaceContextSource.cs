@@ -9,13 +9,13 @@ namespace Game.Gameplay
         RunSurfaceContext Current { get; }
     }
 
-    public sealed partial class PhysicsRunSurfaceContextSource : IRunSurfaceContextSource, IFixedTickable
+    internal sealed partial class PhysicsRunSurfaceContextSource : IRunSurfaceContextSource, IFixedTickable
     {
         private const float SupportProbeSkinWidth = 0.02f;
         private const float MinimumSupportNormalDot = 0.17f;
         private const int UngroundedMissThreshold = 2;
 
-        private readonly Collider _supportCollider;
+        private readonly IRunSupportColliderProbe _supportProbe;
         private readonly IRunProgressFrameSource _runProgressFrameSource;
         private readonly float _supportProbeDistance;
         private readonly LayerMask _surfaceMask;
@@ -31,11 +31,16 @@ namespace Game.Gameplay
         public PhysicsRunSurfaceContextSource(
             Collider supportCollider,
             IRunProgressFrameSource runProgressFrameSource,
+            IRunSupportColliderProbeFactory runSupportColliderProbeFactory,
             float supportProbeDistance,
             LayerMask surfaceMask)
         {
-            _supportCollider = supportCollider != null ? supportCollider : throw new ArgumentNullException(nameof(supportCollider));
+            if (supportCollider == null)
+                throw new ArgumentNullException(nameof(supportCollider));
+
             _runProgressFrameSource = runProgressFrameSource ?? throw new ArgumentNullException(nameof(runProgressFrameSource));
+            var supportProbeFactory = runSupportColliderProbeFactory ?? throw new ArgumentNullException(nameof(runSupportColliderProbeFactory));
+            _supportProbe = supportProbeFactory.Create(supportCollider);
             _supportProbeDistance = Mathf.Max(0f, supportProbeDistance);
             _surfaceMask = surfaceMask;
         }
@@ -47,7 +52,7 @@ namespace Game.Gameplay
 
         private void Sample()
         {
-            if (!_runProgressFrameSource.TryCreateSnapshot(_supportCollider.bounds.center, out var frame, out _))
+            if (!_runProgressFrameSource.TryCreateSnapshot(_supportProbe.Collider.bounds.center, out var frame, out _))
             {
                 SetUngrounded();
                 return;
@@ -94,7 +99,7 @@ namespace Game.Gameplay
             var direction = -upDirection;
             var castOffset = upDirection * SupportProbeSkinWidth;
             var distance = supportProbeDistance + SupportProbeSkinWidth;
-            var hitCount = CastSupport(castOffset, direction, distance);
+            var hitCount = _supportProbe.Cast(castOffset, direction, distance, _supportHits, _surfaceMask);
             var hasHit = false;
             var bestNormalDot = float.NegativeInfinity;
             var bestDistance = float.PositiveInfinity;
@@ -156,7 +161,7 @@ namespace Game.Gameplay
         {
             normal = default;
 
-            var probeOrigin = GetSupportProbeOrigin(upDirection);
+            var probeOrigin = _supportProbe.GetSupportProbeOrigin(upDirection, SupportProbeSkinWidth);
 
             var hitCount = Physics.RaycastNonAlloc(
                 probeOrigin,
@@ -186,99 +191,15 @@ namespace Game.Gameplay
             return hasHit;
         }
 
-        private Vector3 GetSupportProbeOrigin(Vector3 upDirection)
-        {
-            var bounds = _supportCollider.bounds;
-
-            var projectedExtent =
-                bounds.extents.x * Mathf.Abs(upDirection.x)
-                + bounds.extents.y * Mathf.Abs(upDirection.y)
-                + bounds.extents.z * Mathf.Abs(upDirection.z);
-
-            return bounds.center - (upDirection * projectedExtent) + (upDirection * SupportProbeSkinWidth);
-        }
-
-        private int CastSupport(Vector3 castOffset, Vector3 direction, float distance)
-        {
-            if (_supportCollider is CapsuleCollider capsule)
-                return CastCapsule(capsule, castOffset, direction, distance);
-
-            if (_supportCollider is SphereCollider sphere)
-                return CastSphere(sphere, castOffset, direction, distance);
-
-            if (_supportCollider is BoxCollider box)
-                return CastBox(box, castOffset, direction, distance);
-
-            return Physics.RaycastNonAlloc(
-                _supportCollider.bounds.center + castOffset,
-                direction,
-                _supportHits,
-                distance,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int CastCapsule(CapsuleCollider capsule, Vector3 castOffset, Vector3 direction, float distance)
-        {
-            var capsuleTransform = capsule.transform;
-            var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(capsule.direction);
-            var scale = Abs(capsuleTransform.lossyScale);
-            var radius = Mathf.Max(0f, capsule.radius * GetCapsuleRadiusScale(scale, capsule.direction));
-            var height = Mathf.Max(radius * 2f, capsule.height * GetCapsuleHeightScale(scale, capsule.direction));
-            var center = capsuleTransform.TransformPoint(capsule.center);
-            var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
-
-            return Physics.CapsuleCastNonAlloc(
-                center + (axis * halfSegment) + castOffset,
-                center - (axis * halfSegment) + castOffset,
-                radius,
-                direction,
-                _supportHits,
-                distance,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int CastSphere(SphereCollider sphere, Vector3 castOffset, Vector3 direction, float distance)
-        {
-            var sphereTransform = sphere.transform;
-            var scale = Abs(sphereTransform.lossyScale);
-            var radius = Mathf.Max(0f, sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
-
-            return Physics.SphereCastNonAlloc(
-                sphereTransform.TransformPoint(sphere.center) + castOffset,
-                radius,
-                direction,
-                _supportHits,
-                distance,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int CastBox(BoxCollider box, Vector3 castOffset, Vector3 direction, float distance)
-        {
-            var boxTransform = box.transform;
-            var halfExtents = Vector3.Scale(box.size * 0.5f, Abs(boxTransform.lossyScale));
-
-            return Physics.BoxCastNonAlloc(
-                boxTransform.TransformPoint(box.center) + castOffset,
-                halfExtents,
-                direction,
-                _supportHits,
-                boxTransform.rotation,
-                distance,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
         private bool TryGetOverlapSupport(Vector3 upDirection, out SupportHit supportHit)
         {
             supportHit = default;
 
-            var overlapCount = OverlapSupport();
+            var overlapCount = _supportProbe.Overlap(_overlapHits, _surfaceMask);
             var hasHit = false;
             var bestNormalDot = float.NegativeInfinity;
             var bestDistance = float.NegativeInfinity;
+            var supportCollider = _supportProbe.Collider;
 
             for (var overlapIndex = 0; overlapIndex < overlapCount; overlapIndex += 1)
             {
@@ -288,9 +209,9 @@ namespace Game.Gameplay
                     continue;
 
                 if (!Physics.ComputePenetration(
-                        _supportCollider,
-                        _supportCollider.transform.position,
-                        _supportCollider.transform.rotation,
+                        supportCollider,
+                        supportCollider.transform.position,
+                        supportCollider.transform.rotation,
                         hitCollider,
                         hitCollider.transform.position,
                         hitCollider.transform.rotation,
@@ -321,73 +242,6 @@ namespace Game.Gameplay
             return hasHit;
         }
 
-        private int OverlapSupport()
-        {
-            if (_supportCollider is CapsuleCollider capsule)
-                return OverlapCapsule(capsule);
-
-            if (_supportCollider is SphereCollider sphere)
-                return OverlapSphere(sphere);
-
-            if (_supportCollider is BoxCollider box)
-                return OverlapBox(box);
-
-            return Physics.OverlapBoxNonAlloc(
-                _supportCollider.bounds.center,
-                _supportCollider.bounds.extents,
-                _overlapHits,
-                Quaternion.identity,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int OverlapCapsule(CapsuleCollider capsule)
-        {
-            var capsuleTransform = capsule.transform;
-            var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(capsule.direction);
-            var scale = Abs(capsuleTransform.lossyScale);
-            var radius = Mathf.Max(0f, capsule.radius * GetCapsuleRadiusScale(scale, capsule.direction));
-            var height = Mathf.Max(radius * 2f, capsule.height * GetCapsuleHeightScale(scale, capsule.direction));
-            var center = capsuleTransform.TransformPoint(capsule.center);
-            var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
-
-            return Physics.OverlapCapsuleNonAlloc(
-                center + (axis * halfSegment),
-                center - (axis * halfSegment),
-                radius,
-                _overlapHits,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int OverlapSphere(SphereCollider sphere)
-        {
-            var sphereTransform = sphere.transform;
-            var scale = Abs(sphereTransform.lossyScale);
-            var radius = Mathf.Max(0f, sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
-
-            return Physics.OverlapSphereNonAlloc(
-                sphereTransform.TransformPoint(sphere.center),
-                radius,
-                _overlapHits,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
-        private int OverlapBox(BoxCollider box)
-        {
-            var boxTransform = box.transform;
-            var halfExtents = Vector3.Scale(box.size * 0.5f, Abs(boxTransform.lossyScale));
-
-            return Physics.OverlapBoxNonAlloc(
-                boxTransform.TransformPoint(box.center),
-                halfExtents,
-                _overlapHits,
-                boxTransform.rotation,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
-        }
-
         private bool IsValidSupportHit(RaycastHit hit)
         {
             return IsValidSupportCollider(hit.collider);
@@ -395,13 +249,15 @@ namespace Game.Gameplay
 
         private bool IsValidSupportCollider(Collider hitCollider)
         {
-            if (hitCollider == null || hitCollider == _supportCollider || hitCollider.isTrigger)
+            var supportCollider = _supportProbe.Collider;
+
+            if (hitCollider == null || hitCollider == supportCollider || hitCollider.isTrigger)
                 return false;
 
             if ((_surfaceMask.value & (1 << hitCollider.gameObject.layer)) == 0)
                 return false;
 
-            var supportBody = _supportCollider.attachedRigidbody;
+            var supportBody = supportCollider.attachedRigidbody;
 
             if (supportBody != null && hitCollider.attachedRigidbody == supportBody)
                 return false;
@@ -418,44 +274,6 @@ namespace Game.Gameplay
                 return false;
 
             return Vector3.Dot(normal.normalized, upDirection) > MinimumSupportNormalDot;
-        }
-
-        private Vector3 GetCapsuleLocalAxis(int direction)
-        {
-            if (direction == 0)
-                return Vector3.right;
-
-            if (direction == 1)
-                return Vector3.up;
-
-            return Vector3.forward;
-        }
-
-        private float GetCapsuleRadiusScale(Vector3 scale, int direction)
-        {
-            if (direction == 0)
-                return Mathf.Max(scale.y, scale.z);
-
-            if (direction == 1)
-                return Mathf.Max(scale.x, scale.z);
-
-            return Mathf.Max(scale.x, scale.y);
-        }
-
-        private float GetCapsuleHeightScale(Vector3 scale, int direction)
-        {
-            if (direction == 0)
-                return scale.x;
-
-            if (direction == 1)
-                return scale.y;
-
-            return scale.z;
-        }
-
-        private Vector3 Abs(Vector3 value)
-        {
-            return new Vector3(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
         }
 
         private readonly struct SupportHit

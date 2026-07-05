@@ -102,6 +102,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
+            builder.Register<IRunSupportColliderProbeFactory, RunSupportColliderProbeFactory>(Lifetime.Singleton);
             InstallSceneComposition(builder);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);

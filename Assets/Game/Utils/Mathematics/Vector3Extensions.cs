@@ -14,5 +14,10 @@ namespace Game.Utils.Mathematics
         {
             return math.abs(value.magnitude - 1f) <= 0.01f;
         }
+        
+        public static Vector3 Abs(this Vector3 value)
+        {
+            return new Vector3(math.abs(value.x), math.abs(value.y), math.abs(value.z));
+        }
     }
 }

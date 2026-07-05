@@ -355,6 +355,7 @@ public sealed class GameplayLifetimeScopeTests
         var runMotionSource = container.Resolve<IRunMotionSource>();
         var runProgressService = container.Resolve<IRunProgressService>();
         var runProgressFrameSource = container.Resolve<IRunProgressFrameSource>();
+        var runSupportColliderProbeFactory = container.Resolve<IRunSupportColliderProbeFactory>();
         var runSurfaceContextSource = container.Resolve<IRunSurfaceContextSource>();
         var contactNotifier = container.Resolve<IRigidbodyContactNotifier>();
         var contactClassifier = container.Resolve<IRunContactClassifier>();
@@ -470,6 +471,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runMotionSource, Is.SameAs(fixture.RunCameraSource));
         Assert.That(runProgressService, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.SameAs(fixture.RunProgressFrameSource));
+        Assert.That(runSupportColliderProbeFactory, Is.TypeOf<RunSupportColliderProbeFactory>());
         Assert.That(runSurfaceContextSource, Is.TypeOf<PhysicsRunSurfaceContextSource>());
         Assert.That(runSurfaceContextSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));

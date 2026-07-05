@@ -169,7 +169,12 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
 
         Assert.That(
-            () => new PhysicsRunSurfaceContextSource(null, runProgressFrameSource, 0.08f, TestAssets.RunSurfaceLayerMask),
+            () => new PhysicsRunSurfaceContextSource(
+                null,
+                runProgressFrameSource,
+                new RunSupportColliderProbeFactory(),
+                0.08f,
+                TestAssets.RunSurfaceLayerMask),
             Throws.ArgumentNullException.With.Property("ParamName").EqualTo("supportCollider"));
     }
 
@@ -179,8 +184,30 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         var supportCollider = CreateSupportCollider(CreateGameObject("Run Surface Context Source").transform, 1.1f);
 
         Assert.That(
-            () => new PhysicsRunSurfaceContextSource(supportCollider, null, 0.08f, TestAssets.RunSurfaceLayerMask),
+            () => new PhysicsRunSurfaceContextSource(
+                supportCollider,
+                null,
+                new RunSupportColliderProbeFactory(),
+                0.08f,
+                TestAssets.RunSurfaceLayerMask),
             Throws.ArgumentNullException.With.Property("ParamName").EqualTo("runProgressFrameSource"));
+    }
+
+    [Test]
+    public void given_MissingRunSupportColliderProbeFactory_when_Constructed_then_ThrowsArgumentNullException()
+    {
+        var sourceObject = CreateGameObject("Run Surface Context Source");
+        var runProgressFrameSource = sourceObject.AddComponent<RunProgressFrameSource>();
+        var supportCollider = CreateSupportCollider(sourceObject.transform, 1.1f);
+
+        Assert.That(
+            () => new PhysicsRunSurfaceContextSource(
+                supportCollider,
+                runProgressFrameSource,
+                null,
+                0.08f,
+                TestAssets.RunSurfaceLayerMask),
+            Throws.ArgumentNullException.With.Property("ParamName").EqualTo("runSupportColliderProbeFactory"));
     }
 
     private PhysicsRunSurfaceContextSource CreateSource(float supportCenterY, float supportProbeDistance)
@@ -194,6 +221,7 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         return new PhysicsRunSurfaceContextSource(
             supportCollider,
             runProgressFrameSource,
+            new RunSupportColliderProbeFactory(),
             supportProbeDistance,
             TestAssets.RunSurfaceLayerMask);
     }
