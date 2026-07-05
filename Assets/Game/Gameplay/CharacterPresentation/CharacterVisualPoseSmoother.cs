@@ -11,12 +11,16 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly float _maximumSnapAngle = 180f;
 
         private CharacterVisualPose _smoothedPose;
+        private CharacterVisualPose _previousTargetPose;
         private bool _hasSmoothedPose;
+        private bool _hasPreviousTargetPose;
 
         public void Reset()
         {
             _hasSmoothedPose = false;
+            _hasPreviousTargetPose = false;
             _smoothedPose = new CharacterVisualPose(Vector3.zero, Quaternion.identity);
+            _previousTargetPose = new CharacterVisualPose(Vector3.zero, Quaternion.identity);
         }
 
         public CharacterVisualPose Update(
@@ -45,6 +49,7 @@ namespace Game.Gameplay.CharacterPresentation
 
             _smoothedPose = SanitizePose(new CharacterVisualPose(position, rotation), safeTargetPose);
             _hasSmoothedPose = true;
+            RememberTargetPose(safeTargetPose);
             return _smoothedPose;
         }
 
@@ -52,6 +57,7 @@ namespace Game.Gameplay.CharacterPresentation
         {
             _smoothedPose = targetPose;
             _hasSmoothedPose = true;
+            RememberTargetPose(targetPose);
             return _smoothedPose;
         }
 
@@ -60,13 +66,37 @@ namespace Game.Gameplay.CharacterPresentation
             if (snap)
                 return true;
 
-            var snapDistance = Mathf.Max(_minimumSnapDistance, tuning.VisualSnapDistance);
+            if (!_hasPreviousTargetPose)
+                return false;
 
-            if (Vector3.Distance(_smoothedPose.Position, targetPose.Position) >= snapDistance)
+            if (ShouldSnapStationaryPositionDrift(targetPose, tuning))
                 return true;
+
+            return ShouldSnapStationaryRotationDrift(targetPose, tuning);
+        }
+
+        private bool ShouldSnapStationaryPositionDrift(CharacterVisualPose targetPose, ICharacterVisualFollowTuning tuning)
+        {
+            if (Vector3.Distance(_previousTargetPose.Position, targetPose.Position) > _minimumSnapDistance)
+                return false;
+
+            var snapDistance = Mathf.Max(_minimumSnapDistance, tuning.VisualSnapDistance);
+            return Vector3.Distance(_smoothedPose.Position, targetPose.Position) >= snapDistance;
+        }
+
+        private bool ShouldSnapStationaryRotationDrift(CharacterVisualPose targetPose, ICharacterVisualFollowTuning tuning)
+        {
+            if (Quaternion.Angle(_previousTargetPose.Rotation, targetPose.Rotation) > 0.0001f)
+                return false;
 
             var snapAngle = Mathf.Clamp(tuning.VisualSnapAngleDegrees, 0f, _maximumSnapAngle);
             return Quaternion.Angle(_smoothedPose.Rotation, targetPose.Rotation) >= snapAngle;
+        }
+
+        private void RememberTargetPose(CharacterVisualPose targetPose)
+        {
+            _previousTargetPose = targetPose;
+            _hasPreviousTargetPose = true;
         }
 
         private Vector3 GetNextPosition(Vector3 targetPosition, ICharacterVisualFollowTuning tuning, float deltaTime)

@@ -50,7 +50,7 @@ public sealed class CharacterVisualPoseSmootherTests
     }
 
     [Test]
-    public void Update_TargetBeyondSnapDistance_SnapsToTargetPose()
+    public void Update_MovingTargetBeyondSnapDistance_BoundsMaximumLagWithoutSnapping()
     {
         var startPose = new CharacterVisualPose(Vector3.zero, Quaternion.identity);
         _smoother.Update(startPose, startPose, _tuning, 0.02f, false);
@@ -58,11 +58,30 @@ public sealed class CharacterVisualPoseSmootherTests
 
         var smoothedPose = _smoother.Update(startPose, targetPose, _tuning, 0.02f, false);
 
-        AssertPose(smoothedPose, targetPose);
+        Assert.That(Vector3.Distance(smoothedPose.Position, targetPose.Position), Is.GreaterThan(0.0001f));
+        Assert.That(Vector3.Distance(smoothedPose.Position, targetPose.Position), Is.LessThanOrEqualTo(_tuning.VisualMaxPositionLag + 0.0001f));
     }
 
     [Test]
-    public void Update_TargetBeyondSnapAngle_SnapsToTargetPose()
+    public void Update_ContinuousHighSpeedTargetMotionBeyondSnapDistance_BoundsMaximumLagWithoutSnapping()
+    {
+        var currentPose = new CharacterVisualPose(Vector3.zero, Quaternion.identity);
+        _smoother.Update(currentPose, currentPose, _tuning, 0.02f, false);
+
+        for (var frameIndex = 1; frameIndex <= 4; frameIndex += 1)
+        {
+            var targetPose = new CharacterVisualPose(new Vector3(0.84f * frameIndex, 0f, 0f), Quaternion.identity);
+
+            currentPose = _smoother.Update(currentPose, targetPose, _tuning, 0.02f, false);
+
+            var lag = Vector3.Distance(currentPose.Position, targetPose.Position);
+            Assert.That(lag, Is.GreaterThan(0.0001f));
+            Assert.That(lag, Is.LessThanOrEqualTo(_tuning.VisualMaxPositionLag + 0.0001f));
+        }
+    }
+
+    [Test]
+    public void Update_MovingTargetBeyondSnapAngle_SmoothsRotationWithoutSnapping()
     {
         var startPose = new CharacterVisualPose(Vector3.zero, Quaternion.identity);
         _smoother.Update(startPose, startPose, _tuning, 0.02f, false);
@@ -70,7 +89,8 @@ public sealed class CharacterVisualPoseSmootherTests
 
         var smoothedPose = _smoother.Update(startPose, targetPose, _tuning, 0.02f, false);
 
-        AssertPose(smoothedPose, targetPose);
+        Assert.That(Quaternion.Angle(smoothedPose.Rotation, targetPose.Rotation), Is.GreaterThan(0.0001f));
+        Assert.That(Quaternion.Angle(smoothedPose.Rotation, targetPose.Rotation), Is.LessThan(90f));
     }
 
     [Test]

@@ -11,6 +11,7 @@ using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Physics;
 using Game.Gameplay.CharacterPresentation;
+using Game.Gameplay.Diagnostics;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
@@ -30,6 +31,9 @@ public sealed class GameplayLifetimeScopeTests
     [TearDown]
     public void OnTearDown()
     {
+        DestroyGeneratedGameObjects<RunDiagnosticsOverlay>();
+        DestroyGeneratedGameObjects<UnityApplicationLifecycleNotifier>();
+
         foreach (var assetDirectory in _assetDirectories)
         {
             AssetDatabase.DeleteAsset(assetDirectory);
@@ -228,6 +232,24 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
             Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Pickup Definition"));
+    }
+
+    [Test]
+    public void ConfigureForTests_ValidReferences_CreatesRunDiagnosticsOverlayOnBuild()
+    {
+        var fixture = CreateValidScopeFixture();
+        var builder = new ContainerBuilder();
+
+        fixture.Scope.ConfigureForTests(builder);
+
+        using var container = builder.Build();
+        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        Assert.That(overlays, Has.Length.EqualTo(1));
+        Assert.That(overlays[0].gameObject.name, Is.EqualTo("RunDiagnosticsOverlay"));
+        Assert.That(container.Resolve<RunDiagnosticsOverlay>(), Is.SameAs(overlays[0]));
     }
 
     [Test]
@@ -844,6 +866,20 @@ public sealed class GameplayLifetimeScopeTests
     {
         _objects.Add(value);
         return value;
+    }
+
+    private void DestroyGeneratedGameObjects<T>()
+        where T : Component
+    {
+        var components = UnityEngine.Object.FindObjectsByType<T>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        foreach (var component in components)
+        {
+            if (component != null)
+                UnityEngine.Object.DestroyImmediate(component.gameObject);
+        }
     }
 
     private sealed class ValidScopeFixture

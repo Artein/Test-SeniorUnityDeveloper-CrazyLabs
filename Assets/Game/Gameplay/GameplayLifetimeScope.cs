@@ -7,6 +7,7 @@ using Game.Foundation.Input;
 using Game.Foundation.Persistence;
 using Game.Foundation.Screen;
 using Game.Gameplay.CharacterPresentation;
+using Game.Gameplay.Diagnostics;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Pickups;
@@ -160,6 +161,8 @@ namespace Game.Gameplay
 
             builder.RegisterComponentOnNewGameObject<UnityApplicationLifecycleNotifier>(Lifetime.Singleton, "ApplicationLifecycleNotifier")
                 .As<IApplicationPauseNotifier, IApplicationFocusChangeNotifier, IApplicationQuitNotifier>();
+            builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");
+            builder.RegisterBuildCallback(container => container.Resolve<RunDiagnosticsOverlay>());
 
             builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton);
             builder.Register<EconomySaveSerializer>(Lifetime.Singleton);

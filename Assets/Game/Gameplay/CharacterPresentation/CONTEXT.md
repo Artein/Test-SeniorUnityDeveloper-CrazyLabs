@@ -170,10 +170,11 @@ _Avoid_: Gameplay State, animation mode, run result
 - **Character Visual Anchor** belongs to visual mounting, not transform hierarchy, gameplay contact, or band alignment.
 - **Character Visual Follower** smooths only the **Character Visual Anchor**; it must not move the controlled gameplay object, Rigidbody, colliders, camera source, progress source, or surface probes.
 - **Character Visual Follower** samples the controlled gameplay object's Transform render pose in the presentation late update phase, not raw Rigidbody position, so the visible **Character** follows Unity's interpolated render pose.
+- Camera and motion presentation sources may align to the same controlled-object Transform render pose, but they must not read the **Smoothed Character Pose** as gameplay truth.
 - **Smoothed Character Pose** is presentation-only and must not become gameplay truth or an input to physics, steering, progress, collision, or camera systems.
 - **Character Visual Follow Tuning** belongs to the **Character Presentation View** scene or prefab authoring; it is not gameplay movement, upgrade, or economy tuning.
 - **Character Visual Follower** is owned by the composition root as a presentation entry point; the view remains passive and should not own a standalone `LateUpdate` loop.
-- **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; distance and angle snap thresholds prevent visible lag after teleports, run resets, and terminal state changes.
+- **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; explicit snaps handle run resets and terminal state changes, while automatic snap thresholds are for stationary drift rather than continuous high-speed target motion.
 - **Character Model Root** handles source-asset alignment under a **Character**.
 - **Character Presentation Mode** is appearance language, not **Gameplay State**.
 - **Character Presentation Mode** changes must not change **Run Body** velocity, steering state, speed recovery, contact response, or run distance.

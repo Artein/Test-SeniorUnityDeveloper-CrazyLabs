@@ -271,7 +271,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunCameraAnchor, Is.SameAs(runCameraAnchor));
         Assert.That(resolvedRunCameraRig, Is.SameAs(runCameraRig));
         Assert.That(((IPlayerSteeringTarget)playerSteeringTarget).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
-        Assert.That(((IRunMotionSource)runCameraSource).Position, Is.EqualTo(playerRigidbody.position));
+        Assert.That(((IRunMotionSource)runCameraSource).Position, Is.EqualTo(playerRigidbody.transform.position));
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
