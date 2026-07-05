@@ -15,7 +15,6 @@ namespace Game.Gameplay
 {
     public sealed partial class GameplayLifetimeScope
     {
-        internal GameplayStateId PreLaunchStateIdForTests => _preLaunchStateId;
         internal GameplayStateId RunPreparationStateIdForTests => _runPreparationStateId;
         internal GameplayStateId RunningStateIdForTests => _runningStateId;
         internal GameplayStateId RunEndedStateIdForTests => _runEndedStateId;
@@ -23,8 +22,6 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
-        internal PhysicsRunSurfaceContextSource RunSurfaceContextSourceForTests => _runSurfaceContextSource;
-        internal FinishPresentationView FinishPresentationViewForTests => _finishPresentationView;
         internal IReadOnlyList<Pickup> LevelPickupsForTests => GetLevelPickups();
         internal IReadOnlyList<Collider> PlayerPickupContactCollidersForTests => GetPlayerPickupContactColliders();
         internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
@@ -49,7 +46,7 @@ namespace Game.Gameplay
             RigidbodyPlayerSteeringTarget playerSteeringTarget,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
-            PhysicsRunSurfaceContextSource runSurfaceContextSource,
+            BaseSceneCompositionMonoInstaller[] sceneCompositionInstallers,
             RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,
@@ -89,7 +86,7 @@ namespace Game.Gameplay
             _playerSteeringTarget = playerSteeringTarget;
             _runCameraSource = runCameraSource;
             _runProgressFrameSource = runProgressFrameSource;
-            _runSurfaceContextSource = runSurfaceContextSource;
+            _sceneCompositionInstallers = sceneCompositionInstallers;
             _contactNotifier = contactNotifier;
             _runCameraAnchor = runCameraAnchor;
             _runCameraRig = runCameraRig;
@@ -123,6 +120,11 @@ namespace Game.Gameplay
             _playerTag = playerTag;
             _playerLayerName = playerLayerName;
             _pickupLayerName = pickupLayerName;
+        }
+
+        internal void SetSceneCompositionInstallersForTests(BaseSceneCompositionMonoInstaller[] sceneCompositionInstallers)
+        {
+            _sceneCompositionInstallers = sceneCompositionInstallers;
         }
 
         internal void ValidateRequiredReferencesForTests()

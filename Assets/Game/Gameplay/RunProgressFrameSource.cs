@@ -11,7 +11,7 @@ namespace Game.Gameplay
     {
         [SerializeField] private Transform _frameTransform;
 
-        public bool TryCreateSnapshot(Vector3 origin, out RunProgressFrameSnapshot snapshot, out string error)
+        bool IRunProgressFrameSource.TryCreateSnapshot(Vector3 origin, out RunProgressFrameSnapshot snapshot, out string error)
         {
             var sourceTransform = _frameTransform != null ? _frameTransform : transform;
             return RunProgressFrameSnapshot.TryCreate(
@@ -20,12 +20,6 @@ namespace Game.Gameplay
                 sourceTransform.up,
                 out snapshot,
                 out error);
-        }
-
-        private void OnValidate()
-        {
-            if (_frameTransform == null)
-                _frameTransform = transform;
         }
     }
 }

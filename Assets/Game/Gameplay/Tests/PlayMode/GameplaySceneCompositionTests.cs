@@ -14,6 +14,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
+
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Animations;
@@ -44,7 +45,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var runCameraSource = FindSingleInScene<RigidbodyRunCameraSource>(activeScene, "RigidbodyRunCameraSource");
         var contactNotifier = FindSingleInScene<RigidbodyContactNotifier>(activeScene, "RigidbodyContactNotifier");
         var runProgressFrameSource = FindSingleInScene<RunProgressFrameSource>(activeScene, "RunProgressFrameSource");
-        var runSurfaceContextSource = FindSingleInScene<PhysicsRunSurfaceContextSource>(activeScene, "PhysicsRunSurfaceContextSource");
+
+        var runSurfaceInstaller =
+            FindSingleInScene<GameplayPhysicsSceneCompositionMonoInstaller>(activeScene, "GameplayPhysicsSceneCompositionMonoInstaller");
         var characterPresentationView = FindSingleInScene<CharacterPresentationView>(activeScene, "CharacterPresentationView");
         var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, "Run Camera Anchor");
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, "Run Camera Rig");
@@ -159,7 +162,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runCameraSource, Is.Not.Null);
         Assert.That(contactNotifier, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.Not.Null);
-        Assert.That(runSurfaceContextSource, Is.Not.Null);
+        Assert.That(runSurfaceInstaller, Is.Not.Null);
+        Assert.That(typeof(Component).IsAssignableFrom(typeof(PhysicsRunSurfaceContextSource)), Is.False);
         Assert.That(characterPresentationView, Is.Not.Null);
         Assert.That(finishPresentationView, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.Not.Null);
@@ -227,7 +231,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunCameraSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunProgressFrameSource, Is.SameAs(runProgressFrameSource));
-        Assert.That(resolvedRunSurfaceContextSource, Is.SameAs(runSurfaceContextSource));
+        Assert.That(resolvedRunSurfaceContextSource, Is.TypeOf<PhysicsRunSurfaceContextSource>());
+        Assert.That(resolvedRunSurfaceContextSource, Is.Not.SameAs(runSurfaceInstaller));
         Assert.That(resolvedRunSteeringFrameSource, Is.Not.Null);
         Assert.That(resolvedContactNotifier, Is.SameAs(contactNotifier));
         Assert.That(resolvedRunEndConfig, Is.SameAs(assignedRunEndConfigs[0]));
@@ -275,9 +280,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
-        Assert.That(runSurfaceContextSource.SupportColliderForTests, Is.SameAs(targetCollider));
-        Assert.That(runSurfaceContextSource.SupportProbeDistanceForTests, Is.LessThanOrEqualTo(0.25f));
-        Assert.That(runSurfaceContextSource.SurfaceMaskForTests.value, Is.EqualTo(TestAssets.RunSurfaceLayerMask.value));
+        Assert.That(runSurfaceInstaller.SupportColliderForTests, Is.SameAs(targetCollider));
+        Assert.That(runSurfaceInstaller.SupportProbeDistanceForTests, Is.LessThanOrEqualTo(0.25f));
+        Assert.That(runSurfaceInstaller.SurfaceMaskForTests.value, Is.EqualTo(TestAssets.RunSurfaceLayerMask.value));
         Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);
@@ -358,20 +363,16 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunEndConfig.LostMomentumPlanarSpeedThreshold, Is.EqualTo(1f).Within(0.0001f));
         Assert.That(resolvedRunEndConfig.LostMomentumProgressThreshold, Is.EqualTo(0.5f).Within(0.0001f));
 
-        Assert.That(runProgressFrameSource.TryCreateSnapshot(playerRigidbody.position, out var frameSnapshot, out var frameError), Is.True,
-            frameError);
+        Assert.That(
+            ((IRunProgressFrameSource)runProgressFrameSource).TryCreateSnapshot(playerRigidbody.position, out var frameSnapshot, out var frameError),
+            Is.True, frameError);
         Assert.That(frameSnapshot.ForwardDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
         Assert.That(frameSnapshot.RightDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
         Assert.That(frameSnapshot.UpDirection.sqrMagnitude, Is.EqualTo(1f).Within(0.0001f));
         AssertLegacyRunFinishIsNonAuthoritative(runContactsRoot, legacyRunFinish);
         AssertRunContactPlaceholder(runContactsRoot, runSafetyNet, RunContactCategory.SafetyNet, true);
         AssertRunContactPlaceholder(runContactsRoot, runObstacle, RunContactCategory.Obstacle, false);
-
-        AssertFinishPresentationContracts(
-            finishPresentationRoot,
-            finishThresholdVisual,
-            authoritativeRunFinish,
-            finishPresentationView);
+        AssertFinishPresentationContracts(finishPresentationRoot, finishThresholdVisual, authoritativeRunFinish, finishPresentationView);
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Boundary"));
         Assert.That(System.Enum.GetNames(typeof(RunContactCategory)), Does.Not.Contain("Ramp"));
         Assert.That(playerRigidbody.collisionDetectionMode, Is.EqualTo(CollisionDetectionMode.ContinuousDynamic));
@@ -828,8 +829,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         return transition.destinationState != null
                && transition.destinationState.name == mode.ToString()
                && transition.conditions.Any(condition =>
-                   condition.parameter == "PresentationMode"
-                   && condition.mode == AnimatorConditionMode.Equals
+                   condition is { parameter: "PresentationMode", mode: AnimatorConditionMode.Equals }
                    && Mathf.Approximately(condition.threshold, (int)mode));
     }
 
@@ -883,7 +883,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
         return state.motion;
     }
-#endif
+#endif // UNITY_EDITOR
 
     private void AssertPoleFramesAnchor(GameObject pole, Transform anchor, Vector3 anchorPosition, string poleName)
     {

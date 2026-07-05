@@ -11008,7 +11008,8 @@ MonoBehaviour:
   _playerSteeringTarget: {fileID: 1918570527}
   _runCameraSource: {fileID: 1918570528}
   _runProgressFrameSource: {fileID: 2200000002}
-  _runSurfaceContextSource: {fileID: 1918570530}
+  _sceneCompositionInstallers:
+  - {fileID: 1918570530}
   _contactNotifier: {fileID: 1918570529}
   _runCameraAnchor: {fileID: 1577665901}
   _runCameraRig: {fileID: 1422486652}
@@ -14094,7 +14095,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65ac48e14daf342949c51f34765c11de, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.PhysicsRunSurfaceContextSource
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.GameplayPhysicsSceneCompositionMonoInstaller
   _supportCollider: {fileID: 200501558}
   _runProgressFrameSource: {fileID: 2200000002}
   _supportProbeDistance: 0.08

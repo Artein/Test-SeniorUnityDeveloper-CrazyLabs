@@ -87,7 +87,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Player Steering Target")
                 .And.Message.Contains("Run Camera Source")
                 .And.Message.Contains("Run Progress Frame Source")
-                .And.Message.Contains("Run Surface Context Source")
+                .And.Message.Contains("Scene Composition Installer")
                 .And.Message.Contains("Rigidbody Contact Notifier")
                 .And.Message.Contains("Run Camera Anchor")
                 .And.Message.Contains("Run Camera Rig")
@@ -112,6 +112,62 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_EmptySceneCompositionInstallers_ThrowsWithSceneCompositionInstallerMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetSceneCompositionInstallersForTests(Array.Empty<BaseSceneCompositionMonoInstaller>());
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("at least one Scene Composition Installer"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_NullSceneCompositionInstallerEntry_ThrowsWithInstallerIndexMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetSceneCompositionInstallersForTests(new BaseSceneCompositionMonoInstaller[] { null });
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Scene Composition Installer at index 0"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_DuplicateSceneCompositionInstaller_ThrowsWithDuplicateInstallerMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetSceneCompositionInstallersForTests(new BaseSceneCompositionMonoInstaller[]
+        {
+            fixture.RunSurfaceInstaller,
+            fixture.RunSurfaceInstaller
+        });
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate Scene Composition Installer"));
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_MissingPhysicsSceneInstallerReferences_ThrowsWithReferenceNames()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        var invalidInstaller = CreateGameObject("Invalid Run Surface Installer")
+            .AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
+
+        fixture.Scope.SetSceneCompositionInstallersForTests(new BaseSceneCompositionMonoInstaller[] { invalidInstaller });
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>()
+                .With.Message.Contains("Support Collider"));
     }
 
     [Test]
@@ -243,6 +299,7 @@ public sealed class GameplayLifetimeScopeTests
         fixture.Scope.ConfigureForTests(builder);
 
         using var container = builder.Build();
+
         var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(
             FindObjectsInactive.Include,
             FindObjectsSortMode.None);
@@ -364,6 +421,9 @@ public sealed class GameplayLifetimeScopeTests
         var runSteeringFrameFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSteeringFrameSource));
 
+        var runSurfaceContextSourceFixedTickableIndex =
+            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSurfaceContextSource));
+
         var playerSteeringControllerFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is PlayerSteeringController);
 
@@ -384,7 +444,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(continueCommand, Is.Not.Null);
         Assert.That(initializables.Count, Is.EqualTo(20));
         Assert.That(tickables.Count, Is.EqualTo(4));
-        Assert.That(fixedTickables.Count, Is.EqualTo(6));
+        Assert.That(fixedTickables.Count, Is.EqualTo(7));
         Assert.That(lateTickables.Count, Is.EqualTo(2));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -398,8 +458,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runSteeringGesture, Is.Not.Null);
         Assert.That(runSteeringFrameSource, Is.Not.Null);
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
+        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(runSteeringFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(playerSteeringControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.LessThan(runSteeringFrameFixedTickableIndex));
         Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(playerSteeringControllerFixedTickableIndex));
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
@@ -408,7 +470,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runMotionSource, Is.SameAs(fixture.RunCameraSource));
         Assert.That(runProgressService, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.SameAs(fixture.RunProgressFrameSource));
-        Assert.That(runSurfaceContextSource, Is.SameAs(fixture.RunSurfaceContextSource));
+        Assert.That(runSurfaceContextSource, Is.TypeOf<PhysicsRunSurfaceContextSource>());
+        Assert.That(runSurfaceContextSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
@@ -522,12 +585,14 @@ public sealed class GameplayLifetimeScopeTests
         var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(runPreparationCamera, preLaunchCamera, runCamera);
-        var runSurfaceContextSource = CreateGameObject("Run Surface Context Source").AddComponent<PhysicsRunSurfaceContextSource>();
         var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
         var finishPresentationView = CreateGameObject("Finish Presentation View").AddComponent<FinishPresentationView>();
         var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
         playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
         playerPickupContactCollider.gameObject.tag = "Player";
+        var runSurfaceInstaller = CreateGameObject("Run Surface Installer").AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
+        var runSurfaceMask = new LayerMask { value = Physics.DefaultRaycastLayers };
+        runSurfaceInstaller.SetReferencesForTests(playerPickupContactCollider, supportProbeDistance: 0.08f, runSurfaceMask);
         var currencyDefinition = CreateCurrencyDefinition("Coins", "currency-coins");
         var upgradeCatalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
@@ -557,7 +622,7 @@ public sealed class GameplayLifetimeScopeTests
             playerSteeringTarget,
             runCameraSource,
             runProgressFrameSource,
-            runSurfaceContextSource,
+            new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller },
             contactNotifier,
             runCameraAnchor,
             runCameraRig,
@@ -601,7 +666,7 @@ public sealed class GameplayLifetimeScopeTests
             RunEndConfig = runEndConfig,
             RunCameraSource = runCameraSource,
             RunProgressFrameSource = runProgressFrameSource,
-            RunSurfaceContextSource = runSurfaceContextSource,
+            RunSurfaceInstaller = runSurfaceInstaller,
             ContactNotifier = contactNotifier,
             RunCameraAnchor = runCameraAnchor,
             InputCamera = camera,
@@ -905,7 +970,7 @@ public sealed class GameplayLifetimeScopeTests
         public RunEndConfig RunEndConfig { get; set; }
         public RigidbodyRunCameraSource RunCameraSource { get; set; }
         public RunProgressFrameSource RunProgressFrameSource { get; set; }
-        public PhysicsRunSurfaceContextSource RunSurfaceContextSource { get; set; }
+        public GameplayPhysicsSceneCompositionMonoInstaller RunSurfaceInstaller { get; set; }
         public RigidbodyContactNotifier ContactNotifier { get; set; }
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
         public Camera InputCamera { get; set; }

@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using VContainer.Unity;
 
 namespace Game.Gameplay
 {
@@ -7,17 +9,16 @@ namespace Game.Gameplay
         RunSurfaceContext Current { get; }
     }
 
-    public sealed partial class PhysicsRunSurfaceContextSource : MonoBehaviour, IRunSurfaceContextSource
+    public sealed partial class PhysicsRunSurfaceContextSource : IRunSurfaceContextSource, IFixedTickable
     {
         private const float SupportProbeSkinWidth = 0.02f;
         private const float MinimumSupportNormalDot = 0.17f;
         private const int UngroundedMissThreshold = 2;
 
-        [SerializeField] private Collider _supportCollider;
-        [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
-        [SerializeField] private float _supportProbeDistance = 0.08f;
-        [SerializeField] private LayerMask _surfaceMask = Physics.DefaultRaycastLayers;
-
+        private readonly Collider _supportCollider;
+        private readonly IRunProgressFrameSource _runProgressFrameSource;
+        private readonly float _supportProbeDistance;
+        private readonly LayerMask _surfaceMask;
         private readonly RaycastHit[] _supportHits = new RaycastHit[16];
         private readonly RaycastHit[] _normalProbeHits = new RaycastHit[16];
         private readonly Collider[] _overlapHits = new Collider[16];
@@ -25,34 +26,34 @@ namespace Game.Gameplay
 
         private int _consecutiveMissedSupportSamples = UngroundedMissThreshold;
 
-        public RunSurfaceContext Current { get; private set; } = new(false, Vector3.up, 0f);
+        public RunSurfaceContext Current { get; private set; } = new(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
 
-        private void Reset()
+        public PhysicsRunSurfaceContextSource(
+            Collider supportCollider,
+            IRunProgressFrameSource runProgressFrameSource,
+            float supportProbeDistance,
+            LayerMask surfaceMask)
         {
-            _supportCollider = GetComponentInChildren<Collider>();
-            _runProgressFrameSource = GetComponentInParent<RunProgressFrameSource>();
+            _supportCollider = supportCollider != null ? supportCollider : throw new ArgumentNullException(nameof(supportCollider));
+            _runProgressFrameSource = runProgressFrameSource ?? throw new ArgumentNullException(nameof(runProgressFrameSource));
+            _supportProbeDistance = Mathf.Max(0f, supportProbeDistance);
+            _surfaceMask = surfaceMask;
         }
 
-        private void FixedUpdate()
+        void IFixedTickable.FixedTick()
         {
             Sample();
         }
 
         private void Sample()
         {
-            if (_supportCollider == null || _runProgressFrameSource == null)
-            {
-                SetUngrounded();
-                return;
-            }
-
             if (!_runProgressFrameSource.TryCreateSnapshot(_supportCollider.bounds.center, out var frame, out _))
             {
                 SetUngrounded();
                 return;
             }
 
-            if (!TryGetBestSupportHit(frame.UpDirection, Mathf.Max(0f, _supportProbeDistance), out var supportHit))
+            if (!TryGetBestSupportHit(frame.UpDirection, _supportProbeDistance, out var supportHit))
             {
                 RecordMissedSupportSample();
                 return;

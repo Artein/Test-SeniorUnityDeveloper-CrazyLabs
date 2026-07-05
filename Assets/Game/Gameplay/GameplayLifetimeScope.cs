@@ -40,7 +40,7 @@ namespace Game.Gameplay
         [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
-        [SerializeField] private PhysicsRunSurfaceContextSource _runSurfaceContextSource;
+        [SerializeField] private BaseSceneCompositionMonoInstaller[] _sceneCompositionInstallers;
         [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
@@ -102,7 +102,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
-            builder.RegisterInstance<IRunSurfaceContextSource>(_runSurfaceContextSource);
+            InstallSceneComposition(builder);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraLens>(new TransformRunCameraLens(_inputCamera.transform));
@@ -151,9 +151,9 @@ namespace Game.Gameplay
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
             builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
             builder.Register<RunRewardSourceCatalog>(Lifetime.Singleton);
-            builder.Register<AccumulatedRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
-            builder.Register<DistanceBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
-            builder.Register<AirTimeBonusRunRewardContributor>(Lifetime.Singleton).As<IRunRewardContributor>();
+            builder.Register<IRunRewardContributor, AccumulatedRunRewardContributor>(Lifetime.Singleton);
+            builder.Register<IRunRewardContributor, DistanceBonusRunRewardContributor>(Lifetime.Singleton);
+            builder.Register<IRunRewardContributor, AirTimeBonusRunRewardContributor>(Lifetime.Singleton);
             builder.Register<RunRewardBreakdownBuilder>(Lifetime.Singleton);
             builder.Register<PlayerEconomyState>(Lifetime.Singleton);
             builder.Register<EconomySaveSettings>(Lifetime.Singleton);
@@ -205,6 +205,24 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<FinishCelebrationPresenter>();
         }
 
+        private void InstallSceneComposition(IContainerBuilder builder)
+        {
+            var installers = _sceneCompositionInstallers ?? Array.Empty<BaseSceneCompositionMonoInstaller>();
+
+            for (var installerIndex = 0; installerIndex < installers.Length; installerIndex += 1)
+            {
+                var installer = installers[installerIndex];
+
+                if (installer == null)
+                {
+                    throw new InvalidOperationException(
+                        $"GameplayLifetimeScope Scene Composition Installer at index {installerIndex} is missing.");
+                }
+
+                installer.Install(builder);
+            }
+        }
+
         private IReadOnlyList<Pickup> GetLevelPickups()
         {
             var pickups = new List<Pickup>();
@@ -231,9 +249,9 @@ namespace Game.Gameplay
 
         private void AddPickupReferences(ICollection<Pickup> target, IReadOnlyList<Pickup> source)
         {
-            for (var pickupIndex = 0; pickupIndex < source.Count; pickupIndex += 1)
+            for (var i = 0; i < source.Count; i += 1)
             {
-                target.Add(source[pickupIndex]);
+                target.Add(source[i]);
             }
         }
 

@@ -89,8 +89,8 @@ namespace Game.Gameplay
             if (_runProgressFrameSource == null)
                 yield return "GameplayLifetimeScope requires a Run Progress Frame Source reference.";
 
-            if (_runSurfaceContextSource == null)
-                yield return "GameplayLifetimeScope requires a Run Surface Context Source reference.";
+            foreach (var error in GetSceneCompositionInstallerValidationErrors())
+                yield return error;
 
             if (_contactNotifier == null)
                 yield return "GameplayLifetimeScope requires a Rigidbody Contact Notifier reference.";
@@ -154,6 +154,36 @@ namespace Game.Gameplay
                          _pickupLayerName))
             {
                 yield return error;
+            }
+        }
+
+        private IEnumerable<string> GetSceneCompositionInstallerValidationErrors()
+        {
+            if (_sceneCompositionInstallers is null || _sceneCompositionInstallers.Length == 0)
+            {
+                yield return "GameplayLifetimeScope requires at least one Scene Composition Installer reference.";
+                yield break;
+            }
+
+            var installers = new HashSet<BaseSceneCompositionMonoInstaller>();
+
+            for (var installerIndex = 0; installerIndex < _sceneCompositionInstallers.Length; installerIndex += 1)
+            {
+                var installer = _sceneCompositionInstallers[installerIndex];
+
+                if (installer == null)
+                {
+                    yield return $"GameplayLifetimeScope Scene Composition Installer at index {installerIndex} is missing.";
+                    continue;
+                }
+
+                if (!installers.Add(installer))
+                    yield return $"GameplayLifetimeScope contains duplicate Scene Composition Installer reference '{installer.name}'.";
+
+                foreach (var error in installer.GetReferenceValidationErrors())
+                {
+                    yield return error;
+                }
             }
         }
 
