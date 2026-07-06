@@ -45,6 +45,12 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
 
         var animatedContactSensorPoseSyncView =
             FindSingleInScene<AnimatedContactSensorPoseSyncView>(scene, "AnimatedContactSensorPoseSyncView");
+        var player = FindGameObjectByName(scene, "Player");
+        var movementPhysicsRoot = FindGameObjectByName(scene, "MovementPhysicsRoot");
+        var characterVisualAnchor = FindGameObjectByName(scene, "CharacterVisualAnchor");
+        var launchTargetColliderRoot = FindGameObjectByName(scene, "LaunchTargetColliderRoot");
+        var runBodyContactColliderRoot = FindGameObjectByName(scene, "RunBodyContactColliderRoot");
+        var bandCenter = FindGameObjectByName(scene, "Band Center");
         var playerBodyPartLayer = GetRequiredLayer(PlayerBodyPartLayerName);
         var pickupLayer = GetRequiredLayer(PickupLayerName);
         var allScenePickups = FindComponentsInScene<Pickup>(scene);
@@ -93,6 +99,15 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
         var bigCoinPickup = FindConfiguredPickup(configuredPickups, 25, "big coin pickup");
 
         Assert.That(regularCoinPickup.Definition.CurrencyDefinition, Is.SameAs(bigCoinPickup.Definition.CurrencyDefinition));
+        AssertPlayerTransformAuthority(
+            player,
+            movementPhysicsRoot,
+            characterVisualAnchor,
+            animatedContactSensorPoseSyncView,
+            pickupSensorSource,
+            launchTargetColliderRoot,
+            runBodyContactColliderRoot,
+            bandCenter);
         AssertPickupSensorAuthoring(pickupSensorSource, pickupSensorNotifiers, playerBodyPartLayer);
         AssertPickupSensorPoseBindings(animatedContactSensorPoseSyncView, pickupSensorNotifiers);
     }
@@ -184,6 +199,51 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
             Assert.That(binding.Source, Is.Not.Null, expectedSensor.SensorName);
             Assert.That(binding.Source.name, Is.EqualTo(expectedSensor.SourceBoneName), expectedSensor.SensorName);
         }
+    }
+
+    private void AssertPlayerTransformAuthority(
+        GameObject player,
+        GameObject movementPhysicsRoot,
+        GameObject characterVisualAnchor,
+        AnimatedContactSensorPoseSyncView poseSyncView,
+        PickupSensorSource pickupSensorSource,
+        GameObject launchTargetColliderRoot,
+        GameObject runBodyContactColliderRoot,
+        GameObject bandCenter)
+    {
+        var movementRigidbody = movementPhysicsRoot.GetComponent<Rigidbody>();
+        var sensorRoot = poseSyncView.RootRigidbody.gameObject;
+
+        Assert.That(player.transform.parent, Is.Null, player.name);
+        Assert.That(player.GetComponent<Rigidbody>(), Is.Null, player.name);
+        Assert.That(player.GetComponent<Collider>(), Is.Null, player.name);
+        Assert.That(movementPhysicsRoot.transform.parent, Is.SameAs(player.transform), movementPhysicsRoot.name);
+        Assert.That(movementRigidbody, Is.Not.Null, movementPhysicsRoot.name);
+        Assert.That(characterVisualAnchor.transform.parent, Is.SameAs(player.transform), characterVisualAnchor.name);
+        Assert.That(sensorRoot.transform.parent, Is.SameAs(player.transform), sensorRoot.name);
+        Assert.That(pickupSensorSource.transform, Is.SameAs(sensorRoot.transform), pickupSensorSource.name);
+        Assert.That(sensorRoot.transform.IsChildOf(movementPhysicsRoot.transform), Is.False, sensorRoot.name);
+        Assert.That(launchTargetColliderRoot.transform.parent, Is.SameAs(movementPhysicsRoot.transform), launchTargetColliderRoot.name);
+        Assert.That(runBodyContactColliderRoot.transform.parent, Is.SameAs(movementPhysicsRoot.transform), runBodyContactColliderRoot.name);
+        Assert.That(bandCenter.transform.parent, Is.SameAs(movementPhysicsRoot.transform), bandCenter.name);
+        Assert.That(FindNonKinematicRigidbodyAncestor(sensorRoot.transform), Is.Null, sensorRoot.name);
+    }
+
+    private Rigidbody FindNonKinematicRigidbodyAncestor(Transform transform)
+    {
+        var current = transform.parent;
+
+        while (current != null)
+        {
+            var rigidbody = current.GetComponent<Rigidbody>();
+
+            if (rigidbody != null && !rigidbody.isKinematic)
+                return rigidbody;
+
+            current = current.parent;
+        }
+
+        return null;
     }
 
     private void AssertPickupVisualAuthoring(Pickup pickup)

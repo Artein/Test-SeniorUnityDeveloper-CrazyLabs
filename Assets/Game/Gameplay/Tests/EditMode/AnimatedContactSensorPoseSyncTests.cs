@@ -101,6 +101,21 @@ public sealed class AnimatedContactSensorPoseSyncTests
     }
 
     [Test]
+    public void GetReferenceValidationErrors_RootUnderNonKinematicRigidbodyAncestor_ReturnsHierarchyError()
+    {
+        var source = CreateGameObject("Character Left Hand").transform;
+        var view = CreateValidView(out _, source, out _);
+        var movementPhysicsRoot = CreateGameObject("Movement Physics Root");
+        movementPhysicsRoot.AddComponent<Rigidbody>().isKinematic = false;
+
+        view.RootRigidbody.transform.SetParent(movementPhysicsRoot.transform, true);
+
+        var errors = GetReferenceValidationErrors(view).ToArray();
+
+        Assert.That(errors.Any(error => error.Contains("non-kinematic Rigidbody ancestor")), Is.True);
+    }
+
+    [Test]
     public void GetReferenceValidationErrors_DuplicateTarget_ReturnsDuplicateError()
     {
         var source = CreateGameObject("Character Left Hand").transform;
