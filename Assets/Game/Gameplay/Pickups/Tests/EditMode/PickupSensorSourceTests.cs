@@ -87,6 +87,47 @@ public sealed class PickupSensorSourceTests
     }
 
     [Test]
+    public void Validate_InactiveSensorGameObject_ReturnsInactiveSensorError()
+    {
+        var sourceRoot = CreateGameObject("Pickup Sensor Source");
+        var sensor = CreateSensor(sourceRoot.transform, "Left Hand Sensor", PlayerBodyPartLayerName);
+        sensor.gameObject.SetActive(false);
+        var source = CreateSource(sourceRoot, sensor);
+
+        var errors = source.GetReferenceValidationErrorsForTests(PlayerBodyPartLayerName, PickupLayerName).ToArray();
+
+        Assert.That(errors.Any(error => error.Contains("active in hierarchy")), Is.True);
+    }
+
+    [Test]
+    public void Validate_SensorUnderInactiveParent_ReturnsInactiveSensorError()
+    {
+        var sourceRoot = CreateGameObject("Pickup Sensor Source");
+        var inactiveParent = CreateGameObject("Inactive Sensor Parent");
+        inactiveParent.transform.SetParent(sourceRoot.transform, false);
+        inactiveParent.SetActive(false);
+        var sensor = CreateSensor(inactiveParent.transform, "Left Hand Sensor", PlayerBodyPartLayerName);
+        var source = CreateSource(sourceRoot, sensor);
+
+        var errors = source.GetReferenceValidationErrorsForTests(PlayerBodyPartLayerName, PickupLayerName).ToArray();
+
+        Assert.That(errors.Any(error => error.Contains("active in hierarchy")), Is.True);
+    }
+
+    [Test]
+    public void Validate_DisabledTriggerNotifier_ReturnsDisabledSensorError()
+    {
+        var sourceRoot = CreateGameObject("Pickup Sensor Source");
+        var sensor = CreateSensor(sourceRoot.transform, "Left Hand Sensor", PlayerBodyPartLayerName);
+        sensor.enabled = false;
+        var source = CreateSource(sourceRoot, sensor);
+
+        var errors = source.GetReferenceValidationErrorsForTests(PlayerBodyPartLayerName, PickupLayerName).ToArray();
+
+        Assert.That(errors.Any(error => error.Contains("TriggerNotifier")), Is.True);
+    }
+
+    [Test]
     public void Validate_DuplicateTriggerNotifier_ReturnsDuplicateError()
     {
         var sourceRoot = CreateGameObject("Pickup Sensor Source");

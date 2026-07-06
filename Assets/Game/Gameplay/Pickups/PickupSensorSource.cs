@@ -85,6 +85,18 @@ namespace Game.Gameplay.Pickups
             int playerBodyPartLayer,
             string playerBodyPartLayerName)
         {
+            if (!sensor.gameObject.activeInHierarchy)
+            {
+                yield return
+                    $"Pickup Sensor Source '{name}' Sensor Entry '{sensor.name}' must be active in hierarchy.";
+            }
+
+            if (!sensor.enabled)
+            {
+                yield return
+                    $"Pickup Sensor Source '{name}' Sensor Entry '{sensor.name}' TriggerNotifier must be enabled.";
+            }
+
             var colliders = sensor.GetComponents<Collider>();
 
             if (colliders.Length <= 0)
