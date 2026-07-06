@@ -55,6 +55,9 @@ namespace Game.Gameplay
         [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
+        
+        [Header("Diagnostics")]
+        [SerializeField] private bool _runDiagnosticsOverlayEnabled;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -153,8 +156,6 @@ namespace Game.Gameplay
 
             builder.RegisterComponentOnNewGameObject<UnityApplicationLifecycleNotifier>(Lifetime.Singleton, "ApplicationLifecycleNotifier")
                 .As<IApplicationPauseNotifier, IApplicationFocusChangeNotifier, IApplicationQuitNotifier>();
-            builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");
-            builder.RegisterBuildCallback(container => container.Resolve<RunDiagnosticsOverlay>());
 
             builder.Register<IPlayerEconomyContentIndex, GameplayEconomyContentIndex>(Lifetime.Singleton);
             builder.Register<EconomySaveSerializer>(Lifetime.Singleton);
@@ -196,6 +197,12 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
             builder.RegisterEntryPoint<FinishCelebrationPresenter>();
+            
+            if (_runDiagnosticsOverlayEnabled)
+            {
+                builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");
+                builder.RegisterBuildCallback(container => container.Resolve<RunDiagnosticsOverlay>());
+            }
         }
 
         private void InstallSceneComposition(IContainerBuilder builder)
