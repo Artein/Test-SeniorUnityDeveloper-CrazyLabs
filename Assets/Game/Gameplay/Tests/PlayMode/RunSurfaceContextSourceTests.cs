@@ -164,6 +164,50 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     }
 
     [Test]
+    public void given_StableSupportAndTransientLargeFrameUpChange_when_Sampled_then_ContextKeepsStableSupportNormal()
+    {
+        var bankRotation = Quaternion.AngleAxis(55f, Vector3.forward);
+        var bankNormal = bankRotation * Vector3.up;
+        var source = CreateSphereSource(new Vector3(0f, 0.35f, 0f), 0.4f, 0.2f, out var frameSource);
+        CreateSurface(0.05f, Quaternion.identity);
+        CreateSurface(0.05f, bankRotation);
+        Physics.SyncTransforms();
+
+        frameSource.UpDirection = Vector3.up;
+        source.SampleForTests();
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(Vector3.Angle(source.Current.GroundNormal, Vector3.up), Is.LessThanOrEqualTo(0.1f));
+
+        frameSource.UpDirection = bankNormal;
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(Vector3.Angle(source.Current.GroundNormal, Vector3.up), Is.LessThanOrEqualTo(0.1f));
+    }
+
+    [Test]
+    public void given_StableSupportAndPersistentLargeFrameUpChange_when_Sampled_then_ContextAcceptsNewSupportNormal()
+    {
+        var bankRotation = Quaternion.AngleAxis(55f, Vector3.forward);
+        var bankNormal = bankRotation * Vector3.up;
+        var source = CreateSphereSource(new Vector3(0f, 0.35f, 0f), 0.4f, 0.2f, out var frameSource);
+        CreateSurface(0.05f, Quaternion.identity);
+        CreateSurface(0.05f, bankRotation);
+        Physics.SyncTransforms();
+
+        frameSource.UpDirection = Vector3.up;
+        source.SampleForTests();
+        Assert.That(source.Current.IsGrounded, Is.True);
+
+        frameSource.UpDirection = bankNormal;
+        source.SampleForTests();
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        Assert.That(Vector3.Angle(source.Current.GroundNormal, bankNormal), Is.LessThanOrEqualTo(0.1f));
+    }
+
+    [Test]
     public void given_MissingSupportCollider_when_Constructed_then_ThrowsArgumentNullException()
     {
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
@@ -226,6 +270,31 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
             TestAssets.RunSurfaceLayerMask);
     }
 
+    private PhysicsRunSurfaceContextSource CreateSphereSource(
+        Vector3 supportCenterOffset,
+        float supportRadius,
+        float supportProbeDistance,
+        out FakeRunProgressFrameSource frameSource)
+    {
+        var sourceObject = CreateGameObject("Run Surface Context Source");
+        sourceObject.transform.position = TestOrigin;
+        frameSource = new FakeRunProgressFrameSource(sourceObject.transform.position);
+
+        var supportObject = CreateGameObject("Support Collider");
+        supportObject.transform.SetParent(sourceObject.transform, false);
+        supportObject.transform.localPosition = supportCenterOffset;
+
+        var supportCollider = supportObject.AddComponent<SphereCollider>();
+        supportCollider.radius = supportRadius;
+
+        return new PhysicsRunSurfaceContextSource(
+            supportCollider,
+            frameSource,
+            new RunSupportColliderProbeFactory(),
+            supportProbeDistance,
+            TestAssets.RunSurfaceLayerMask);
+    }
+
     private Collider CreateSupportCollider(Transform parent, float supportCenterY)
     {
         var supportObject = CreateGameObject("Support Collider");
@@ -272,5 +341,22 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         var gameObject = new GameObject(name);
         _createdObjects.Add(gameObject);
         return gameObject;
+    }
+
+    private sealed class FakeRunProgressFrameSource : IRunProgressFrameSource
+    {
+        private readonly Vector3 _origin;
+
+        public Vector3 UpDirection { get; set; } = Vector3.up;
+
+        public FakeRunProgressFrameSource(Vector3 origin)
+        {
+            _origin = origin;
+        }
+
+        public bool TryCreateSnapshot(Vector3 origin, out RunProgressFrameSnapshot snapshot, out string error)
+        {
+            return RunProgressFrameSnapshot.TryCreate(_origin, Vector3.forward, UpDirection, out snapshot, out error);
+        }
     }
 }

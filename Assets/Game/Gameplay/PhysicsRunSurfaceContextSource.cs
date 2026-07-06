@@ -13,7 +13,10 @@ namespace Game.Gameplay
     {
         private const float SupportProbeSkinWidth = 0.02f;
         private const float MinimumSupportNormalDot = 0.17f;
+        private const float SupportNormalSnapDegrees = 45f;
+        private const float SameSuspectSupportNormalDot = 0.9999f;
         private const int UngroundedMissThreshold = 2;
+        private const int SuspectSupportNormalConfirmationSampleCount = 2;
 
         private readonly IRunSupportColliderProbe _supportProbe;
         private readonly IRunProgressFrameSource _runProgressFrameSource;
@@ -25,6 +28,11 @@ namespace Game.Gameplay
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator = new RunSurfaceSlopeCalculator();
 
         private int _consecutiveMissedSupportSamples = UngroundedMissThreshold;
+        private Vector3 _acceptedSupportNormal = Vector3.up;
+        private Vector3 _suspectSupportNormal = Vector3.up;
+        private bool _hasAcceptedSupportNormal;
+        private bool _hasSuspectSupportNormal;
+        private int _suspectSupportNormalSampleCount;
 
         public RunSurfaceContext Current { get; private set; } = new(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
 
@@ -66,13 +74,15 @@ namespace Game.Gameplay
 
             _consecutiveMissedSupportSamples = 0;
 
-            var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(supportHit.Normal, frame);
-            Current = new RunSurfaceContext(true, supportHit.Normal, downhillDegrees);
+            var supportNormal = AcceptOrKeepSupportNormal(supportHit.Normal);
+            var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(supportNormal, frame);
+            Current = new RunSurfaceContext(true, supportNormal, downhillDegrees);
         }
 
         private void SetUngrounded()
         {
             _consecutiveMissedSupportSamples = UngroundedMissThreshold;
+            ClearAcceptedSupportNormal();
             Current = new RunSurfaceContext(false, Vector3.up, 0f);
         }
 
@@ -83,7 +93,79 @@ namespace Game.Gameplay
             if (Current.IsGrounded && _consecutiveMissedSupportSamples < UngroundedMissThreshold)
                 return;
 
+            ClearAcceptedSupportNormal();
             Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        }
+
+        private Vector3 AcceptOrKeepSupportNormal(Vector3 sampledSupportNormal)
+        {
+            var supportNormal = sampledSupportNormal.normalized;
+
+            if (!Current.IsGrounded || !_hasAcceptedSupportNormal)
+            {
+                AcceptSupportNormal(supportNormal);
+                return _acceptedSupportNormal;
+            }
+
+            var angleToSample = Vector3.Angle(_acceptedSupportNormal, supportNormal);
+
+            if (angleToSample <= 0.0001f)
+            {
+                AcceptSupportNormal(supportNormal);
+                return _acceptedSupportNormal;
+            }
+
+            if (angleToSample > SupportNormalSnapDegrees)
+                return ProcessSuspectSupportNormal(supportNormal);
+
+            AcceptSupportNormal(supportNormal);
+            return _acceptedSupportNormal;
+        }
+
+        private Vector3 ProcessSuspectSupportNormal(Vector3 supportNormal)
+        {
+            if (!_hasSuspectSupportNormal || !AreSameDirection(_suspectSupportNormal, supportNormal))
+            {
+                _suspectSupportNormal = supportNormal;
+                _suspectSupportNormalSampleCount = 1;
+                _hasSuspectSupportNormal = true;
+            }
+            else
+            {
+                _suspectSupportNormalSampleCount += 1;
+            }
+
+            if (_suspectSupportNormalSampleCount < SuspectSupportNormalConfirmationSampleCount)
+                return _acceptedSupportNormal;
+
+            AcceptSupportNormal(supportNormal);
+            return _acceptedSupportNormal;
+        }
+
+        private void AcceptSupportNormal(Vector3 supportNormal)
+        {
+            _acceptedSupportNormal = supportNormal.normalized;
+            _hasAcceptedSupportNormal = true;
+            ClearSuspectSupportNormal();
+        }
+
+        private void ClearAcceptedSupportNormal()
+        {
+            _acceptedSupportNormal = Vector3.up;
+            _hasAcceptedSupportNormal = false;
+            ClearSuspectSupportNormal();
+        }
+
+        private void ClearSuspectSupportNormal()
+        {
+            _suspectSupportNormal = Vector3.up;
+            _hasSuspectSupportNormal = false;
+            _suspectSupportNormalSampleCount = 0;
+        }
+
+        private bool AreSameDirection(Vector3 firstDirection, Vector3 secondDirection)
+        {
+            return Vector3.Dot(firstDirection, secondDirection) >= SameSuspectSupportNormalDot;
         }
 
         private bool TryGetBestSupportHit(Vector3 upDirection, float supportProbeDistance, out SupportHit bestHit)
