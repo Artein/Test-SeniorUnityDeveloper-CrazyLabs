@@ -102,6 +102,11 @@ namespace Game.Gameplay
             _sceneCompositionInstallers = sceneCompositionInstallers;
         }
 
+        internal void SetRunDiagnosticsOverlayEnabledForTests(bool enabled)
+        {
+            _runDiagnosticsOverlayEnabled = enabled;
+        }
+
         internal void ValidateRequiredReferencesForTests()
         {
             ThrowIfInvalidReferences();

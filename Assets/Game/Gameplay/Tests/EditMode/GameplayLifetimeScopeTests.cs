@@ -285,10 +285,29 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     [Test]
-    public void ConfigureForTests_ValidReferences_CreatesRunDiagnosticsOverlayOnBuild()
+    public void ConfigureForTests_RunDiagnosticsDisabled_DoesNotCreateRunDiagnosticsOverlayOnBuild()
     {
         var fixture = CreateValidScopeFixture();
         var builder = new ContainerBuilder();
+
+        fixture.Scope.ConfigureForTests(builder);
+
+        using var container = builder.Build();
+
+        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        Assert.That(overlays, Is.Empty);
+        Assert.That(() => container.Resolve<RunDiagnosticsOverlay>(), Throws.TypeOf<VContainerException>());
+    }
+
+    [Test]
+    public void ConfigureForTests_RunDiagnosticsEnabled_CreatesRunDiagnosticsOverlayOnBuild()
+    {
+        var fixture = CreateValidScopeFixture();
+        var builder = new ContainerBuilder();
+        fixture.Scope.SetRunDiagnosticsOverlayEnabledForTests(true);
 
         fixture.Scope.ConfigureForTests(builder);
 
