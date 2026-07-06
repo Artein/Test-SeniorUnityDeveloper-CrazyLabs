@@ -10,6 +10,8 @@ namespace Game.Gameplay.CharacterPresentation
 
     internal sealed class CharacterPresentationModeClassifier : ICharacterPresentationModeClassifier
     {
+        private const float FallEnterUpwardSpeedDeadZone = 0.25f;
+
         private readonly ICharacterPresentationTuning _tuning;
 
         public CharacterPresentationModeClassifier(ICharacterPresentationTuning tuning)
@@ -87,18 +89,27 @@ namespace Game.Gameplay.CharacterPresentation
 
         private bool HasFallIntent(CharacterPresentationClassificationInput input)
         {
-            var hardTimeout = Mathf.Max(0f, _tuning.FallEnterHardUngroundedSeconds);
+            var minimumUngroundedSeconds = Mathf.Max(0f, _tuning.FallEnterMinimumUngroundedSeconds);
 
-            if (input.UngroundedElapsedSeconds >= hardTimeout)
-                return true;
+            if (input.UngroundedElapsedSeconds < minimumUngroundedSeconds)
+                return false;
 
-            if (input.UngroundedElapsedSeconds < Mathf.Max(0f, _tuning.FallEnterMinimumUngroundedSeconds))
+            if (HasMeaningfulUpwardMotion(input))
                 return false;
 
             if (input.CourseVerticalSpeed <= -Mathf.Max(0f, _tuning.FallEnterMinimumDownwardSpeed))
                 return true;
 
-            return input.UngroundedVerticalSeparation <= -Mathf.Max(0f, _tuning.FallEnterMinimumVerticalSeparation);
+            if (input.UngroundedVerticalSeparation <= -Mathf.Max(0f, _tuning.FallEnterMinimumVerticalSeparation))
+                return true;
+
+            var hardTimeout = Mathf.Max(minimumUngroundedSeconds, _tuning.FallEnterHardUngroundedSeconds);
+            return input.UngroundedElapsedSeconds >= hardTimeout;
+        }
+
+        private static bool HasMeaningfulUpwardMotion(CharacterPresentationClassificationInput input)
+        {
+            return input.CourseVerticalSpeed > FallEnterUpwardSpeedDeadZone;
         }
 
         private bool TryGetPreservedUngroundedLocomotion(CharacterPresentationMode mode, out CharacterPresentationMode preservedMode)

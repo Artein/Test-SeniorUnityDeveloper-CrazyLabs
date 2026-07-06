@@ -432,6 +432,52 @@ public sealed class CharacterPresentationModeClassifierTests
     }
 
     [Test]
+    public void Classify_UngroundedPastHardTimeoutWithUpwardSpeed_ReturnsSlide()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterHardUngroundedSeconds,
+            coursePlanarSpeed: _tuning.MeaningfulGroundedMovementThreshold + 0.01f,
+            courseVerticalSpeed: 0.5f,
+            ungroundedVerticalSeparation: 0.1f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastMinimumWithDownwardSeparationAndUpwardSpeed_ReturnsSlide()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterMinimumUngroundedSeconds,
+            coursePlanarSpeed: _tuning.MeaningfulGroundedMovementThreshold + 0.01f,
+            courseVerticalSpeed: 0.5f,
+            ungroundedVerticalSeparation: -_tuning.FallEnterMinimumVerticalSeparation);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Slide));
+    }
+
+    [Test]
+    public void Classify_UngroundedPastHardTimeoutWithTinyUpwardSpeed_ReturnsAirborne()
+    {
+        var input = CreateInput(
+            currentMode: CharacterPresentationMode.Slide,
+            surfaceContext: Ungrounded(),
+            ungroundedElapsedSeconds: _tuning.FallEnterHardUngroundedSeconds,
+            courseVerticalSpeed: 0.01f);
+
+        var result = _classifier.Classify(input);
+
+        Assert.That(result.Mode, Is.EqualTo(CharacterPresentationMode.Airborne));
+    }
+
+    [Test]
     public void Classify_UngroundedPastMinimumWithDownwardSpeed_ReturnsAirborne()
     {
         var input = CreateInput(
