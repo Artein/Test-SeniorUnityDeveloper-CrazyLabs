@@ -18,6 +18,16 @@ namespace Game.Gameplay.CharacterPresentation
             {
                 yield return "AnimatedContactSensorPoseSyncView requires a kinematic Rigidbody on the Animated Contact Sensor Physics Root.";
             }
+            else
+            {
+                var nonKinematicAncestor = FindNonKinematicRigidbodyAncestor(rootRigidbody.transform);
+
+                if (nonKinematicAncestor != null)
+                {
+                    yield return
+                        $"AnimatedContactSensorPoseSyncView Animated Contact Sensor Physics Root must not be parented under non-kinematic Rigidbody ancestor '{nonKinematicAncestor.name}'.";
+                }
+            }
 
             var safeBindings = bindings ?? Array.Empty<AnimatedContactSensorPoseBinding>();
 
@@ -51,6 +61,23 @@ namespace Game.Gameplay.CharacterPresentation
                         $"AnimatedContactSensorPoseSyncView Target Transform '{binding.Target.name}' must be inside the Animated Contact Sensor Physics Root.";
                 }
             }
+        }
+
+        private Rigidbody FindNonKinematicRigidbodyAncestor(Transform transform)
+        {
+            var current = transform.parent;
+
+            while (current != null)
+            {
+                var rigidbody = current.GetComponent<Rigidbody>();
+
+                if (rigidbody != null && !rigidbody.isKinematic)
+                    return rigidbody;
+
+                current = current.parent;
+            }
+
+            return null;
         }
     }
 }
