@@ -13,7 +13,7 @@ using VContainer;
 using static GameplaySceneBandShapePlayModeTestUtils;
 
 // ReSharper disable once CheckNamespace
-public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGameplayScenePlayModeFixture
+public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplayScenePlayModeFixture
 {
     private const string PresentationModeParameterName = "PresentationMode";
     private const string PlaybackSpeedParameterName = "PlaybackSpeedMultiplier";
@@ -63,6 +63,61 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
         }
     }
 
+    [UnityTest]
+    public IEnumerator given_LadybugAnimator_when_AirborneTransitionReceivesSlideAgain_then_TransitionRedirectsToSlide()
+    {
+        yield return ReloadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
+        var activeScene = SceneManager.GetActiveScene();
+        var sourceAnimator = FindCharacterAnimator(activeScene);
+        var probe = Object.Instantiate(sourceAnimator.gameObject);
+
+        probe.name = "Ladybug Animator Interruption Probe";
+        probe.SetActive(false);
+        probe.transform.position += Vector3.right * 1000f;
+
+        var animator = probe.GetComponent<Animator>();
+        animator.applyRootMotion = false;
+        animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        animator.updateMode = AnimatorUpdateMode.Normal;
+
+        var trace = new StringBuilder();
+
+        try
+        {
+            probe.SetActive(true);
+            animator.Rebind();
+            animator.Update(0f);
+            animator.Play(CharacterPresentationMode.Slide.ToString(), layer: 0, normalizedTime: 0f);
+            SetPresentationMode(animator, CharacterPresentationMode.Slide);
+            animator.Update(0f);
+
+            var initial = CaptureAnimatorSnapshot(animator, "initial Slide", trace);
+            AssertSnapshotState(initial, CharacterPresentationMode.Slide, hasTransition: false, trace);
+
+            SetPresentationMode(animator, CharacterPresentationMode.Airborne);
+            AdvanceAnimator(animator, seconds: 0.02f);
+
+            var airborneRequested = CaptureAnimatorSnapshot(animator, "0.02s after Airborne request", trace);
+            AssertSnapshotState(airborneRequested, CharacterPresentationMode.Slide, CharacterPresentationMode.Airborne, trace);
+
+            SetPresentationMode(animator, CharacterPresentationMode.Slide);
+            AdvanceAnimator(animator, seconds: 0.02f);
+
+            var slideRequestedDuringBlend = CaptureAnimatorSnapshot(animator, "0.02s after Slide request during Airborne blend", trace);
+            AssertSnapshotState(slideRequestedDuringBlend, CharacterPresentationMode.Slide, CharacterPresentationMode.Slide, trace);
+
+            AdvanceAnimator(animator, seconds: 0.12f);
+
+            var recovered = CaptureAnimatorSnapshot(animator, "after recovery time", trace);
+            TestContext.Out.WriteLine(trace.ToString());
+            AssertSnapshotState(recovered, CharacterPresentationMode.Slide, hasTransition: false, trace);
+        }
+        finally
+        {
+            Object.Destroy(probe);
+        }
+    }
+
     private static IEnumerator AssertPostLaunchPresentation(
         Animator characterAnimator,
         Rigidbody playerRigidbody,
@@ -106,7 +161,9 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
 
             previousMode = mode;
             Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.Run), $"frame {frameIndex}");
-            Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.LaunchPush), $"normal slingshot launch should go straight to LaunchFlight, frame {frameIndex}");
+
+            Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.LaunchPush),
+                $"normal slingshot launch should go straight to LaunchFlight, frame {frameIndex}");
             Assert.That(characterAnimator.applyRootMotion, Is.False, $"frame {frameIndex}");
 
             sawLaunchFlight |= mode == CharacterPresentationMode.LaunchFlight;
@@ -217,8 +274,144 @@ public sealed class GameplaySceneCharacterPresentationVisualSmokeTests : BaseGam
         return (CharacterPresentationMode)animator.GetInteger(PresentationModeParameterName);
     }
 
+    private static void SetPresentationMode(Animator animator, CharacterPresentationMode mode)
+    {
+        animator.SetInteger(PresentationModeParameterName, (int)mode);
+    }
+
     private static void AssertPresentationModeIsNotRun(Animator animator, string phase)
     {
         Assert.That(GetPresentationMode(animator), Is.Not.EqualTo(CharacterPresentationMode.Run), phase);
+    }
+
+    private static void AdvanceAnimator(Animator animator, float seconds)
+    {
+        const float StepSeconds = 1f / 60f;
+        var remainingSeconds = seconds;
+
+        while (remainingSeconds > 0f)
+        {
+            var deltaTime = Mathf.Min(StepSeconds, remainingSeconds);
+            animator.Update(deltaTime);
+            remainingSeconds -= deltaTime;
+        }
+    }
+
+    private static AnimatorTransitionProbeSnapshot CaptureAnimatorSnapshot(
+        Animator animator,
+        string label,
+        StringBuilder trace)
+    {
+        var isInTransition = animator.IsInTransition(layerIndex: 0);
+        var currentState = animator.GetCurrentAnimatorStateInfo(layerIndex: 0);
+
+        var nextState = isInTransition
+            ? animator.GetNextAnimatorStateInfo(layerIndex: 0)
+            : default;
+
+        var transitionInfo = isInTransition
+            ? animator.GetAnimatorTransitionInfo(layerIndex: 0)
+            : default;
+
+        var snapshot = new AnimatorTransitionProbeSnapshot(
+            label,
+            isInTransition,
+            currentState,
+            nextState,
+            transitionInfo.normalizedTime,
+            transitionInfo.anyState);
+
+        _ = trace.AppendLine(snapshot.ToString());
+        return snapshot;
+    }
+
+    private static void AssertSnapshotState(
+        AnimatorTransitionProbeSnapshot snapshot,
+        CharacterPresentationMode expectedCurrent,
+        bool hasTransition,
+        StringBuilder trace)
+    {
+        Assert.That(snapshot.IsInTransition, Is.EqualTo(hasTransition), trace.ToString());
+        Assert.That(StateMatches(snapshot.CurrentState, expectedCurrent), Is.True, trace.ToString());
+    }
+
+    private static void AssertSnapshotState(
+        AnimatorTransitionProbeSnapshot snapshot,
+        CharacterPresentationMode expectedCurrent,
+        CharacterPresentationMode expectedNext,
+        StringBuilder trace)
+    {
+        Assert.That(snapshot.IsInTransition, Is.True, trace.ToString());
+        Assert.That(StateMatches(snapshot.CurrentState, expectedCurrent), Is.True, trace.ToString());
+        Assert.That(StateMatches(snapshot.NextState, expectedNext), Is.True, trace.ToString());
+    }
+
+    private static bool StateMatches(AnimatorStateInfo stateInfo, CharacterPresentationMode mode)
+    {
+        return stateInfo.shortNameHash == Animator.StringToHash(mode.ToString());
+    }
+
+    private readonly struct AnimatorTransitionProbeSnapshot
+    {
+        public string Label { get; }
+        public bool IsInTransition { get; }
+        public AnimatorStateInfo CurrentState { get; }
+        public AnimatorStateInfo NextState { get; }
+        public float TransitionNormalizedTime { get; }
+        public bool IsAnyStateTransition { get; }
+
+        public AnimatorTransitionProbeSnapshot(
+            string label,
+            bool isInTransition,
+            AnimatorStateInfo currentState,
+            AnimatorStateInfo nextState,
+            float transitionNormalizedTime,
+            bool isAnyStateTransition)
+        {
+            Label = label;
+            IsInTransition = isInTransition;
+            CurrentState = currentState;
+            NextState = nextState;
+            TransitionNormalizedTime = transitionNormalizedTime;
+            IsAnyStateTransition = isAnyStateTransition;
+        }
+
+        public override string ToString()
+        {
+            return $"{Label}: inTransition={IsInTransition}, current={ResolveStateName(CurrentState)}, next={ResolveStateName(NextState)}, " +
+                   $"transitionNormalizedTime={TransitionNormalizedTime:0.000}, anyState={IsAnyStateTransition}";
+        }
+    }
+
+    private static string ResolveStateName(AnimatorStateInfo stateInfo)
+    {
+        if (StateMatches(stateInfo, CharacterPresentationMode.Idle))
+            return CharacterPresentationMode.Idle.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.PullAnticipation))
+            return CharacterPresentationMode.PullAnticipation.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.LaunchPush))
+            return CharacterPresentationMode.LaunchPush.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.Slide))
+            return CharacterPresentationMode.Slide.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.Run))
+            return CharacterPresentationMode.Run.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.Airborne))
+            return CharacterPresentationMode.Airborne.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.Victory))
+            return CharacterPresentationMode.Victory.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.Defeat))
+            return CharacterPresentationMode.Defeat.ToString();
+
+        if (StateMatches(stateInfo, CharacterPresentationMode.LaunchFlight))
+            return CharacterPresentationMode.LaunchFlight.ToString();
+
+        return $"hash:{stateInfo.shortNameHash}";
     }
 }
