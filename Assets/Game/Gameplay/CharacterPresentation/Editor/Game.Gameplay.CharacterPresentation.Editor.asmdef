@@ -1,0 +1,19 @@
+{
+  "name": "Game.Gameplay.CharacterPresentation.Editor",
+  "rootNamespace": "",
+  "references": [
+    "Game.Gameplay",
+    "SaintsField.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -101,9 +101,9 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Run Ended View")
                 .And.Message.Contains("Launch Target")
                 .And.Message.Contains("Character Presentation View")
+                .And.Message.Contains("Animated Contact Sensor Pose Sync View")
                 .And.Message.Contains("Finish Presentation View")
-                .And.Message.Contains("Level Pickup")
-                .And.Message.Contains("Player Pickup Contact Collider"));
+                .And.Message.Contains("Gameplay Pickups Scene Composition Installer"));
     }
 
     [Test]
@@ -186,12 +186,11 @@ public sealed class GameplayLifetimeScopeTests
         var duplicatePickupDefinition = CreatePickupDefinition(duplicateCurrencyDefinition, 1);
         var duplicatePickup = CreatePickup("Duplicate Currency Pickup", duplicatePickupDefinition);
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { fixture.LevelPickup, duplicatePickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            fixture.PlayerTag,
-            "Player",
-            "Pickup");
+            fixture.PickupSensorSource,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -206,12 +205,11 @@ public sealed class GameplayLifetimeScopeTests
         var pickupDefinition = CreatePickupDefinition(blankCurrencyDefinition, 1);
         var pickup = CreatePickup("Blank Currency Pickup", pickupDefinition);
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { pickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            fixture.PlayerTag,
-            "Player",
-            "Pickup");
+            fixture.PickupSensorSource,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -226,12 +224,11 @@ public sealed class GameplayLifetimeScopeTests
         var pickupDefinition = CreatePickupDefinition(mismatchedCurrencyDefinition, 1);
         var pickup = CreatePickup("Mismatched Currency Pickup", pickupDefinition);
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { pickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            fixture.PlayerTag,
-            "Player",
-            "Pickup");
+            fixture.PickupSensorSource,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -243,12 +240,11 @@ public sealed class GameplayLifetimeScopeTests
     {
         var fixture = CreateValidScopeFixture();
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { fixture.LevelPickup, fixture.LevelPickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            "Player",
-            "Player",
-            "Pickup");
+            fixture.PickupSensorSource,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -256,20 +252,19 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     [Test]
-    public void ValidateRequiredReferencesForTests_EmptyPlayerTag_ThrowsWithPlayerTagMessage()
+    public void ValidateRequiredReferencesForTests_MissingPickupSensorSource_ThrowsWithSensorSourceMessage()
     {
         var fixture = CreateValidScopeFixture();
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { fixture.LevelPickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            string.Empty,
-            "Player",
-            "Pickup");
+            null,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Player Tag"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Pickup Sensor Source"));
     }
 
     [Test]
@@ -278,12 +273,11 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
         var invalidPickup = CreatePickup("Invalid Pickup", null);
 
-        fixture.Scope.SetPickupReferencesForTests(
+        fixture.PickupsInstaller.SetReferencesForTests(
             new[] { invalidPickup },
-            new[] { fixture.PlayerPickupContactCollider },
-            "Player",
-            "Player",
-            "Pickup");
+            fixture.PickupSensorSource,
+            "Pickup",
+            "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -407,6 +401,8 @@ public sealed class GameplayLifetimeScopeTests
         var presentationClassifier = container.Resolve<ICharacterPresentationModeClassifier>();
         var finishPresentationView = container.Resolve<IFinishPresentationView>();
         var presentationSupportTracker = container.Resolve<ICharacterPresentationSupportTracker>();
+        var animatedContactSensorPoseSyncView = container.Resolve<IAnimatedContactSensorPoseSyncView>();
+        var pickupContactSource = container.Resolve<IPickupContactSource>();
         var resolvedRunPreparationState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.RunPreparation);
         var resolvedPreLaunchState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.PreLaunch);
         var resolvedRunningState = container.Resolve<GameplayStateId>(InjectKey.GameplayStateId.Running);
@@ -417,7 +413,6 @@ public sealed class GameplayLifetimeScopeTests
         var resolvedPlayerMaxSpeedStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerMaxSpeed);
         var resolvedPlayerSteeringResponsivenessStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
         var resolvedLevelPickups = container.Resolve<IReadOnlyList<Pickup>>(InjectKey.Pickups.LevelPickups);
-        var resolvedPlayerTag = container.Resolve<string>(InjectKey.Tags.Player);
 
         var runSteeringFrameFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSteeringFrameSource));
@@ -427,6 +422,12 @@ public sealed class GameplayLifetimeScopeTests
 
         var playerSteeringControllerFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is PlayerSteeringController);
+
+        var characterVisualFollowerLateTickableIndex =
+            GetLateTickableIndex(lateTickables, lateTickable => lateTickable is CharacterVisualFollower);
+
+        var animatedContactSensorPoseSyncLateTickableIndex =
+            GetLateTickableIndex(lateTickables, lateTickable => lateTickable is AnimatedContactSensorPoseSync);
 
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
@@ -446,7 +447,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(initializables.Count, Is.EqualTo(20));
         Assert.That(tickables.Count, Is.EqualTo(4));
         Assert.That(fixedTickables.Count, Is.EqualTo(7));
-        Assert.That(lateTickables.Count, Is.EqualTo(2));
+        Assert.That(lateTickables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
@@ -535,6 +536,11 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(presentationClassifier, Is.Not.Null);
         Assert.That(finishPresentationView, Is.SameAs(fixture.FinishPresentationView));
         Assert.That(presentationSupportTracker, Is.Not.Null);
+        Assert.That(animatedContactSensorPoseSyncView, Is.SameAs(fixture.AnimatedContactSensorPoseSyncView));
+        Assert.That(pickupContactSource, Is.SameAs(fixture.PickupSensorSource));
+        Assert.That(characterVisualFollowerLateTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(animatedContactSensorPoseSyncLateTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(characterVisualFollowerLateTickableIndex, Is.LessThan(animatedContactSensorPoseSyncLateTickableIndex));
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(resolvedRunningState, Is.SameAs(fixture.RunningStateId));
@@ -545,7 +551,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(resolvedPlayerMaxSpeedStat, Is.SameAs(fixture.PlayerMaxSpeedStatId));
         Assert.That(resolvedPlayerSteeringResponsivenessStat, Is.SameAs(fixture.PlayerSteeringResponsivenessStatId));
         Assert.That(resolvedLevelPickups, Is.SameAs(fixture.LevelPickups));
-        Assert.That(resolvedPlayerTag, Is.EqualTo(fixture.PlayerTag));
+        Assert.That(((LevelPickupState)levelPickupState).PickupsForTests, Is.EquivalentTo(fixture.LevelPickups));
     }
 
     private ValidScopeFixture CreateValidScopeFixture()
@@ -588,21 +594,23 @@ public sealed class GameplayLifetimeScopeTests
         var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(runPreparationCamera, preLaunchCamera, runCamera);
         var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
+        var animatedContactSensorPoseSyncView = CreateAnimatedContactSensorPoseSyncView(characterPresentationView.transform);
         var finishPresentationView = CreateGameObject("Finish Presentation View").AddComponent<FinishPresentationView>();
-        var playerPickupContactCollider = launchTarget.GetComponent<Collider>();
-        playerPickupContactCollider.gameObject.layer = GetRequiredLayer("Player");
-        playerPickupContactCollider.gameObject.tag = "Player";
+        var runBodyContactCollider = launchTarget.GetComponent<Collider>();
+        runBodyContactCollider.gameObject.layer = GetRequiredLayer("Player");
+        runBodyContactCollider.gameObject.tag = "Player";
         var runSurfaceInstaller = CreateGameObject("Run Surface Installer").AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
         var runSurfaceMask = new LayerMask { value = Physics.DefaultRaycastLayers };
-        runSurfaceInstaller.SetReferencesForTests(playerPickupContactCollider, supportProbeDistance: 0.08f, runSurfaceMask);
+        runSurfaceInstaller.SetReferencesForTests(runBodyContactCollider, supportProbeDistance: 0.08f, runSurfaceMask);
         var currencyDefinition = CreateCurrencyDefinition("Coins", "currency-coins");
         var upgradeCatalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
         var pickupDefinition = CreatePickupDefinition(currencyDefinition, 1);
         var levelPickup = CreatePickup("Level Pickup", pickupDefinition);
         var levelPickups = new[] { levelPickup };
-        var playerPickupContactColliders = new[] { playerPickupContactCollider };
-        var playerTag = "Player";
+        var pickupSensorSource = CreatePickupSensorSource();
+        var pickupsInstaller = CreateGameObject("Pickups Installer").AddComponent<GameplayPickupsSceneCompositionMonoInstaller>();
+        pickupsInstaller.SetReferencesForTests(levelPickups, pickupSensorSource, "Pickup", "PlayerBodyPart");
 
         scope.SetReferencesForTests(
             gameplayStateConfig,
@@ -624,7 +632,7 @@ public sealed class GameplayLifetimeScopeTests
             playerSteeringTarget,
             runCameraSource,
             runProgressFrameSource,
-            new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller },
+            new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller, pickupsInstaller },
             contactNotifier,
             runCameraAnchor,
             runCameraRig,
@@ -638,12 +646,8 @@ public sealed class GameplayLifetimeScopeTests
             runEndedView,
             launchTarget,
             characterPresentationView,
-            finishPresentationView,
-            levelPickups,
-            playerPickupContactColliders,
-            playerTag,
-            "Player",
-            "Pickup");
+            animatedContactSensorPoseSyncView,
+            finishPresentationView);
 
         return new ValidScopeFixture
         {
@@ -662,7 +666,8 @@ public sealed class GameplayLifetimeScopeTests
             LaunchTarget = launchTarget,
             LevelPickup = levelPickup,
             LevelPickups = levelPickups,
-            PlayerPickupContactCollider = playerPickupContactCollider,
+            PickupsInstaller = pickupsInstaller,
+            PickupSensorSource = pickupSensorSource,
             PlayerSteeringTarget = playerSteeringTarget,
             RunCameraConfig = runCameraConfig,
             RunEndConfig = runEndConfig,
@@ -676,8 +681,8 @@ public sealed class GameplayLifetimeScopeTests
             PullHintView = pullHintView,
             RunEndedView = runEndedView,
             CharacterPresentationView = characterPresentationView,
-            FinishPresentationView = finishPresentationView,
-            PlayerTag = playerTag
+            AnimatedContactSensorPoseSyncView = animatedContactSensorPoseSyncView,
+            FinishPresentationView = finishPresentationView
         };
     }
 
@@ -701,12 +706,55 @@ public sealed class GameplayLifetimeScopeTests
         return view;
     }
 
+    private AnimatedContactSensorPoseSyncView CreateAnimatedContactSensorPoseSyncView(Transform sourceTransform)
+    {
+        var rootRigidbody = CreateGameObject("Animated Contact Sensor Physics Root").AddComponent<Rigidbody>();
+        rootRigidbody.isKinematic = true;
+        rootRigidbody.useGravity = false;
+
+        var target = CreateGameObject("Body Sensor").transform;
+        target.SetParent(rootRigidbody.transform, false);
+
+        var view = rootRigidbody.gameObject.AddComponent<AnimatedContactSensorPoseSyncView>();
+
+        view.SetReferencesForTests(
+            rootRigidbody,
+            new[] { new AnimatedContactSensorPoseBinding(sourceTransform, target) });
+
+        return view;
+    }
+
+    private PickupSensorSource CreatePickupSensorSource()
+    {
+        var source = CreateGameObject("Pickup Sensor Source").AddComponent<PickupSensorSource>();
+        var sensorObject = CreateGameObject("Body Sensor");
+        sensorObject.transform.SetParent(source.transform, false);
+        sensorObject.layer = GetRequiredLayer("PlayerBodyPart");
+        var sensorCollider = sensorObject.AddComponent<SphereCollider>();
+        sensorCollider.isTrigger = true;
+        var sensor = sensorObject.AddComponent<TriggerNotifier>();
+        source.SetSensorEntriesForTests(sensor);
+
+        return source;
+    }
+
     private static int GetFixedTickableIndex(IReadOnlyList<IFixedTickable> fixedTickables, Predicate<IFixedTickable> predicate)
     {
         for (var fixedTickableIndex = 0; fixedTickableIndex < fixedTickables.Count; fixedTickableIndex += 1)
         {
             if (predicate(fixedTickables[fixedTickableIndex]))
                 return fixedTickableIndex;
+        }
+
+        return -1;
+    }
+
+    private static int GetLateTickableIndex(IReadOnlyList<ILateTickable> lateTickables, Predicate<ILateTickable> predicate)
+    {
+        for (var lateTickableIndex = 0; lateTickableIndex < lateTickables.Count; lateTickableIndex += 1)
+        {
+            if (predicate(lateTickables[lateTickableIndex]))
+                return lateTickableIndex;
         }
 
         return -1;
@@ -966,7 +1014,8 @@ public sealed class GameplayLifetimeScopeTests
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
         public Pickup LevelPickup { get; set; }
         public IReadOnlyList<Pickup> LevelPickups { get; set; }
-        public Collider PlayerPickupContactCollider { get; set; }
+        public GameplayPickupsSceneCompositionMonoInstaller PickupsInstaller { get; set; }
+        public PickupSensorSource PickupSensorSource { get; set; }
         public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; set; }
         public RunCameraConfig RunCameraConfig { get; set; }
         public RunEndConfig RunEndConfig { get; set; }
@@ -980,7 +1029,7 @@ public sealed class GameplayLifetimeScopeTests
         public PullHintView PullHintView { get; set; }
         public RunEndedUIView RunEndedView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
+        public AnimatedContactSensorPoseSyncView AnimatedContactSensorPoseSyncView { get; set; }
         public FinishPresentationView FinishPresentationView { get; set; }
-        public string PlayerTag { get; set; }
     }
 }

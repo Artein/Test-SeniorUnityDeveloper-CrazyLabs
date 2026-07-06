@@ -28,18 +28,21 @@ namespace Game.Gameplay.Pickups
                 throw new InvalidOperationException($"Pickup '{name}' requires a Pickup Definition reference.");
 
             _definition.Validate();
-
-            if (_triggerNotifier == null)
-                throw new InvalidOperationException($"Pickup '{name}' requires a Trigger Notifier reference.");
         }
 
         private void OnEnable()
         {
+            if (_triggerNotifier == null)
+                return;
+
             _triggerNotifier.TriggerEntered += OnTriggerNotifierEntered;
         }
 
         private void OnDisable()
         {
+            if (_triggerNotifier == null)
+                return;
+
             _triggerNotifier.TriggerEntered -= OnTriggerNotifierEntered;
         }
 

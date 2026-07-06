@@ -219,10 +219,10 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
 
     private static Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
     {
-        var colliders = launchTarget.GetComponentsInChildren<Collider>(true);
+        var collider = launchTarget.BandContactColliderForTests;
 
-        Assert.That(colliders, Has.Length.EqualTo(1));
-        return colliders[0];
+        Assert.That(collider, Is.Not.Null);
+        return collider;
     }
 }
 

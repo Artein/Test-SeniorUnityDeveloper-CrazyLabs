@@ -5,20 +5,20 @@ using UnityEngine;
 
 namespace Game.Gameplay.Pickups.Editor
 {
-    [CustomEditor(typeof(GameplayLifetimeScope))]
-    internal sealed class GameplayLifetimeScopeEditor : UnityEditor.Editor
+    [CustomEditor(typeof(GameplayPickupsSceneCompositionMonoInstaller))]
+    internal sealed class GameplayPickupsSceneCompositionMonoInstallerEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
 
             if (GUILayout.Button("Refresh Pickup References From Scene"))
-                RefreshPickupReferences((GameplayLifetimeScope)target);
+                RefreshPickupReferences((GameplayPickupsSceneCompositionMonoInstaller)target);
         }
 
-        private void RefreshPickupReferences(GameplayLifetimeScope scope)
+        private void RefreshPickupReferences(GameplayPickupsSceneCompositionMonoInstaller installer)
         {
-            var scene = scope.gameObject.scene;
+            var scene = installer.gameObject.scene;
 
             var pickups = scene.GetRootGameObjects()
                 .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<Pickup>(true))
@@ -26,9 +26,9 @@ namespace Game.Gameplay.Pickups.Editor
                 .OrderBy(pickup => GetHierarchyPath(pickup.transform), StringComparer.Ordinal)
                 .ThenBy(pickup => pickup.GetInstanceID())
                 .ToArray();
-            var pickupsProperty = serializedObject.FindProperty(GameplayLifetimeScope.Serialization.LevelPickups);
+            var pickupsProperty = serializedObject.FindProperty(GameplayPickupsSceneCompositionMonoInstaller.Serialization.LevelPickups);
 
-            Undo.RecordObject(scope, "Refresh Pickup References From Scene");
+            Undo.RecordObject(installer, "Refresh Pickup References From Scene");
             serializedObject.Update();
             pickupsProperty.arraySize = pickups.Length;
 
@@ -38,7 +38,7 @@ namespace Game.Gameplay.Pickups.Editor
             }
 
             serializedObject.ApplyModifiedProperties();
-            EditorUtility.SetDirty(scope);
+            EditorUtility.SetDirty(installer);
         }
 
         private static string GetHierarchyPath(Transform transform)

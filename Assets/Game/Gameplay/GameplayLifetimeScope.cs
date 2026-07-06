@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Game.Foundation;
 using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Persistence;
@@ -54,12 +53,8 @@ namespace Game.Gameplay
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
+        [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
-        [SerializeField] [TagSelector] private string _playerTag = "Player";
-        [SerializeField] private string _playerLayerName = "Player";
-        [SerializeField] private string _pickupLayerName = "Pickup";
-        [SerializeField] private Pickup[] _levelPickups = Array.Empty<Pickup>();
-        [SerializeField] private Collider[] _playerPickupContactColliders = Array.Empty<Collider>();
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -113,11 +108,11 @@ namespace Game.Gameplay
             builder.RegisterInstance<ICharacterVisualFollowView>(_characterPresentationView);
             builder.RegisterInstance<ICharacterVisualFollowTuning>(_characterPresentationView);
             builder.RegisterInstance<ICharacterVisualTargetPoseSource>(new TransformCharacterVisualTargetPoseSource(_launchTarget.transform));
+            builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
-            builder.RegisterInstance<ILevelPickupSource>(new GameplayLifetimeScopePickupSource(this));
 
             builder.RegisterInstance<IPreLaunchRigPoseResetter>(
                 new PreLaunchRigPoseResetter(_slingshotRig, _preLaunchSlingshotRigPose, _launchTarget, _preLaunchLaunchTargetPose));
@@ -136,10 +131,6 @@ namespace Game.Gameplay
             builder.RegisterInstance(_slingshotLaunchPowerStatId).Keyed(InjectKey.GameplayStatId.SlingshotLaunchPower);
             builder.RegisterInstance(_playerMaxSpeedStatId).Keyed(InjectKey.GameplayStatId.PlayerMaxSpeed);
             builder.RegisterInstance(_playerSteeringResponsivenessStatId).Keyed(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
-
-            var levelPickups = GetConfiguredLevelPickups();
-            builder.RegisterInstance<IReadOnlyList<Pickup>>(levelPickups).Keyed(InjectKey.Pickups.LevelPickups);
-            builder.RegisterInstance(_playerTag).Keyed(InjectKey.Tags.Player);
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
@@ -193,6 +184,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<PlayerSteeringController>();
             builder.RegisterEntryPoint<RunCameraController>();
             builder.RegisterEntryPoint<CharacterVisualFollower>();
+            builder.RegisterEntryPoint<AnimatedContactSensorPoseSync>();
             builder.RegisterEntryPoint<RunAirTimeTracker>();
             builder.RegisterEntryPoint<RunEndFlow>();
             builder.RegisterEntryPoint<RunEndPoseLockController>();
@@ -224,85 +216,11 @@ namespace Game.Gameplay
             }
         }
 
-        private IReadOnlyList<Pickup> GetLevelPickups()
+        private IReadOnlyList<GameplayPickupsSceneCompositionMonoInstaller> GetPickupSceneCompositionInstallers()
         {
-            var pickups = new List<Pickup>();
-
-            AddPickupReferences(pickups, _levelPickups ?? Array.Empty<Pickup>());
-            AddPickupReferences(pickups, FindSceneLevelPickups());
-
-            return pickups
-                .Distinct()
-                .OrderBy(GetPickupHierarchyPath, StringComparer.Ordinal)
-                .ThenBy(pickup => pickup == null ? 0 : pickup.GetInstanceID())
+            return (_sceneCompositionInstallers ?? Array.Empty<BaseSceneCompositionMonoInstaller>())
+                .OfType<GameplayPickupsSceneCompositionMonoInstaller>()
                 .ToArray();
-        }
-
-        private IReadOnlyList<Collider> GetPlayerPickupContactColliders()
-        {
-            return _playerPickupContactColliders ?? Array.Empty<Collider>();
-        }
-
-        private IReadOnlyList<Pickup> GetConfiguredLevelPickups()
-        {
-            return _levelPickups ?? Array.Empty<Pickup>();
-        }
-
-        private void AddPickupReferences(ICollection<Pickup> target, IReadOnlyList<Pickup> source)
-        {
-            for (var i = 0; i < source.Count; i += 1)
-            {
-                target.Add(source[i]);
-            }
-        }
-
-        private IReadOnlyList<Pickup> FindSceneLevelPickups()
-        {
-            var scene = gameObject.scene;
-
-            if (!scene.IsValid() || !scene.isLoaded)
-                return Array.Empty<Pickup>();
-
-            return scene.GetRootGameObjects()
-                .SelectMany(rootGameObject => rootGameObject.GetComponentsInChildren<Pickup>(true))
-                .ToArray();
-        }
-
-        private string GetPickupHierarchyPath(Pickup pickup)
-        {
-            if (pickup == null)
-                return string.Empty;
-
-            var path = pickup.name;
-            var parent = pickup.transform.parent;
-
-            while (parent != null)
-            {
-                path = $"{parent.name}/{path}";
-                parent = parent.parent;
-            }
-
-            return path;
-        }
-
-        private sealed class GameplayLifetimeScopePickupSource : ILevelPickupSource
-        {
-            private readonly GameplayLifetimeScope _lifetimeScope;
-
-            public GameplayLifetimeScopePickupSource(GameplayLifetimeScope lifetimeScope)
-            {
-                _lifetimeScope = lifetimeScope ?? throw new ArgumentNullException(nameof(lifetimeScope));
-            }
-
-            public IReadOnlyList<Pickup> GetLevelPickups()
-            {
-                return _lifetimeScope.GetLevelPickups();
-            }
-        }
-
-        public static class Serialization
-        {
-            public const string LevelPickups = nameof(_levelPickups);
         }
     }
 }

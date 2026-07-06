@@ -13,8 +13,7 @@ using VContainer.Unity;
 // ReSharper disable once CheckNamespace
 public sealed class PickupPhysicsIntegrationTests
 {
-    private const string PlayerTag = "Player";
-    private const string PlayerLayerName = "Player";
+    private const string PlayerBodyPartLayerName = "PlayerBodyPart";
     private const string PickupLayerName = "Pickup";
 
     private readonly List<IDisposable> _disposables = new();
@@ -34,9 +33,9 @@ public sealed class PickupPhysicsIntegrationTests
         _coins.name = "Coins";
         _coins.SetSaveIdForTests("currency-coins");
 
-        Assert.That(GetRequiredLayer(PlayerLayerName), Is.GreaterThanOrEqualTo(0));
+        Assert.That(GetRequiredLayer(PlayerBodyPartLayerName), Is.GreaterThanOrEqualTo(0));
         Assert.That(GetRequiredLayer(PickupLayerName), Is.GreaterThanOrEqualTo(0));
-        Assert.That(Physics.GetIgnoreLayerCollision(GetRequiredLayer(PlayerLayerName), GetRequiredLayer(PickupLayerName)), Is.False);
+        Assert.That(Physics.GetIgnoreLayerCollision(GetRequiredLayer(PlayerBodyPartLayerName), GetRequiredLayer(PickupLayerName)), Is.False);
     }
 
     [TearDown]
@@ -58,14 +57,14 @@ public sealed class PickupPhysicsIntegrationTests
     }
 
     [UnityTest]
-    public IEnumerator given_RunningStateAndTaggedPlayerCollider_when_PlayerEntersChildPickupTrigger_then_PickupIsCollectedOnce()
+    public IEnumerator given_RunningStateAndBodyPartSensor_when_SensorEntersChildPickupTrigger_then_PickupIsCollectedOnce()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
-        var controllerFixture = CreateControllerFixture(new[] { pickup });
+        var sensor = CreatePickupSensorContact("Player Body Sensor", new Vector3(3f, 0f, 0f));
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, sensor.Source);
         Initialize(controllerFixture.Controller);
-        var player = CreatePlayerContact("Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
 
-        player.Rigidbody.MovePosition(Vector3.zero);
+        sensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
         Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
@@ -79,13 +78,13 @@ public sealed class PickupPhysicsIntegrationTests
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         var resolver = new FixedPickupCurrencyGrantResolver(4);
-        var controllerFixture = CreateControllerFixture(new[] { pickup }, resolver);
+        var sensor = CreatePickupSensorContact("Player Body Sensor", new Vector3(3f, 0f, 0f));
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, sensor.Source, resolver);
         PickupCollectedEventArgs? observedEvent = null;
         controllerFixture.Controller.PickupCollected += pickupEvent => observedEvent = pickupEvent;
         Initialize(controllerFixture.Controller);
-        var player = CreatePlayerContact("Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
 
-        player.Rigidbody.MovePosition(Vector3.zero);
+        sensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
         Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
@@ -99,12 +98,12 @@ public sealed class PickupPhysicsIntegrationTests
     public IEnumerator given_PreLaunchState_when_PlayerEntersPickupTrigger_then_PickupIsIgnored()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
-        var controllerFixture = CreateControllerFixture(new[] { pickup });
+        var sensor = CreatePickupSensorContact("Player Body Sensor", new Vector3(3f, 0f, 0f));
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, sensor.Source);
         Initialize(controllerFixture.Controller);
         _stateService.ChangeTo(_preLaunchStateId);
-        var player = CreatePlayerContact("Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
 
-        player.Rigidbody.MovePosition(Vector3.zero);
+        sensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
         Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
@@ -114,18 +113,19 @@ public sealed class PickupPhysicsIntegrationTests
     }
 
     [UnityTest]
-    public IEnumerator given_PlayerTagOnlyOnRoot_when_ChildColliderEntersPickupTrigger_then_PickupIsIgnored()
+    public IEnumerator given_NonPickupCollider_when_BodyPartSensorEntersTrigger_then_PickupIsIgnored()
     {
-        var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
-        var controllerFixture = CreateControllerFixture(new[] { pickup });
+        var pickup = CreatePickup("Regular Pickup", 3, new Vector3(6f, 0f, 0f));
+        var sensor = CreatePickupSensorContact("Player Body Sensor", new Vector3(3f, 0f, 0f));
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, sensor.Source);
         Initialize(controllerFixture.Controller);
-        var playerRoot = CreateGameObject("Player Root");
-        playerRoot.tag = PlayerTag;
-        playerRoot.layer = GetRequiredLayer(PlayerLayerName);
-        var playerChild = CreatePlayerContact("Player Child Contact", new Vector3(3f, 0f, 0f), "Untagged");
-        playerChild.GameObject.transform.SetParent(playerRoot.transform, true);
+        var nonPickupTrigger = CreateGameObject("Non Pickup Trigger");
+        nonPickupTrigger.layer = GetRequiredLayer(PickupLayerName);
+        nonPickupTrigger.transform.position = Vector3.zero;
+        var nonPickupCollider = nonPickupTrigger.AddComponent<SphereCollider>();
+        nonPickupCollider.isTrigger = true;
 
-        playerChild.Rigidbody.MovePosition(Vector3.zero);
+        sensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
         Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
@@ -135,18 +135,19 @@ public sealed class PickupPhysicsIntegrationTests
     }
 
     [UnityTest]
-    public IEnumerator given_ConsumedPickupRootDisabled_when_PlayerContactsSamePositionAgain_then_NoSecondGrantOccurs()
+    public IEnumerator given_ConsumedPickupRootDisabled_when_BodyPartSensorContactsSamePositionAgain_then_NoSecondGrantOccurs()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
-        var controllerFixture = CreateControllerFixture(new[] { pickup });
+        var firstSensor = CreatePickupSensorContact("First Body Sensor", new Vector3(3f, 0f, 0f));
+        var controllerFixture = CreateControllerFixture(new[] { pickup }, firstSensor.Source);
         Initialize(controllerFixture.Controller);
-        var firstPlayer = CreatePlayerContact("First Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
 
-        firstPlayer.Rigidbody.MovePosition(Vector3.zero);
+        firstSensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
-        var secondPlayer = CreatePlayerContact("Second Player Contact", new Vector3(3f, 0f, 0f), PlayerTag);
-        secondPlayer.Rigidbody.MovePosition(Vector3.zero);
+        firstSensor.Rigidbody.MovePosition(new Vector3(3f, 0f, 0f));
+        yield return WaitForFixedUpdates(1);
+        firstSensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdates(3);
 
         Assert.That(controllerFixture.CurrencyStorage.GetAmount(_coins), Is.Zero);
@@ -178,6 +179,7 @@ public sealed class PickupPhysicsIntegrationTests
 
     private ControllerFixture CreateControllerFixture(
         IReadOnlyList<Pickup> pickups,
+        IPickupContactSource pickupContactSource,
         IPickupCurrencyGrantResolver pickupCurrencyGrantResolver = null)
     {
         var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(pickups));
@@ -186,15 +188,14 @@ public sealed class PickupPhysicsIntegrationTests
         var resolver = pickupCurrencyGrantResolver ?? new FixedPickupCurrencyGrantResolver();
 
         var controller = new PickupCollectionController(
-            new FixedLevelPickupSource(pickups),
+            pickupContactSource,
             levelPickupState,
             accumulator,
             new RunRewardSourceCatalog(),
             resolver,
             _stateService,
             _runningStateId,
-            _preLaunchStateId,
-            PlayerTag);
+            _preLaunchStateId);
         _disposables.Add(controller);
 
         return new ControllerFixture(controller, levelPickupState, storage, accumulator);
@@ -226,17 +227,24 @@ public sealed class PickupPhysicsIntegrationTests
         return pickup;
     }
 
-    private PlayerContact CreatePlayerContact(string objectName, Vector3 position, string tag)
+    private SensorContact CreatePickupSensorContact(string objectName, Vector3 position)
     {
-        var gameObject = CreateGameObject(objectName);
-        gameObject.transform.position = position;
-        gameObject.layer = GetRequiredLayer(PlayerLayerName);
-        gameObject.tag = tag;
-        gameObject.AddComponent<SphereCollider>();
-        var rigidbody = gameObject.AddComponent<Rigidbody>();
+        var root = CreateGameObject($"{objectName} Root");
+        root.transform.position = position;
+        var rigidbody = root.AddComponent<Rigidbody>();
         rigidbody.isKinematic = true;
         rigidbody.useGravity = false;
-        return new PlayerContact(gameObject, rigidbody);
+
+        var source = root.AddComponent<PickupSensorSource>();
+        var sensorObject = CreateGameObject(objectName);
+        sensorObject.transform.SetParent(root.transform, false);
+        sensorObject.layer = GetRequiredLayer(PlayerBodyPartLayerName);
+        var collider = sensorObject.AddComponent<SphereCollider>();
+        collider.isTrigger = true;
+        var notifier = sensorObject.AddComponent<TriggerNotifier>();
+        source.SetSensorEntriesForTests(notifier);
+
+        return new SensorContact(rigidbody, source);
     }
 
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
@@ -304,15 +312,15 @@ public sealed class PickupPhysicsIntegrationTests
         }
     }
 
-    private readonly struct PlayerContact
+    private readonly struct SensorContact
     {
-        public GameObject GameObject { get; }
         public Rigidbody Rigidbody { get; }
+        public PickupSensorSource Source { get; }
 
-        public PlayerContact(GameObject gameObject, Rigidbody rigidbody)
+        public SensorContact(Rigidbody rigidbody, PickupSensorSource source)
         {
-            GameObject = gameObject;
             Rigidbody = rigidbody;
+            Source = source;
         }
     }
 

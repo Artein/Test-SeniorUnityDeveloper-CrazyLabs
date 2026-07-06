@@ -3695,6 +3695,56 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4970901124191530123, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
   m_PrefabInstance: {fileID: 613386045}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386048 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4370807904238502459, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386049 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8106293805544569147, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386050 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7115946434465058331, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386051 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4398330164937039831, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386052 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3527068890942817840, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386053 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8453123879253083198, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386054 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2239822082812708762, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386055 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2603193409486072276, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386056 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6585798947302206328, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &613386057 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1191838921736071021, guid: a152951c20f0b4c658a36d94e0a28827, type: 3}
+  m_PrefabInstance: {fileID: 613386045}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &631625250
 GameObject:
   m_ObjectHideFlags: 0
@@ -10966,6 +11016,7 @@ GameObject:
   - component: {fileID: 1422486651}
   - component: {fileID: 1422486650}
   - component: {fileID: 1422486652}
+  - component: {fileID: 2800000030}
   m_Layer: 0
   m_Name: Gameplay Composition
   m_TagString: Untagged
@@ -11010,6 +11061,7 @@ MonoBehaviour:
   _runProgressFrameSource: {fileID: 2200000002}
   _sceneCompositionInstallers:
   - {fileID: 1918570530}
+  - {fileID: 2800000030}
   _contactNotifier: {fileID: 1918570529}
   _runCameraAnchor: {fileID: 1577665901}
   _runCameraRig: {fileID: 1422486652}
@@ -11023,120 +11075,8 @@ MonoBehaviour:
   _runEndedView: {fileID: 2501000004}
   _launchTarget: {fileID: 1918570526}
   _characterPresentationView: {fileID: 613386046}
+  _animatedContactSensorPoseSyncView: {fileID: 2800000014}
   _finishPresentationView: {fileID: 2900000004}
-  _playerTag: Player
-  _playerLayerName: Player
-  _pickupLayerName: Pickup
-  _levelPickups:
-  - {fileID: 1493872559}
-  - {fileID: 1996660235}
-  - {fileID: 2100392166}
-  - {fileID: 246148298}
-  - {fileID: 1772675535}
-  - {fileID: 1153024021}
-  - {fileID: 830784878}
-  - {fileID: 1159251894}
-  - {fileID: 1613760442}
-  - {fileID: 792401093}
-  - {fileID: 289192587}
-  - {fileID: 491198797}
-  - {fileID: 2119578208}
-  - {fileID: 135710186}
-  - {fileID: 1128190361}
-  - {fileID: 101752388}
-  - {fileID: 2017839971}
-  - {fileID: 391511663}
-  - {fileID: 277527605}
-  - {fileID: 1931583836}
-  - {fileID: 1052391600}
-  - {fileID: 1994268889}
-  - {fileID: 1352035288}
-  - {fileID: 1162936573}
-  - {fileID: 192440970}
-  - {fileID: 479682350}
-  - {fileID: 1767866808}
-  - {fileID: 1375968386}
-  - {fileID: 1796185834}
-  - {fileID: 227481185}
-  - {fileID: 560156824}
-  - {fileID: 950018741}
-  - {fileID: 802764795}
-  - {fileID: 898837113}
-  - {fileID: 799461264}
-  - {fileID: 1943832145}
-  - {fileID: 1708123113}
-  - {fileID: 990448671}
-  - {fileID: 1439061062}
-  - {fileID: 1041397214}
-  - {fileID: 1026051325}
-  - {fileID: 20833172}
-  - {fileID: 1739686341}
-  - {fileID: 172048151}
-  - {fileID: 1721452106}
-  - {fileID: 437226677}
-  - {fileID: 789074606}
-  - {fileID: 761801679}
-  - {fileID: 2065754381}
-  - {fileID: 645211909}
-  - {fileID: 2081976537}
-  - {fileID: 496426745}
-  - {fileID: 755769158}
-  - {fileID: 197799866}
-  - {fileID: 268292674}
-  - {fileID: 1482493694}
-  - {fileID: 1818266747}
-  - {fileID: 1894241179}
-  - {fileID: 2141564499}
-  - {fileID: 1082450016}
-  - {fileID: 1808726712}
-  - {fileID: 810901316}
-  - {fileID: 434682333}
-  - {fileID: 35820783}
-  - {fileID: 2087003484}
-  - {fileID: 2136660439}
-  - {fileID: 397515808}
-  - {fileID: 1501886382}
-  - {fileID: 184616893}
-  - {fileID: 1433297350}
-  - {fileID: 1288245066}
-  - {fileID: 1261672601}
-  - {fileID: 744766304}
-  - {fileID: 418392542}
-  - {fileID: 518202316}
-  - {fileID: 1405525701}
-  - {fileID: 2129217855}
-  - {fileID: 1391009972}
-  - {fileID: 2072050369}
-  - {fileID: 1835267876}
-  - {fileID: 1033744728}
-  - {fileID: 1399801338}
-  - {fileID: 1826575686}
-  - {fileID: 1305722810}
-  - {fileID: 400037124}
-  - {fileID: 212813975}
-  - {fileID: 1879441706}
-  - {fileID: 44969146}
-  - {fileID: 1073163352}
-  - {fileID: 1612033968}
-  - {fileID: 93655803}
-  - {fileID: 1387429290}
-  - {fileID: 607085146}
-  - {fileID: 1692410031}
-  - {fileID: 555158048}
-  - {fileID: 701565949}
-  - {fileID: 1810716530}
-  - {fileID: 2131158285}
-  - {fileID: 1541042823}
-  - {fileID: 21883427}
-  - {fileID: 1851407031}
-  - {fileID: 1834585738}
-  - {fileID: 892284841}
-  - {fileID: 1347937772}
-  - {fileID: 1233736001}
-  - {fileID: 1747321109}
-  - {fileID: 1777442188}
-  _playerPickupContactColliders:
-  - {fileID: 200501558}
 --- !u!4 &1422486651
 Transform:
   m_ObjectHideFlags: 0
@@ -14001,6 +13941,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 200501557}
+  - {fileID: 2800000001}
+  - {fileID: 2800000011}
   - {fileID: 1613459821}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -14096,8 +14038,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 65ac48e14daf342949c51f34765c11de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.GameplayPhysicsSceneCompositionMonoInstaller
-  _supportCollider: {fileID: 200501558}
-  _runProgressFrameSource: {fileID: 2200000002}
+  _supportCollider: {fileID: 2800000002}
   _supportProbeDistance: 0.08
   _surfaceMask:
     serializedVersion: 2
@@ -16429,6 +16370,988 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2300000006}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2800000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000001}
+  - component: {fileID: 2800000002}
+  m_Layer: 10
+  m_Name: RunBodyContactColliderRoot
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.35, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1918570524}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &2800000002
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000000}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.35
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &2800000010
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000011}
+  - component: {fileID: 2800000012}
+  - component: {fileID: 2800000013}
+  - component: {fileID: 2800000014}
+  m_Layer: 0
+  m_Name: AnimatedContactSensorPhysicsRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000010}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2800000041}
+  - {fileID: 2800000051}
+  - {fileID: 2800000061}
+  - {fileID: 2800000071}
+  - {fileID: 2800000081}
+  - {fileID: 2800000091}
+  - {fileID: 2800000101}
+  - {fileID: 2800000111}
+  - {fileID: 2800000121}
+  - {fileID: 2800000131}
+  m_Father: {fileID: 1918570524}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &2800000012
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000010}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &2800000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f64aec515d5324d1fbdb8cc7d1385bb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay.Pickups::Game.Gameplay.Pickups.PickupSensorSource
+  _sensors:
+  - {fileID: 2800000043}
+  - {fileID: 2800000053}
+  - {fileID: 2800000063}
+  - {fileID: 2800000073}
+  - {fileID: 2800000083}
+  - {fileID: 2800000093}
+  - {fileID: 2800000103}
+  - {fileID: 2800000113}
+  - {fileID: 2800000123}
+  - {fileID: 2800000133}
+--- !u!114 &2800000014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 462d2a3c1cc845089d72d587b8c21cc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.CharacterPresentation.AnimatedContactSensorPoseSyncView
+  _rootRigidbody: {fileID: 2800000012}
+  _bindings:
+  - _source: {fileID: 613386048}
+    _target: {fileID: 2800000041}
+  - _source: {fileID: 613386049}
+    _target: {fileID: 2800000051}
+  - _source: {fileID: 613386050}
+    _target: {fileID: 2800000061}
+  - _source: {fileID: 613386051}
+    _target: {fileID: 2800000071}
+  - _source: {fileID: 613386052}
+    _target: {fileID: 2800000081}
+  - _source: {fileID: 613386053}
+    _target: {fileID: 2800000091}
+  - _source: {fileID: 613386054}
+    _target: {fileID: 2800000101}
+  - _source: {fileID: 613386055}
+    _target: {fileID: 2800000111}
+  - _source: {fileID: 613386056}
+    _target: {fileID: 2800000121}
+  - _source: {fileID: 613386057}
+    _target: {fileID: 2800000131}
+--- !u!114 &2800000030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1422486649}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb815a4d6c6fe4ee499ff97c1c3d01ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.GameplayPickupsSceneCompositionMonoInstaller
+  _levelPickups:
+  - {fileID: 1493872559}
+  - {fileID: 1996660235}
+  - {fileID: 2100392166}
+  - {fileID: 246148298}
+  - {fileID: 1772675535}
+  - {fileID: 1153024021}
+  - {fileID: 830784878}
+  - {fileID: 1159251894}
+  - {fileID: 1613760442}
+  - {fileID: 792401093}
+  - {fileID: 289192587}
+  - {fileID: 491198797}
+  - {fileID: 2119578208}
+  - {fileID: 135710186}
+  - {fileID: 1128190361}
+  - {fileID: 101752388}
+  - {fileID: 2017839971}
+  - {fileID: 391511663}
+  - {fileID: 277527605}
+  - {fileID: 1931583836}
+  - {fileID: 1052391600}
+  - {fileID: 1994268889}
+  - {fileID: 1352035288}
+  - {fileID: 1162936573}
+  - {fileID: 192440970}
+  - {fileID: 479682350}
+  - {fileID: 1767866808}
+  - {fileID: 1375968386}
+  - {fileID: 1796185834}
+  - {fileID: 227481185}
+  - {fileID: 560156824}
+  - {fileID: 950018741}
+  - {fileID: 802764795}
+  - {fileID: 898837113}
+  - {fileID: 799461264}
+  - {fileID: 1943832145}
+  - {fileID: 1708123113}
+  - {fileID: 990448671}
+  - {fileID: 1439061062}
+  - {fileID: 1041397214}
+  - {fileID: 1026051325}
+  - {fileID: 20833172}
+  - {fileID: 1739686341}
+  - {fileID: 172048151}
+  - {fileID: 1721452106}
+  - {fileID: 437226677}
+  - {fileID: 789074606}
+  - {fileID: 761801679}
+  - {fileID: 2065754381}
+  - {fileID: 645211909}
+  - {fileID: 2081976537}
+  - {fileID: 496426745}
+  - {fileID: 755769158}
+  - {fileID: 197799866}
+  - {fileID: 268292674}
+  - {fileID: 1482493694}
+  - {fileID: 1818266747}
+  - {fileID: 1894241179}
+  - {fileID: 2141564499}
+  - {fileID: 1082450016}
+  - {fileID: 1808726712}
+  - {fileID: 810901316}
+  - {fileID: 434682333}
+  - {fileID: 35820783}
+  - {fileID: 2087003484}
+  - {fileID: 2136660439}
+  - {fileID: 397515808}
+  - {fileID: 1501886382}
+  - {fileID: 184616893}
+  - {fileID: 1433297350}
+  - {fileID: 1288245066}
+  - {fileID: 1261672601}
+  - {fileID: 744766304}
+  - {fileID: 418392542}
+  - {fileID: 518202316}
+  - {fileID: 1405525701}
+  - {fileID: 2129217855}
+  - {fileID: 1391009972}
+  - {fileID: 2072050369}
+  - {fileID: 1835267876}
+  - {fileID: 1033744728}
+  - {fileID: 1399801338}
+  - {fileID: 1826575686}
+  - {fileID: 1305722810}
+  - {fileID: 400037124}
+  - {fileID: 212813975}
+  - {fileID: 1879441706}
+  - {fileID: 44969146}
+  - {fileID: 1073163352}
+  - {fileID: 1612033968}
+  - {fileID: 93655803}
+  - {fileID: 1387429290}
+  - {fileID: 607085146}
+  - {fileID: 1692410031}
+  - {fileID: 555158048}
+  - {fileID: 701565949}
+  - {fileID: 1810716530}
+  - {fileID: 2131158285}
+  - {fileID: 1541042823}
+  - {fileID: 21883427}
+  - {fileID: 1851407031}
+  - {fileID: 1834585738}
+  - {fileID: 892284841}
+  - {fileID: 1347937772}
+  - {fileID: 1233736001}
+  - {fileID: 1747321109}
+  - {fileID: 1777442188}
+  _pickupSensorSource: {fileID: 2800000013}
+  _pickupLayerName: Pickup
+  _playerBodyPartLayerName: PlayerBodyPart
+--- !u!1 &2800000040
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000041}
+  - component: {fileID: 2800000042}
+  - component: {fileID: 2800000043}
+  m_Layer: 12
+  m_Name: Head Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000041
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000040}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.53225005, y: 0.46491852, z: 0.5328464, w: -0.46544108}
+  m_LocalPosition: {x: -0.000006374232, y: 1.4633783, z: -0.0048624873}
+  m_LocalScale: {x: 0.012996602, y: 0.012996606, z: 0.012996609}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &2800000042
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000040}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 11
+  m_Center: {x: -12, y: 0, z: 0}
+--- !u!114 &2800000043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000040}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000050
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000051}
+  - component: {fileID: 2800000052}
+  - component: {fileID: 2800000053}
+  m_Layer: 12
+  m_Name: Torso Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000051
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000050}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.50256646, y: 0.4968564, z: 0.50312966, w: -0.4974146}
+  m_LocalPosition: {x: -0.000009811585, y: 1.1603562, z: -0.00834731}
+  m_LocalScale: {x: 0.012996609, y: 0.012996612, z: 0.012996611}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000052
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000050}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 7.5
+  m_Height: 26
+  m_Direction: 0
+  m_Center: {x: -10, y: 0, z: 0}
+--- !u!114 &2800000053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000050}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000060
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000061}
+  - component: {fileID: 2800000062}
+  - component: {fileID: 2800000063}
+  m_Layer: 12
+  m_Name: L Upper Arm Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000061
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000060}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.6472781, y: 0.33043885, z: -0.2709145, w: -0.6312263}
+  m_LocalPosition: {x: -0.11685477, y: 1.3627449, z: -0.03919919}
+  m_LocalScale: {x: 0.012996618, y: 0.012996616, z: 0.012996614}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000062
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000060}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 4.2
+  m_Height: 19
+  m_Direction: 0
+  m_Center: {x: -9.5, y: 0, z: 0}
+--- !u!114 &2800000063
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000070
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000071}
+  - component: {fileID: 2800000072}
+  - component: {fileID: 2800000073}
+  m_Layer: 12
+  m_Name: L Forearm Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000071
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000070}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.676411, y: 0.26575726, z: -0.33116612, w: -0.6018059}
+  m_LocalPosition: {x: -0.27385098, y: 1.1723732, z: -0.05563233}
+  m_LocalScale: {x: 0.012996619, y: 0.012996612, z: 0.012996612}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000072
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000070}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 3.8
+  m_Height: 20
+  m_Direction: 0
+  m_Center: {x: -10, y: 0, z: 0}
+--- !u!114 &2800000073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000080
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000081}
+  - component: {fileID: 2800000082}
+  - component: {fileID: 2800000083}
+  m_Layer: 12
+  m_Name: R Upper Arm Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000081
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000080}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.2701894, y: 0.6308567, z: -0.64758116, w: -0.3311438}
+  m_LocalPosition: {x: 0.11676525, y: 1.3627452, z: -0.03946048}
+  m_LocalScale: {x: 0.012996621, y: 0.01299662, z: 0.012996617}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000082
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000080}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 4.2
+  m_Height: 19
+  m_Direction: 0
+  m_Center: {x: -9.5, y: 0, z: 0}
+--- !u!114 &2800000083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000090
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000091}
+  - component: {fileID: 2800000092}
+  - component: {fileID: 2800000093}
+  m_Layer: 12
+  m_Name: R Forearm Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000091
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000090}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.3304084, y: 0.60150874, z: -0.6767813, w: -0.26642942}
+  m_LocalPosition: {x: 0.2737249, y: 1.1723739, z: -0.056244895}
+  m_LocalScale: {x: 0.012996618, y: 0.012996618, z: 0.012996614}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000092
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000090}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 3.8
+  m_Height: 20
+  m_Direction: 0
+  m_Center: {x: -10, y: 0, z: 0}
+--- !u!114 &2800000093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000101}
+  - component: {fileID: 2800000102}
+  - component: {fileID: 2800000103}
+  m_Layer: 12
+  m_Name: L Thigh Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000101
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000100}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.5360869, y: -0.46180454, z: -0.4806442, w: -0.5180044}
+  m_LocalPosition: {x: -0.07006116, y: 0.9740163, z: -0.031027451}
+  m_LocalScale: {x: 0.012996611, y: 0.012996613, z: 0.012996614}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000102
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000100}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 5.4
+  m_Height: 34
+  m_Direction: 0
+  m_Center: {x: -17, y: 0, z: 0}
+--- !u!114 &2800000103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000111}
+  - component: {fileID: 2800000112}
+  - component: {fileID: 2800000113}
+  m_Layer: 12
+  m_Name: L Calf Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000111
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000110}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.53636307, y: -0.46148378, z: -0.48095387, w: -0.5177169}
+  m_LocalPosition: {x: -0.11974692, y: 0.53122866, z: -0.04748033}
+  m_LocalScale: {x: 0.012996613, y: 0.012996612, z: 0.012996616}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000112
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000110}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 4.5
+  m_Height: 36
+  m_Direction: 0
+  m_Center: {x: -18, y: 0, z: 0}
+--- !u!114 &2800000113
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000120
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000121}
+  - component: {fileID: 2800000122}
+  - component: {fileID: 2800000123}
+  m_Layer: 12
+  m_Name: R Thigh Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000120}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.4812428, y: -0.5185214, z: -0.53554964, w: -0.46122402}
+  m_LocalPosition: {x: 0.06999107, y: 0.9740165, z: -0.031184122}
+  m_LocalScale: {x: 0.012996617, y: 0.012996618, z: 0.012996616}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000122
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000120}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 5.4
+  m_Height: 34
+  m_Direction: 0
+  m_Center: {x: -17, y: 0, z: 0}
+--- !u!114 &2800000123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
+--- !u!1 &2800000130
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2800000131}
+  - component: {fileID: 2800000132}
+  - component: {fileID: 2800000133}
+  m_Layer: 12
+  m_Name: R Calf Pickup Sensor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2800000131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000130}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.48155284, y: -0.5182335, z: -0.5358254, w: -0.46090358}
+  m_LocalPosition: {x: 0.11964122, y: 0.5312291, z: -0.047748126}
+  m_LocalScale: {x: 0.012996616, y: 0.012996614, z: 0.012996614}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2800000011}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &2800000132
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000130}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 4.5
+  m_Height: 36
+  m_Direction: 0
+  m_Center: {x: -18, y: 0, z: 0}
+--- !u!114 &2800000133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2800000130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e286cf8f36c43118eec41a9fb73bc89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Foundation::Game.Foundation.Physics.TriggerNotifier
 --- !u!1 &2900000000
 GameObject:
   m_ObjectHideFlags: 0

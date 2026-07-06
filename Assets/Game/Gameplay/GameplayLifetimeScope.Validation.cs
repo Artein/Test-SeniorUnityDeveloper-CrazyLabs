@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
-using Game.Gameplay.Pickups;
 using UnityEngine;
 
 namespace Game.Gameplay
@@ -131,6 +131,22 @@ namespace Game.Gameplay
             if (_characterPresentationView == null)
                 yield return "GameplayLifetimeScope requires a Character Presentation View reference.";
 
+            if (_animatedContactSensorPoseSyncView == null)
+            {
+                yield return "GameplayLifetimeScope requires an Animated Contact Sensor Pose Sync View reference.";
+            }
+            else
+            {
+                var validator = new AnimatedContactSensorPoseSyncReferenceValidator();
+
+                foreach (var error in validator.GetReferenceValidationErrors(
+                             _animatedContactSensorPoseSyncView.RootRigidbody,
+                             _animatedContactSensorPoseSyncView.Bindings))
+                {
+                    yield return error;
+                }
+            }
+
             if (_finishPresentationView == null)
                 yield return "GameplayLifetimeScope requires a Finish Presentation View reference.";
 
@@ -143,18 +159,13 @@ namespace Game.Gameplay
 
         private IEnumerable<string> GetPickupSetupValidationErrors()
         {
-            foreach (var error in GetSerializedLevelPickupReferenceErrors())
-            {
-                yield return error;
-            }
+            var pickupInstallers = GetPickupSceneCompositionInstallers();
 
-            var validator = new PickupSetupValidator();
+            if (pickupInstallers.Count <= 0)
+                yield return "GameplayLifetimeScope requires a Gameplay Pickups Scene Composition Installer reference.";
 
-            foreach (var error in validator.Validate(GetLevelPickups(), GetPlayerPickupContactColliders(), _playerTag, _playerLayerName,
-                         _pickupLayerName))
-            {
-                yield return error;
-            }
+            if (pickupInstallers.Count > 1)
+                yield return "GameplayLifetimeScope requires exactly one Gameplay Pickups Scene Composition Installer reference.";
         }
 
         private IEnumerable<string> GetSceneCompositionInstallerValidationErrors()
@@ -187,25 +198,6 @@ namespace Game.Gameplay
             }
         }
 
-        private IEnumerable<string> GetSerializedLevelPickupReferenceErrors()
-        {
-            if (_levelPickups == null)
-                yield break;
-
-            var serializedPickups = new HashSet<Pickup>();
-
-            for (var pickupIndex = 0; pickupIndex < _levelPickups.Length; pickupIndex += 1)
-            {
-                var pickup = _levelPickups[pickupIndex];
-
-                if (pickup == null)
-                    continue;
-
-                if (!serializedPickups.Add(pickup))
-                    yield return $"GameplayLifetimeScope contains duplicate Level Pickup reference '{pickup.name}'.";
-            }
-        }
-
         private IEnumerable<string> GetCurrencyDefinitionValidationErrors()
         {
             var validator = new CurrencyDefinitionValidator();
@@ -224,7 +216,7 @@ namespace Game.Gameplay
             if (_upgradeCatalog != null && _upgradeCatalog.PurchaseCurrency != null)
                 yield return _upgradeCatalog.PurchaseCurrency;
 
-            foreach (var pickup in GetLevelPickups())
+            foreach (var pickup in GetPickupSceneCompositionInstallers().SelectMany(installer => installer.LevelPickups))
             {
                 if (pickup == null || pickup.Definition == null || pickup.Definition.CurrencyDefinition == null)
                     continue;

@@ -129,6 +129,7 @@ _Avoid_: Launch Push, active pull, run movement
 - **Pull Release** may become an accepted **Launch**, but not every release launches.
 - **Launch Impulse Calculator** resolves the push; **Launch Impulse Application** applies it.
 - The **Launch Target** becomes the Gameplay **Run Body** after **Launch** starts **Running**.
+- **Launch Target Collider Root** is a slingshot-facing collider role, not the Gameplay **Run Body Contact Collider**.
 - **Band Shape** is presentation, not launch force.
 - A taut **Band Shape** may include **Band Contact Points** and **Band Wrap**.
 - **Pulled Side** follows the current **Pull** direction.

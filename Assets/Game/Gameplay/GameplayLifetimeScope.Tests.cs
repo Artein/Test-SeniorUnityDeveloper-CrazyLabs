@@ -5,7 +5,6 @@ using System.Linq;
 using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
-using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using UnityEngine;
@@ -22,8 +21,6 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
-        internal IReadOnlyList<Pickup> LevelPickupsForTests => GetLevelPickups();
-        internal IReadOnlyList<Collider> PlayerPickupContactCollidersForTests => GetPlayerPickupContactColliders();
         internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
 
         internal void SetReferencesForTests(
@@ -60,12 +57,8 @@ namespace Game.Gameplay
             RunEndedUIView runEndedView,
             RigidbodyLaunchTarget launchTarget,
             CharacterPresentationView characterPresentationView,
-            FinishPresentationView finishPresentationView,
-            Pickup[] levelPickups,
-            Collider[] playerPickupContactColliders,
-            string playerTag,
-            string playerLayerName,
-            string pickupLayerName)
+            AnimatedContactSensorPoseSyncView animatedContactSensorPoseSyncView,
+            FinishPresentationView finishPresentationView)
         {
             _gameplayStateConfig = gameplayStateConfig;
             _runPreparationStateId = runPreparationStateId;
@@ -100,26 +93,8 @@ namespace Game.Gameplay
             _runEndedView = runEndedView;
             _launchTarget = launchTarget;
             _characterPresentationView = characterPresentationView;
+            _animatedContactSensorPoseSyncView = animatedContactSensorPoseSyncView;
             _finishPresentationView = finishPresentationView;
-            _levelPickups = levelPickups;
-            _playerPickupContactColliders = playerPickupContactColliders;
-            _playerTag = playerTag;
-            _playerLayerName = playerLayerName;
-            _pickupLayerName = pickupLayerName;
-        }
-
-        internal void SetPickupReferencesForTests(
-            Pickup[] levelPickups,
-            Collider[] playerPickupContactColliders,
-            string playerTag,
-            string playerLayerName,
-            string pickupLayerName)
-        {
-            _levelPickups = levelPickups;
-            _playerPickupContactColliders = playerPickupContactColliders;
-            _playerTag = playerTag;
-            _playerLayerName = playerLayerName;
-            _pickupLayerName = pickupLayerName;
         }
 
         internal void SetSceneCompositionInstallersForTests(BaseSceneCompositionMonoInstaller[] sceneCompositionInstallers)

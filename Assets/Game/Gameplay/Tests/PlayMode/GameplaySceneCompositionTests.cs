@@ -78,6 +78,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var geometry = slingshotView.CreateGeometrySnapshot();
         var bandCenter = FindGameObjectByName(activeScene, "Band Center");
         var launchTargetColliderRoot = FindGameObjectByName(activeScene, "LaunchTargetColliderRoot");
+        var runBodyContactColliderRoot = FindGameObjectByName(activeScene, "RunBodyContactColliderRoot");
+        var runBodyContactCollider = runBodyContactColliderRoot.GetComponent<SphereCollider>();
         var characterVisualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
         var playerCameraLookTarget = FindGameObjectByName(activeScene, "Player Camera Look Target");
         var ladybugCharacter = FindGameObjectByName(activeScene, "LadybugCharacter");
@@ -280,10 +282,14 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
         Assert.That(targetCollider.transform, Is.SameAs(launchTargetColliderRoot.transform));
-        Assert.That(runSurfaceInstaller.SupportColliderForTests, Is.SameAs(targetCollider));
+        Assert.That(runBodyContactCollider, Is.Not.Null);
+        Assert.That(runBodyContactCollider.isTrigger, Is.False);
+        Assert.That(runBodyContactCollider.transform, Is.SameAs(runBodyContactColliderRoot.transform));
+        Assert.That(runSurfaceInstaller.SupportColliderForTests, Is.SameAs(runBodyContactCollider));
         Assert.That(runSurfaceInstaller.SupportProbeDistanceForTests, Is.LessThanOrEqualTo(0.25f));
         Assert.That(runSurfaceInstaller.SurfaceMaskForTests.value, Is.EqualTo(TestAssets.RunSurfaceLayerMask.value));
         Assert.That(launchTargetColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
+        Assert.That(runBodyContactColliderRoot.transform.IsChildOf(launchTarget.transform), Is.True);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshRenderer>(), Is.Null);
         Assert.That(launchTargetColliderRoot.GetComponent<MeshFilter>(), Is.Null);
         Assert.That(characterPresentationView.VisualAnchorForTests, Is.SameAs(characterVisualAnchor.transform));
@@ -650,10 +656,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
     private Collider GetSingleTargetCollider(RigidbodyLaunchTarget launchTarget)
     {
-        var colliders = launchTarget.GetComponentsInChildren<Collider>(true);
+        var collider = launchTarget.BandContactColliderForTests;
 
-        Assert.That(colliders, Has.Length.EqualTo(1));
-        return colliders[0];
+        Assert.That(collider, Is.Not.Null);
+        return collider;
     }
 
     private void AssertRunContactPlaceholder(

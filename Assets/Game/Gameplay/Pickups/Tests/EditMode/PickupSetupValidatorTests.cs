@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Game.Foundation.Physics;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
 using NUnit.Framework;
@@ -37,173 +36,145 @@ public sealed class PickupSetupValidatorTests
     }
 
     [Test]
-    public void Validate_ValidPickupAndPlayerContactCollider_ReturnsNoErrors()
+    public void Validate_EmptyPickupReferences_ReturnsNoErrors()
     {
-        var pickup = CreateValidPickup("Pickup");
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
-
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(Array.Empty<Pickup>());
 
         Assert.That(errors, Is.Empty);
     }
 
     [Test]
-    public void Validate_PickupColliderWrongLayer_ReturnsLayerError()
+    public void Validate_ValidPickupWithSinglePickupLayerTriggerCollider_ReturnsNoErrors()
     {
         var pickup = CreateValidPickup("Pickup");
-        pickup.TriggerNotifierForTests.GetComponent<Collider>().gameObject.layer = 0;
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
 
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup });
 
-        Assert.That(errors.Any(error => error.Contains("Pickup Layer")), Is.True);
+        Assert.That(errors, Is.Empty);
+    }
+
+    [Test]
+    public void Validate_PickupColliderWrongLayer_ReturnsSingleColliderError()
+    {
+        var pickup = CreatePickup("Pickup");
+        AddPickupCollider(pickup.transform, "Pickup Trigger", "Default", isTrigger: true);
+
+        var errors = Validate(new[] { pickup });
+
+        Assert.That(errors.Any(error => error.Contains("exactly one") && error.Contains("Pickup Layer")), Is.True);
     }
 
     [Test]
     public void Validate_PickupColliderNotTrigger_ReturnsTriggerError()
     {
-        var pickup = CreateValidPickup("Pickup");
-        pickup.TriggerNotifierForTests.GetComponent<Collider>().isTrigger = false;
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
+        var pickup = CreatePickup("Pickup");
+        AddPickupCollider(pickup.transform, "Pickup Trigger", "Pickup", isTrigger: false);
 
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup });
 
         Assert.That(errors.Any(error => error.Contains("Trigger")), Is.True);
     }
 
     [Test]
-    public void Validate_MissingPickupTriggerNotifier_ReturnsNotifierError()
+    public void Validate_DisabledPickupCollider_ReturnsEnabledError()
     {
-        var pickup = CreatePickupWithoutNotifier("Pickup");
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
+        var pickup = CreatePickup("Pickup");
+        var collider = AddPickupCollider(pickup.transform, "Pickup Trigger", "Pickup", isTrigger: true);
+        collider.enabled = false;
 
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup });
 
-        Assert.That(errors.Any(error => error.Contains("Trigger Notifier")), Is.True);
+        Assert.That(errors.Any(error => error.Contains("enabled")), Is.True);
     }
 
     [Test]
-    public void Validate_PickupTriggerNotifierOutsidePickupHierarchy_ReturnsHierarchyError()
+    public void Validate_MissingPickupLayerTriggerCollider_ReturnsSingleColliderError()
+    {
+        var pickup = CreatePickup("Pickup");
+
+        var errors = Validate(new[] { pickup });
+
+        Assert.That(errors.Any(error => error.Contains("exactly one") && error.Contains("Pickup Layer")), Is.True);
+    }
+
+    [Test]
+    public void Validate_MultiplePickupLayerTriggerColliders_ReturnsSingleColliderError()
+    {
+        var pickup = CreatePickup("Pickup");
+        AddPickupCollider(pickup.transform, "Pickup Trigger 1", "Pickup", isTrigger: true);
+        AddPickupCollider(pickup.transform, "Pickup Trigger 2", "Pickup", isTrigger: true);
+
+        var errors = Validate(new[] { pickup });
+
+        Assert.That(errors.Any(error => error.Contains("exactly one") && error.Contains("Pickup Layer")), Is.True);
+    }
+
+    [Test]
+    public void Validate_NonPickupLayerColliderAlongsidePickupTrigger_ReturnsNoErrors()
     {
         var pickup = CreateValidPickup("Pickup");
-        var outsideNotifier = CreateTriggerNotifier("Outside Trigger", GetRequiredLayer("Pickup"));
-        pickup.SetTriggerNotifierForTests(outsideNotifier);
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
+        AddPickupCollider(pickup.transform, "Visual Collider", "Default", isTrigger: false);
 
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup });
 
-        Assert.That(errors.Any(error => error.Contains("hierarchy")), Is.True);
+        Assert.That(errors, Is.Empty);
     }
 
     [Test]
-    public void Validate_PlayerContactColliderWrongLayer_ReturnsLayerError()
+    public void Validate_MissingPickupDefinition_ReturnsDefinitionError()
     {
-        var pickup = CreateValidPickup("Pickup");
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
-        playerCollider.gameObject.layer = 0;
+        var pickup = CreateGameObject("Pickup").AddComponent<Pickup>();
+        AddPickupCollider(pickup.transform, "Pickup Trigger", "Pickup", isTrigger: true);
 
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup });
 
-        Assert.That(errors.Any(error => error.Contains("Player Layer")), Is.True);
-    }
-
-    [Test]
-    public void Validate_PlayerContactColliderWithoutPlayerTag_ReturnsTagError()
-    {
-        var pickup = CreateValidPickup("Pickup");
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
-        playerCollider.gameObject.tag = "Untagged";
-
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
-
-        Assert.That(errors.Any(error => error.Contains("Player Tag")), Is.True);
-    }
-
-    [Test]
-    public void Validate_RootOnlyPlayerTag_ReturnsTagError()
-    {
-        var pickup = CreateValidPickup("Pickup");
-        var playerRoot = CreateGameObject("Player Root");
-        playerRoot.tag = "Player";
-        playerRoot.layer = GetRequiredLayer("Player");
-        var child = CreateGameObject("Player Child");
-        child.transform.SetParent(playerRoot.transform, false);
-        child.layer = GetRequiredLayer("Player");
-        var playerCollider = child.AddComponent<SphereCollider>();
-
-        var errors = Validate(new[] { pickup }, new[] { playerCollider });
-
-        Assert.That(errors.Any(error => error.Contains("Player Tag")), Is.True);
-    }
-
-    [Test]
-    public void Validate_MissingPickupReferences_ReturnsReferenceError()
-    {
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
-
-        var errors = Validate(Array.Empty<Pickup>(), new[] { playerCollider });
-
-        Assert.That(errors.Any(error => error.Contains("Level Pickup")), Is.True);
+        Assert.That(errors.Any(error => error.Contains("Pickup Definition")), Is.True);
     }
 
     [Test]
     public void Validate_DuplicatePickupReferences_ReturnsDuplicateError()
     {
         var pickup = CreateValidPickup("Pickup");
-        var playerCollider = CreateValidPlayerContactCollider("Player Contact");
 
-        var errors = Validate(new[] { pickup, pickup }, new[] { playerCollider });
+        var errors = Validate(new[] { pickup, pickup });
 
         Assert.That(errors.Any(error => error.Contains("duplicate")), Is.True);
     }
 
     [Test]
-    public void Validate_MissingPlayerContactColliderReferences_ReturnsReferenceError()
+    public void Validate_NullPickupReference_ReturnsReferenceError()
     {
-        var pickup = CreateValidPickup("Pickup");
+        var errors = Validate(new Pickup[] { null });
 
-        var errors = Validate(new[] { pickup }, Array.Empty<Collider>());
-
-        Assert.That(errors.Any(error => error.Contains("Player Pickup Contact Collider")), Is.True);
+        Assert.That(errors.Any(error => error.Contains("Level Pickup at index 0")), Is.True);
     }
 
-    private IReadOnlyList<string> Validate(IReadOnlyList<Pickup> pickups, IReadOnlyList<Collider> playerContactColliders)
+    private IReadOnlyList<string> Validate(IReadOnlyList<Pickup> pickups)
     {
-        return _validator.Validate(pickups, playerContactColliders, "Player", "Player", "Pickup");
+        return _validator.Validate(pickups, "Pickup");
     }
 
     private Pickup CreateValidPickup(string objectName)
     {
-        var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
-        pickup.gameObject.layer = GetRequiredLayer("Pickup");
-        pickup.SetDefinitionForTests(_pickupDefinition);
-        var notifier = CreateTriggerNotifier($"{objectName} Trigger", GetRequiredLayer("Pickup"));
-        notifier.transform.SetParent(pickup.transform, false);
-        pickup.SetTriggerNotifierForTests(notifier);
+        var pickup = CreatePickup(objectName);
+        AddPickupCollider(pickup.transform, $"{objectName} Trigger", "Pickup", isTrigger: true);
         return pickup;
     }
 
-    private Pickup CreatePickupWithoutNotifier(string objectName)
+    private Pickup CreatePickup(string objectName)
     {
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
-        pickup.gameObject.layer = GetRequiredLayer("Pickup");
         pickup.SetDefinitionForTests(_pickupDefinition);
         return pickup;
     }
 
-    private TriggerNotifier CreateTriggerNotifier(string objectName, int layer)
+    private Collider AddPickupCollider(Transform parent, string objectName, string layerName, bool isTrigger)
     {
-        var triggerObject = CreateGameObject(objectName);
-        triggerObject.layer = layer;
-        triggerObject.AddComponent<SphereCollider>().isTrigger = true;
-        return triggerObject.AddComponent<TriggerNotifier>();
-    }
-
-    private Collider CreateValidPlayerContactCollider(string objectName)
-    {
-        var collider = CreateGameObject(objectName).AddComponent<SphereCollider>();
-        collider.gameObject.layer = GetRequiredLayer("Player");
-        collider.gameObject.tag = "Player";
+        var colliderObject = CreateGameObject(objectName);
+        colliderObject.transform.SetParent(parent, false);
+        colliderObject.layer = GetRequiredLayer(layerName);
+        var collider = colliderObject.AddComponent<SphereCollider>();
+        collider.isTrigger = isTrigger;
         return collider;
     }
 
