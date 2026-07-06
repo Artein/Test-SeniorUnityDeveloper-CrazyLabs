@@ -16,8 +16,7 @@ using Object = UnityEngine.Object;
 // ReSharper disable once CheckNamespace
 public sealed class CoinPickupMultiplierPlayModeTests
 {
-    private const string PlayerTag = "Player";
-    private const string PlayerLayerName = "Player";
+    private const string PlayerBodyPartLayerName = "PlayerBodyPart";
     private const string PickupLayerName = "Pickup";
 
     private readonly List<IDisposable> _disposables = new();
@@ -42,7 +41,7 @@ public sealed class CoinPickupMultiplierPlayModeTests
     }
 
     [UnityTest]
-    public IEnumerator given_RunningStateAndCoinPickupMultiplier_when_PlayerEntersPickupTrigger_then_FinalCoinGrantIsRecorded()
+    public IEnumerator given_RunningStateAndCoinPickupMultiplier_when_BodyPartSensorEntersPickupTrigger_then_FinalCoinGrantIsRecorded()
     {
         var coins = CreateCurrencyDefinition("Coins");
         var coinPickupMultiplierStatId = CreateStatId("CoinPickupMultiplier");
@@ -55,22 +54,21 @@ public sealed class CoinPickupMultiplierPlayModeTests
         IRunCurrencyAccumulator runCurrencyAccumulator = new RunCurrencyAccumulator();
         var statResolver = new FixedRunGameplayStatResolver(1.5f);
         var grantResolver = new CoinPickupCurrencyGrantResolver(statResolver, coins, coinPickupMultiplierStatId);
+        var sensor = CreatePickupSensorContact("Player Body Sensor", new Vector3(3f, 0f, 0f));
 
         var controller = new PickupCollectionController(
-            new FixedLevelPickupSource(new[] { pickup }),
+            sensor.Source,
             levelPickupState,
             runCurrencyAccumulator,
             new RunRewardSourceCatalog(),
             grantResolver,
             stateService,
             runningStateId,
-            resetStateId,
-            PlayerTag);
+            resetStateId);
         _disposables.Add(controller);
         ((IInitializable)controller).Initialize();
-        var player = CreatePlayerContact("Player Contact", new Vector3(3f, 0f, 0f));
 
-        player.MovePosition(Vector3.zero);
+        sensor.Rigidbody.MovePosition(Vector3.zero);
         yield return WaitForFixedUpdatesUntil(() => !pickup.gameObject.activeSelf);
 
         Assert.That(currencyStorage.GetAmount(coins), Is.Zero);
@@ -110,17 +108,24 @@ public sealed class CoinPickupMultiplierPlayModeTests
         return pickup;
     }
 
-    private Rigidbody CreatePlayerContact(string objectName, Vector3 position)
+    private SensorContact CreatePickupSensorContact(string objectName, Vector3 position)
     {
-        var gameObject = CreateGameObject(objectName);
-        gameObject.transform.position = position;
-        gameObject.layer = GetRequiredLayer(PlayerLayerName);
-        gameObject.tag = PlayerTag;
-        gameObject.AddComponent<SphereCollider>();
-        var rigidbody = gameObject.AddComponent<Rigidbody>();
+        var root = CreateGameObject($"{objectName} Root");
+        root.transform.position = position;
+        var rigidbody = root.AddComponent<Rigidbody>();
         rigidbody.isKinematic = true;
         rigidbody.useGravity = false;
-        return rigidbody;
+
+        var source = root.AddComponent<PickupSensorSource>();
+        var sensorObject = CreateGameObject(objectName);
+        sensorObject.transform.SetParent(root.transform, false);
+        sensorObject.layer = GetRequiredLayer(PlayerBodyPartLayerName);
+        var collider = sensorObject.AddComponent<SphereCollider>();
+        collider.isTrigger = true;
+        var notifier = sensorObject.AddComponent<TriggerNotifier>();
+        source.SetSensorEntriesForTests(notifier);
+
+        return new SensorContact(rigidbody, source);
     }
 
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
@@ -169,6 +174,18 @@ public sealed class CoinPickupMultiplierPlayModeTests
     {
         _objects.Add(value);
         return value;
+    }
+
+    private readonly struct SensorContact
+    {
+        public Rigidbody Rigidbody { get; }
+        public PickupSensorSource Source { get; }
+
+        public SensorContact(Rigidbody rigidbody, PickupSensorSource source)
+        {
+            Rigidbody = rigidbody;
+            Source = source;
+        }
     }
 
     private sealed class FixedRunGameplayStatResolver : IRunGameplayStatResolver

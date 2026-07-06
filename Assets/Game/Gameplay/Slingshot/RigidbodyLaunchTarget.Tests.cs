@@ -7,13 +7,8 @@ namespace Game.Gameplay.Slingshot
     public sealed partial class RigidbodyLaunchTarget
     {
         internal bool HasPreviousStateForTests => _hasPreviousState;
-
         internal RigidbodyInterpolation PreviousInterpolationForTests => _previousInterpolation;
-
-        internal void SetRigidbodyForTests(Rigidbody body)
-        {
-            _rigidbody = body;
-        }
+        internal Collider BandContactColliderForTests => _bandContactCollider;
 
         internal void SetReferencesForTests(Rigidbody body, Collider bandContactCollider, Transform bandCenter)
         {

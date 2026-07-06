@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
 using Game.Gameplay.Pickups;
-using Game.Foundation.Physics;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -48,7 +47,7 @@ public sealed class PickupCollectionControllerTests
     }
 
     [Test]
-    public void TriggerEntered_RunningPlayerCollider_RecordsRunCurrencyDisablesPickupAndPublishesEvent()
+    public void PickupContacted_RunningState_RecordsRunCurrencyDisablesPickupAndPublishesEvent()
     {
         var pickup = CreatePickup("Regular Pickup", 3, new Vector3(2f, 0f, 5f));
         var fixture = CreateControllerFixture(new[] { pickup });
@@ -56,7 +55,7 @@ public sealed class PickupCollectionControllerTests
         fixture.Controller.PickupCollected += pickupEvent => observedEvent = pickupEvent;
         Initialize(fixture.Controller);
 
-        pickup.RaiseTriggerEnteredForTests(CreatePlayerCollider());
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
         Assert.That(pickup.gameObject.activeSelf, Is.False);
@@ -73,7 +72,7 @@ public sealed class PickupCollectionControllerTests
     }
 
     [Test]
-    public void TriggerEntered_ResolvedPickupGrant_WritesFinalAmountsAndPublishesBaseAndFinalEvent()
+    public void PickupContacted_ResolvedPickupGrant_WritesFinalAmountsAndPublishesBaseAndFinalEvent()
     {
         var pickup = CreatePickup("Regular Pickup", 3, new Vector3(2f, 0f, 5f));
 
@@ -86,7 +85,7 @@ public sealed class PickupCollectionControllerTests
         fixture.Controller.PickupCollected += pickupEvent => observedEvent = pickupEvent;
         Initialize(fixture.Controller);
 
-        pickup.RaiseTriggerEnteredForTests(CreatePlayerCollider());
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(4));
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().Amounts, Has.Length.EqualTo(1));
@@ -101,7 +100,7 @@ public sealed class PickupCollectionControllerTests
     }
 
     [Test]
-    public void TriggerEntered_OutsideRunningState_IgnoresContact()
+    public void PickupContacted_OutsideRunningState_IgnoresContact()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         var fixture = CreateControllerFixture(new[] { pickup });
@@ -110,7 +109,7 @@ public sealed class PickupCollectionControllerTests
         Initialize(fixture.Controller);
         _stateService.ChangeTo(_preLaunchStateId);
 
-        pickup.RaiseTriggerEnteredForTests(CreatePlayerCollider());
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
         Assert.That(fixture.LevelPickupState.IsAvailable(pickup), Is.True);
@@ -119,7 +118,7 @@ public sealed class PickupCollectionControllerTests
     }
 
     [Test]
-    public void TriggerEntered_ColliderWithoutPlayerTag_IgnoresContact()
+    public void PickupContacted_SensorContactWithoutPlayerTag_CollectsPickup()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         var fixture = CreateControllerFixture(new[] { pickup });
@@ -127,16 +126,16 @@ public sealed class PickupCollectionControllerTests
         fixture.Controller.PickupCollected += _ => eventCount += 1;
         Initialize(fixture.Controller);
 
-        pickup.RaiseTriggerEnteredForTests(CreateCollider("Obstacle Contact"));
+        fixture.PickupContactSource.RaisePickupContact(pickup, "Untagged Sensor Contact");
 
-        Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
-        Assert.That(fixture.LevelPickupState.IsAvailable(pickup), Is.True);
-        Assert.That(pickup.gameObject.activeSelf, Is.True);
-        Assert.That(eventCount, Is.Zero);
+        Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
+        Assert.That(fixture.LevelPickupState.IsAvailable(pickup), Is.False);
+        Assert.That(pickup.gameObject.activeSelf, Is.False);
+        Assert.That(eventCount, Is.EqualTo(1));
     }
 
     [Test]
-    public void TriggerEntered_AcceptedPickup_ConsumesStateBeforeRecordingRunCurrency()
+    public void PickupContacted_AcceptedPickup_ConsumesStateBeforeRecordingRunCurrency()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         ILevelPickupState observedState = null;
@@ -149,23 +148,22 @@ public sealed class PickupCollectionControllerTests
         observedState = fixture.LevelPickupState;
         Initialize(fixture.Controller);
 
-        pickup.RaiseTriggerEnteredForTests(CreatePlayerCollider());
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(runCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
     }
 
     [Test]
-    public void TriggerEntered_DuplicateContact_GrantsOnlyOnce()
+    public void PickupContacted_DuplicateContact_GrantsOnlyOnce()
     {
         var pickup = CreatePickup("Regular Pickup", 3, Vector3.zero);
         var fixture = CreateControllerFixture(new[] { pickup });
         var eventCount = 0;
         fixture.Controller.PickupCollected += _ => eventCount += 1;
         Initialize(fixture.Controller);
-        var playerCollider = CreatePlayerCollider();
 
-        pickup.RaiseTriggerEnteredForTests(playerCollider);
-        pickup.RaiseTriggerEnteredForTests(playerCollider);
+        fixture.PickupContactSource.RaisePickupContact(pickup);
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.EqualTo(3));
         Assert.That(eventCount, Is.EqualTo(1));
@@ -181,7 +179,7 @@ public sealed class PickupCollectionControllerTests
         Initialize(fixture.Controller);
         ((IDisposable)fixture.Controller).Dispose();
 
-        pickup.RaiseTriggerEnteredForTests(CreatePlayerCollider());
+        fixture.PickupContactSource.RaisePickupContact(pickup);
 
         Assert.That(fixture.RunCurrencyAccumulator.CreateSnapshot().GetAmount(_coins), Is.Zero);
         Assert.That(fixture.LevelPickupState.IsAvailable(pickup), Is.True);
@@ -210,19 +208,19 @@ public sealed class PickupCollectionControllerTests
         var levelPickupState = new LevelPickupState(new FixedLevelPickupSource(pickups));
         var accumulator = runCurrencyAccumulator ?? new RunCurrencyAccumulator();
         var resolver = pickupCurrencyGrantResolver ?? new FakePickupCurrencyGrantResolver();
+        var pickupContactSource = new FakePickupContactSource(CreateCollider);
 
         var controller = new PickupCollectionController(
-            new FixedLevelPickupSource(pickups),
+            pickupContactSource,
             levelPickupState,
             accumulator,
             new RunRewardSourceCatalog(),
             resolver,
             _stateService,
             _runningStateId,
-            _preLaunchStateId,
-            "Player");
+            _preLaunchStateId);
         _disposables.Add(controller);
-        return new ControllerFixture(controller, levelPickupState, accumulator);
+        return new ControllerFixture(controller, pickupContactSource, levelPickupState, accumulator);
     }
 
     private void Initialize(PickupCollectionController controller)
@@ -235,16 +233,7 @@ public sealed class PickupCollectionControllerTests
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
         pickup.transform.position = position;
         pickup.SetDefinitionForTests(CreatePickupDefinition(_coins, amount));
-        pickup.SetTriggerNotifierForTests(CreateTriggerNotifier(pickup.transform, $"{objectName} Trigger"));
         return pickup;
-    }
-
-    private TriggerNotifier CreateTriggerNotifier(Transform parent, string objectName)
-    {
-        var triggerObject = CreateGameObject(objectName);
-        triggerObject.transform.SetParent(parent, false);
-        triggerObject.AddComponent<SphereCollider>().isTrigger = true;
-        return triggerObject.AddComponent<TriggerNotifier>();
     }
 
     private PickupDefinition CreatePickupDefinition(CurrencyDefinition currencyDefinition, int amount)
@@ -252,13 +241,6 @@ public sealed class PickupCollectionControllerTests
         var definition = Track(ScriptableObject.CreateInstance<PickupDefinition>());
         definition.SetValuesForTests(currencyDefinition, amount);
         return definition;
-    }
-
-    private Collider CreatePlayerCollider()
-    {
-        var collider = CreateCollider("Player Contact");
-        collider.gameObject.tag = "Player";
-        return collider;
     }
 
     private Collider CreateCollider(string objectName)
@@ -373,18 +355,38 @@ public sealed class PickupCollectionControllerTests
         }
     }
 
+    private sealed class FakePickupContactSource : IPickupContactSource
+    {
+        private readonly Func<string, Collider> _colliderFactory;
+
+        public event Action<PickupContact> PickupContacted;
+
+        public FakePickupContactSource(Func<string, Collider> colliderFactory)
+        {
+            _colliderFactory = colliderFactory ?? throw new ArgumentNullException(nameof(colliderFactory));
+        }
+
+        public void RaisePickupContact(Pickup pickup, string contactObjectName = "Sensor Contact")
+        {
+            PickupContacted?.Invoke(new PickupContact(pickup, _colliderFactory(contactObjectName), null, contactObjectName));
+        }
+    }
+
     private readonly struct ControllerFixture
     {
         public PickupCollectionController Controller { get; }
+        public FakePickupContactSource PickupContactSource { get; }
         public ILevelPickupState LevelPickupState { get; }
         public IRunCurrencyAccumulator RunCurrencyAccumulator { get; }
 
         public ControllerFixture(
             PickupCollectionController controller,
+            FakePickupContactSource pickupContactSource,
             ILevelPickupState levelPickupState,
             IRunCurrencyAccumulator runCurrencyAccumulator)
         {
             Controller = controller;
+            PickupContactSource = pickupContactSource;
             LevelPickupState = levelPickupState;
             RunCurrencyAccumulator = runCurrencyAccumulator;
         }

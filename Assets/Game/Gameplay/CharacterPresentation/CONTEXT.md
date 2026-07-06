@@ -170,10 +170,38 @@ _Avoid_: Gameplay State, animation mode, run result
 - **Character Visual Anchor** belongs to visual mounting, not transform hierarchy, gameplay contact, or band alignment.
 - **Character Visual Follower** smooths only the **Character Visual Anchor**; it must not move the controlled gameplay object, Rigidbody, colliders, camera source, progress source, or surface probes.
 - **Character Visual Follower** samples the controlled gameplay object's Transform render pose in the presentation late update phase, not raw Rigidbody position, so the visible **Character** follows Unity's interpolated render pose.
+- Camera and motion presentation sources may align to the same controlled-object Transform render pose, but they must not read the **Smoothed Character Pose** as gameplay truth.
 - **Smoothed Character Pose** is presentation-only and must not become gameplay truth or an input to physics, steering, progress, collision, or camera systems.
+- An **Animated Contact Sensor** may copy a **Character** body-part pose for contact reporting, but this does not make **Smoothed Character Pose** gameplay truth.
+- **Animated Contact Sensor** reports should cross into gameplay through a dedicated aggregation boundary, not through direct gameplay dependency on the **Character** hierarchy.
+- Raw `TriggerNotifier` callbacks on **Animated Contact Sensors** should stay private to gameplay sensor sources; gameplay consumers should receive typed source reports.
+- Pose-following **Animated Contact Sensors** may copy **Character** body-part poses without being parented under **Character Visual Anchor**.
+- **Animated Contact Sensors** should remain trigger-only; they must not make **Character Visual Anchor**, animated bones, or per-sensor objects own gameplay Rigidbodies.
+- **Animated Contact Sensor Physics Root** belongs to gameplay ownership, not **Character Visual Anchor**, even when it copies **Character** body-part poses.
+- **Animated Contact Sensor Physics Root** should be a separate gameplay-owned sibling/root driven explicitly, not a child of the **Run Body** Rigidbody root and not under **Character Visual Anchor**.
+- **Animated Contact Sensor Pose Sync** copies finalized **Character** body-part poses into **Animated Contact Sensor Physics Root** after presentation and animation have produced the rendered-frame pose.
+- **Animated Contact Sensor Pose Sync** should be ordered after **Character Visual Follower**; it must not run from the gameplay movement `FixedUpdate` path.
+- **Animated Contact Sensor Pose Sync** may read **Character** body-part transforms without making **Smoothed Character Pose** a general gameplay truth source.
+- **Animated Contact Sensor Pose Sync** should not make **Character Visual Anchor** own a standalone physics or trigger-delivery loop.
+- A **Character** using `Animate Physics` Animator timing needs an explicit sensor sync policy; first-pass render-frame sync assumes normal presentation timing.
+- Pickup trigger delivery physics-body ownership belongs to **Animated Contact Sensor Physics Root**, not **Character Visual Anchor**, animated bones, or per-pickup Rigidbodies.
+- Pose-following **Animated Contact Sensors** may use the `PlayerBodyPart` physics layer, but layer and tag policy remains gameplay contact authoring, not character presentation state.
+- Pose-following **Animated Contact Sensors** should not trigger against Player Layer just because they follow the **Character**.
+- First-pass pose-following **Animated Contact Sensors** should interact with **Pickups** only; `CameraObstacle` interaction requires an explicit body-part obstacle feature.
+- **Character** GameObject names or hierarchy paths may provide first-pass **Animated Sensor Identity**, but they should not become a long-lived gameplay API when stable sensor content is needed.
+- Pickup-eligible **Animated Contact Sensor** authoring may reference **Character** hierarchy objects as pose inputs, but gameplay source entries should point at copied sensors hosted by **Animated Contact Sensor Physics Root**.
+- Future obstacle-eligible **Animated Contact Sensor** authoring may use the same pose-input pattern, but **Run Obstacle Sensor Source** owns what is obstacle-eligible if that feature is enabled.
+- Gameplay sensor source components should not live under **Character Visual Anchor** just because their referenced **Animated Contact Sensors** follow **Character** animation.
+- **Character Visual Anchor** supplies animated pose inputs; gameplay-owned sensor sources own eligibility, target resolution, and typed contact event publication.
+- Gameplay sensor sources should reference explicit **Animated Contact Sensor** entries; **Character Visual Anchor** should not be treated as a scan root for all `TriggerNotifier` children.
+- First-pass gameplay sensor source entries should reference copied sensor `TriggerNotifier` components directly; a separate `AnimatedContactSensor` component is not required on every sensor object.
+- Gameplay sensor sources own their raw `TriggerNotifier` subscription lifecycle; **Character Visual Anchor** and animated bones do not own gameplay listener state.
+- Gameplay sensor sources own target-resolution filtering; non-matching sensor contacts should not make **Character Visual Anchor** log or decide gameplay meaning.
+- The same **Animated Contact Sensor** may be referenced by multiple gameplay sensor sources only when it is explicitly eligible for multiple contact purposes.
+- Duplicate references to the same **Animated Contact Sensor** inside one gameplay sensor source should be treated as setup error or validation warning.
 - **Character Visual Follow Tuning** belongs to the **Character Presentation View** scene or prefab authoring; it is not gameplay movement, upgrade, or economy tuning.
 - **Character Visual Follower** is owned by the composition root as a presentation entry point; the view remains passive and should not own a standalone `LateUpdate` loop.
-- **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; distance and angle snap thresholds prevent visible lag after teleports, run resets, and terminal state changes.
+- **Character Visual Follower** keeps position tight, heading fairly tight, and smooths up/tilt more strongly; explicit snaps handle run resets and terminal state changes, while automatic snap thresholds are for stationary drift rather than continuous high-speed target motion.
 - **Character Model Root** handles source-asset alignment under a **Character**.
 - **Character Presentation Mode** is appearance language, not **Gameplay State**.
 - **Character Presentation Mode** changes must not change **Run Body** velocity, steering state, speed recovery, contact response, or run distance.
@@ -211,6 +239,51 @@ _Avoid_: Gameplay State, animation mode, run result
 
 > **Dev:** "Can gameplay systems read the **Smoothed Character Pose**?"
 > **Domain expert:** "No - gameplay reads the controlled gameplay object and its physics facts; the smoothed pose is visual-only."
+
+> **Dev:** "Does a hand sensor that follows animation make the **Character** a gameplay collider?"
+> **Domain expert:** "No - an **Animated Contact Sensor** can copy a body-part pose for narrow contact reporting, but it does not replace **Run Body** collision authority."
+
+> **Dev:** "Should a hand sensor use Player Tag because it is under the **Character**?"
+> **Domain expert:** "No - visual hierarchy placement only supplies pose; gameplay contact authoring uses `PlayerBodyPart` and source configuration."
+
+> **Dev:** "Should animated sensors touch the player collider because both represent the same character?"
+> **Domain expert:** "No - visual representation does not create player self-contact; gameplay sensor sources only need external contact facts."
+
+> **Dev:** "Can gameplay subscribe directly to a hand `TriggerNotifier`?"
+> **Domain expert:** "No - the notifier is a low-level adapter; gameplay should consume typed reports from a sensor source."
+
+> **Dev:** "Should every animated hand or head sensor get a Rigidbody?"
+> **Domain expert:** "No - the sensor stays trigger-only; pickup collection uses gameplay-owned **Animated Contact Sensor Physics Root** for trigger delivery, and other contact features need their own explicit physics-body policy."
+
+> **Dev:** "Should `CharacterVisualAnchor` get one Rigidbody for all body-part sensors?"
+> **Domain expert:** "No - use gameplay-owned **Animated Contact Sensor Physics Root**; **Character Visual Anchor** remains presentation-only."
+
+> **Dev:** "Should copied body-part sensors read the visual pose before **Character Visual Follower** finishes smoothing?"
+> **Domain expert:** "No - **Animated Contact Sensor Pose Sync** runs after the visible **Character** pose is finalized for that rendered frame."
+
+> **Dev:** "Does a head obstacle sensor make the Character hierarchy own obstacle logic?"
+> **Domain expert:** "No - if body-part obstacle notices are enabled, **Run Obstacle Sensor Source** owns obstacle eligibility and reporting; the Character hierarchy only supplies animated sensor poses."
+
+> **Dev:** "Should `Pickup Sensor Source` be a child of **Character Visual Anchor**?"
+> **Domain expert:** "No - **Character Visual Anchor** supplies pose inputs; source ownership stays with gameplay."
+
+> **Dev:** "Can gameplay infer all sensors by walking the whole character hierarchy?"
+> **Domain expert:** "No - source eligibility must be explicit and validated."
+
+> **Dev:** "Should every copied sensor also have an `AnimatedContactSensor` component?"
+> **Domain expert:** "No - first pass keeps the copied sensor as trigger plus `TriggerNotifier`; source entries provide gameplay meaning."
+
+> **Dev:** "Should the animated sensor remember which gameplay source subscribed to it?"
+> **Domain expert:** "No - lifecycle belongs to the gameplay sensor source; the sensor notifier only reports trigger enters."
+
+> **Dev:** "Should the visual hierarchy warn when a sensor touches something that is not a pickup or obstacle?"
+> **Domain expert:** "No - target filtering belongs to gameplay sensor sources; non-matching contacts are ignored."
+
+> **Dev:** "Can the same hand sensor be pickup-eligible and obstacle-eligible?"
+> **Domain expert:** "Yes - that is gameplay source configuration; the visual hierarchy only supplies pose inputs."
+
+> **Dev:** "Should we hardcode head and hand sensor ids in gameplay code?"
+> **Domain expert:** "No - first use authored object name or hierarchy path; graduate to asset-backed ids when those contacts need stable content contracts."
 
 > **Dev:** "Should the **Character Visual Follower** smooth raw Rigidbody position?"
 > **Domain expert:** "No - it follows the controlled gameplay object's Transform render pose during presentation late update, after Rigidbody interpolation has produced the visible pose."

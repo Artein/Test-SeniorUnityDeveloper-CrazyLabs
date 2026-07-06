@@ -44,13 +44,11 @@ public sealed class PickupAdapterAndStateTests
     }
 
     [Test]
-    public void Validate_MissingTriggerNotifier_Throws()
+    public void Validate_MissingTriggerNotifier_DoesNotThrow()
     {
         var pickup = CreatePickup("Pickup", _pickupDefinition, false);
 
-        Assert.That(
-            pickup.Validate,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Trigger Notifier"));
+        Assert.That(pickup.Validate, Throws.Nothing);
     }
 
     [Test]

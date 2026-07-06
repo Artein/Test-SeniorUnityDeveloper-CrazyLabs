@@ -11,7 +11,7 @@ namespace Game.Gameplay
             get
             {
                 UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyRunCameraSource requires a Rigidbody reference.");
-                return _rigidbody.position;
+                return _rigidbody.transform.position;
             }
         }
 
