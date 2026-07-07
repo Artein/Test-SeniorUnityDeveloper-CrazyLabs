@@ -11077,7 +11077,7 @@ MonoBehaviour:
   _characterPresentationView: {fileID: 613386046}
   _animatedContactSensorPoseSyncView: {fileID: 2800000014}
   _finishPresentationView: {fileID: 2900000004}
-  _runDiagnosticsOverlayEnabled: 1
+  _runDiagnosticsOverlayEnabled: 0
 --- !u!4 &1422486651
 Transform:
   m_ObjectHideFlags: 0
