@@ -308,7 +308,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
 #if UNITY_EDITOR
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.LaunchFlight, 0.08f);
-        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Airborne, 0.22f);
+        AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Airborne, 1f);
+        AssertAnyStateTransitionSupportsInterruption(characterAnimator, CharacterPresentationMode.Airborne);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Victory, 0.24f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Defeat, 0.2f);
         AssertLaunchPushUsesSlideMotion(characterAnimator);
@@ -817,6 +818,24 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 #if UNITY_EDITOR
     private void AssertAnyStateTransitionDuration(Animator animator, CharacterPresentationMode mode, float expectedDuration)
     {
+        var transition = FindPresentationModeAnyStateTransition(animator, mode);
+
+        Assert.That(transition.hasFixedDuration, Is.True, $"{mode} transition should use fixed-duration seconds.");
+        Assert.That(transition.duration, Is.EqualTo(expectedDuration).Within(0.0001f), mode.ToString());
+    }
+
+    private void AssertAnyStateTransitionSupportsInterruption(Animator animator, CharacterPresentationMode mode)
+    {
+        var transition = FindPresentationModeAnyStateTransition(animator, mode);
+
+        Assert.That(
+            transition.interruptionSource,
+            Is.Not.EqualTo(TransitionInterruptionSource.None),
+            $"{mode} transition should support interruption.");
+    }
+
+    private AnimatorStateTransition FindPresentationModeAnyStateTransition(Animator animator, CharacterPresentationMode mode)
+    {
         var controller = animator.runtimeAnimatorController as AnimatorController;
 
         Assert.That(controller, Is.Not.Null, $"{animator.name} should use an AnimatorController asset.");
@@ -826,8 +845,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             .SingleOrDefault(candidate => IsPresentationModeAnyStateTransition(candidate, mode));
 
         Assert.That(transition, Is.Not.Null, $"{controller.name} should contain an AnyState transition to {mode}.");
-        Assert.That(transition.hasFixedDuration, Is.True, $"{mode} transition should use fixed-duration seconds.");
-        Assert.That(transition.duration, Is.EqualTo(expectedDuration).Within(0.0001f), mode.ToString());
+
+        return transition;
     }
 
     private bool IsPresentationModeAnyStateTransition(AnimatorStateTransition transition, CharacterPresentationMode mode)
