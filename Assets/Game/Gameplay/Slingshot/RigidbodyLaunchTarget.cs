@@ -45,8 +45,7 @@ namespace Game.Gameplay.Slingshot
         private const float MaximumBandShapeClearanceSampleSpacing = 0.0025f;
         private const float MinimumBandShapeClearanceSegmentLength = 0.0001f;
 
-        private const RigidbodyConstraints PostLaunchStabilizationConstraints =
-            RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        private const RigidbodyConstraints PostLaunchStabilizationConstraints = RigidbodyConstraints.FreezeRotation;
 
         [SerializeField] private Rigidbody _rigidbody;
         [SerializeField] private Collider _bandContactCollider;

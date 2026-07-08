@@ -7,8 +7,7 @@ using UnityEngine.TestTools;
 // ReSharper disable once CheckNamespace
 public sealed class RigidbodyLaunchTargetTests
 {
-    private const RigidbodyConstraints PostLaunchStabilizationConstraints =
-        RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+    private const RigidbodyConstraints PostLaunchStabilizationConstraints = RigidbodyConstraints.FreezeRotation;
 
     private GameObject _gameObject;
     private Rigidbody _rigidbody;
@@ -68,7 +67,7 @@ public sealed class RigidbodyLaunchTargetTests
     }
 
     [UnityTest]
-    public IEnumerator Launch_AfterHold_PreservesSavedConstraintsAddsStabilizationAndAppliesVelocityChange()
+    public IEnumerator Launch_AfterHold_PreservesSavedConstraintsFreezesRotationAndAppliesVelocityChange()
     {
         _rigidbody.isKinematic = false;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotationX;
@@ -79,9 +78,9 @@ public sealed class RigidbodyLaunchTargetTests
         yield return new WaitForFixedUpdate();
 
         Assert.That(_rigidbody.isKinematic, Is.False);
-        Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ));
+        Assert.That(_rigidbody.constraints, Is.EqualTo(PostLaunchStabilizationConstraints));
         Assert.That(_rigidbody.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate));
-        AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
+        AssertConstraintIsSet(RigidbodyConstraints.FreezeRotationY);
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(1f, 2f, 3f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
     }
@@ -99,8 +98,7 @@ public sealed class RigidbodyLaunchTargetTests
 
         Assert.That(_rigidbody.isKinematic, Is.False);
 
-        Assert.That(_rigidbody.constraints,
-            Is.EqualTo(RigidbodyConstraints.FreezeRotationY | PostLaunchStabilizationConstraints));
+        Assert.That(_rigidbody.constraints, Is.EqualTo(PostLaunchStabilizationConstraints));
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 1f)));
         Assert.That(_rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
         LogAssert.NoUnexpectedReceived();
@@ -121,7 +119,7 @@ public sealed class RigidbodyLaunchTargetTests
 
         Assert.That(_rigidbody.isKinematic, Is.False);
         Assert.That(_rigidbody.constraints, Is.EqualTo(RigidbodyConstraints.FreezePositionX | PostLaunchStabilizationConstraints));
-        AssertConstraintIsNotSet(RigidbodyConstraints.FreezeRotationY);
+        AssertConstraintIsSet(RigidbodyConstraints.FreezeRotationY);
     }
 
     [Test]
@@ -207,9 +205,9 @@ public sealed class RigidbodyLaunchTargetTests
         Assert.That(_rigidbody.linearVelocity, Is.EqualTo(new Vector3(2f, 0f, 0f)));
     }
 
-    private void AssertConstraintIsNotSet(RigidbodyConstraints constraint)
+    private void AssertConstraintIsSet(RigidbodyConstraints constraint)
     {
-        Assert.That(_rigidbody.constraints & constraint, Is.EqualTo(RigidbodyConstraints.None));
+        Assert.That(_rigidbody.constraints & constraint, Is.EqualTo(constraint));
     }
 
     private void AssertRotationEquals(Quaternion expectedRotation, Quaternion actualRotation)
