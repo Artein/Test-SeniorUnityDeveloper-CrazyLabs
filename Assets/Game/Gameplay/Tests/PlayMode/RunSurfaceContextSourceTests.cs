@@ -208,6 +208,91 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     }
 
     [Test]
+    public void given_SupportFootprintStraddlesFlatAndBankedSurface_when_SampledRepeatedly_then_ContextKeepsDominantSupportNormal()
+    {
+        var bankRotation = Quaternion.AngleAxis(35f, Vector3.forward);
+        var bankNormal = bankRotation * Vector3.up;
+        var source = CreateSphereSource(new Vector3(0f, 0.62f, 0f), 0.4f, 0.4f, out _);
+
+        CreateSurfacePatch(
+            "Bank Surface",
+            Vector3.zero,
+            new Vector3(3f, 0.1f, 3f),
+            0.05f,
+            bankRotation);
+
+        CreateSurfacePatch(
+            "Flat Center Patch",
+            Vector3.zero,
+            new Vector3(0.16f, 0.1f, 0.16f),
+            0.08f,
+            Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        AssertGroundNormalNear(source.Current.GroundNormal, bankNormal, 2f);
+    }
+
+    [Test]
+    public void given_BankedSurfaceHasMajorityFootprintSupport_when_Sampled_then_ContextUsesBankNormal()
+    {
+        var bankRotation = Quaternion.AngleAxis(35f, Vector3.forward);
+        var bankNormal = bankRotation * Vector3.up;
+        var source = CreateSphereSource(new Vector3(0f, 0.62f, 0f), 0.4f, 0.4f, out _);
+
+        CreateSurfacePatch(
+            "Flat Center Patch",
+            Vector3.zero,
+            new Vector3(0.16f, 0.1f, 0.16f),
+            0.08f,
+            Quaternion.identity);
+
+        CreateSurfacePatch(
+            "Bank Surface",
+            Vector3.zero,
+            new Vector3(3f, 0.1f, 3f),
+            0.05f,
+            bankRotation);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        AssertGroundNormalNear(source.Current.GroundNormal, bankNormal, 2f);
+    }
+
+    [Test]
+    public void given_FootprintSamplesHitNonSurfaceContacts_when_Sampled_then_IgnoresThem()
+    {
+        var obstacleRotation = Quaternion.AngleAxis(35f, Vector3.forward);
+        var source = CreateSphereSource(new Vector3(0f, 0.62f, 0f), 0.4f, 0.4f, out _);
+
+        CreateSurfacePatch(
+            "Obstacle Surface",
+            Vector3.zero,
+            new Vector3(3f, 0.1f, 3f),
+            0.05f,
+            obstacleRotation,
+            RunContactCategory.Obstacle);
+
+        CreateSurfacePatch(
+            "Flat Center Patch",
+            Vector3.zero,
+            new Vector3(0.16f, 0.1f, 0.16f),
+            0.08f,
+            Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.True);
+        AssertGroundNormalNear(source.Current.GroundNormal, Vector3.up, 0.1f);
+    }
+
+    [Test]
     public void given_MissingSupportCollider_when_Constructed_then_ThrowsArgumentNullException()
     {
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
@@ -308,6 +393,26 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         return supportCollider;
     }
 
+    private GameObject CreateSurfacePatch(
+        string name,
+        Vector3 centerOffset,
+        Vector3 size,
+        float topY,
+        Quaternion rotation,
+        RunContactCategory category = RunContactCategory.Surface)
+    {
+        var surface = CreateGameObject(name);
+        surface.layer = GetSingleLayer(TestAssets.RunSurfaceLayerMask, "Run Surface");
+
+        surface.transform.SetPositionAndRotation(
+            TestOrigin + centerOffset + (Vector3.up * topY) - (rotation * Vector3.up * (size.y * 0.5f)),
+            rotation);
+        surface.transform.localScale = size;
+        surface.AddComponent<BoxCollider>();
+        surface.AddComponent<RunContact>().SetCategoryForTests(category);
+        return surface;
+    }
+
     private GameObject CreateSurface(
         float topY,
         Quaternion rotation,
@@ -334,6 +439,11 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         Assert.That(layerMask.value, Is.Not.EqualTo(0), description);
         Assert.That(layerMask.value & (layerMask.value - 1), Is.Zero, description);
         return Mathf.RoundToInt(Mathf.Log(layerMask.value, 2f));
+    }
+
+    private static void AssertGroundNormalNear(Vector3 actual, Vector3 expected, float toleranceDegrees)
+    {
+        Assert.That(Vector3.Angle(actual, expected), Is.LessThanOrEqualTo(toleranceDegrees));
     }
 
     private GameObject CreateGameObject(string name)
