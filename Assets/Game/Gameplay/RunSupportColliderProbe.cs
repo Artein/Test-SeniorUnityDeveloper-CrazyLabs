@@ -5,6 +5,9 @@ namespace Game.Gameplay
 {
     internal abstract class RunSupportColliderProbe : IRunSupportColliderProbe
     {
+        private const float MinimumDirectionSqrMagnitude = 0.000001f;
+        private const float MinimumOriginPadding = 0.05f;
+
         public Collider Collider { get; }
 
         protected RunSupportColliderProbe(Collider collider)
@@ -20,19 +23,57 @@ namespace Game.Gameplay
             LayerMask surfaceMask);
 
         public abstract int Overlap(
-            Collider[] results, 
+            Collider[] results,
             LayerMask surfaceMask);
 
-        public Vector3 GetSupportProbeOrigin(Vector3 upDirection, float skinWidth)
+        public virtual float GetProjectedFootprintExtent(Vector3 direction)
         {
+            if (!TryNormalizeDirection(direction, out var normalizedDirection))
+                return 0f;
+
+            return CalculateProjectedExtent(Collider.bounds, normalizedDirection);
+        }
+
+        public bool TryGetSupportSampleOrigin(
+            Vector3 upDirection,
+            Vector3 lateralOffset,
+            float skinWidth,
+            out Vector3 origin)
+        {
+            origin = default;
+
+            if (!TryNormalizeDirection(upDirection, out var normalizedUpDirection))
+                return false;
+
             var bounds = Collider.bounds;
+            var projectedExtent = GetProjectedFootprintExtent(normalizedUpDirection);
+            var padding = Mathf.Max(MinimumOriginPadding, Mathf.Max(0f, skinWidth) * 2f);
+            var rayStart = bounds.center + lateralOffset - (normalizedUpDirection * (projectedExtent + padding));
+            var rayDistance = (projectedExtent + padding) * 2f;
 
-            var projectedExtent =
-                bounds.extents.x * Mathf.Abs(upDirection.x)
-                + bounds.extents.y * Mathf.Abs(upDirection.y)
-                + bounds.extents.z * Mathf.Abs(upDirection.z);
+            if (!Collider.Raycast(new Ray(rayStart, normalizedUpDirection), out var hit, rayDistance))
+                return false;
 
-            return bounds.center - (upDirection * projectedExtent) + (upDirection * skinWidth);
+            origin = hit.point + (normalizedUpDirection * Mathf.Max(0f, skinWidth));
+            return true;
+        }
+
+        protected bool TryNormalizeDirection(Vector3 direction, out Vector3 normalizedDirection)
+        {
+            normalizedDirection = default;
+
+            if (direction.sqrMagnitude <= MinimumDirectionSqrMagnitude)
+                return false;
+
+            normalizedDirection = direction.normalized;
+            return true;
+        }
+
+        protected float CalculateProjectedExtent(Bounds bounds, Vector3 normalizedDirection)
+        {
+            return (bounds.extents.x * Mathf.Abs(normalizedDirection.x))
+                   + (bounds.extents.y * Mathf.Abs(normalizedDirection.y))
+                   + (bounds.extents.z * Mathf.Abs(normalizedDirection.z));
         }
     }
 }

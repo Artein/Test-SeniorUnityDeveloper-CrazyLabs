@@ -15,6 +15,12 @@ namespace Game.Gameplay
 
         int Overlap(Collider[] results, LayerMask surfaceMask);
 
-        Vector3 GetSupportProbeOrigin(Vector3 upDirection, float skinWidth);
+        float GetProjectedFootprintExtent(Vector3 direction);
+
+        bool TryGetSupportSampleOrigin(
+            Vector3 upDirection,
+            Vector3 lateralOffset,
+            float skinWidth,
+            out Vector3 origin);
     }
 }

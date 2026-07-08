@@ -20,13 +20,7 @@ namespace Game.Gameplay
             RaycastHit[] results,
             LayerMask surfaceMask)
         {
-            var capsuleTransform = _capsule.transform;
-            var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(_capsule.direction);
-            var scale = capsuleTransform.lossyScale.Abs();
-            var radius = Mathf.Max(0f, _capsule.radius * GetCapsuleRadiusScale(scale, _capsule.direction));
-            var height = Mathf.Max(radius * 2f, _capsule.height * GetCapsuleHeightScale(scale, _capsule.direction));
-            var center = capsuleTransform.TransformPoint(_capsule.center);
-            var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
+            ResolveGeometry(out var center, out var axis, out var radius, out var halfSegment);
 
             return Physics.CapsuleCastNonAlloc(
                 center + (axis * halfSegment) + castOffset,
@@ -41,13 +35,7 @@ namespace Game.Gameplay
 
         public override int Overlap(Collider[] results, LayerMask surfaceMask)
         {
-            var capsuleTransform = _capsule.transform;
-            var axis = capsuleTransform.rotation * GetCapsuleLocalAxis(_capsule.direction);
-            var scale = capsuleTransform.lossyScale.Abs();
-            var radius = Mathf.Max(0f, _capsule.radius * GetCapsuleRadiusScale(scale, _capsule.direction));
-            var height = Mathf.Max(radius * 2f, _capsule.height * GetCapsuleHeightScale(scale, _capsule.direction));
-            var center = capsuleTransform.TransformPoint(_capsule.center);
-            var halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
+            ResolveGeometry(out var center, out var axis, out var radius, out var halfSegment);
 
             return Physics.OverlapCapsuleNonAlloc(
                 center + (axis * halfSegment),
@@ -56,6 +44,31 @@ namespace Game.Gameplay
                 results,
                 surfaceMask,
                 QueryTriggerInteraction.Ignore);
+        }
+
+        public override float GetProjectedFootprintExtent(Vector3 direction)
+        {
+            if (!TryNormalizeDirection(direction, out var normalizedDirection))
+                return 0f;
+
+            ResolveGeometry(out _, out var axis, out var radius, out var halfSegment);
+
+            return (Mathf.Abs(Vector3.Dot(axis, normalizedDirection)) * halfSegment) + radius;
+        }
+
+        private void ResolveGeometry(out Vector3 center, out Vector3 axis, out float radius, out float halfSegment)
+        {
+            var capsuleTransform = _capsule.transform;
+            axis = capsuleTransform.rotation * GetCapsuleLocalAxis(_capsule.direction);
+
+            if (!TryNormalizeDirection(axis, out axis))
+                axis = Vector3.up;
+
+            var scale = capsuleTransform.lossyScale.Abs();
+            radius = Mathf.Max(0f, _capsule.radius * GetCapsuleRadiusScale(scale, _capsule.direction));
+            var height = Mathf.Max(radius * 2f, _capsule.height * GetCapsuleHeightScale(scale, _capsule.direction));
+            center = capsuleTransform.TransformPoint(_capsule.center);
+            halfSegment = Mathf.Max(0f, (height * 0.5f) - radius);
         }
 
         private static Vector3 GetCapsuleLocalAxis(int direction)

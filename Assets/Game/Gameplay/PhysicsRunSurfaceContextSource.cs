@@ -14,7 +14,6 @@ namespace Game.Gameplay
         private const float SupportProbeSkinWidth = 0.02f;
         private const float MinimumSupportNormalDot = 0.17f;
         private const float SupportNormalSnapDegrees = 45f;
-        private const float SameSuspectSupportNormalDot = 0.9999f;
         private const int UngroundedMissThreshold = 2;
         private const int SuspectSupportNormalConfirmationSampleCount = 2;
 
@@ -26,6 +25,8 @@ namespace Game.Gameplay
         private readonly RaycastHit[] _normalProbeHits = new RaycastHit[16];
         private readonly Collider[] _overlapHits = new Collider[16];
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator = new RunSurfaceSlopeCalculator();
+        private readonly RunSupportHitValidator _supportHitValidator;
+        private readonly RunSupportFootprintResolver _supportFootprintResolver;
 
         private int _consecutiveMissedSupportSamples = UngroundedMissThreshold;
         private Vector3 _acceptedSupportNormal = Vector3.up;
@@ -51,6 +52,8 @@ namespace Game.Gameplay
             _supportProbe = supportProbeFactory.Create(supportCollider);
             _supportProbeDistance = Mathf.Max(0f, supportProbeDistance);
             _surfaceMask = surfaceMask;
+            _supportHitValidator = new RunSupportHitValidator(_supportProbe, _surfaceMask, MinimumSupportNormalDot);
+            _supportFootprintResolver = new RunSupportFootprintResolver(_supportProbe, _surfaceMask, _supportHitValidator);
         }
 
         void IFixedTickable.FixedTick()
@@ -66,7 +69,7 @@ namespace Game.Gameplay
                 return;
             }
 
-            if (!TryGetBestSupportHit(frame.UpDirection, _supportProbeDistance, out var supportHit))
+            if (!TryGetBestSupportHit(frame, _supportProbeDistance, out var supportHit))
             {
                 RecordMissedSupportSample();
                 return;
@@ -163,14 +166,19 @@ namespace Game.Gameplay
             _suspectSupportNormalSampleCount = 0;
         }
 
-        private bool AreSameDirection(Vector3 firstDirection, Vector3 secondDirection)
+        private static bool AreSameDirection(Vector3 firstDirection, Vector3 secondDirection)
         {
-            return Vector3.Dot(firstDirection, secondDirection) >= SameSuspectSupportNormalDot;
+            const float sameSuspectSupportNormalDot = 0.9999f;
+            return Vector3.Dot(firstDirection, secondDirection) >= sameSuspectSupportNormalDot;
         }
 
-        private bool TryGetBestSupportHit(Vector3 upDirection, float supportProbeDistance, out SupportHit bestHit)
+        private bool TryGetBestSupportHit(
+            RunProgressFrameSnapshot frame,
+            float supportProbeDistance,
+            out RunSupportHit bestHit)
         {
             bestHit = default;
+            var upDirection = frame.UpDirection;
 
             if (TryGetOverlapSupport(upDirection, out bestHit))
                 return true;
@@ -181,6 +189,14 @@ namespace Game.Gameplay
             var direction = -upDirection;
             var castOffset = upDirection * SupportProbeSkinWidth;
             var distance = supportProbeDistance + SupportProbeSkinWidth;
+            var hasContinuityNormal = Current.IsGrounded && _hasAcceptedSupportNormal;
+
+            if (_supportFootprintResolver.TryResolve(frame, distance, SupportProbeSkinWidth, hasContinuityNormal, _acceptedSupportNormal,
+                    out bestHit))
+            {
+                return true;
+            }
+
             var hitCount = _supportProbe.Cast(castOffset, direction, distance, _supportHits, _surfaceMask);
             var hasHit = false;
             var bestNormalDot = float.NegativeInfinity;
@@ -190,23 +206,20 @@ namespace Game.Gameplay
             {
                 var hit = _supportHits[hitIndex];
 
-                if (!IsValidSupportHit(hit))
-                    continue;
-
-                if (!TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
-                    continue;
-
-                var normalDot = Vector3.Dot(normal, upDirection);
-
-                if (normalDot < bestNormalDot
-                    || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
+                if (!_supportHitValidator.IsValidSupportHit(hit)
+                    || !TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
                 {
                     continue;
                 }
 
+                var normalDot = Vector3.Dot(normal, upDirection);
+
+                if (normalDot < bestNormalDot || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
+                    continue;
+
                 bestNormalDot = normalDot;
                 bestDistance = hit.distance;
-                bestHit = new SupportHit(normal);
+                bestHit = new RunSupportHit(normal, hit.distance, hit.collider);
                 hasHit = true;
             }
 
@@ -222,7 +235,7 @@ namespace Game.Gameplay
         {
             normal = default;
 
-            if (!IsValidSupportNormal(hit.normal, upDirection))
+            if (!_supportHitValidator.IsValidSupportNormal(hit.normal, upDirection))
                 return false;
 
             normal = hit.normal.normalized;
@@ -243,15 +256,10 @@ namespace Game.Gameplay
         {
             normal = default;
 
-            var probeOrigin = _supportProbe.GetSupportProbeOrigin(upDirection, SupportProbeSkinWidth);
+            if (!_supportProbe.TryGetSupportSampleOrigin(upDirection, Vector3.zero, SupportProbeSkinWidth, out var probeOrigin))
+                return false;
 
-            var hitCount = Physics.RaycastNonAlloc(
-                probeOrigin,
-                direction,
-                _normalProbeHits,
-                distance,
-                _surfaceMask,
-                QueryTriggerInteraction.Ignore);
+            var hitCount = Physics.RaycastNonAlloc(probeOrigin, direction, _normalProbeHits, distance, _surfaceMask, QueryTriggerInteraction.Ignore);
             var bestDistance = float.PositiveInfinity;
             var hasHit = false;
 
@@ -259,11 +267,13 @@ namespace Game.Gameplay
             {
                 var hit = _normalProbeHits[hitIndex];
 
-                if (hit.collider != targetCollider || !IsValidSupportHit(hit) || !IsValidSupportNormal(hit.normal, upDirection))
+                if (hit.collider != targetCollider
+                    || !_supportHitValidator.IsValidSupportHit(hit)
+                    || !_supportHitValidator.IsValidSupportNormal(hit.normal, upDirection)
+                    || hit.distance >= bestDistance)
+                {
                     continue;
-
-                if (hit.distance >= bestDistance)
-                    continue;
+                }
 
                 bestDistance = hit.distance;
                 normal = hit.normal.normalized;
@@ -273,7 +283,7 @@ namespace Game.Gameplay
             return hasHit;
         }
 
-        private bool TryGetOverlapSupport(Vector3 upDirection, out SupportHit supportHit)
+        private bool TryGetOverlapSupport(Vector3 upDirection, out RunSupportHit supportHit)
         {
             supportHit = default;
 
@@ -287,7 +297,7 @@ namespace Game.Gameplay
             {
                 var hitCollider = _overlapHits[overlapIndex];
 
-                if (!IsValidSupportCollider(hitCollider))
+                if (!_supportHitValidator.IsValidSupportCollider(hitCollider))
                     continue;
 
                 if (!Physics.ComputePenetration(
@@ -303,69 +313,24 @@ namespace Game.Gameplay
                     continue;
                 }
 
-                if (!IsValidSupportNormal(separationDirection, upDirection))
+                if (!_supportHitValidator.IsValidSupportNormal(separationDirection, upDirection))
                     continue;
 
                 var normal = separationDirection.normalized;
                 var normalDot = Vector3.Dot(normal, upDirection);
 
-                if (normalDot < bestNormalDot
-                    || (Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance))
+                if (normalDot < bestNormalDot || (Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance))
                 {
                     continue;
                 }
 
                 bestNormalDot = normalDot;
                 bestDistance = separationDistance;
-                supportHit = new SupportHit(normal);
+                supportHit = new RunSupportHit(normal, separationDistance, hitCollider);
                 hasHit = true;
             }
 
             return hasHit;
-        }
-
-        private bool IsValidSupportHit(RaycastHit hit)
-        {
-            return IsValidSupportCollider(hit.collider);
-        }
-
-        private bool IsValidSupportCollider(Collider hitCollider)
-        {
-            var supportCollider = _supportProbe.Collider;
-
-            if (hitCollider == null || hitCollider == supportCollider || hitCollider.isTrigger)
-                return false;
-
-            if ((_surfaceMask.value & (1 << hitCollider.gameObject.layer)) == 0)
-                return false;
-
-            var supportBody = supportCollider.attachedRigidbody;
-
-            if (supportBody != null && hitCollider.attachedRigidbody == supportBody)
-                return false;
-
-            return hitCollider.TryGetComponent(out RunContact runContact)
-                   && runContact.Category == RunContactCategory.Surface;
-        }
-
-        private bool IsValidSupportNormal(Vector3 normal, Vector3 upDirection)
-        {
-            var sqrMagnitude = normal.sqrMagnitude;
-
-            if (sqrMagnitude <= 0.000001f || float.IsNaN(sqrMagnitude) || float.IsInfinity(sqrMagnitude))
-                return false;
-
-            return Vector3.Dot(normal.normalized, upDirection) > MinimumSupportNormalDot;
-        }
-
-        private readonly struct SupportHit
-        {
-            public Vector3 Normal { get; }
-
-            public SupportHit(Vector3 normal)
-            {
-                Normal = normal;
-            }
         }
     }
 }
