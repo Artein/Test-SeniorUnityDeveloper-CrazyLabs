@@ -256,7 +256,8 @@ namespace Game.Gameplay
         {
             normal = default;
 
-            var probeOrigin = _supportProbe.GetSupportProbeOrigin(upDirection, SupportProbeSkinWidth);
+            if (!_supportProbe.TryGetSupportSampleOrigin(upDirection, Vector3.zero, SupportProbeSkinWidth, out var probeOrigin))
+                return false;
 
             var hitCount = Physics.RaycastNonAlloc(probeOrigin, direction, _normalProbeHits, distance, _surfaceMask, QueryTriggerInteraction.Ignore);
             var bestDistance = float.PositiveInfinity;

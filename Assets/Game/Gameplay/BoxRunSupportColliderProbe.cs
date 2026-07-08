@@ -21,11 +21,10 @@ namespace Game.Gameplay
             LayerMask surfaceMask)
         {
             var boxTransform = _box.transform;
-            var halfExtents = Vector3.Scale(_box.size * 0.5f, boxTransform.lossyScale.Abs());
 
             return Physics.BoxCastNonAlloc(
                 boxTransform.TransformPoint(_box.center) + castOffset,
-                halfExtents,
+                ResolveHalfExtents(),
                 direction,
                 results,
                 boxTransform.rotation,
@@ -37,15 +36,32 @@ namespace Game.Gameplay
         public override int Overlap(Collider[] results, LayerMask surfaceMask)
         {
             var boxTransform = _box.transform;
-            var halfExtents = Vector3.Scale(_box.size * 0.5f, boxTransform.lossyScale.Abs());
 
             return Physics.OverlapBoxNonAlloc(
                 boxTransform.TransformPoint(_box.center),
-                halfExtents,
+                ResolveHalfExtents(),
                 results,
                 boxTransform.rotation,
                 surfaceMask,
                 QueryTriggerInteraction.Ignore);
+        }
+
+        public override float GetProjectedFootprintExtent(Vector3 direction)
+        {
+            if (!TryNormalizeDirection(direction, out var normalizedDirection))
+                return 0f;
+
+            var boxTransform = _box.transform;
+            var halfExtents = ResolveHalfExtents();
+
+            return (halfExtents.x * Mathf.Abs(Vector3.Dot(boxTransform.right, normalizedDirection)))
+                   + (halfExtents.y * Mathf.Abs(Vector3.Dot(boxTransform.up, normalizedDirection)))
+                   + (halfExtents.z * Mathf.Abs(Vector3.Dot(boxTransform.forward, normalizedDirection)));
+        }
+
+        private Vector3 ResolveHalfExtents()
+        {
+            return Vector3.Scale(_box.size * 0.5f, _box.transform.lossyScale.Abs());
         }
     }
 }

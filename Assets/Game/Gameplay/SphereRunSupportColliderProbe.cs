@@ -21,12 +21,10 @@ namespace Game.Gameplay
             LayerMask surfaceMask)
         {
             var sphereTransform = _sphere.transform;
-            var scale = sphereTransform.lossyScale.Abs();
-            var radius = Mathf.Max(0f, _sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
 
             return Physics.SphereCastNonAlloc(
                 sphereTransform.TransformPoint(_sphere.center) + castOffset,
-                radius,
+                ResolveRadius(),
                 direction,
                 results,
                 distance,
@@ -37,15 +35,29 @@ namespace Game.Gameplay
         public override int Overlap(Collider[] results, LayerMask surfaceMask)
         {
             var sphereTransform = _sphere.transform;
-            var scale = sphereTransform.lossyScale.Abs();
-            var radius = Mathf.Max(0f, _sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
 
             return Physics.OverlapSphereNonAlloc(
                 sphereTransform.TransformPoint(_sphere.center),
-                radius,
+                ResolveRadius(),
                 results,
                 surfaceMask,
                 QueryTriggerInteraction.Ignore);
+        }
+
+        public override float GetProjectedFootprintExtent(Vector3 direction)
+        {
+            if (!TryNormalizeDirection(direction, out _))
+                return 0f;
+
+            return ResolveRadius();
+        }
+
+        private float ResolveRadius()
+        {
+            var sphereTransform = _sphere.transform;
+            var scale = sphereTransform.lossyScale.Abs();
+
+            return Mathf.Max(0f, _sphere.radius * Mathf.Max(scale.x, scale.y, scale.z));
         }
     }
 }

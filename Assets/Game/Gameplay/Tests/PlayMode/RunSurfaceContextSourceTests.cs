@@ -293,6 +293,24 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     }
 
     [Test]
+    public void given_CurvedFootprintSideRayHitsLedgeBeyondShapeClearance_when_Sampled_then_ContextIsUngrounded()
+    {
+        var source = CreateSphereSource(new Vector3(0f, 0.5f, 0f), 0.4f, 0.04f, out _);
+
+        CreateSurfacePatch(
+            "Right Side Ledge",
+            Vector3.right * 0.24f,
+            new Vector3(0.08f, 0.1f, 0.08f),
+            0.07f,
+            Quaternion.identity);
+        Physics.SyncTransforms();
+
+        source.SampleForTests();
+
+        Assert.That(source.Current.IsGrounded, Is.False);
+    }
+
+    [Test]
     public void given_MissingSupportCollider_when_Constructed_then_ThrowsArgumentNullException()
     {
         var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();

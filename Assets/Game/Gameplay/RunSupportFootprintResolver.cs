@@ -42,17 +42,18 @@ namespace Game.Gameplay
             if (distance <= 0f)
                 return false;
 
-            var origin = _supportProbe.GetSupportProbeOrigin(frame.UpDirection, skinWidth);
-            var bounds = _supportProbe.Collider.bounds;
-            var rightOffset = frame.RightDirection * (CalculateProjectedExtent(bounds, frame.RightDirection) * SampleOffsetScale);
-            var forwardOffset = frame.ForwardDirection * (CalculateProjectedExtent(bounds, frame.ForwardDirection) * SampleOffsetScale);
+            var rightOffset =
+                frame.RightDirection * (_supportProbe.GetProjectedFootprintExtent(frame.RightDirection) * SampleOffsetScale);
+
+            var forwardOffset =
+                frame.ForwardDirection * (_supportProbe.GetProjectedFootprintExtent(frame.ForwardDirection) * SampleOffsetScale);
             var candidateCount = 0;
 
-            TryAddCandidate(origin, frame.UpDirection, distance, ref candidateCount);
-            TryAddCandidate(origin + rightOffset, frame.UpDirection, distance, ref candidateCount);
-            TryAddCandidate(origin - rightOffset, frame.UpDirection, distance, ref candidateCount);
-            TryAddCandidate(origin + forwardOffset, frame.UpDirection, distance, ref candidateCount);
-            TryAddCandidate(origin - forwardOffset, frame.UpDirection, distance, ref candidateCount);
+            TryAddCandidate(Vector3.zero, frame.UpDirection, distance, skinWidth, ref candidateCount);
+            TryAddCandidate(rightOffset, frame.UpDirection, distance, skinWidth, ref candidateCount);
+            TryAddCandidate(-rightOffset, frame.UpDirection, distance, skinWidth, ref candidateCount);
+            TryAddCandidate(forwardOffset, frame.UpDirection, distance, skinWidth, ref candidateCount);
+            TryAddCandidate(-forwardOffset, frame.UpDirection, distance, skinWidth, ref candidateCount);
 
             if (candidateCount <= 0)
                 return false;
@@ -69,13 +70,18 @@ namespace Game.Gameplay
         }
 
         private void TryAddCandidate(
-            Vector3 origin,
+            Vector3 lateralOffset,
             Vector3 upDirection,
             float distance,
+            float skinWidth,
             ref int candidateCount)
         {
-            if (candidateCount >= SampleCount || !TryCollectCandidate(origin, upDirection, distance, out var candidate))
+            if (candidateCount >= SampleCount
+                || !_supportProbe.TryGetSupportSampleOrigin(upDirection, lateralOffset, skinWidth, out var origin)
+                || !TryCollectCandidate(origin, upDirection, distance, out var candidate))
+            {
                 return;
+            }
 
             _candidates[candidateCount] = candidate;
             candidateCount += 1;
@@ -170,7 +176,7 @@ namespace Game.Gameplay
             {
                 var cluster = _clusters[clusterIndex];
                 var currentBestCluster = _clusters[bestClusterIndex];
-                
+
                 if (IsBetterCluster(cluster, currentBestCluster, upDirection, hasContinuityNormal, continuityNormal))
                     bestClusterIndex = clusterIndex;
             }
@@ -212,13 +218,6 @@ namespace Game.Gameplay
         private static bool HasMeaningfulDelta(float firstValue, float secondValue)
         {
             return Mathf.Abs(firstValue - secondValue) > ComparisonEpsilon;
-        }
-
-        private static float CalculateProjectedExtent(Bounds bounds, Vector3 direction)
-        {
-            return bounds.extents.x * Mathf.Abs(direction.x)
-                   + bounds.extents.y * Mathf.Abs(direction.y)
-                   + bounds.extents.z * Mathf.Abs(direction.z);
         }
 
         private readonly struct Candidate
