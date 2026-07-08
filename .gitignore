@@ -105,6 +105,11 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
+# Auto-generated Resources files from editor/build/test tooling
+/[Aa]ssets/[Rr]esources/Eflatun_SceneReference_*.generated.json*
+/[Aa]ssets/[Rr]esources/PerformanceTestRunInfo.json*
+/[Aa]ssets/[Rr]esources/PerformanceTestRunSettings.json*
+
 # direnv local configuration
 /.envrc
 
