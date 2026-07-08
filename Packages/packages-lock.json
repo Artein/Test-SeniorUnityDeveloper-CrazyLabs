@@ -8,7 +8,7 @@
         "com.unity.nuget.newtonsoft-json": "3.2.1",
         "com.unity.test-framework": "1.6.0"
       },
-      "hash": "e0de6277becbece21be605cd6d84d3ad2cf9061f"
+      "hash": "9ab9eb8b862e94be7c84403cfe86dce33f0bfbbd"
     },
     "com.eflatun.scenereference": {
       "version": "https://github.com/starikcetin/Eflatun.SceneReference.git#5.0.0",
