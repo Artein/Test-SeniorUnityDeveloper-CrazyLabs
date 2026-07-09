@@ -28,6 +28,7 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeTime _clock;
     protected FakeScreen _screen;
     protected FakeRunSteeringFrameSource _steeringFrameSource;
+    protected FakeRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
     protected FakeRunSteeringAffordanceView _runSteeringAffordanceView;
     protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
     protected GameplayStateId _preLaunchStateId;
@@ -93,6 +94,7 @@ public abstract class PlayerSteeringControllerTestFixture
 
         _steeringFrameSource = new FakeRunSteeringFrameSource();
         _runSteeringGesture = new RunSteeringGesture(_config);
+        _runSteeringAffordanceLayout = new FakeRunSteeringAffordanceLayout();
         _runSteeringAffordanceView = new FakeRunSteeringAffordanceView();
         _runSteeringPointerPressGuard = new FakeRunSteeringPointerPressGuard();
         _controller = CreateController();
@@ -243,7 +245,8 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
             _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture,
-            _runSteeringAffordanceView, _runSteeringPointerPressGuard, _runningStateId, _playerSteeringResponsivenessStatId);
+            _runSteeringAffordanceLayout, _runSteeringAffordanceView, _runSteeringPointerPressGuard, _runningStateId,
+            _playerSteeringResponsivenessStatId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -502,6 +505,29 @@ public abstract class PlayerSteeringControllerTestFixture
         {
             LastFallbackUpDirection = Vector3.zero;
             GetUpDirectionCallCount = 0;
+        }
+    }
+
+    protected sealed class FakeRunSteeringAffordanceLayout : IRunSteeringAffordanceLayout
+    {
+        public FakeRunSteeringAffordanceLayout()
+        {
+            Result = new RunSteeringAffordancePresentationState(
+                true,
+                new Vector2(11f, 12f),
+                new Vector2(21f, 22f),
+                new Vector2(31f, 32f),
+                new Vector2(41f, 42f),
+                51f);
+        }
+
+        internal List<RunSteeringAffordanceSnapshot> Snapshots { get; } = new();
+        internal RunSteeringAffordancePresentationState Result { get; }
+
+        RunSteeringAffordancePresentationState IRunSteeringAffordanceLayout.Create(RunSteeringAffordanceSnapshot snapshot)
+        {
+            Snapshots.Add(snapshot);
+            return Result;
         }
     }
 

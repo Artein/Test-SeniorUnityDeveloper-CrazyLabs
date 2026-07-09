@@ -381,6 +381,7 @@ public sealed class GameplayLifetimeScopeTests
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
+        var runSteeringAffordanceLayout = container.Resolve<IRunSteeringAffordanceLayout>();
         var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
         var runSteeringAffordancePresentationView = container.Resolve<IRunSteeringAffordancePresentationView>();
         var runSteeringAffordanceTuning = container.Resolve<IRunSteeringAffordanceTuning>();
@@ -501,6 +502,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runSteeringGesture, Is.Not.Null);
+        Assert.That(runSteeringAffordanceLayout, Is.TypeOf<RunSteeringAffordanceLayout>());
         Assert.That(runSteeringAffordanceView, Is.Not.InstanceOf<MonoBehaviour>());
         Assert.That(runSteeringAffordanceView, Is.InstanceOf<ITickable>());
         Assert.That(tickables, Has.Some.SameAs(runSteeringAffordanceView));

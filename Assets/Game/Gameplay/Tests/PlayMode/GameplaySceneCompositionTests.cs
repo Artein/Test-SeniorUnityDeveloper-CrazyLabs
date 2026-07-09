@@ -96,15 +96,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var pullHintCanvasGroup = pullHint.GetComponent<CanvasGroup>();
         var pullHintAnimator = pullHint.GetComponent<Animator>();
         var pullHintFinger = pullHint.transform.Find("Finger");
-
-        var pullHintFingerRectTransform = pullHintFinger != null
-            ? pullHintFinger.GetComponent<RectTransform>()
-            : null;
-
-        var pullHintFingerImage = pullHintFinger != null
-            ? pullHintFinger.GetComponent<Image>()
-            : null;
-
+        var pullHintFingerRectTransform = pullHintFinger != null ? pullHintFinger.GetComponent<RectTransform>() : null;
+        var pullHintFingerImage = pullHintFinger != null ? pullHintFinger.GetComponent<Image>() : null;
         var runSteeringAffordance = FindGameObjectByName(activeScene, "Run Steering Affordance");
         var runSteeringAffordanceView = runSteeringAffordance.GetComponent<RunSteeringAffordanceView>();
         var runSteeringAffordanceRectTransform = runSteeringAffordance.GetComponent<RectTransform>();
@@ -332,6 +325,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchPower", AnimatorControllerParameterType.Float);
         AssertAnimatorParameter(characterAnimator, "NormalizedPullOffset", AnimatorControllerParameterType.Float);
         AssertAnimatorParameter(characterAnimator, "NormalizedLaunchOffset", AnimatorControllerParameterType.Float);
+
 #if UNITY_EDITOR
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.LaunchFlight, 0.08f);
         AssertAnyStateTransitionDuration(characterAnimator, CharacterPresentationMode.Airborne, 1f);
@@ -341,6 +335,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         AssertLaunchPushUsesSlideMotion(characterAnimator);
         AssertLaunchFlightUsesDistinctMotion(characterAnimator);
 #endif
+
         Assert.That(characterAnimationEventReceiver, Is.Not.Null);
         Assert.That(characterAnimationEventReceiver.transform, Is.SameAs(characterAnimator.transform));
 
@@ -472,12 +467,12 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var affordanceLayout = new RunSteeringAffordanceLayout();
 
         var affordanceStartState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
-            true,
-            1,
-            new Vector2(500f, 700f),
-            new Vector2(560f, 1200f),
-            100f,
-            0.25f));
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(500f, 700f),
+            currentScreenPosition: new Vector2(560f, 1200f),
+            capturedRangePixels: 100f,
+            capturedDeadzoneFraction: 0.25f));
 
         resolvedRunSteeringAffordanceView.Show(affordanceStartState);
         Assert.That(runSteeringAffordance.activeSelf, Is.True);
@@ -485,12 +480,12 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f / canvas.scaleFactor).Within(0.001f));
 
         var affordanceMovedState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
-            true,
-            1,
-            new Vector2(500f, 700f),
-            new Vector2(650f, 1200f),
-            100f,
-            0.25f));
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(500f, 700f),
+            currentScreenPosition: new Vector2(650f, 1200f),
+            capturedRangePixels: 100f,
+            capturedDeadzoneFraction: 0.25f));
 
         resolvedRunSteeringAffordanceView.Update(affordanceMovedState);
         Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(600f / canvas.scaleFactor).Within(0.001f));
@@ -606,7 +601,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
                     playerRigidbody,
                     bandCenter.transform,
                     preLaunchLaunchTargetPose.transform,
-                    $"restart scenario {scenarioIndex}");
+                    assertionScope: $"restart scenario {scenarioIndex}");
             }
         }
         finally

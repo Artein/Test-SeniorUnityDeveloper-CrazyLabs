@@ -2,7 +2,12 @@ using UnityEngine;
 
 namespace Game.Gameplay
 {
-    internal sealed class RunSteeringAffordanceLayout
+    internal interface IRunSteeringAffordanceLayout
+    {
+        RunSteeringAffordancePresentationState Create(RunSteeringAffordanceSnapshot snapshot);
+    }
+
+    internal sealed class RunSteeringAffordanceLayout : IRunSteeringAffordanceLayout
     {
         public RunSteeringAffordancePresentationState Create(RunSteeringAffordanceSnapshot snapshot)
         {

@@ -25,9 +25,9 @@ namespace Game.Gameplay
         private readonly ITime _clock;
         private readonly IScreen _screen;
         private readonly IRunSteeringGesture _runSteeringGesture;
+        private readonly IRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
         private readonly IRunSteeringAffordanceView _runSteeringAffordanceView;
         private readonly IRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
-        private readonly RunSteeringAffordanceLayout _runSteeringAffordanceLayout = new();
         private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
         private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly GameplayStateId _runningStateId;
@@ -61,6 +61,7 @@ namespace Game.Gameplay
             ITime clock,
             IScreen screen,
             IRunSteeringGesture runSteeringGesture,
+            IRunSteeringAffordanceLayout runSteeringAffordanceLayout,
             IRunSteeringAffordanceView runSteeringAffordanceView,
             IRunSteeringPointerPressGuard runSteeringPointerPressGuard,
             [Key(InjectKey.GameplayStateId.Running)]
@@ -80,6 +81,8 @@ namespace Game.Gameplay
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
+            _runSteeringAffordanceLayout = runSteeringAffordanceLayout ??
+                                           throw new ArgumentNullException(nameof(runSteeringAffordanceLayout));
             _runSteeringAffordanceView = runSteeringAffordanceView ?? throw new ArgumentNullException(nameof(runSteeringAffordanceView));
             _runSteeringPointerPressGuard = runSteeringPointerPressGuard ?? throw new ArgumentNullException(nameof(runSteeringPointerPressGuard));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));

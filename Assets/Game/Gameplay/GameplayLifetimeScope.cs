@@ -140,6 +140,7 @@ namespace Game.Gameplay
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
+            builder.Register<IRunSteeringAffordanceLayout, RunSteeringAffordanceLayout>(Lifetime.Singleton);
             builder.Register<IRunSteeringPointerPressGuard, UnityEventSystemRunSteeringPointerPressGuard>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 

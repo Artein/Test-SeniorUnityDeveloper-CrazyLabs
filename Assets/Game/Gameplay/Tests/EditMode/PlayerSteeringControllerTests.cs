@@ -718,7 +718,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void PointerPressed_DuringRunning_ShowsRunSteeringAffordanceAtOrigin()
+    public void PointerPressed_DuringRunning_PresentsLayoutStateFromGestureSnapshot()
     {
         _screen.Dpi = 100f;
         _config.RunSteeringDeadzoneFraction = 0.25f;
@@ -727,14 +727,16 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Press(1, new Vector2(500f, 100f));
 
         Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(1));
+        var snapshot = _runSteeringAffordanceLayout.Snapshots[0];
+        Assert.That(snapshot.IsActive, Is.True);
+        Assert.That(snapshot.PointerId, Is.EqualTo(1));
+        AssertVector2(snapshot.OriginScreenPosition, new Vector2(500f, 100f));
+        AssertVector2(snapshot.CurrentScreenPosition, new Vector2(500f, 100f));
+        Assert.That(snapshot.CapturedRangePixels, Is.EqualTo(100f).Within(0.0001f));
+        Assert.That(snapshot.CapturedDeadzoneFraction, Is.EqualTo(0.25f).Within(0.0001f));
         Assert.That(_runSteeringAffordanceView.ShowStates, Has.Count.EqualTo(1));
-        var state = _runSteeringAffordanceView.ShowStates[0];
-        Assert.That(state.IsVisible, Is.True);
-        AssertVector2(state.OriginScreenPosition, new Vector2(500f, 100f));
-        AssertVector2(state.KnobScreenPosition, new Vector2(500f, 100f));
-        AssertVector2(state.LeftRangeEndScreenPosition, new Vector2(400f, 100f));
-        AssertVector2(state.RightRangeEndScreenPosition, new Vector2(600f, 100f));
-        Assert.That(state.DeadzoneDiameterPixels, Is.EqualTo(50f).Within(0.0001f));
+        Assert.That(_runSteeringAffordanceView.ShowStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -745,11 +747,10 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Press(1, new Vector2(500f, 100f));
         _input.Move(1, new Vector2(650f, 900f));
 
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[1].CurrentScreenPosition, new Vector2(650f, 900f));
         Assert.That(_runSteeringAffordanceView.UpdateStates, Has.Count.EqualTo(1));
-        var state = _runSteeringAffordanceView.UpdateStates[0];
-        AssertVector2(state.KnobScreenPosition, new Vector2(600f, 100f));
-        AssertVector2(state.LeftRangeEndScreenPosition, new Vector2(400f, 100f));
-        AssertVector2(state.RightRangeEndScreenPosition, new Vector2(600f, 100f));
+        Assert.That(_runSteeringAffordanceView.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -761,8 +762,10 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Move(1, new Vector2(540f, 100f));
         _input.Release(1, new Vector2(650f, 900f));
 
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(650f, 900f));
         Assert.That(_runSteeringAffordanceView.HideStates, Has.Count.EqualTo(1));
-        AssertVector2(_runSteeringAffordanceView.HideStates[0].KnobScreenPosition, new Vector2(600f, 100f));
+        Assert.That(_runSteeringAffordanceView.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -774,8 +777,10 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Move(1, new Vector2(540f, 100f));
         _input.Cancel(1, new Vector2(350f, -200f));
 
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(350f, -200f));
         Assert.That(_runSteeringAffordanceView.HideStates, Has.Count.EqualTo(1));
-        AssertVector2(_runSteeringAffordanceView.HideStates[0].KnobScreenPosition, new Vector2(400f, 100f));
+        Assert.That(_runSteeringAffordanceView.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -789,6 +794,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         FixedTick();
 
         Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Is.Empty);
         Assert.That(_runSteeringAffordanceView.ShowStates, Is.Empty);
         Assert.That(_runSteeringAffordanceView.UpdateStates, Is.Empty);
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
@@ -804,8 +810,9 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Move(1, new Vector2(600f, 100f));
 
         Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
         Assert.That(_runSteeringAffordanceView.UpdateStates, Has.Count.EqualTo(1));
-        AssertVector2(_runSteeringAffordanceView.UpdateStates[0].KnobScreenPosition, new Vector2(600f, 100f));
+        Assert.That(_runSteeringAffordanceView.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
