@@ -12,6 +12,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using VContainer;
 
 // ReSharper disable once CheckNamespace
@@ -131,6 +132,10 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             var runSteeringAffordanceCanvasGroup = runSteeringAffordance.GetComponent<CanvasGroup>();
             var runSteeringKnob = runSteeringAffordance.transform.Find("Knob");
             var runSteeringKnobRectTransform = runSteeringKnob.GetComponent<RectTransform>();
+            var runSteeringLeftRangeEnd = runSteeringAffordance.transform.Find("Left Range End Hint");
+            var runSteeringLeftRangeEndImage = runSteeringLeftRangeEnd.GetComponent<Image>();
+            var runSteeringRightRangeEnd = runSteeringAffordance.transform.Find("Right Range End Hint");
+            var runSteeringRightRangeEndImage = runSteeringRightRangeEnd.GetComponent<Image>();
             var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
             var launchAppliedNotifier = lifetimeScope.Container.Resolve<ISlingshotLaunchAppliedNotifier>();
             var gameplayStateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
@@ -182,6 +187,8 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
                     yield return null;
 
                 Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
+                Assert.That(runSteeringLeftRangeEndImage.color.a, Is.EqualTo(0f).Within(0.001f));
+                Assert.That(runSteeringRightRangeEndImage.color.a, Is.GreaterThan(0f));
             }
             finally
             {

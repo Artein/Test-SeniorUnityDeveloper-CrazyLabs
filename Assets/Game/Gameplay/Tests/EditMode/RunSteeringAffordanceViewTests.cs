@@ -7,6 +7,7 @@ using UnityEngine.UI;
 // ReSharper disable once CheckNamespace
 public sealed class RunSteeringAffordanceViewTests
 {
+    private const float RangeEndTintAlpha = 0.58f;
     private readonly List<UnityEngine.Object> _objects = new();
 
     [TearDown]
@@ -91,6 +92,87 @@ public sealed class RunSteeringAffordanceViewTests
         AssertVector2(knobRoot.anchoredPosition, new Vector2(180f, 200f));
         AssertVector2(leftRangeEndRoot.anchoredPosition, new Vector2(20f, 200f));
         AssertVector2(rightRangeEndRoot.anchoredPosition, new Vector2(180f, 200f));
+    }
+
+    [Test]
+    public void Show_OriginState_HidesBothRangeEnds()
+    {
+        var view = CreateView(
+            showSeconds: 0f,
+            hideSeconds: 0f,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out var leftRangeEndImage,
+            out _,
+            out var rightRangeEndImage,
+            out _,
+            out _);
+
+        ((IRunSteeringAffordanceView)view).Show(CreateState(
+            knob: new Vector2(100f, 200f),
+            leftRangeEnd: new Vector2(20f, 200f),
+            rightRangeEnd: new Vector2(180f, 200f),
+            deadzoneDiameter: 40f));
+
+        AssertImageAlpha(leftRangeEndImage, 0f);
+        AssertImageAlpha(rightRangeEndImage, 0f);
+    }
+
+    [Test]
+    public void Show_RightMovement_FadesOnlyRightRangeEndDuringRamp()
+    {
+        var view = CreateView(
+            showSeconds: 0f,
+            hideSeconds: 0f,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out var leftRangeEndImage,
+            out _,
+            out var rightRangeEndImage,
+            out _,
+            out _);
+
+        ((IRunSteeringAffordanceView)view).Show(CreateState(
+            knob: new Vector2(120f, 200f),
+            leftRangeEnd: new Vector2(20f, 200f),
+            rightRangeEnd: new Vector2(180f, 200f),
+            deadzoneDiameter: 40f));
+
+        AssertImageAlpha(leftRangeEndImage, 0f);
+        Assert.That(rightRangeEndImage.color.a, Is.GreaterThan(0f).And.LessThan(RangeEndTintAlpha));
+    }
+
+    [Test]
+    public void Show_FullLeftMovement_ShowsLeftRangeEndAtMaxAlpha()
+    {
+        var view = CreateView(
+            showSeconds: 0f,
+            hideSeconds: 0f,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out var leftRangeEndImage,
+            out _,
+            out var rightRangeEndImage,
+            out _,
+            out _);
+
+        ((IRunSteeringAffordanceView)view).Show(CreateState(
+            knob: new Vector2(20f, 200f),
+            leftRangeEnd: new Vector2(20f, 200f),
+            rightRangeEnd: new Vector2(180f, 200f),
+            deadzoneDiameter: 40f));
+
+        AssertImageAlpha(leftRangeEndImage, RangeEndTintAlpha);
+        AssertImageAlpha(rightRangeEndImage, 0f);
     }
 
     [Test]
@@ -322,6 +404,11 @@ public sealed class RunSteeringAffordanceViewTests
     {
         Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.001f));
         Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.001f));
+    }
+
+    private static void AssertImageAlpha(Image image, float expected)
+    {
+        Assert.That(image.color.a, Is.EqualTo(expected).Within(0.001f));
     }
 
     private static void AssertRenderedScreenPosition(RectTransform rectTransform, Vector2 expected)

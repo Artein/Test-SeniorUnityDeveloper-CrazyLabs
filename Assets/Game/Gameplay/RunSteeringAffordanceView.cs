@@ -6,6 +6,12 @@ namespace Game.Gameplay
 {
     public sealed partial class RunSteeringAffordanceView : MonoBehaviour, IRunSteeringAffordanceView
     {
+        private const float RangeEndMinimumFadeStartFraction = 0.06f;
+        private const float RangeEndDeadzoneFadeStartMultiplier = 0.5f;
+        private const float RangeEndDefaultFullOpacityFraction = 0.4f;
+        private const float RangeEndMinimumFadeSpanFraction = 0.08f;
+        private const float RangeEndMinimumRangePixels = 0.001f;
+
         [SerializeField] private RectTransform _root;
         [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private RectTransform _knobRoot;
@@ -276,14 +282,16 @@ namespace Game.Gameplay
                 _deadzoneRoot.sizeDelta = new Vector2(deadzoneDiameter, deadzoneDiameter);
             }
 
-            ApplyImageSettings();
+            ApplyImageSettings(state);
         }
 
-        private void ApplyImageSettings()
+        private void ApplyImageSettings(RunSteeringAffordancePresentationState state)
         {
+            GetRangeEndAlphaMultipliers(state, out var leftAlphaMultiplier, out var rightAlphaMultiplier);
+
             ApplyImageSettings(_knobImage, _knobTint);
-            ApplyImageSettings(_leftRangeEndImage, _rangeEndTint);
-            ApplyImageSettings(_rightRangeEndImage, _rangeEndTint);
+            ApplyImageSettings(_leftRangeEndImage, CreateRangeEndTint(leftAlphaMultiplier));
+            ApplyImageSettings(_rightRangeEndImage, CreateRangeEndTint(rightAlphaMultiplier));
             ApplyImageSettings(_deadzoneImage, _deadzoneTint);
         }
 
@@ -293,6 +301,61 @@ namespace Game.Gameplay
                 return;
 
             image.color = tint;
+            ApplyNonInteractiveImageSettings(image);
+        }
+
+        private void GetRangeEndAlphaMultipliers(
+            RunSteeringAffordancePresentationState state,
+            out float leftAlphaMultiplier,
+            out float rightAlphaMultiplier)
+        {
+            leftAlphaMultiplier = 0f;
+            rightAlphaMultiplier = 0f;
+
+            var rangePixels = Mathf.Max(
+                state.OriginScreenPosition.x - state.LeftRangeEndScreenPosition.x,
+                state.RightRangeEndScreenPosition.x - state.OriginScreenPosition.x);
+
+            if (rangePixels <= RangeEndMinimumRangePixels)
+                return;
+
+            var offset = state.KnobScreenPosition.x - state.OriginScreenPosition.x;
+
+            if (Mathf.Abs(offset) <= RangeEndMinimumRangePixels)
+                return;
+
+            var normalized = Mathf.Clamp01(Mathf.Abs(offset) / rangePixels);
+            var deadzoneFraction = Mathf.Clamp01(state.DeadzoneDiameterPixels / (rangePixels * 2f));
+            var fadeStart = Mathf.Clamp01(Mathf.Max(
+                RangeEndMinimumFadeStartFraction,
+                deadzoneFraction * RangeEndDeadzoneFadeStartMultiplier));
+            var fadeFull = Mathf.Clamp(
+                Mathf.Max(RangeEndDefaultFullOpacityFraction, fadeStart + RangeEndMinimumFadeSpanFraction),
+                fadeStart,
+                1f);
+            var progress = fadeFull > fadeStart
+                ? Mathf.InverseLerp(fadeStart, fadeFull, normalized)
+                : normalized >= fadeFull ? 1f : 0f;
+            var alphaMultiplier = Mathf.SmoothStep(0f, 1f, progress);
+
+            if (offset > 0f)
+                rightAlphaMultiplier = alphaMultiplier;
+            else
+                leftAlphaMultiplier = alphaMultiplier;
+        }
+
+        private Color CreateRangeEndTint(float alphaMultiplier)
+        {
+            var tint = _rangeEndTint;
+            tint.a *= Mathf.Clamp01(alphaMultiplier);
+            return tint;
+        }
+
+        private void ApplyNonInteractiveImageSettings(Image image)
+        {
+            if (image == null)
+                return;
+
             image.raycastTarget = false;
             image.preserveAspect = true;
         }
@@ -305,7 +368,10 @@ namespace Game.Gameplay
                 _canvasGroup.blocksRaycasts = false;
             }
 
-            ApplyImageSettings();
+            ApplyNonInteractiveImageSettings(_knobImage);
+            ApplyNonInteractiveImageSettings(_leftRangeEndImage);
+            ApplyNonInteractiveImageSettings(_rightRangeEndImage);
+            ApplyNonInteractiveImageSettings(_deadzoneImage);
         }
 
         private void SetScreenPosition(RectTransform target, Vector2 screenPosition)
