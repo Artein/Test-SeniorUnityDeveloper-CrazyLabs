@@ -160,12 +160,12 @@ public sealed class RunSteeringAffordancePresenterTests
     private static RunSteeringAffordancePresentationState CreateState(float knobX = 100f)
     {
         return new RunSteeringAffordancePresentationState(
-            true,
-            new Vector2(100f, 200f),
-            new Vector2(knobX, 200f),
-            new Vector2(20f, 200f),
-            new Vector2(180f, 200f),
-            40f);
+            isVisible: true,
+            originScreenPosition: new Vector2(100f, 200f),
+            knobScreenPosition: new Vector2(knobX, 200f),
+            leftRangeEndScreenPosition: new Vector2(20f, 200f),
+            rightRangeEndScreenPosition: new Vector2(180f, 200f),
+            deadzoneDiameterPixels: 40f);
     }
 
     private static void AssertAnimationFrame(AnimationFrame frame, float expectedAlpha, float expectedScale)
@@ -180,10 +180,7 @@ public sealed class RunSteeringAffordancePresenterTests
         public FakePresentationView View { get; }
         public FakeTime Time { get; }
 
-        public Fixture(
-            RunSteeringAffordancePresenter presenter,
-            FakePresentationView view,
-            FakeTime time)
+        public Fixture(RunSteeringAffordancePresenter presenter, FakePresentationView view, FakeTime time)
         {
             Presenter = presenter;
             View = view;

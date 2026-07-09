@@ -357,17 +357,8 @@ public sealed class RunSteeringAffordanceViewTests
 
         var view = rootObject.AddComponent<RunSteeringAffordanceView>();
 
-        view.SetReferencesForTests(
-            root,
-            canvasGroup,
-            knobRoot,
-            knobImage,
-            leftRangeEndRoot,
-            leftRangeEndImage,
-            rightRangeEndRoot,
-            rightRangeEndImage,
-            deadzoneRoot,
-            deadzoneImage);
+        view.SetReferencesForTests(root, canvasGroup, knobRoot, knobImage, leftRangeEndRoot, leftRangeEndImage, rightRangeEndRoot, rightRangeEndImage,
+            deadzoneRoot, deadzoneImage);
         view.SetAnimationDurationsForTests(showSeconds, hideSeconds);
         rootObject.SetActive(false);
         return view;
@@ -392,8 +383,8 @@ public sealed class RunSteeringAffordanceViewTests
         float deadzoneDiameter)
     {
         return new RunSteeringAffordancePresentationState(
-            true,
-            new Vector2(100f, 200f),
+            isVisible: true,
+            originScreenPosition: new Vector2(100f, 200f),
             knob,
             leftRangeEnd,
             rightRangeEnd,
