@@ -81,8 +81,7 @@ namespace Game.Gameplay
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
-            _runSteeringAffordanceLayout = runSteeringAffordanceLayout ??
-                                           throw new ArgumentNullException(nameof(runSteeringAffordanceLayout));
+            _runSteeringAffordanceLayout = runSteeringAffordanceLayout ?? throw new ArgumentNullException(nameof(runSteeringAffordanceLayout));
             _runSteeringAffordanceView = runSteeringAffordanceView ?? throw new ArgumentNullException(nameof(runSteeringAffordanceView));
             _runSteeringPointerPressGuard = runSteeringPointerPressGuard ?? throw new ArgumentNullException(nameof(runSteeringPointerPressGuard));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
@@ -125,15 +124,12 @@ namespace Game.Gameplay
 
             _isDisposed = true;
 
-            if (_isInitialized)
-            {
-                _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
-                _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
-                _unityInput.PointerPressed -= OnInputPointerPressed;
-                _unityInput.PointerMoved -= OnInputPointerMoved;
-                _unityInput.PointerReleased -= OnInputPointerReleased;
-                _unityInput.PointerCanceled -= OnInputPointerCanceled;
-            }
+            _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+            _unityInput.PointerPressed -= OnInputPointerPressed;
+            _unityInput.PointerMoved -= OnInputPointerMoved;
+            _unityInput.PointerReleased -= OnInputPointerReleased;
+            _unityInput.PointerCanceled -= OnInputPointerCanceled;
 
             DeactivateSteering();
         }
@@ -209,29 +205,27 @@ namespace Game.Gameplay
 
         private void OnInputPointerPressed(PointerInput pointerInput)
         {
-            if (!_isSteeringActive)
-                return;
-
-            if (!_runSteeringPointerPressGuard.CanBeginRunSteering(pointerInput))
-                return;
-
-            if (_runSteeringGesture.TryBegin(pointerInput, _screen.Dpi))
+            if (!_isSteeringActive
+                || !_runSteeringPointerPressGuard.CanBeginRunSteering(pointerInput)
+                || !_runSteeringGesture.TryBegin(pointerInput, _screen.Dpi))
             {
-                _desiredSteer = _runSteeringGesture.RequestedSteering;
-                _runSteeringAffordanceView.Show(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+                return;
             }
+
+            _desiredSteer = _runSteeringGesture.RequestedSteering;
+            _runSteeringAffordanceView.Show(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
         }
 
         private void OnInputPointerMoved(PointerInput pointerInput)
         {
-            if (!_isSteeringActive)
-                return;
-
-            if (_runSteeringGesture.TryMove(pointerInput))
+            if (!_isSteeringActive
+                || !_runSteeringGesture.TryMove(pointerInput))
             {
-                _desiredSteer = _runSteeringGesture.RequestedSteering;
-                _runSteeringAffordanceView.Update(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+                return;
             }
+
+            _desiredSteer = _runSteeringGesture.RequestedSteering;
+            _runSteeringAffordanceView.Update(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
         }
 
         private void OnInputPointerReleased(PointerInput pointerInput)
@@ -241,11 +235,11 @@ namespace Game.Gameplay
 
             var finalSnapshot = _runSteeringGesture.AffordanceSnapshot.WithCurrentScreenPosition(pointerInput.ScreenPosition);
 
-            if (_runSteeringGesture.TryRelease(pointerInput))
-            {
-                _desiredSteer = 0f;
-                _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
-            }
+            if (!_runSteeringGesture.TryRelease(pointerInput))
+                return;
+
+            _desiredSteer = 0f;
+            _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
         }
 
         private void OnInputPointerCanceled(PointerInput pointerInput)
@@ -255,11 +249,11 @@ namespace Game.Gameplay
 
             var finalSnapshot = _runSteeringGesture.AffordanceSnapshot.WithCurrentScreenPosition(pointerInput.ScreenPosition);
 
-            if (_runSteeringGesture.TryCancel(pointerInput))
-            {
-                _desiredSteer = 0f;
-                _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
-            }
+            if (!_runSteeringGesture.TryCancel(pointerInput))
+                return;
+            
+            _desiredSteer = 0f;
+            _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
         }
 
         private void UpdateSmoothedSteer()
@@ -405,8 +399,7 @@ namespace Game.Gameplay
 
         private bool HasValidGroundedSurface(RunSurfaceContext surfaceContext)
         {
-            return surfaceContext.IsGrounded
-                   && surfaceContext.HasValidGroundNormal
+            return surfaceContext is { IsGrounded: true, HasValidGroundNormal: true }
                    && IsValidDirection(surfaceContext.GroundNormal);
         }
 
