@@ -10,12 +10,12 @@ public sealed class RunSteeringAffordanceLayoutTests
     {
         var layout = new RunSteeringAffordanceLayout();
         var snapshot = new RunSteeringAffordanceSnapshot(
-            false,
-            0,
-            Vector2.zero,
-            Vector2.zero,
-            0f,
-            0f);
+            isActive: false,
+            pointerId: 0,
+            originScreenPosition: Vector2.zero,
+            currentScreenPosition: Vector2.zero,
+            capturedRangePixels: 0f,
+            capturedDeadzoneFraction: 0f);
 
         var state = layout.Create(snapshot);
 
@@ -27,12 +27,12 @@ public sealed class RunSteeringAffordanceLayoutTests
     {
         var layout = new RunSteeringAffordanceLayout();
         var snapshot = new RunSteeringAffordanceSnapshot(
-            true,
-            1,
-            new Vector2(100f, 200f),
-            new Vector2(100f, 200f),
-            80f,
-            0.25f);
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(100f, 200f),
+            currentScreenPosition: new Vector2(100f, 200f),
+            capturedRangePixels: 80f,
+            capturedDeadzoneFraction: 0.25f);
 
         var state = layout.Create(snapshot);
 
@@ -49,12 +49,12 @@ public sealed class RunSteeringAffordanceLayoutTests
     {
         var layout = new RunSteeringAffordanceLayout();
         var snapshot = new RunSteeringAffordanceSnapshot(
-            true,
-            1,
-            new Vector2(100f, 200f),
-            new Vector2(260f, 900f),
-            80f,
-            0f);
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(100f, 200f),
+            currentScreenPosition: new Vector2(260f, 900f),
+            capturedRangePixels: 80f,
+            capturedDeadzoneFraction: 0f);
 
         var state = layout.Create(snapshot);
 
@@ -66,12 +66,12 @@ public sealed class RunSteeringAffordanceLayoutTests
     {
         var layout = new RunSteeringAffordanceLayout();
         var snapshot = new RunSteeringAffordanceSnapshot(
-            true,
-            1,
-            new Vector2(0f, 60f),
-            new Vector2(-120f, -400f),
-            100f,
-            0.1f);
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(0f, 60f),
+            currentScreenPosition: new Vector2(-120f, -400f),
+            capturedRangePixels: 100f,
+            capturedDeadzoneFraction: 0.1f);
 
         var state = layout.Create(snapshot);
 
