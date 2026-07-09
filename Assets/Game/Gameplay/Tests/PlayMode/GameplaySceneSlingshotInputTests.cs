@@ -126,6 +126,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
             var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
             var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
             var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var gameplayCanvas = FindSingleInScene<Canvas>(activeScene, "Gameplay UI Canvas");
             var runSteeringAffordance = FindGameObjectByName(activeScene, "Run Steering Affordance");
             var runSteeringAffordanceCanvasGroup = runSteeringAffordance.GetComponent<CanvasGroup>();
             var runSteeringKnob = runSteeringAffordance.transform.Find("Knob");
@@ -164,13 +165,18 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
 
                 Assert.That(runSteeringAffordance.activeSelf, Is.True);
                 Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
-                Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(runPressScreenPosition.x).Within(0.001f));
-                Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(runPressScreenPosition.y).Within(0.001f));
+                Assert.That(
+                    gameplayCanvas.scaleFactor,
+                    Is.Not.EqualTo(1f).Within(0.001f),
+                    "Expected this scene test to exercise a scaled Gameplay UI Canvas.");
+
+                var expectedRunPressCanvasPosition = ToCanvasUnits(gameplayCanvas, runPressScreenPosition);
+                AssertVector2(runSteeringKnobRectTransform.anchoredPosition, expectedRunPressCanvasPosition);
 
                 yield return SendMouse(mouse, runMoveScreenPosition, true);
 
-                Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.GreaterThan(runPressScreenPosition.x));
-                Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(runPressScreenPosition.y).Within(0.001f));
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.GreaterThan(expectedRunPressCanvasPosition.x));
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(expectedRunPressCanvasPosition.y).Within(0.001f));
 
                 for (var frameIndex = 0; frameIndex < 8; frameIndex += 1)
                     yield return null;
@@ -473,6 +479,18 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
 
         Assert.That(screenPosition.z, Is.GreaterThan(0f));
         return new Vector2(screenPosition.x, screenPosition.y);
+    }
+
+    private static Vector2 ToCanvasUnits(Canvas canvas, Vector2 screenPosition)
+    {
+        Assert.That(canvas.scaleFactor, Is.GreaterThan(0f));
+        return screenPosition / canvas.scaleFactor;
+    }
+
+    private static void AssertVector2(Vector2 actual, Vector2 expected)
+    {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.001f));
     }
 
     private IEnumerator SendMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)

@@ -474,7 +474,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
         resolvedRunSteeringAffordanceView.Show(affordanceStartState);
         Assert.That(runSteeringAffordance.activeSelf, Is.True);
-        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f).Within(0.001f));
+        Assert.That(canvas.scaleFactor, Is.GreaterThan(0f));
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f / canvas.scaleFactor).Within(0.001f));
 
         var affordanceMovedState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
             true,
@@ -485,8 +486,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             0.25f));
 
         resolvedRunSteeringAffordanceView.Update(affordanceMovedState);
-        Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(600f).Within(0.001f));
-        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f).Within(0.001f));
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(600f / canvas.scaleFactor).Within(0.001f));
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f / canvas.scaleFactor).Within(0.001f));
         resolvedRunSteeringAffordanceView.Reset();
         Assert.That(runSteeringAffordance.activeSelf, Is.False);
         Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));

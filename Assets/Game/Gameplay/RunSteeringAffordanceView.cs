@@ -32,6 +32,7 @@ namespace Game.Gameplay
         private float _animationEndScale;
         private bool _isAnimating;
         private bool _hideWhenAnimationCompletes;
+        private Canvas _canvas;
 
         void IRunSteeringAffordanceView.Show(RunSteeringAffordancePresentationState state)
         {
@@ -195,6 +196,10 @@ namespace Game.Gameplay
 
             if (_deadzoneImage == null && _deadzoneRoot != null)
                 _deadzoneImage = _deadzoneRoot.GetComponent<Image>();
+
+            _canvas = _root != null
+                ? _root.GetComponentInParent<Canvas>(true)
+                : GetComponentInParent<Canvas>(true);
         }
 
         private bool IsDestroyed()
@@ -258,15 +263,17 @@ namespace Game.Gameplay
 
         private void ApplyLayout(RunSteeringAffordancePresentationState state)
         {
-            SetAnchoredPosition(_knobRoot, state.KnobScreenPosition);
-            SetAnchoredPosition(_leftRangeEndRoot, state.LeftRangeEndScreenPosition);
-            SetAnchoredPosition(_rightRangeEndRoot, state.RightRangeEndScreenPosition);
+            SetScreenPosition(_knobRoot, state.KnobScreenPosition);
+            SetScreenPosition(_leftRangeEndRoot, state.LeftRangeEndScreenPosition);
+            SetScreenPosition(_rightRangeEndRoot, state.RightRangeEndScreenPosition);
 
             if (_deadzoneRoot != null)
             {
                 _deadzoneRoot.gameObject.SetActive(_deadzoneHintEnabled && state.DeadzoneDiameterPixels > 0f);
-                _deadzoneRoot.anchoredPosition = state.OriginScreenPosition;
-                _deadzoneRoot.sizeDelta = new Vector2(state.DeadzoneDiameterPixels, state.DeadzoneDiameterPixels);
+                SetScreenPosition(_deadzoneRoot, state.OriginScreenPosition);
+
+                var deadzoneDiameter = ScreenPixelsToCanvasUnits(state.DeadzoneDiameterPixels);
+                _deadzoneRoot.sizeDelta = new Vector2(deadzoneDiameter, deadzoneDiameter);
             }
 
             ApplyImageSettings();
@@ -301,10 +308,78 @@ namespace Game.Gameplay
             ApplyImageSettings();
         }
 
-        private void SetAnchoredPosition(RectTransform target, Vector2 screenPosition)
+        private void SetScreenPosition(RectTransform target, Vector2 screenPosition)
         {
-            if (target != null)
+            if (target == null)
+                return;
+
+            if (!TryGetParentLocalPosition(target, screenPosition, out var localPosition))
+            {
                 target.anchoredPosition = screenPosition;
+                return;
+            }
+
+            var currentLocalPosition = target.localPosition;
+            target.localPosition = new Vector3(localPosition.x, localPosition.y, currentLocalPosition.z);
+        }
+
+        private bool TryGetParentLocalPosition(RectTransform target, Vector2 screenPosition, out Vector2 localPosition)
+        {
+            localPosition = Vector2.zero;
+            var parent = target.parent as RectTransform;
+
+            if (parent == null || _canvas == null)
+                return false;
+
+            if (_canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                return TryGetOverlayParentLocalPosition(parent, screenPosition, out localPosition);
+
+            if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(parent, screenPosition, GetCanvasCamera(), out var worldPosition))
+                return false;
+
+            var parentLocalPosition = parent.InverseTransformPoint(worldPosition);
+            localPosition = new Vector2(parentLocalPosition.x, parentLocalPosition.y);
+            return true;
+        }
+
+        private bool TryGetOverlayParentLocalPosition(RectTransform parent, Vector2 screenPosition, out Vector2 localPosition)
+        {
+            localPosition = Vector2.zero;
+
+            if (_canvas == null || _canvas.transform is not RectTransform canvasTransform)
+                return false;
+
+            var scaleFactor = _canvas.scaleFactor;
+
+            if (scaleFactor <= 0f)
+                return false;
+
+            // CanvasScaler maps physical screen pixels into Canvas-local UI units via scaleFactor.
+            var canvasRect = canvasTransform.rect;
+            var canvasLocalPosition = new Vector3(
+                canvasRect.xMin + (screenPosition.x / scaleFactor),
+                canvasRect.yMin + (screenPosition.y / scaleFactor),
+                0f);
+            var worldPosition = canvasTransform.TransformPoint(canvasLocalPosition);
+            var parentLocalPosition = parent.InverseTransformPoint(worldPosition);
+            localPosition = new Vector2(parentLocalPosition.x, parentLocalPosition.y);
+            return true;
+        }
+
+        private float ScreenPixelsToCanvasUnits(float screenPixels)
+        {
+            if (_canvas == null || _canvas.scaleFactor <= 0f)
+                return screenPixels;
+
+            return screenPixels / _canvas.scaleFactor;
+        }
+
+        private Camera GetCanvasCamera()
+        {
+            if (_canvas == null || _canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                return null;
+
+            return _canvas.worldCamera;
         }
 
         private float GetAlpha()

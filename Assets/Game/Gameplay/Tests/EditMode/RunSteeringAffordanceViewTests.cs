@@ -94,6 +94,49 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
+    public void Show_UnderScaledOverlayCanvas_RendersScreenSpaceLayoutAtRequestedScreenPositions()
+    {
+        var canvasRoot = Track(new GameObject("Scaled Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler)));
+        var canvasTransform = canvasRoot.GetComponent<RectTransform>();
+        canvasTransform.sizeDelta = new Vector2(540f, 960f);
+        canvasTransform.localScale = new Vector3(0.5f, 0.5f, 1f);
+        canvasRoot.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        var canvasScaler = canvasRoot.GetComponent<CanvasScaler>();
+        canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        canvasScaler.referenceResolution = new Vector2(1080f, 1920f);
+
+        var view = CreateView(
+            showSeconds: 0f,
+            hideSeconds: 0f,
+            out var root,
+            out _,
+            out var knobRoot,
+            out _,
+            out var leftRangeEndRoot,
+            out _,
+            out var rightRangeEndRoot,
+            out _,
+            out var deadzoneRoot,
+            out _);
+        root.SetParent(canvasTransform, false);
+        root.anchorMin = Vector2.zero;
+        root.anchorMax = Vector2.one;
+        root.sizeDelta = Vector2.zero;
+
+        ((IRunSteeringAffordanceView)view).Show(CreateState(
+            knob: new Vector2(150f, 200f),
+            leftRangeEnd: new Vector2(20f, 200f),
+            rightRangeEnd: new Vector2(180f, 200f),
+            deadzoneDiameter: 40f));
+
+        AssertRenderedScreenPosition(knobRoot, new Vector2(150f, 200f));
+        AssertRenderedScreenPosition(leftRangeEndRoot, new Vector2(20f, 200f));
+        AssertRenderedScreenPosition(rightRangeEndRoot, new Vector2(180f, 200f));
+        AssertRenderedScreenPosition(deadzoneRoot, new Vector2(100f, 200f));
+        AssertRenderedScreenSize(deadzoneRoot, new Vector2(40f, 40f));
+    }
+
+    [Test]
     public void Hide_VisibleState_HidesFromFinalKnobPositionWithoutReturningToOrigin()
     {
         var view = CreateView(
@@ -277,6 +320,26 @@ public sealed class RunSteeringAffordanceViewTests
 
     private static void AssertVector2(Vector2 actual, Vector2 expected)
     {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.001f));
+    }
+
+    private static void AssertRenderedScreenPosition(RectTransform rectTransform, Vector2 expected)
+    {
+        var actual = RectTransformUtility.WorldToScreenPoint(null, rectTransform.position);
+
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.001f));
+    }
+
+    private static void AssertRenderedScreenSize(RectTransform rectTransform, Vector2 expected)
+    {
+        var corners = new Vector3[4];
+        rectTransform.GetWorldCorners(corners);
+        var bottomLeft = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+        var topRight = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+        var actual = topRight - bottomLeft;
+
         Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.001f));
         Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.001f));
     }
