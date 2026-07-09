@@ -22,6 +22,10 @@ namespace Game.Gameplay
         private bool _isAnimating;
         private bool _deactivateWhenAnimationCompletes;
 
+        private float HiddenScale => Mathf.Clamp01(_tuning.HiddenScale);
+        private float ShowDurationSeconds => Mathf.Max(0f, _tuning.ShowDurationSeconds);
+        private float HideDurationSeconds => Mathf.Max(0f, _tuning.HideDurationSeconds);
+
         public RunSteeringAffordancePresenter(
             IRunSteeringAffordancePresentationView view,
             IRunSteeringAffordanceTuning tuning,
@@ -85,23 +89,13 @@ namespace Game.Gameplay
             if (state.IsVisible)
                 _view.Present(state);
 
-            BeginAnimation(
-                _currentAlpha,
-                0f,
-                _currentScale,
-                HiddenScale,
-                HideDurationSeconds,
-                true);
+            BeginAnimation(_currentAlpha, 0f, _currentScale, HiddenScale, HideDurationSeconds, deactivateWhenAnimationCompletes: true);
         }
 
         void IRunSteeringAffordanceView.Reset()
         {
             Reset();
         }
-
-        private float HiddenScale => Mathf.Clamp01(_tuning.HiddenScale);
-        private float ShowDurationSeconds => Mathf.Max(0f, _tuning.ShowDurationSeconds);
-        private float HideDurationSeconds => Mathf.Max(0f, _tuning.HideDurationSeconds);
 
         private void Reset()
         {
