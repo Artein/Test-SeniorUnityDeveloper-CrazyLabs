@@ -113,6 +113,82 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
     }
 
     [UnityTest]
+    public IEnumerator given_GameplayScene_when_EditorMousePressesDuringRun_then_RunSteeringAffordanceIsVisible()
+    {
+        var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Run Steering Affordance Mouse");
+
+        try
+        {
+            yield return PrepareFreshPreLaunchScene();
+            var activeScene = SceneManager.GetActiveScene();
+
+            var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
+            var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
+            var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
+            var inputCamera = FindSingleInScene<Camera>(activeScene, "Input Camera");
+            var runSteeringAffordance = FindGameObjectByName(activeScene, "Run Steering Affordance");
+            var runSteeringAffordanceCanvasGroup = runSteeringAffordance.GetComponent<CanvasGroup>();
+            var runSteeringKnob = runSteeringAffordance.transform.Find("Knob");
+            var runSteeringKnobRectTransform = runSteeringKnob.GetComponent<RectTransform>();
+            var playerRigidbody = launchTarget.GetComponent<Rigidbody>();
+            var launchAppliedNotifier = lifetimeScope.Container.Resolve<ISlingshotLaunchAppliedNotifier>();
+            var gameplayStateService = lifetimeScope.Container.Resolve<IGameplayStateService>();
+            var geometry = slingshotView.CreateGeometrySnapshot();
+            var pressScreenPosition = GetScreenPosition(inputCamera, geometry.RestPoint);
+            var pullWorldPosition = geometry.RestPoint - (geometry.LaunchFrameForward * 1.25f);
+            var releaseScreenPosition = GetScreenPosition(inputCamera, pullWorldPosition);
+            var hasLaunchApplied = false;
+
+            void OnLaunchApplied(SlingshotLaunchAppliedEvent _)
+            {
+                hasLaunchApplied = true;
+            }
+
+            launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
+
+            try
+            {
+                yield return SendMouse(mouse, pressScreenPosition, true);
+                yield return SendMouse(mouse, releaseScreenPosition, true);
+                yield return SendMouse(mouse, releaseScreenPosition, false);
+                yield return WaitUntilPlayerLaunches(playerRigidbody);
+
+                Assert.That(hasLaunchApplied, Is.True, "Expected Slingshot launch to publish its applied launch payload.");
+                Assert.That(gameplayStateService.CurrentStateId.name, Is.EqualTo("RunningStateId"));
+                Assert.That(runSteeringAffordance.activeSelf, Is.False);
+
+                var runPressScreenPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
+                var runMoveScreenPosition = runPressScreenPosition + new Vector2(120f, 180f);
+
+                yield return SendMouse(mouse, runPressScreenPosition, true);
+
+                Assert.That(runSteeringAffordance.activeSelf, Is.True);
+                Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(runPressScreenPosition.x).Within(0.001f));
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(runPressScreenPosition.y).Within(0.001f));
+
+                yield return SendMouse(mouse, runMoveScreenPosition, true);
+
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.GreaterThan(runPressScreenPosition.x));
+                Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(runPressScreenPosition.y).Within(0.001f));
+
+                for (var frameIndex = 0; frameIndex < 8; frameIndex += 1)
+                    yield return null;
+
+                Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
+            }
+            finally
+            {
+                launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
+            }
+        }
+        finally
+        {
+            InputSystem.RemoveDevice(mouse);
+        }
+    }
+
+    [UnityTest]
     public IEnumerator given_GameplayScene_when_EditorMousePressesOutsideBand_then_PlayerStaysHeld()
     {
         var mouse = InputSystem.AddDevice<Mouse>("Gameplay Scene Outside Band Mouse");

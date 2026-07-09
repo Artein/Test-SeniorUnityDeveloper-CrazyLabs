@@ -49,6 +49,7 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private PullHintView _pullHintView;
+        [SerializeField] private RunSteeringAffordanceView _runSteeringAffordanceView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
@@ -114,6 +115,8 @@ namespace Game.Gameplay
             builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
+            builder.RegisterInstance<IRunSteeringAffordanceView>(
+                _runSteeringAffordanceView != null ? _runSteeringAffordanceView : new NullRunSteeringAffordanceView());
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
 
@@ -137,6 +140,7 @@ namespace Game.Gameplay
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
+            builder.Register<IRunSteeringPointerPressGuard, UnityEventSystemRunSteeringPointerPressGuard>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 
             builder.Register<IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);

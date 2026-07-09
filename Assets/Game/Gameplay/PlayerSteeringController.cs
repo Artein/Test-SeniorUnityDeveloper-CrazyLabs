@@ -25,6 +25,9 @@ namespace Game.Gameplay
         private readonly ITime _clock;
         private readonly IScreen _screen;
         private readonly IRunSteeringGesture _runSteeringGesture;
+        private readonly IRunSteeringAffordanceView _runSteeringAffordanceView;
+        private readonly IRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
+        private readonly RunSteeringAffordanceLayout _runSteeringAffordanceLayout = new();
         private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
         private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly GameplayStateId _runningStateId;
@@ -58,6 +61,8 @@ namespace Game.Gameplay
             ITime clock,
             IScreen screen,
             IRunSteeringGesture runSteeringGesture,
+            IRunSteeringAffordanceView runSteeringAffordanceView,
+            IRunSteeringPointerPressGuard runSteeringPointerPressGuard,
             [Key(InjectKey.GameplayStateId.Running)]
             GameplayStateId runningStateId,
             [Key(InjectKey.GameplayStatId.PlayerSteeringResponsiveness)]
@@ -75,6 +80,8 @@ namespace Game.Gameplay
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
+            _runSteeringAffordanceView = runSteeringAffordanceView ?? throw new ArgumentNullException(nameof(runSteeringAffordanceView));
+            _runSteeringPointerPressGuard = runSteeringPointerPressGuard ?? throw new ArgumentNullException(nameof(runSteeringPointerPressGuard));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
 
             _playerSteeringResponsivenessStatId = playerSteeringResponsivenessStatId != null
@@ -167,12 +174,12 @@ namespace Game.Gameplay
             _steeringFrameResetter.Reset(_steeringUp);
             _inputEnableHandle = _unityInput.Enable();
             _isSteeringActive = true;
-            ResetPointerAndSteerState();
+            ResetAffordancePointerAndSteerState();
         }
 
         private void DeactivateSteering()
         {
-            ResetPointerAndSteerState();
+            ResetAffordancePointerAndSteerState();
             _isSteeringActive = false;
 
             var inputEnableHandle = _inputEnableHandle;
@@ -182,6 +189,12 @@ namespace Game.Gameplay
 
             _inputEnableHandle = null;
             inputEnableHandle.Dispose();
+        }
+
+        private void ResetAffordancePointerAndSteerState()
+        {
+            _runSteeringAffordanceView.Reset();
+            ResetPointerAndSteerState();
         }
 
         private void ResetPointerAndSteerState()
@@ -196,8 +209,14 @@ namespace Game.Gameplay
             if (!_isSteeringActive)
                 return;
 
+            if (!_runSteeringPointerPressGuard.CanBeginRunSteering(pointerInput))
+                return;
+
             if (_runSteeringGesture.TryBegin(pointerInput, _screen.Dpi))
+            {
                 _desiredSteer = _runSteeringGesture.RequestedSteering;
+                _runSteeringAffordanceView.Show(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+            }
         }
 
         private void OnInputPointerMoved(PointerInput pointerInput)
@@ -206,7 +225,10 @@ namespace Game.Gameplay
                 return;
 
             if (_runSteeringGesture.TryMove(pointerInput))
+            {
                 _desiredSteer = _runSteeringGesture.RequestedSteering;
+                _runSteeringAffordanceView.Update(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+            }
         }
 
         private void OnInputPointerReleased(PointerInput pointerInput)
@@ -214,8 +236,13 @@ namespace Game.Gameplay
             if (!_isSteeringActive)
                 return;
 
+            var finalSnapshot = _runSteeringGesture.AffordanceSnapshot.WithCurrentScreenPosition(pointerInput.ScreenPosition);
+
             if (_runSteeringGesture.TryRelease(pointerInput))
+            {
                 _desiredSteer = 0f;
+                _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
+            }
         }
 
         private void OnInputPointerCanceled(PointerInput pointerInput)
@@ -223,8 +250,13 @@ namespace Game.Gameplay
             if (!_isSteeringActive)
                 return;
 
+            var finalSnapshot = _runSteeringGesture.AffordanceSnapshot.WithCurrentScreenPosition(pointerInput.ScreenPosition);
+
             if (_runSteeringGesture.TryCancel(pointerInput))
+            {
                 _desiredSteer = 0f;
+                _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
+            }
         }
 
         private void UpdateSmoothedSteer()

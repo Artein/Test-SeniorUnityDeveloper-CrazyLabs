@@ -25,6 +25,7 @@ public sealed class RunSteeringGestureTests
     public void TryBegin_WhenInactive_CapturesOriginRangeAndReturnsNeutral()
     {
         var began = ((IRunSteeringGesture)_gesture).TryBegin(new PointerInput(1, new Vector2(25f, 40f)), 96f);
+        var snapshot = ((IRunSteeringGesture)_gesture).AffordanceSnapshot;
 
         Assert.That(began, Is.True);
         Assert.That(_gesture.isActive, Is.True);
@@ -32,6 +33,25 @@ public sealed class RunSteeringGestureTests
         Assert.That(_gesture.capturedRangePixels, Is.EqualTo(100f));
         Assert.That(_gesture.RequestedSteering, Is.Zero);
         Assert.That(_config.RangePixelRawDpiRequest, Is.EqualTo(96f));
+        Assert.That(snapshot.IsActive, Is.True);
+        Assert.That(snapshot.PointerId, Is.EqualTo(1));
+        Assert.That(snapshot.OriginScreenPosition, Is.EqualTo(new Vector2(25f, 40f)));
+        Assert.That(snapshot.CurrentScreenPosition, Is.EqualTo(new Vector2(25f, 40f)));
+        Assert.That(snapshot.CapturedRangePixels, Is.EqualTo(100f));
+        Assert.That(snapshot.CapturedDeadzoneFraction, Is.EqualTo(0.2f));
+    }
+
+    [Test]
+    public void AffordanceSnapshot_BeforeBegin_IsInactive()
+    {
+        var snapshot = ((IRunSteeringGesture)_gesture).AffordanceSnapshot;
+
+        Assert.That(snapshot.IsActive, Is.False);
+        Assert.That(snapshot.PointerId, Is.Zero);
+        Assert.That(snapshot.OriginScreenPosition, Is.EqualTo(Vector2.zero));
+        Assert.That(snapshot.CurrentScreenPosition, Is.EqualTo(Vector2.zero));
+        Assert.That(snapshot.CapturedRangePixels, Is.Zero);
+        Assert.That(snapshot.CapturedDeadzoneFraction, Is.Zero);
     }
 
     [Test]
@@ -40,8 +60,11 @@ public sealed class RunSteeringGestureTests
         ((IRunSteeringGesture)_gesture).TryBegin(new PointerInput(1, new Vector2(50f, 50f)), 96f);
 
         ((IRunSteeringGesture)_gesture).TryMove(new PointerInput(1, new Vector2(110f, 10f)));
+        var snapshot = ((IRunSteeringGesture)_gesture).AffordanceSnapshot;
 
         Assert.That(_gesture.RequestedSteering, Is.EqualTo(0.5f).Within(0.0001f));
+        Assert.That(snapshot.OriginScreenPosition, Is.EqualTo(new Vector2(50f, 50f)));
+        Assert.That(snapshot.CurrentScreenPosition, Is.EqualTo(new Vector2(110f, 10f)));
     }
 
     [Test]
@@ -115,12 +138,14 @@ public sealed class RunSteeringGestureTests
         var moved = ((IRunSteeringGesture)_gesture).TryMove(new PointerInput(2, new Vector2(150f, 50f)));
         var released = ((IRunSteeringGesture)_gesture).TryRelease(new PointerInput(2, new Vector2(150f, 50f)));
         var canceled = ((IRunSteeringGesture)_gesture).TryCancel(new PointerInput(2, new Vector2(150f, 50f)));
+        var snapshot = ((IRunSteeringGesture)_gesture).AffordanceSnapshot;
 
         Assert.That(moved, Is.False);
         Assert.That(released, Is.False);
         Assert.That(canceled, Is.False);
         Assert.That(_gesture.isActive, Is.True);
         Assert.That(_gesture.RequestedSteering, Is.Zero);
+        Assert.That(snapshot.CurrentScreenPosition, Is.EqualTo(new Vector2(50f, 50f)));
     }
 
     [Test]
@@ -156,11 +181,14 @@ public sealed class RunSteeringGestureTests
         ((IRunSteeringGesture)_gesture).TryMove(new PointerInput(1, new Vector2(150f, 50f)));
 
         ((IRunSteeringGesture)_gesture).Reset();
+        var snapshot = ((IRunSteeringGesture)_gesture).AffordanceSnapshot;
 
         Assert.That(_gesture.isActive, Is.False);
         Assert.That(_gesture.origin, Is.EqualTo(Vector2.zero));
         Assert.That(_gesture.capturedRangePixels, Is.Zero);
         Assert.That(_gesture.RequestedSteering, Is.Zero);
+        Assert.That(snapshot.IsActive, Is.False);
+        Assert.That(snapshot.CurrentScreenPosition, Is.EqualTo(Vector2.zero));
     }
 
     [Test]

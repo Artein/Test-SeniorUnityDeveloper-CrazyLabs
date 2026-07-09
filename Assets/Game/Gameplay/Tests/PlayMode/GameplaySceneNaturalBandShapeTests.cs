@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using VContainer;
@@ -855,7 +856,9 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
     {
         QueueMouse(mouse, screenPosition, isPressed);
         yield return null;
-        yield return new WaitForEndOfFrame();
+
+        if (!Application.isBatchMode && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null)
+            yield return new WaitForEndOfFrame();
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)

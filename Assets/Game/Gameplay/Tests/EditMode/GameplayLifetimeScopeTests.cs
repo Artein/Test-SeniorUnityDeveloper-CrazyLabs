@@ -115,6 +115,29 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     [Test]
+    public void ValidateRequiredReferencesForTests_MissingRunSteeringAffordanceView_DoesNotThrow()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetRunSteeringAffordanceViewForTests(null);
+
+        Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_InvalidRunSteeringAffordanceView_ThrowsWithSetupMessage()
+    {
+        var fixture = CreateValidScopeFixture();
+        var invalidView = CreateGameObject("Invalid Run Steering Affordance").AddComponent<RunSteeringAffordanceView>();
+
+        fixture.Scope.SetRunSteeringAffordanceViewForTests(invalidView);
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("RunSteeringAffordanceView requires"));
+    }
+
+    [Test]
     public void ValidateRequiredReferencesForTests_EmptySceneCompositionInstallers_ThrowsWithSceneCompositionInstallerMessage()
     {
         var fixture = CreateValidScopeFixture();
@@ -359,6 +382,8 @@ public sealed class GameplayLifetimeScopeTests
         var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
+        var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
+        var runSteeringPointerPressGuard = container.Resolve<IRunSteeringPointerPressGuard>();
         var runSteeringFrameSource = container.Resolve<IRunSteeringFrameSource>();
         var runSteeringFrameResetter = container.Resolve<IRunSteeringFrameResetter>();
         var runCameraConfig = container.Resolve<IRunCameraConfig>();
@@ -477,6 +502,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runSteeringGesture, Is.Not.Null);
+        Assert.That(runSteeringAffordanceView, Is.SameAs(fixture.RunSteeringAffordanceView));
+        Assert.That(runSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(runSteeringFrameSource, Is.Not.Null);
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
         Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
@@ -573,6 +600,21 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(((LevelPickupState)levelPickupState).PickupsForTests, Is.EquivalentTo(fixture.LevelPickups));
     }
 
+    [Test]
+    public void ConfigureForTests_MissingRunSteeringAffordanceView_RegistersNullAffordanceView()
+    {
+        var fixture = CreateValidScopeFixture();
+        var builder = new ContainerBuilder();
+        fixture.Scope.SetRunSteeringAffordanceViewForTests(null);
+
+        fixture.Scope.ConfigureForTests(builder);
+
+        using var container = builder.Build();
+        var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
+
+        Assert.That(runSteeringAffordanceView, Is.TypeOf<NullRunSteeringAffordanceView>());
+    }
+
     private ValidScopeFixture CreateValidScopeFixture()
     {
         var scope = CreateGameObject("Gameplay Lifetime Scope Test").AddComponent<GameplayLifetimeScope>();
@@ -599,6 +641,7 @@ public sealed class GameplayLifetimeScopeTests
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
         var pullHintView = CreateGameObject("Pull Hint View").AddComponent<PullHintView>();
+        var runSteeringAffordanceView = CreateRunSteeringAffordanceView();
         var runPreparationView = CreateRunPreparationView();
         var runEndedView = CreateRunEndedView();
         var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
@@ -661,6 +704,7 @@ public sealed class GameplayLifetimeScopeTests
             preLaunchLaunchTargetPose,
             slingshotView,
             pullHintView,
+            runSteeringAffordanceView,
             runPreparationView,
             runEndedView,
             launchTarget,
@@ -698,6 +742,7 @@ public sealed class GameplayLifetimeScopeTests
             InputCamera = camera,
             RunCameraRig = runCameraRig,
             PullHintView = pullHintView,
+            RunSteeringAffordanceView = runSteeringAffordanceView,
             RunEndedView = runEndedView,
             CharacterPresentationView = characterPresentationView,
             AnimatedContactSensorPoseSyncView = animatedContactSensorPoseSyncView,
@@ -722,6 +767,34 @@ public sealed class GameplayLifetimeScopeTests
         launchFrame.rotation = Quaternion.identity;
 
         view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, touchIndicatorObject, config);
+        return view;
+    }
+
+    private RunSteeringAffordanceView CreateRunSteeringAffordanceView()
+    {
+        var rootObject = Track(new GameObject("Run Steering Affordance", typeof(RectTransform)));
+        rootObject.SetActive(false);
+        var root = rootObject.GetComponent<RectTransform>();
+        var canvasGroup = rootObject.AddComponent<CanvasGroup>();
+        var deadzoneRoot = CreateChildImage(root, "Deadzone Hint");
+        var leftRangeEndRoot = CreateChildImage(root, "Left Range End Hint");
+        var rightRangeEndRoot = CreateChildImage(root, "Right Range End Hint");
+        var knobRoot = CreateChildImage(root, "Knob");
+        var view = rootObject.AddComponent<RunSteeringAffordanceView>();
+
+        view.SetReferencesForTests(
+            root,
+            canvasGroup,
+            knobRoot.rectTransform,
+            knobRoot,
+            leftRangeEndRoot.rectTransform,
+            leftRangeEndRoot,
+            rightRangeEndRoot.rectTransform,
+            rightRangeEndRoot,
+            deadzoneRoot.rectTransform,
+            deadzoneRoot);
+
+        rootObject.SetActive(true);
         return view;
     }
 
@@ -1046,6 +1119,7 @@ public sealed class GameplayLifetimeScopeTests
         public Camera InputCamera { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
         public PullHintView PullHintView { get; set; }
+        public RunSteeringAffordanceView RunSteeringAffordanceView { get; set; }
         public RunEndedUIView RunEndedView { get; set; }
         public CharacterPresentationView CharacterPresentationView { get; set; }
         public AnimatedContactSensorPoseSyncView AnimatedContactSensorPoseSyncView { get; set; }

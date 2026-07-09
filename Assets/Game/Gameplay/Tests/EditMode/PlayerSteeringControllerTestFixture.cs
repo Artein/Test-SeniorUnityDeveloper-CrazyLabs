@@ -28,6 +28,8 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeTime _clock;
     protected FakeScreen _screen;
     protected FakeRunSteeringFrameSource _steeringFrameSource;
+    protected FakeRunSteeringAffordanceView _runSteeringAffordanceView;
+    protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
     protected GameplayStatId _playerSteeringResponsivenessStatId;
@@ -91,6 +93,8 @@ public abstract class PlayerSteeringControllerTestFixture
 
         _steeringFrameSource = new FakeRunSteeringFrameSource();
         _runSteeringGesture = new RunSteeringGesture(_config);
+        _runSteeringAffordanceView = new FakeRunSteeringAffordanceView();
+        _runSteeringPointerPressGuard = new FakeRunSteeringPointerPressGuard();
         _controller = CreateController();
         ((IInitializable)_controller).Initialize();
     }
@@ -238,8 +242,8 @@ public abstract class PlayerSteeringControllerTestFixture
     private PlayerSteeringController CreateController()
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
-            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
-            _playerSteeringResponsivenessStatId);
+            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture,
+            _runSteeringAffordanceView, _runSteeringPointerPressGuard, _runningStateId, _playerSteeringResponsivenessStatId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -498,6 +502,46 @@ public abstract class PlayerSteeringControllerTestFixture
         {
             LastFallbackUpDirection = Vector3.zero;
             GetUpDirectionCallCount = 0;
+        }
+    }
+
+    protected sealed class FakeRunSteeringAffordanceView : IRunSteeringAffordanceView
+    {
+        internal List<RunSteeringAffordancePresentationState> ShowStates { get; } = new();
+        internal List<RunSteeringAffordancePresentationState> UpdateStates { get; } = new();
+        internal List<RunSteeringAffordancePresentationState> HideStates { get; } = new();
+        public int ResetCallCount { get; private set; }
+
+        void IRunSteeringAffordanceView.Show(RunSteeringAffordancePresentationState state)
+        {
+            ShowStates.Add(state);
+        }
+
+        void IRunSteeringAffordanceView.Update(RunSteeringAffordancePresentationState state)
+        {
+            UpdateStates.Add(state);
+        }
+
+        void IRunSteeringAffordanceView.Hide(RunSteeringAffordancePresentationState state)
+        {
+            HideStates.Add(state);
+        }
+
+        public void Reset()
+        {
+            ResetCallCount += 1;
+        }
+    }
+
+    protected sealed class FakeRunSteeringPointerPressGuard : IRunSteeringPointerPressGuard
+    {
+        public bool CanBegin { get; set; } = true;
+        public List<PointerInput> Requests { get; } = new();
+
+        public bool CanBeginRunSteering(PointerInput pointerInput)
+        {
+            Requests.Add(pointerInput);
+            return CanBegin;
         }
     }
 }

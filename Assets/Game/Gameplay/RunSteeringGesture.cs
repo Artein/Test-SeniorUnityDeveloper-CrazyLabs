@@ -8,6 +8,7 @@ namespace Game.Gameplay
     {
         bool IsActive { get; }
         float RequestedSteering { get; }
+        RunSteeringAffordanceSnapshot AffordanceSnapshot { get; }
 
         bool TryBegin(PointerInput pointerInput, float rawDpi);
         bool TryMove(PointerInput pointerInput);
@@ -22,6 +23,7 @@ namespace Game.Gameplay
 
         internal bool isActive;
         internal Vector2 origin;
+        private Vector2 _currentScreenPosition;
         private int _activePointerId;
         internal float capturedRangePixels;
         private float _capturedDeadzoneFraction;
@@ -29,6 +31,7 @@ namespace Game.Gameplay
 
         public float RequestedSteering => _requestedSteering;
         bool IRunSteeringGesture.IsActive => isActive;
+        RunSteeringAffordanceSnapshot IRunSteeringGesture.AffordanceSnapshot => CreateAffordanceSnapshot();
 
         public RunSteeringGesture(IPlayerSteeringConfig config)
         {
@@ -43,6 +46,7 @@ namespace Game.Gameplay
             isActive = true;
             _activePointerId = pointerInput.PointerId;
             origin = pointerInput.ScreenPosition;
+            _currentScreenPosition = pointerInput.ScreenPosition;
             capturedRangePixels = Mathf.Max(0.0001f, _config.ResolveRunSteeringRangePixels(rawDpi));
             _capturedDeadzoneFraction = Mathf.Clamp(_config.RunSteeringDeadzoneFraction, 0f, 0.95f);
             _requestedSteering = 0f;
@@ -54,6 +58,7 @@ namespace Game.Gameplay
             if (!IsActivePointer(pointerInput))
                 return false;
 
+            _currentScreenPosition = pointerInput.ScreenPosition;
             _requestedSteering = MapHorizontalDisplacement(pointerInput.ScreenPosition.x - origin.x);
             return true;
         }
@@ -81,9 +86,24 @@ namespace Game.Gameplay
             isActive = false;
             _activePointerId = 0;
             origin = Vector2.zero;
+            _currentScreenPosition = Vector2.zero;
             capturedRangePixels = 0f;
             _capturedDeadzoneFraction = 0f;
             _requestedSteering = 0f;
+        }
+
+        private RunSteeringAffordanceSnapshot CreateAffordanceSnapshot()
+        {
+            if (!isActive)
+                return new RunSteeringAffordanceSnapshot(false, 0, Vector2.zero, Vector2.zero, 0f, 0f);
+
+            return new RunSteeringAffordanceSnapshot(
+                true,
+                _activePointerId,
+                origin,
+                _currentScreenPosition,
+                capturedRangePixels,
+                _capturedDeadzoneFraction);
         }
 
         private bool IsActivePointer(PointerInput pointerInput)

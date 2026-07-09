@@ -104,6 +104,22 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             ? pullHintFinger.GetComponent<Image>()
             : null;
 
+        var runSteeringAffordance = FindGameObjectByName(activeScene, "Run Steering Affordance");
+        var runSteeringAffordanceView = runSteeringAffordance.GetComponent<RunSteeringAffordanceView>();
+        var runSteeringAffordanceRectTransform = runSteeringAffordance.GetComponent<RectTransform>();
+        var runSteeringAffordanceCanvasGroup = runSteeringAffordance.GetComponent<CanvasGroup>();
+        var runSteeringKnob = runSteeringAffordance.transform.Find("Knob");
+        var runSteeringLeftRangeEnd = runSteeringAffordance.transform.Find("Left Range End Hint");
+        var runSteeringRightRangeEnd = runSteeringAffordance.transform.Find("Right Range End Hint");
+        var runSteeringDeadzone = runSteeringAffordance.transform.Find("Deadzone Hint");
+        var runSteeringKnobRectTransform = runSteeringKnob != null ? runSteeringKnob.GetComponent<RectTransform>() : null;
+        var runSteeringKnobImage = runSteeringKnob != null ? runSteeringKnob.GetComponent<Image>() : null;
+        var runSteeringLeftRangeEndRectTransform = runSteeringLeftRangeEnd != null ? runSteeringLeftRangeEnd.GetComponent<RectTransform>() : null;
+        var runSteeringLeftRangeEndImage = runSteeringLeftRangeEnd != null ? runSteeringLeftRangeEnd.GetComponent<Image>() : null;
+        var runSteeringRightRangeEndRectTransform = runSteeringRightRangeEnd != null ? runSteeringRightRangeEnd.GetComponent<RectTransform>() : null;
+        var runSteeringRightRangeEndImage = runSteeringRightRangeEnd != null ? runSteeringRightRangeEnd.GetComponent<Image>() : null;
+        var runSteeringDeadzoneRectTransform = runSteeringDeadzone != null ? runSteeringDeadzone.GetComponent<RectTransform>() : null;
+        var runSteeringDeadzoneImage = runSteeringDeadzone != null ? runSteeringDeadzone.GetComponent<Image>() : null;
         var touchIndicator = FindGameObjectByName(activeScene, "Touch Indicator");
 
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
@@ -128,6 +144,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedFinishPresentationView = lifetimeScope.Container.Resolve<IFinishPresentationView>();
         var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
         var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
+        var resolvedRunSteeringAffordanceView = lifetimeScope.Container.Resolve<IRunSteeringAffordanceView>();
+        var resolvedRunSteeringPointerPressGuard = lifetimeScope.Container.Resolve<IRunSteeringPointerPressGuard>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
         var resolvedSlingshotActivePullNotifier = lifetimeScope.Container.Resolve<ISlingshotActivePullNotifier>();
         var resolvedSlingshotCaptureLifecycleNotifier = lifetimeScope.Container.Resolve<ISlingshotCaptureLifecycleNotifier>();
@@ -269,6 +287,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedFinishPresentationView, Is.SameAs(finishPresentationView));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
+        Assert.That(resolvedRunSteeringAffordanceView, Is.SameAs(runSteeringAffordanceView));
+        Assert.That(resolvedRunSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
         Assert.That(resolvedSlingshotActivePullNotifier, Is.Not.Null);
         Assert.That(resolvedSlingshotCaptureLifecycleNotifier, Is.Not.Null);
@@ -423,6 +443,53 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         resolvedPullHintView.Hide();
         Assert.That(pullHint.activeSelf, Is.False);
         Assert.That(pullHintCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(runSteeringAffordance.transform.IsChildOf(canvas.transform), Is.True);
+        Assert.That(runSteeringAffordanceView, Is.Not.Null);
+        Assert.That(runSteeringAffordanceRectTransform, Is.Not.Null);
+        Assert.That(runSteeringAffordanceRectTransform.anchorMin, Is.EqualTo(Vector2.zero));
+        Assert.That(runSteeringAffordanceRectTransform.anchorMax, Is.EqualTo(Vector2.one));
+        Assert.That(runSteeringAffordanceCanvasGroup, Is.Not.Null);
+        Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(runSteeringAffordanceCanvasGroup.interactable, Is.False);
+        Assert.That(runSteeringAffordanceCanvasGroup.blocksRaycasts, Is.False);
+        Assert.That(runSteeringKnobRectTransform, Is.Not.Null);
+        Assert.That(runSteeringLeftRangeEndRectTransform, Is.Not.Null);
+        Assert.That(runSteeringRightRangeEndRectTransform, Is.Not.Null);
+        Assert.That(runSteeringDeadzoneRectTransform, Is.Not.Null);
+        AssertRunSteeringAffordanceImage(runSteeringKnobImage, "Run Steering Knob");
+        AssertRunSteeringAffordanceImage(runSteeringLeftRangeEndImage, "Run Steering Left Range End");
+        AssertRunSteeringAffordanceImage(runSteeringRightRangeEndImage, "Run Steering Right Range End");
+        AssertRunSteeringAffordanceImage(runSteeringDeadzoneImage, "Run Steering Deadzone");
+        Assert.That(TryFindGameObjectByName(activeScene, "Run Steering Track", out _), Is.False);
+        Assert.That(runSteeringAffordance.activeSelf, Is.False);
+
+        var affordanceLayout = new RunSteeringAffordanceLayout();
+        var affordanceStartState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
+            true,
+            1,
+            new Vector2(500f, 700f),
+            new Vector2(560f, 1200f),
+            100f,
+            0.25f));
+
+        resolvedRunSteeringAffordanceView.Show(affordanceStartState);
+        Assert.That(runSteeringAffordance.activeSelf, Is.True);
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f).Within(0.001f));
+
+        var affordanceMovedState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
+            true,
+            1,
+            new Vector2(500f, 700f),
+            new Vector2(650f, 1200f),
+            100f,
+            0.25f));
+
+        resolvedRunSteeringAffordanceView.Update(affordanceMovedState);
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(600f).Within(0.001f));
+        Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f).Within(0.001f));
+        resolvedRunSteeringAffordanceView.Reset();
+        Assert.That(runSteeringAffordance.activeSelf, Is.False);
+        Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);
         Assert.That(touchIndicator.activeSelf, Is.False);
     }
@@ -582,6 +649,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             return false;
 
         if (!TryFindGameObjectByName(scene, "Pull Hint", out var pullHint) || pullHint.activeSelf)
+            return false;
+
+        if (!TryFindGameObjectByName(scene, "Run Steering Affordance", out var runSteeringAffordance) || runSteeringAffordance.activeSelf)
             return false;
 
         if (!TryFindGameObjectByName(scene, "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)
@@ -763,7 +833,32 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 #endif
     }
 
+    private void AssertRunSteeringAffordanceImage(Image image, string label)
+    {
+        Assert.That(image, Is.Not.Null, label);
+        Assert.That(image.sprite, Is.Not.Null, label);
+        Assert.That(image.raycastTarget, Is.False, label);
+
 #if UNITY_EDITOR
+        AssertRunSteeringAffordanceSpriteImporter(image.sprite, label);
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void AssertRunSteeringAffordanceSpriteImporter(Sprite sprite, string label)
+    {
+        var texturePath = AssetDatabase.GetAssetPath(sprite);
+        Assert.That(texturePath, Is.Not.Empty, label);
+
+        var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+        Assert.That(importer, Is.Not.Null, label);
+        Assert.That(importer.textureType, Is.EqualTo(TextureImporterType.Sprite), label);
+        Assert.That(importer.spriteImportMode, Is.EqualTo(SpriteImportMode.Single), label);
+        Assert.That(importer.mipmapEnabled, Is.False, label);
+        Assert.That(importer.alphaIsTransparency, Is.True, label);
+        Assert.That(importer.maxTextureSize, Is.EqualTo(512), label);
+    }
+
     private void AssertFinishThresholdTextureImporter(Texture texture)
     {
         var texturePath = AssetDatabase.GetAssetPath(texture);
