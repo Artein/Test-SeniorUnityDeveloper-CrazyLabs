@@ -383,6 +383,8 @@ public sealed class GameplayLifetimeScopeTests
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
         var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
+        var runSteeringAffordancePresentationView = container.Resolve<IRunSteeringAffordancePresentationView>();
+        var runSteeringAffordanceTuning = container.Resolve<IRunSteeringAffordanceTuning>();
         var runSteeringPointerPressGuard = container.Resolve<IRunSteeringPointerPressGuard>();
         var runSteeringFrameSource = container.Resolve<IRunSteeringFrameSource>();
         var runSteeringFrameResetter = container.Resolve<IRunSteeringFrameResetter>();
@@ -488,8 +490,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(20));
-        Assert.That(tickables.Count, Is.EqualTo(4));
+        Assert.That(initializables.Count, Is.EqualTo(21));
+        Assert.That(tickables.Count, Is.EqualTo(5));
         Assert.That(fixedTickables.Count, Is.EqualTo(7));
         Assert.That(lateTickables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -502,7 +504,11 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runSteeringGesture, Is.Not.Null);
-        Assert.That(runSteeringAffordanceView, Is.SameAs(fixture.RunSteeringAffordanceView));
+        Assert.That(runSteeringAffordanceView, Is.Not.InstanceOf<MonoBehaviour>());
+        Assert.That(runSteeringAffordanceView, Is.InstanceOf<ITickable>());
+        Assert.That(tickables, Has.Some.SameAs(runSteeringAffordanceView));
+        Assert.That(runSteeringAffordancePresentationView, Is.SameAs(fixture.RunSteeringAffordanceView));
+        Assert.That(runSteeringAffordanceTuning, Is.SameAs(fixture.RunSteeringAffordanceView));
         Assert.That(runSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(runSteeringFrameSource, Is.Not.Null);
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));

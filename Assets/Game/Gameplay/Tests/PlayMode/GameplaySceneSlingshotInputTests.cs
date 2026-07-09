@@ -170,6 +170,7 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
 
                 Assert.That(runSteeringAffordance.activeSelf, Is.True);
                 Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
+
                 Assert.That(
                     gameplayCanvas.scaleFactor,
                     Is.Not.EqualTo(1f).Within(0.001f),
@@ -184,11 +185,23 @@ public sealed class GameplaySceneSlingshotInputTests : BaseGameplayScenePlayMode
                 Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(expectedRunPressCanvasPosition.y).Within(0.001f));
 
                 for (var frameIndex = 0; frameIndex < 8; frameIndex += 1)
+                {
                     yield return null;
+                }
 
                 Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.GreaterThan(0.9f));
                 Assert.That(runSteeringLeftRangeEndImage.color.a, Is.EqualTo(0f).Within(0.001f));
                 Assert.That(runSteeringRightRangeEndImage.color.a, Is.GreaterThan(0f));
+
+                yield return SendMouse(mouse, runMoveScreenPosition, false);
+
+                for (var frameIndex = 0; frameIndex < 30 && runSteeringAffordance.activeSelf; frameIndex += 1)
+                {
+                    yield return null;
+                }
+
+                Assert.That(runSteeringAffordance.activeSelf, Is.False);
+                Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
             }
             finally
             {

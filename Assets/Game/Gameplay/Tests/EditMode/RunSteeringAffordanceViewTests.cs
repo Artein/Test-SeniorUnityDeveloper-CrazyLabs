@@ -22,7 +22,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_VisibleState_AppliesLayoutAndNonInteractiveSettings()
+    public void Present_VisibleState_AppliesLayoutAndNonInteractiveSettings()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -38,7 +38,7 @@ public sealed class RunSteeringAffordanceViewTests
             out var deadzoneRoot,
             out var deadzoneImage);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(150f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -61,7 +61,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Update_VisibleState_MovesKnobImmediatelyWithoutChangingRangeEndpointIntent()
+    public void Present_UpdatedState_MovesKnobImmediatelyWithoutChangingRangeEndpointIntent()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -77,13 +77,13 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(100f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
 
-        ((IRunSteeringAffordanceView)view).Update(CreateState(
+        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
             knob: new Vector2(180f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -95,7 +95,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_OriginState_HidesBothRangeEnds()
+    public void Present_OriginState_HidesBothRangeEnds()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -111,7 +111,7 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(100f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -122,7 +122,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_RightMovement_FadesOnlyRightRangeEndDuringRamp()
+    public void Present_RightMovement_FadesOnlyRightRangeEndDuringRamp()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -138,7 +138,7 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(120f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -149,7 +149,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_FullLeftMovement_ShowsLeftRangeEndAtMaxAlpha()
+    public void Present_FullLeftMovement_ShowsLeftRangeEndAtMaxAlpha()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -165,7 +165,7 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(20f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -176,7 +176,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_UnderScaledOverlayCanvas_RendersScreenSpaceLayoutAtRequestedScreenPositions()
+    public void Present_UnderScaledOverlayCanvas_RendersScreenSpaceLayoutAtRequestedScreenPositions()
     {
         var canvasRoot = Track(new GameObject("Scaled Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler)));
         var canvasTransform = canvasRoot.GetComponent<RectTransform>();
@@ -205,7 +205,7 @@ public sealed class RunSteeringAffordanceViewTests
         root.anchorMax = Vector2.one;
         root.sizeDelta = Vector2.zero;
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(150f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -219,7 +219,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Hide_VisibleState_HidesFromFinalKnobPositionWithoutReturningToOrigin()
+    public void Deactivate_AfterFinalPresentation_HidesWithoutReturningKnobToOrigin()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -235,17 +235,19 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        Present(view, CreateState(
             knob: new Vector2(100f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
 
-        ((IRunSteeringAffordanceView)view).Hide(CreateState(
+        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
             knob: new Vector2(180f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
+        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(0f, 0.86f);
+        ((IRunSteeringAffordancePresentationView)view).Deactivate();
 
         Assert.That(root.gameObject.activeSelf, Is.False);
         Assert.That(canvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
@@ -253,7 +255,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Show_WithNonzeroAnimation_AppliesLayoutBeforeAnimationCompletes()
+    public void Present_BeforeAnimationFrame_AppliesLayoutImmediately()
     {
         var view = CreateView(
             showSeconds: 1f,
@@ -269,20 +271,18 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordanceView)view).Show(CreateState(
+        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
             knob: new Vector2(150f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
+        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(1f, 0.86f);
 
         Assert.That(root.gameObject.activeSelf, Is.True);
         Assert.That(canvasGroup.alpha, Is.EqualTo(1f).Within(0.001f));
         AssertVector2(knobRoot.anchoredPosition, new Vector2(150f, 200f));
 
-        view.TickAnimationForTests(1f);
-
-        Assert.That(canvasGroup.alpha, Is.EqualTo(1f).Within(0.001f));
-        AssertVector2(knobRoot.anchoredPosition, new Vector2(150f, 200f));
+        Assert.That(knobRoot.localScale, Is.EqualTo(Vector3.one * 0.86f));
     }
 
     [Test]
@@ -300,7 +300,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Reset_DestroyedUnityObject_DoesNotThrow()
+    public void PresentationCommands_DestroyedUnityObject_DoNotThrow()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -318,7 +318,13 @@ public sealed class RunSteeringAffordanceViewTests
 
         UnityEngine.Object.DestroyImmediate(root.gameObject);
 
-        Assert.That(() => view.Reset(), Throws.Nothing);
+        Assert.That(
+            () =>
+            {
+                ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(0f, 0.86f);
+                ((IRunSteeringAffordancePresentationView)view).Deactivate();
+            },
+            Throws.Nothing);
     }
 
     private RunSteeringAffordanceView CreateView(
@@ -350,6 +356,7 @@ public sealed class RunSteeringAffordanceViewTests
         knobRoot = CreateImageChild(root, "Knob", out knobImage);
 
         var view = rootObject.AddComponent<RunSteeringAffordanceView>();
+
         view.SetReferencesForTests(
             root,
             canvasGroup,
@@ -391,6 +398,14 @@ public sealed class RunSteeringAffordanceViewTests
             leftRangeEnd,
             rightRangeEnd,
             deadzoneDiameter);
+    }
+
+    private static void Present(
+        RunSteeringAffordanceView view,
+        RunSteeringAffordancePresentationState state)
+    {
+        ((IRunSteeringAffordancePresentationView)view).Present(state);
+        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(1f, 1f);
     }
 
     private T Track<T>(T value)

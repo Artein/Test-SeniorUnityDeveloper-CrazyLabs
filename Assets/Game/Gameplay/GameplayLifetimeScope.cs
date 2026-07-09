@@ -56,9 +56,9 @@ namespace Game.Gameplay
         [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
-        
-        [Header("Diagnostics")]
-        [SerializeField] private bool _runDiagnosticsOverlayEnabled;
+
+        [Header("Diagnostics")] [SerializeField]
+        private bool _runDiagnosticsOverlayEnabled;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -115,8 +115,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
-            builder.RegisterInstance<IRunSteeringAffordanceView>(
-                _runSteeringAffordanceView != null ? _runSteeringAffordanceView : new NullRunSteeringAffordanceView());
+            InstallRunSteeringAffordance(builder);
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
 
@@ -201,12 +200,24 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
             builder.RegisterEntryPoint<FinishCelebrationPresenter>();
-            
+
             if (_runDiagnosticsOverlayEnabled)
             {
                 builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");
                 builder.RegisterBuildCallback(container => container.Resolve<RunDiagnosticsOverlay>());
             }
+        }
+
+        private void InstallRunSteeringAffordance(IContainerBuilder builder)
+        {
+            if (_runSteeringAffordanceView == null)
+            {
+                builder.RegisterInstance<IRunSteeringAffordanceView>(new NullRunSteeringAffordanceView());
+                return;
+            }
+
+            builder.RegisterInstance<IRunSteeringAffordancePresentationView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
+            builder.RegisterEntryPoint<RunSteeringAffordancePresenter>();
         }
 
         private void InstallSceneComposition(IContainerBuilder builder)

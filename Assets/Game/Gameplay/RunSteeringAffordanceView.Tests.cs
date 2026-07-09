@@ -40,11 +40,6 @@ namespace Game.Gameplay
             _hideSeconds = hideSeconds;
         }
 
-        internal void TickAnimationForTests(float deltaSeconds)
-        {
-            TickAnimation(deltaSeconds);
-        }
-
         internal IReadOnlyList<string> GetReferenceValidationErrorsForTests()
         {
             return GetReferenceValidationErrors().ToArray();

@@ -4,7 +4,24 @@ using UnityEngine.UI;
 
 namespace Game.Gameplay
 {
-    public sealed partial class RunSteeringAffordanceView : MonoBehaviour, IRunSteeringAffordanceView
+    internal interface IRunSteeringAffordancePresentationView
+    {
+        void Present(RunSteeringAffordancePresentationState state);
+        void ApplyAnimation(float alpha, float scale);
+        void Deactivate();
+    }
+
+    internal interface IRunSteeringAffordanceTuning
+    {
+        float HiddenScale { get; }
+        float ShowDurationSeconds { get; }
+        float HideDurationSeconds { get; }
+    }
+
+    public sealed partial class RunSteeringAffordanceView :
+        MonoBehaviour,
+        IRunSteeringAffordancePresentationView,
+        IRunSteeringAffordanceTuning
     {
         private const float RangeEndMinimumFadeStartFraction = 0.06f;
         private const float RangeEndDeadzoneFadeStartMultiplier = 0.5f;
@@ -30,64 +47,18 @@ namespace Game.Gameplay
         [SerializeField, Min(0f)] private float _showSeconds = 0.08f;
         [SerializeField, Min(0f)] private float _hideSeconds = 0.08f;
 
-        private float _animationElapsedSeconds;
-        private float _animationDurationSeconds;
-        private float _animationStartAlpha;
-        private float _animationEndAlpha;
-        private float _animationStartScale;
-        private float _animationEndScale;
-        private bool _isAnimating;
-        private bool _hideWhenAnimationCompletes;
         private Canvas _canvas;
 
-        void IRunSteeringAffordanceView.Show(RunSteeringAffordancePresentationState state)
-        {
-            Show(state);
-        }
+        float IRunSteeringAffordanceTuning.HiddenScale => Mathf.Clamp01(_hiddenScale);
+        float IRunSteeringAffordanceTuning.ShowDurationSeconds => Mathf.Max(0f, _showSeconds);
+        float IRunSteeringAffordanceTuning.HideDurationSeconds => Mathf.Max(0f, _hideSeconds);
 
-        void IRunSteeringAffordanceView.Update(RunSteeringAffordancePresentationState state)
-        {
-            Update(state);
-        }
-
-        void IRunSteeringAffordanceView.Hide(RunSteeringAffordancePresentationState state)
-        {
-            Hide(state);
-        }
-
-        private void Show(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresentationView.Present(RunSteeringAffordancePresentationState state)
         {
             if (IsDestroyed())
                 return;
 
             EnsureReferences();
-
-            if (!state.IsVisible)
-            {
-                Reset();
-                return;
-            }
-
-            if (_root != null)
-                _root.gameObject.SetActive(true);
-
-            ApplyLayout(state);
-            ApplyNonInteractiveSettings();
-            BeginAnimation(1f, 1f, Mathf.Clamp01(_hiddenScale), 1f, Mathf.Max(0f, _showSeconds), false);
-        }
-
-        private void Update(RunSteeringAffordancePresentationState state)
-        {
-            if (IsDestroyed())
-                return;
-
-            EnsureReferences();
-
-            if (!state.IsVisible)
-            {
-                Reset();
-                return;
-            }
 
             if (_root != null)
                 _root.gameObject.SetActive(true);
@@ -96,30 +67,23 @@ namespace Game.Gameplay
             ApplyNonInteractiveSettings();
         }
 
-        private void Hide(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresentationView.ApplyAnimation(float alpha, float scale)
         {
             if (IsDestroyed())
                 return;
 
             EnsureReferences();
-
-            if (state.IsVisible)
-                ApplyLayout(state);
-
+            SetAlpha(alpha);
+            SetVisualScale(scale);
             ApplyNonInteractiveSettings();
-            BeginAnimation(GetAlpha(), 0f, GetVisualScale(), Mathf.Clamp01(_hiddenScale), Mathf.Max(0f, _hideSeconds), true);
         }
 
-        public void Reset()
+        void IRunSteeringAffordancePresentationView.Deactivate()
         {
             if (IsDestroyed())
                 return;
 
             EnsureReferences();
-            _isAnimating = false;
-            SetAlpha(0f);
-            SetVisualScale(Mathf.Clamp01(_hiddenScale));
-            ApplyNonInteractiveSettings();
 
             if (_root != null)
                 _root.gameObject.SetActive(false);
@@ -152,14 +116,7 @@ namespace Game.Gameplay
         private void Awake()
         {
             EnsureReferences();
-
-            if (_root != null && !_root.gameObject.activeSelf)
-                Reset();
-        }
-
-        private void Update()
-        {
-            TickAnimation(Time.unscaledDeltaTime);
+            ApplyNonInteractiveSettings();
         }
 
         private void OnValidate()
@@ -211,60 +168,6 @@ namespace Game.Gameplay
         private bool IsDestroyed()
         {
             return this == null;
-        }
-
-        private void BeginAnimation(
-            float startAlpha,
-            float endAlpha,
-            float startScale,
-            float endScale,
-            float durationSeconds,
-            bool hideWhenAnimationCompletes)
-        {
-            _animationElapsedSeconds = 0f;
-            _animationDurationSeconds = durationSeconds;
-            _animationStartAlpha = startAlpha;
-            _animationEndAlpha = endAlpha;
-            _animationStartScale = startScale;
-            _animationEndScale = endScale;
-            _hideWhenAnimationCompletes = hideWhenAnimationCompletes;
-
-            if (durationSeconds <= 0f)
-            {
-                CompleteAnimation();
-                return;
-            }
-
-            _isAnimating = true;
-            SetAlpha(startAlpha);
-            SetVisualScale(startScale);
-        }
-
-        private void TickAnimation(float deltaSeconds)
-        {
-            if (!_isAnimating)
-                return;
-
-            _animationElapsedSeconds += Mathf.Max(0f, deltaSeconds);
-            var progress = _animationDurationSeconds > 0f
-                ? Mathf.Clamp01(_animationElapsedSeconds / _animationDurationSeconds)
-                : 1f;
-
-            SetAlpha(Mathf.Lerp(_animationStartAlpha, _animationEndAlpha, progress));
-            SetVisualScale(Mathf.Lerp(_animationStartScale, _animationEndScale, progress));
-
-            if (progress >= 1f)
-                CompleteAnimation();
-        }
-
-        private void CompleteAnimation()
-        {
-            _isAnimating = false;
-            SetAlpha(_animationEndAlpha);
-            SetVisualScale(_animationEndScale);
-
-            if (_hideWhenAnimationCompletes && _root != null)
-                _root.gameObject.SetActive(false);
         }
 
         private void ApplyLayout(RunSteeringAffordancePresentationState state)
@@ -326,16 +229,21 @@ namespace Game.Gameplay
 
             var normalized = Mathf.Clamp01(Mathf.Abs(offset) / rangePixels);
             var deadzoneFraction = Mathf.Clamp01(state.DeadzoneDiameterPixels / (rangePixels * 2f));
+
             var fadeStart = Mathf.Clamp01(Mathf.Max(
                 RangeEndMinimumFadeStartFraction,
                 deadzoneFraction * RangeEndDeadzoneFadeStartMultiplier));
+
             var fadeFull = Mathf.Clamp(
                 Mathf.Max(RangeEndDefaultFullOpacityFraction, fadeStart + RangeEndMinimumFadeSpanFraction),
                 fadeStart,
                 1f);
+
             var progress = fadeFull > fadeStart
                 ? Mathf.InverseLerp(fadeStart, fadeFull, normalized)
-                : normalized >= fadeFull ? 1f : 0f;
+                : normalized >= fadeFull
+                    ? 1f
+                    : 0f;
             var alphaMultiplier = Mathf.SmoothStep(0f, 1f, progress);
 
             if (offset > 0f)
@@ -422,6 +330,7 @@ namespace Game.Gameplay
 
             // CanvasScaler maps physical screen pixels into Canvas-local UI units via scaleFactor.
             var canvasRect = canvasTransform.rect;
+
             var canvasLocalPosition = new Vector3(
                 canvasRect.xMin + (screenPosition.x / scaleFactor),
                 canvasRect.yMin + (screenPosition.y / scaleFactor),
@@ -448,20 +357,10 @@ namespace Game.Gameplay
             return _canvas.worldCamera;
         }
 
-        private float GetAlpha()
-        {
-            return _canvasGroup != null ? _canvasGroup.alpha : 0f;
-        }
-
         private void SetAlpha(float alpha)
         {
             if (_canvasGroup != null)
                 _canvasGroup.alpha = Mathf.Clamp01(alpha);
-        }
-
-        private float GetVisualScale()
-        {
-            return _knobRoot != null ? _knobRoot.localScale.x : 1f;
         }
 
         private void SetVisualScale(float scale)
