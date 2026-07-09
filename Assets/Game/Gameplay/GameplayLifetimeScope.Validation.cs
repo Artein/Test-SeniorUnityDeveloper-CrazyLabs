@@ -119,7 +119,11 @@ namespace Game.Gameplay
             if (_pullHintView == null)
                 yield return "GameplayLifetimeScope requires a Pull Hint View reference.";
 
-            if (_runSteeringAffordanceView != null)
+            if (_runSteeringAffordanceView == null)
+            {
+                yield return "GameplayLifetimeScope requires a Run Steering Affordance View reference.";
+            }
+            else
             {
                 foreach (var error in _runSteeringAffordanceView.GetReferenceValidationErrors())
                 {

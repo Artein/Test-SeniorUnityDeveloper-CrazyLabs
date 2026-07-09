@@ -97,6 +97,7 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Pre-Launch Launch Target Pose")
                 .And.Message.Contains("Slingshot View")
                 .And.Message.Contains("Pull Hint View")
+                .And.Message.Contains("Run Steering Affordance View")
                 .And.Message.Contains("Run Preparation View")
                 .And.Message.Contains("Run Ended View")
                 .And.Message.Contains("Launch Target")
@@ -115,13 +116,15 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     [Test]
-    public void ValidateRequiredReferencesForTests_MissingRunSteeringAffordanceView_DoesNotThrow()
+    public void ValidateRequiredReferencesForTests_MissingRunSteeringAffordanceView_ThrowsWithRequiredReferenceName()
     {
         var fixture = CreateValidScopeFixture();
 
         fixture.Scope.SetRunSteeringAffordanceViewForTests(null);
 
-        Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Run Steering Affordance View"));
     }
 
     [Test]
@@ -598,21 +601,6 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(resolvedPlayerSteeringResponsivenessStat, Is.SameAs(fixture.PlayerSteeringResponsivenessStatId));
         Assert.That(resolvedLevelPickups, Is.SameAs(fixture.LevelPickups));
         Assert.That(((LevelPickupState)levelPickupState).PickupsForTests, Is.EquivalentTo(fixture.LevelPickups));
-    }
-
-    [Test]
-    public void ConfigureForTests_MissingRunSteeringAffordanceView_RegistersNullAffordanceView()
-    {
-        var fixture = CreateValidScopeFixture();
-        var builder = new ContainerBuilder();
-        fixture.Scope.SetRunSteeringAffordanceViewForTests(null);
-
-        fixture.Scope.ConfigureForTests(builder);
-
-        using var container = builder.Build();
-        var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
-
-        Assert.That(runSteeringAffordanceView, Is.TypeOf<NullRunSteeringAffordanceView>());
     }
 
     private ValidScopeFixture CreateValidScopeFixture()

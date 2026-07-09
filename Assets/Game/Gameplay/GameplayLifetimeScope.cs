@@ -115,7 +115,8 @@ namespace Game.Gameplay
             builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
-            InstallRunSteeringAffordance(builder);
+            builder.RegisterInstance<IRunSteeringAffordancePresentationView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
+            builder.RegisterEntryPoint<RunSteeringAffordancePresenter>();
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
 
@@ -206,18 +207,6 @@ namespace Game.Gameplay
                 builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");
                 builder.RegisterBuildCallback(container => container.Resolve<RunDiagnosticsOverlay>());
             }
-        }
-
-        private void InstallRunSteeringAffordance(IContainerBuilder builder)
-        {
-            if (_runSteeringAffordanceView == null)
-            {
-                builder.RegisterInstance<IRunSteeringAffordanceView>(new NullRunSteeringAffordanceView());
-                return;
-            }
-
-            builder.RegisterInstance<IRunSteeringAffordancePresentationView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
-            builder.RegisterEntryPoint<RunSteeringAffordancePresenter>();
         }
 
         private void InstallSceneComposition(IContainerBuilder builder)

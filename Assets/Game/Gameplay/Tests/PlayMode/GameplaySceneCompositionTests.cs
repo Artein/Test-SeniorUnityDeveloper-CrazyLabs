@@ -14,6 +14,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
+using VContainer.Unity;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -145,6 +146,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
         var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
         var resolvedRunSteeringAffordanceView = lifetimeScope.Container.Resolve<IRunSteeringAffordanceView>();
+        var resolvedRunSteeringAffordancePresentationView = lifetimeScope.Container.Resolve<IRunSteeringAffordancePresentationView>();
+        var resolvedRunSteeringAffordanceTuning = lifetimeScope.Container.Resolve<IRunSteeringAffordanceTuning>();
         var resolvedRunSteeringPointerPressGuard = lifetimeScope.Container.Resolve<IRunSteeringPointerPressGuard>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
         var resolvedSlingshotActivePullNotifier = lifetimeScope.Container.Resolve<ISlingshotActivePullNotifier>();
@@ -287,7 +290,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedFinishPresentationView, Is.SameAs(finishPresentationView));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
-        Assert.That(resolvedRunSteeringAffordanceView, Is.SameAs(runSteeringAffordanceView));
+        Assert.That(resolvedRunSteeringAffordanceView, Is.TypeOf<RunSteeringAffordancePresenter>());
+        Assert.That(resolvedRunSteeringAffordanceView, Is.InstanceOf<ITickable>());
+        Assert.That(resolvedRunSteeringAffordancePresentationView, Is.SameAs(runSteeringAffordanceView));
+        Assert.That(resolvedRunSteeringAffordanceTuning, Is.SameAs(runSteeringAffordanceView));
         Assert.That(resolvedRunSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
         Assert.That(resolvedSlingshotActivePullNotifier, Is.Not.Null);
@@ -464,6 +470,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runSteeringAffordance.activeSelf, Is.False);
 
         var affordanceLayout = new RunSteeringAffordanceLayout();
+
         var affordanceStartState = affordanceLayout.Create(new RunSteeringAffordanceSnapshot(
             true,
             1,
