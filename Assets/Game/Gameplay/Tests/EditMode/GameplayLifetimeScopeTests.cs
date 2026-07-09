@@ -210,10 +210,10 @@ public sealed class GameplayLifetimeScopeTests
         var duplicatePickup = CreatePickup("Duplicate Currency Pickup", duplicatePickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { fixture.LevelPickup, duplicatePickup },
+            levelPickups: new[] { fixture.LevelPickup, duplicatePickup },
             fixture.PickupSensorSource,
-            "Pickup",
-            "PlayerBodyPart");
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -229,10 +229,10 @@ public sealed class GameplayLifetimeScopeTests
         var pickup = CreatePickup("Blank Currency Pickup", pickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { pickup },
+            levelPickups: new[] { pickup },
             fixture.PickupSensorSource,
-            "Pickup",
-            "PlayerBodyPart");
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -248,10 +248,10 @@ public sealed class GameplayLifetimeScopeTests
         var pickup = CreatePickup("Mismatched Currency Pickup", pickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { pickup },
+            levelPickups: new[] { pickup },
             fixture.PickupSensorSource,
-            "Pickup",
-            "PlayerBodyPart");
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -264,10 +264,10 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { fixture.LevelPickup, fixture.LevelPickup },
+            levelPickups: new[] { fixture.LevelPickup, fixture.LevelPickup },
             fixture.PickupSensorSource,
-            "Pickup",
-            "PlayerBodyPart");
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -280,10 +280,10 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { fixture.LevelPickup },
-            null,
-            "Pickup",
-            "PlayerBodyPart");
+            levelPickups: new[] { fixture.LevelPickup },
+            pickupSensorSource: null,
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -297,10 +297,10 @@ public sealed class GameplayLifetimeScopeTests
         var invalidPickup = CreatePickup("Invalid Pickup", null);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            new[] { invalidPickup },
+            levelPickups: new[] { invalidPickup },
             fixture.PickupSensorSource,
-            "Pickup",
-            "PlayerBodyPart");
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
@@ -317,9 +317,7 @@ public sealed class GameplayLifetimeScopeTests
 
         using var container = builder.Build();
 
-        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         Assert.That(overlays, Is.Empty);
         Assert.That(() => container.Resolve<RunDiagnosticsOverlay>(), Throws.TypeOf<VContainerException>());
@@ -336,9 +334,7 @@ public sealed class GameplayLifetimeScopeTests
 
         using var container = builder.Build();
 
-        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         Assert.That(overlays, Has.Length.EqualTo(1));
         Assert.That(overlays[0].gameObject.name, Is.EqualTo("RunDiagnosticsOverlay"));
@@ -468,9 +464,7 @@ public sealed class GameplayLifetimeScopeTests
 
         var playerSteeringControllerFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is PlayerSteeringController);
-
-        var characterVisualFollowerLateTickableIndex =
-            GetLateTickableIndex(lateTickables, lateTickable => lateTickable is CharacterVisualFollower);
+        var characterVisualFollowerLateTickableIndex = GetLateTickableIndex(lateTickables, lateTickable => lateTickable is CharacterVisualFollower);
 
         var animatedContactSensorPoseSyncLateTickableIndex =
             GetLateTickableIndex(lateTickables, lateTickable => lateTickable is AnimatedContactSensorPoseSync);
@@ -680,43 +674,13 @@ public sealed class GameplayLifetimeScopeTests
         var pickupsInstaller = CreateGameObject("Pickups Installer").AddComponent<GameplayPickupsSceneCompositionMonoInstaller>();
         pickupsInstaller.SetReferencesForTests(levelPickups, pickupSensorSource, "Pickup", "PlayerBodyPart");
 
-        scope.SetReferencesForTests(
-            gameplayStateConfig,
-            runPreparation,
-            preLaunch,
-            running,
-            runEnded,
-            upgradeCatalog,
-            slingshotLaunchPowerStatId,
-            playerMaxSpeedStatId,
-            playerSteeringResponsivenessStatId,
-            currencyDefinition,
-            coinPickupMultiplierStatId,
-            slingshotConfig,
-            gameplaySlingshotLaunchConfig,
-            playerSteeringConfig,
-            runCameraConfig,
-            runEndConfig,
-            playerSteeringTarget,
-            runCameraSource,
-            runProgressFrameSource,
-            new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller, pickupsInstaller },
-            contactNotifier,
-            runCameraAnchor,
-            runCameraRig,
-            camera,
-            slingshotRig,
-            preLaunchSlingshotRigPose,
-            preLaunchLaunchTargetPose,
-            slingshotView,
-            pullHintView,
-            runSteeringAffordanceView,
-            runPreparationView,
-            runEndedView,
-            launchTarget,
-            characterPresentationView,
-            animatedContactSensorPoseSyncView,
-            finishPresentationView);
+        scope.SetReferencesForTests(gameplayStateConfig, runPreparation, preLaunch, running, runEnded, upgradeCatalog, slingshotLaunchPowerStatId,
+            playerMaxSpeedStatId, playerSteeringResponsivenessStatId, currencyDefinition, coinPickupMultiplierStatId, slingshotConfig,
+            gameplaySlingshotLaunchConfig, playerSteeringConfig, runCameraConfig, runEndConfig, playerSteeringTarget, runCameraSource,
+            runProgressFrameSource, sceneCompositionInstallers: new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller, pickupsInstaller },
+            contactNotifier, runCameraAnchor, runCameraRig, camera, slingshotRig, preLaunchSlingshotRigPose, preLaunchLaunchTargetPose,
+            slingshotView, pullHintView, runSteeringAffordanceView, runPreparationView, runEndedView, launchTarget, characterPresentationView,
+            animatedContactSensorPoseSyncView, finishPresentationView);
 
         return new ValidScopeFixture
         {
@@ -788,17 +752,8 @@ public sealed class GameplayLifetimeScopeTests
         var knobRoot = CreateChildImage(root, "Knob");
         var view = rootObject.AddComponent<RunSteeringAffordanceView>();
 
-        view.SetReferencesForTests(
-            root,
-            canvasGroup,
-            knobRoot.rectTransform,
-            knobRoot,
-            leftRangeEndRoot.rectTransform,
-            leftRangeEndRoot,
-            rightRangeEndRoot.rectTransform,
-            rightRangeEndRoot,
-            deadzoneRoot.rectTransform,
-            deadzoneRoot);
+        view.SetReferencesForTests(root, canvasGroup, knobRoot.rectTransform, knobImage: knobRoot, leftRangeEndRoot.rectTransform,
+            leftRangeEndRoot, rightRangeEndRoot.rectTransform, rightRangeEndRoot, deadzoneRoot.rectTransform, deadzoneImage: deadzoneRoot);
 
         rootObject.SetActive(true);
         return view;
@@ -814,10 +769,7 @@ public sealed class GameplayLifetimeScopeTests
         target.SetParent(rootRigidbody.transform, false);
 
         var view = rootRigidbody.gameObject.AddComponent<AnimatedContactSensorPoseSyncView>();
-
-        view.SetReferencesForTests(
-            rootRigidbody,
-            new[] { new AnimatedContactSensorPoseBinding(sourceTransform, target) });
+        view.SetReferencesForTests(rootRigidbody, new[] { new AnimatedContactSensorPoseBinding(sourceTransform, target) });
 
         return view;
     }
@@ -888,18 +840,9 @@ public sealed class GameplayLifetimeScopeTests
         var tapToContinueRoot = CreateChildGameObject(viewObject.transform, "Run Ended Continue Label");
         var acknowledgeTouchAreaButton = CreateChildButton(viewObject.transform, "Run Ended Continue Touch Area");
 
-        view.SetReferencesForTests(
-            viewObject,
-            titleText,
-            earnedCoinsText,
-            new Graphic[] { earnedCoinsIcon, earnedCoinsText },
-            reachedDistanceText,
-            rewardSourceRowsRoot.transform,
-            rewardSourceRowPrefab,
-            bestImprovementRoot,
-            bestImprovementText,
-            tapToContinueRoot,
-            acknowledgeTouchAreaButton);
+        view.SetReferencesForTests(root: viewObject, titleText, earnedCoinsText,
+            earnedCoinsRevealGraphics: new Graphic[] { earnedCoinsIcon, earnedCoinsText }, reachedDistanceText, rewardSourceRowsRoot.transform,
+            rewardSourceRowPrefab, bestImprovementRoot, bestImprovementText, tapToContinueRoot, acknowledgeTouchAreaButton);
         viewObject.SetActive(true);
         return view;
     }
@@ -1084,9 +1027,7 @@ public sealed class GameplayLifetimeScopeTests
     private void DestroyGeneratedGameObjects<T>()
         where T : Component
     {
-        var components = UnityEngine.Object.FindObjectsByType<T>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        var components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         foreach (var component in components)
         {
