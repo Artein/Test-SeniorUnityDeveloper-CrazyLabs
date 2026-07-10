@@ -28,6 +28,9 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeTime _clock;
     protected FakeScreen _screen;
     protected FakeRunSteeringFrameSource _steeringFrameSource;
+    protected FakeRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
+    protected FakeRunSteeringAffordancePresenter _runSteeringAffordancePresenter;
+    protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
     protected GameplayStatId _playerSteeringResponsivenessStatId;
@@ -91,6 +94,9 @@ public abstract class PlayerSteeringControllerTestFixture
 
         _steeringFrameSource = new FakeRunSteeringFrameSource();
         _runSteeringGesture = new RunSteeringGesture(_config);
+        _runSteeringAffordanceLayout = new FakeRunSteeringAffordanceLayout();
+        _runSteeringAffordancePresenter = new FakeRunSteeringAffordancePresenter();
+        _runSteeringPointerPressGuard = new FakeRunSteeringPointerPressGuard();
         _controller = CreateController();
         ((IInitializable)_controller).Initialize();
     }
@@ -238,7 +244,8 @@ public abstract class PlayerSteeringControllerTestFixture
     private PlayerSteeringController CreateController()
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
-            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture, _runningStateId,
+            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture,
+            _runSteeringAffordanceLayout, _runSteeringAffordancePresenter, _runSteeringPointerPressGuard, _runningStateId,
             _playerSteeringResponsivenessStatId);
     }
 
@@ -498,6 +505,71 @@ public abstract class PlayerSteeringControllerTestFixture
         {
             LastFallbackUpDirection = Vector3.zero;
             GetUpDirectionCallCount = 0;
+        }
+    }
+
+    protected sealed class FakeRunSteeringAffordanceLayout : IRunSteeringAffordanceLayout
+    {
+        public FakeRunSteeringAffordanceLayout()
+        {
+            Result = new RunSteeringAffordancePresentationState(
+                true,
+                new Vector2(11f, 12f),
+                new Vector2(21f, 22f),
+                new Vector2(31f, 32f),
+                new Vector2(41f, 42f),
+                51f,
+                0f,
+                0f);
+        }
+
+        internal List<RunSteeringAffordanceSnapshot> Snapshots { get; } = new();
+        internal RunSteeringAffordancePresentationState Result { get; }
+
+        RunSteeringAffordancePresentationState IRunSteeringAffordanceLayout.Create(RunSteeringAffordanceSnapshot snapshot)
+        {
+            Snapshots.Add(snapshot);
+            return Result;
+        }
+    }
+
+    protected sealed class FakeRunSteeringAffordancePresenter : IRunSteeringAffordancePresenter
+    {
+        internal List<RunSteeringAffordancePresentationState> ShowStates { get; } = new();
+        internal List<RunSteeringAffordancePresentationState> UpdateStates { get; } = new();
+        internal List<RunSteeringAffordancePresentationState> HideStates { get; } = new();
+        public int ResetCallCount { get; private set; }
+
+        void IRunSteeringAffordancePresenter.Show(RunSteeringAffordancePresentationState state)
+        {
+            ShowStates.Add(state);
+        }
+
+        void IRunSteeringAffordancePresenter.Update(RunSteeringAffordancePresentationState state)
+        {
+            UpdateStates.Add(state);
+        }
+
+        void IRunSteeringAffordancePresenter.Hide(RunSteeringAffordancePresentationState state)
+        {
+            HideStates.Add(state);
+        }
+
+        public void Reset()
+        {
+            ResetCallCount += 1;
+        }
+    }
+
+    protected sealed class FakeRunSteeringPointerPressGuard : IRunSteeringPointerPressGuard
+    {
+        public bool CanBegin { get; set; } = true;
+        public List<PointerInput> Requests { get; } = new();
+
+        public bool CanBeginRunSteering(PointerInput pointerInput)
+        {
+            Requests.Add(pointerInput);
+            return CanBegin;
         }
     }
 }

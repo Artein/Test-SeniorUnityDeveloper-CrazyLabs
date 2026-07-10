@@ -48,6 +48,10 @@ _Avoid_: Launch Target Collider Root, Animated Contact Sensor, Character collide
 The player touch control used during **Running** to steer the **Run Body**.
 _Avoid_: Virtual joystick, screen steering, Pull
 
+**Run Steering Affordance**:
+The visible presentation that helps the player perceive an active **Run Steering Control** gesture.
+_Avoid_: movement joystick, 2D joystick, Pull indicator
+
 **Run Steering Origin**:
 The touch position that acts as neutral for one active **Run Steering Control** gesture.
 _Avoid_: Screen center, joystick center, Pull Point
@@ -248,14 +252,41 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - **Run Body Contact Collider** should not be driven by current **Character** animation; animation-following body-part contacts belong to **Animated Contact Sensors**.
 - **Run Steering Control** belongs to **Running**, not **Pre-Launch**.
 - **Run Steering Control** steers the **Run Body** during **Running**.
+- **Run Steering Affordance** presents **Run Steering Control**; it does not redefine movement axes or steering authority.
+- **Run Steering Affordance** may show **Run Steering Origin**, active displacement, **Run Steering Range**, and **Run Steering Deadzone**.
+- **Run Steering Affordance** presents the same **Run Steering Range** and **Run Steering Deadzone** used by **Run Steering Control**.
+- **Run Steering Affordance** follows the **Run Steering Control** lifecycle during **Running**.
+- **Run Steering Affordance** appears from the active **Run Steering Origin**, not from a fixed screen-side home position.
+- **Run Steering Affordance** is presented in screen space from touch positions, not as a world-space visual tied to the **Run Body**.
+- **Run Steering Affordance** is visible only while a **Run Steering Control** gesture is active.
+- **Run Steering Affordance** presents horizontal **Run Steering Control** displacement; it does not present vertical displacement as steering.
+- **Run Steering Affordance** presents active displacement with a knob that moves horizontally, not with a continuous horizontal rail or track.
+- **Run Steering Affordance** may hint at **Run Steering Range** endpoints without rendering a continuous movement track.
+- **Run Steering Affordance** knob directly follows current horizontal **Run Steering Control** displacement while the gesture is active.
+- **Run Steering Affordance** animation does not smooth or lag active **Run Steering Control** displacement.
+- **Run Steering Affordance** knob appears at the current horizontal **Run Steering Control** displacement when the gesture starts.
+- **Run Steering Affordance** appearance animation may affect opacity or scale, but not the initial active knob position.
+- **Run Steering Affordance** disappears from the final knob position when the **Run Steering Control** gesture ends.
+- **Run Steering Affordance** gesture-end animation may affect opacity or scale, but does not return the knob to **Run Steering Origin**.
+- **Run Steering Affordance** clamps visible horizontal displacement at **Run Steering Range** when full steering is reached.
+- **Run Steering Affordance** may show **Run Steering Deadzone** as a neutral area around **Run Steering Origin**.
+- **Run Steering Affordance** may show horizontal touch movement inside **Run Steering Deadzone** while **Run Steering Control** remains neutral.
+- **Run Steering Affordance** observes **Run Steering Control** input state; it is not an input-emitting UI control.
+- **Run Steering Affordance** is not interactive UI and does not consume touches or block **Run Steering Control**.
+- **Run Steering Control** logic does not derive steering values from **Run Steering Affordance** presentation output.
+- Every production `GameplayLifetimeScope` requires a serialized **Run Steering Affordance** view; missing or invalid authoring fails composition validation before gameplay starts.
 - **Run Steering Control** may begin from any touch during **Running**.
+- **Run Steering Control** does not begin from a touch that begins on interactive UI during **Running**.
+- **Run Steering Affordance** does not introduce a left-side or screen-region start requirement for **Run Steering Control**.
 - One active **Run Steering Control** gesture has one **Run Steering Origin**.
 - Only one **Run Steering Control** gesture is active at a time.
 - Additional touches do not change the active **Run Steering Control** gesture.
 - The active **Run Steering Control** gesture ends when its touch ends.
+- Interactive UI during **Running** does not take over an already active **Run Steering Control** gesture.
 - **Run Steering Range** defines full steering from the **Run Steering Origin** as a physical touch distance.
 - **Run Steering Range** maps physical horizontal displacement directly to steering amount until full steering is reached.
 - **Run Steering Range** remains a strict physical distance when **Run Steering Origin** is near a screen edge.
+- **Run Steering Affordance** preserves the true **Run Steering Origin** and **Run Steering Range** near screen edges; it does not shift inward to stay fully visible.
 - **Run Steering Deadzone** ignores a small initial portion of **Run Steering Range** near the **Run Steering Origin**.
 - **Run Steering Deadzone** does not reduce full steering; the remaining **Run Steering Range** still reaches full steering.
 - **Run Steering Responsiveness** affects how quickly the **Run Body** responds to requested **Run Steering Control**.
@@ -465,6 +496,66 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 > **Dev:** "Is the **Run Steering Control** the same thing as a **Pull**?"
 > **Domain expert:** "No - a **Pull** prepares **Launch** during **Pre-Launch**, while **Run Steering Control** steers the **Run Body** during **Running**."
 
+> **Dev:** "Are we adding a virtual joystick Vector2?"
+> **Domain expert:** "No - add a **Run Steering Affordance** for existing horizontal **Run Steering Control**; vertical displacement still has no steering meaning."
+
+> **Dev:** "Should the **Run Steering Affordance** use a fixed left-corner joystick base?"
+> **Domain expert:** "No - it appears from the active **Run Steering Origin** because **Run Steering Control** begins from the player's touch."
+
+> **Dev:** "Should the **Run Steering Affordance** use a UI joystick control to send input?"
+> **Domain expert:** "No - **Run Steering Control** stays owned by the existing project input path; **Run Steering Affordance** only presents it."
+
+> **Dev:** "Since the **Run Steering Affordance** is serialized UI, should its graphics block touches like other UI?"
+> **Domain expert:** "No - it is not interactive UI; it presents **Run Steering Control** without consuming touches."
+
+> **Dev:** "If the **Run Steering Affordance** view is missing, should production gameplay compose with steering only?"
+> **Domain expert:** "No - the serialized view is required production authoring, so composition fails validation before gameplay starts. Isolated steering tests use injected fakes instead of scene UI."
+
+> **Dev:** "Should the **Run Steering Affordance** require touches to start on the left side of the screen?"
+> **Domain expert:** "No - **Run Steering Control** may begin from any touch during **Running**; the affordance appears from that touch."
+
+> **Dev:** "Should the **Run Steering Affordance** stay visible during **Running** before the player touches?"
+> **Domain expert:** "No - it appears only while an active **Run Steering Control** gesture exists."
+
+> **Dev:** "Should the **Run Steering Affordance** knob follow the finger up and down like a circular joystick?"
+> **Domain expert:** "No - it presents horizontal **Run Steering Control** displacement only; vertical displacement still has no steering meaning."
+
+> **Dev:** "Should the **Run Steering Affordance** use a horizontal rail or line for the knob path?"
+> **Domain expert:** "No - it uses a knob that moves horizontally, with subtle **Run Steering Range** end hints and no continuous track."
+
+> **Dev:** "Should the **Run Steering Affordance** knob spring or ease toward the active touch displacement?"
+> **Domain expert:** "No - while **Run Steering Control** is active, the knob directly follows current horizontal displacement."
+
+> **Dev:** "Should the **Run Steering Affordance** knob animate out from **Run Steering Origin** when the gesture starts?"
+> **Domain expert:** "No - it appears at the current horizontal displacement immediately; appearance animation may affect opacity or scale only."
+
+> **Dev:** "Should the **Run Steering Affordance** knob animate back to **Run Steering Origin** when the gesture ends?"
+> **Domain expert:** "No - it disappears from the final knob position; gesture-end animation may affect opacity or scale only."
+
+> **Dev:** "Should the **Run Steering Affordance** keep following the finger after full steering is reached?"
+> **Domain expert:** "No - visible horizontal displacement clamps at **Run Steering Range** because that is already full steering."
+
+> **Dev:** "Should **Run Steering Deadzone** be invisible in the **Run Steering Affordance**?"
+> **Domain expert:** "No - it may appear as a neutral area around **Run Steering Origin** while **Run Steering Control** remains neutral inside it."
+
+> **Dev:** "Should the **Run Steering Affordance** stay centered while the touch is still inside **Run Steering Deadzone**?"
+> **Domain expert:** "No - it may show horizontal touch movement inside **Run Steering Deadzone**, but **Run Steering Control** remains neutral there."
+
+> **Dev:** "Should the **Run Steering Affordance** have separate visual-only range or deadzone values?"
+> **Domain expert:** "No - it presents the same **Run Steering Range** and **Run Steering Deadzone** used by **Run Steering Control**."
+
+> **Dev:** "Should the **Run Steering Affordance** be attached to the **Run Body** in the world?"
+> **Domain expert:** "No - it is presented in screen space from touch positions, because **Run Steering Origin** and **Run Steering Range** are touch concepts."
+
+> **Dev:** "Should the **Run Steering Affordance** shift inward near a screen edge so the whole visual stays visible?"
+> **Domain expert:** "No - it preserves the true **Run Steering Origin** and **Run Steering Range**; decorative visuals may clip or fade without changing those facts."
+
+> **Dev:** "If the player taps a future pause button during **Running**, should that also start **Run Steering Control**?"
+> **Domain expert:** "No - touches that begin on interactive UI during **Running** belong to that UI and do not start **Run Steering Control**."
+
+> **Dev:** "If an active **Run Steering Control** gesture slides over UI, should the UI take it over?"
+> **Domain expert:** "No - the active **Run Steering Control** gesture remains active until that touch ends or cancels."
+
 > **Dev:** "Does **Run Steering Control** use screen center as neutral?"
 > **Domain expert:** "No - the **Run Steering Origin** is the initial touch position for that gesture."
 
@@ -566,9 +657,29 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - "State" resolves to one current **Gameplay State**, not tags or simultaneous flags.
 - "Player" and "target" resolve to **Launch Target** during **Pre-Launch** slingshot discussion, and to **Run Body** during **Running** movement discussion.
 - "Virtual joystick" resolves to **Run Steering Control** when discussing **Running**, not to **Pull** or a visible joystick asset.
+- "Visible joystick" resolves to **Run Steering Affordance** when discussing rendered feedback for **Run Steering Control**, not a new 2D movement input.
+- "Fixed joystick base" conflicts with **Run Steering Origin** unless **Run Steering Control** semantics are explicitly changed.
+- "UI joystick control" conflicts with **Run Steering Affordance** if it emits gameplay input instead of presenting **Run Steering Control** state.
+- "Raycast-blocking joystick UI" conflicts with **Run Steering Affordance** because the affordance is not interactive UI and does not consume touches.
+- "Missing joystick view is a supported steering-only production scene" conflicts with required `GameplayLifetimeScope` composition; missing view authoring is a validation error even though steering values do not derive from presentation output.
+- "Joystick zone" and "left-side joystick" conflict with **Run Steering Control** unless touch eligibility is explicitly changed.
+- "Idle joystick" and "persistent joystick" conflict with **Run Steering Affordance** unless its active-gesture lifecycle is explicitly changed.
+- "Circular joystick", "2D knob", and "vertical joystick movement" conflict with **Run Steering Affordance** unless **Run Steering Control** gains vertical steering meaning.
+- "Horizontal rail", "track line", and "knob path line" conflict with **Run Steering Affordance** because the knob moves horizontally without a continuous track.
+- "Spring-follow knob", "smoothed active knob", and "laggy joystick animation" conflict with **Run Steering Affordance** because active displacement is shown directly.
+- "Position tween from origin", "animate knob out from center", and "delayed first knob position" conflict with **Run Steering Affordance** because gesture-start position is shown immediately.
+- "Return-to-origin animation", "snap back to center", and "recenter on gesture end" conflict with **Run Steering Affordance** because gesture-end disappearance happens from the final knob position.
 - "Center" resolves to **Run Steering Origin** for **Run Steering Control**, not screen center.
 - "Size limit" resolves to **Run Steering Range**, where physical displacement beyond the range clamps to full steering.
+- "Joystick travel beyond the range" conflicts with **Run Steering Affordance** because visible horizontal displacement clamps at **Run Steering Range**.
 - "Deadzone" resolves to **Run Steering Deadzone** for **Run Steering Control**, not screen center distance.
+- "Invisible deadzone" conflicts with **Run Steering Affordance** when neutral-area feedback is needed; **Run Steering Deadzone** may be shown without changing control behavior.
+- "Deadzone means no visual movement" conflicts with **Run Steering Affordance**; inside-deadzone movement may be visible while steering remains neutral.
+- "Visual-only range" and "visual-only deadzone" conflict with **Run Steering Affordance** because it presents the actual **Run Steering Range** and **Run Steering Deadzone**.
+- "World-space joystick" conflicts with **Run Steering Affordance** because the affordance presents screen-space touch concepts, not **Run Body** world position.
+- "Edge-safe joystick center" and "fully visible joystick" conflict with **Run Steering Affordance** if they shift the apparent **Run Steering Origin** or **Run Steering Range** near a screen edge.
+- "Any touch during Running" excludes touches that begin on interactive UI during **Running**.
+- "UI stealing steering" conflicts with **Run Steering Control** once a gesture is already active.
 - "Responsiveness" resolves to **Run Steering Responsiveness**, not input polling or touch sampling.
 - "Ground normal", "support frame", and "locomotion frame" resolve to **Run Steering Frame** only when discussing player steering orientation.
 - "Steering frame" resolves to **Run Steering Frame**, not **Run Progress Frame**.
