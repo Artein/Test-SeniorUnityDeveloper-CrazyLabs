@@ -22,6 +22,7 @@ test_refs:
   - "Assets/Game/Gameplay/Tests/EditMode/RunBodyMovementControllerTests.cs"
   - "Assets/Game/Gameplay/Tests/EditMode/RunBodyVelocitySanityGuardTests.cs"
   - "Assets/Game/Gameplay/Tests/EditMode/RunGameplayStatResolverTests.cs"
+  - "Assets/Game/Gameplay/Tests/PlayMode/RunBodyContactPhysicsPlayModeTests.cs"
   - "Assets/Game/Gameplay/Tests/PlayMode/RunBodySpeedModelPlayModeTests.cs"
   - "Assets/Game/Gameplay/Tests/PlayMode/GameplaySceneRunBodySpeedOwnershipTests.cs"
 issue_refs:
@@ -85,7 +86,7 @@ Designer-authored movement values will use validated configuration. Gameplay pol
 ## Validation
 
 - Code paths: Review the movement orchestrator, speed evaluator, steering evaluator, Rigidbody target adapter, Run Surface validity mapping, configuration validation, stat resolution, and VContainer composition.
-- Tests or checks: Cover slope acceleration, slowdown, soft-envelope resistance, neutral unsupported behavior, bounded low-speed assistance, upgraded `PlayerMaxSpeed`, preserved corrected surface-normal velocity, one final movement write, Editor and startup validation, launch and landing transitions, airborne behavior, collision overspeed, and high-speed obstacle approach.
+- Tests or checks: Cover slope acceleration, slowdown, soft-envelope resistance, neutral unsupported behavior, bounded low-speed assistance, upgraded `PlayerMaxSpeed`, preserved corrected surface-normal velocity, one final movement write, Editor and startup validation, launch and landing transitions, airborne behavior, collision overspeed, and high-speed obstacle approach. Solver-backed PlayMode coverage must observe both the controller target write and the Rigidbody velocity after the following PhysX step so contact ownership is tested rather than mocked.
 - Review trigger: Revisit this ADR before introducing a hard gameplay speed cap, airborne speed policy, a second movement writer, surface-specific speed profiles, or replacement of Rigidbody contact physics.
 
 ## Supersession

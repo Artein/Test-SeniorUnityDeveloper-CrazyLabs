@@ -100,6 +100,9 @@ public sealed class GameplaySceneRunBodySpeedOwnershipTests : BaseGameplaySceneP
             yield return WaitUntilAssistIsActive(diagnostics, 8);
 
             var firstRunSnapshot = diagnostics.Current;
+            Assert.That(firstRunSnapshot.IsRunSurfaceGrounded, Is.True);
+            Assert.That(firstRunSnapshot.HasValidGroundedRunSurface, Is.True);
+            Assert.That(float.IsFinite(firstRunSnapshot.SampledTangentSpeed), Is.True);
             Assert.That(firstRunSnapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(baselineEnvelope).Within(0.0001f));
             Assert.That(firstRunSnapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.GreaterThan(0f));
 

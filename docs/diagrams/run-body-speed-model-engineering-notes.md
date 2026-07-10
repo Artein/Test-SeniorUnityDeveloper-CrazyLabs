@@ -336,6 +336,16 @@ public readonly struct RunBodySpeedContext
 - `CourseForwardAlignment` is an observed normalized runtime fact, not designer tuning and not a preferred movement direction.
 - The evaluator clamps the value before use because `CourseForwardAlignment` is a normalized mathematical input whose proportional effect is defined only on `[-1, 1]`; this is ordinary domain normalization, not authored-config repair.
 
+## Fixed-Step Physics Boundary
+
+- Each active movement pass samples the Rigidbody and current **Run Surface Context**, advances the steering frame, evaluates and composes one `RunBodyMovementTargetState`, and performs exactly one `IRunBodyMovementTarget.ApplyTargetState(...)` call.
+- Unity then owns the following physics solve. Contacts may change the written velocity through collision response, separation, friction, or restitution before the next movement pass samples the Rigidbody again.
+- The soft `PlayerMaxSpeed` envelope applies to the sampled grounded tangent speed in the next controller pass. It resists overspeed incrementally; it does not retroactively clamp collision output or prevent contact-created overspeed from being observable.
+- Low-speed-assist budget is charged from controller-requested velocity delta before solver resolution. A wall cancelling the requested motion therefore cannot replenish or create a new assist attempt.
+- Landing stabilization bounds positive supported-surface normal lift in the controller write while preserving tangent velocity; the solver remains free to resolve the subsequent contact.
+- `RunBodyContactPhysicsPlayModeTests` closes this ownership boundary with real Rigidbody contacts for landing bounce, flat slowdown, downhill acceleration relative to control, wall-blocked assistance, and collision-created overspeed.
+- The contact suite records pre-controller velocity, the single target write, and post-solver velocity. Assertions use finite bounds, monotonic relationships, and bounded fixed-step waits instead of exact contact impulses.
+
 ## Invalid-Value Boundary
 
 - **Authored values** fail fast. Inspector attributes provide immediate bounds, `OnValidate` reports complete validator results, and startup/run preparation rejects invalid config or resolved stats before movement.
