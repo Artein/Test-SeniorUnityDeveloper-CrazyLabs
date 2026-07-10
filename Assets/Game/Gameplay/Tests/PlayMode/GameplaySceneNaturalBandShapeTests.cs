@@ -855,7 +855,6 @@ public sealed class GameplaySceneNaturalBandShapeTests : BaseGameplayScenePlayMo
     {
         QueueMouse(mouse, screenPosition, isPressed);
         yield return null;
-        yield return new WaitForEndOfFrame();
     }
 
     private void QueueMouse(Mouse mouse, Vector2 screenPosition, bool isPressed)

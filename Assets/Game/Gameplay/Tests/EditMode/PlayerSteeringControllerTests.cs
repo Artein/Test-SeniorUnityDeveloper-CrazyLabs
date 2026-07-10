@@ -79,6 +79,20 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void LeavingRunning_WithActiveGesture_ResetsRunSteeringAffordanceImmediately()
+    {
+        ActivateSteering();
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(620f, 900f));
+        var resetCallCountBeforeLeavingRunning = _runSteeringAffordancePresenter.ResetCallCount;
+
+        _stateService.ChangeTo(_preLaunchStateId);
+
+        Assert.That(_runSteeringAffordancePresenter.ResetCallCount, Is.EqualTo(resetCallCountBeforeLeavingRunning + 1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Is.Empty);
+    }
+
+    [Test]
     public void FixedTick_LeftTouch_TurnsVelocityLeftAndPreservesSpeedComponents()
     {
         ActivateSteering();
@@ -704,6 +718,104 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
+    public void PointerPressed_DuringRunning_PresentsLayoutStateFromGestureSnapshot()
+    {
+        _screen.Dpi = 100f;
+        _config.RunSteeringDeadzoneFraction = 0.25f;
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+
+        Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(1));
+        var snapshot = _runSteeringAffordanceLayout.Snapshots[0];
+        Assert.That(snapshot.IsActive, Is.True);
+        Assert.That(snapshot.PointerId, Is.EqualTo(1));
+        AssertVector2(snapshot.OriginScreenPosition, new Vector2(500f, 100f));
+        AssertVector2(snapshot.CurrentScreenPosition, new Vector2(500f, 100f));
+        Assert.That(snapshot.CapturedRangePixels, Is.EqualTo(100f).Within(0.0001f));
+        Assert.That(snapshot.CapturedDeadzoneFraction, Is.EqualTo(0.25f).Within(0.0001f));
+        Assert.That(_runSteeringAffordancePresenter.ShowStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.ShowStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+    }
+
+    [Test]
+    public void PointerMoved_ActivePointer_UpdatesRunSteeringAffordanceImmediately()
+    {
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(650f, 900f));
+
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[1].CurrentScreenPosition, new Vector2(650f, 900f));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+    }
+
+    [Test]
+    public void PointerReleased_ActivePointer_HidesRunSteeringAffordanceFromReleasePosition()
+    {
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(540f, 100f));
+        _input.Release(1, new Vector2(650f, 900f));
+
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(650f, 900f));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+    }
+
+    [Test]
+    public void PointerCanceled_ActivePointer_HidesRunSteeringAffordanceFromCancelPosition()
+    {
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(540f, 100f));
+        _input.Cancel(1, new Vector2(350f, -200f));
+
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
+        AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(350f, -200f));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+    }
+
+    [Test]
+    public void PointerPressed_WhenPressGuardRejects_DoesNotBeginGestureOrShowAffordance()
+    {
+        _runSteeringPointerPressGuard.CanBegin = false;
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _input.Move(1, new Vector2(600f, 100f));
+        FixedTick();
+
+        Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Is.Empty);
+        Assert.That(_runSteeringAffordancePresenter.ShowStates, Is.Empty);
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Is.Empty);
+        Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
+    }
+
+    [Test]
+    public void PointerMoved_AfterBegin_DoesNotRecheckPressGuardAndKeepsUpdatingAffordance()
+    {
+        ActivateSteering();
+
+        _input.Press(1, new Vector2(500f, 100f));
+        _runSteeringPointerPressGuard.CanBegin = false;
+        _input.Move(1, new Vector2(600f, 100f));
+
+        Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+    }
+
+    [Test]
     public void FixedTick_LowResponsiveness_SmoothsRequestedSteering()
     {
         _config.RunSteeringResponsiveness = 5f;
@@ -741,5 +853,11 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         var steeredPlanar = ProjectPlanar(steeredVelocity, upDirection).normalized;
 
         Assert.That(Vector3.Angle(originalPlanar, steeredPlanar), Is.EqualTo(expectedDegrees).Within(0.001f));
+    }
+
+    private static void AssertVector2(Vector2 actual, Vector2 expected)
+    {
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
     }
 }

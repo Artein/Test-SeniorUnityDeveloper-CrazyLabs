@@ -49,15 +49,16 @@ namespace Game.Gameplay
         [SerializeField] private Transform _preLaunchLaunchTargetPose;
         [SerializeField] private SlingshotView _slingshotView;
         [SerializeField] private PullHintView _pullHintView;
+        [SerializeField] private RunSteeringAffordanceView _runSteeringAffordanceView;
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
         [SerializeField] private CharacterPresentationView _characterPresentationView;
         [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
-        
-        [Header("Diagnostics")]
-        [SerializeField] private bool _runDiagnosticsOverlayEnabled;
+
+        [Header("Diagnostics")] [SerializeField]
+        private bool _runDiagnosticsOverlayEnabled;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -114,6 +115,8 @@ namespace Game.Gameplay
             builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
+            builder.RegisterInstance<IRunSteeringAffordanceView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
+            builder.RegisterEntryPoint<RunSteeringAffordancePresenter>();
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
 
@@ -137,6 +140,8 @@ namespace Game.Gameplay
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
+            builder.Register<IRunSteeringAffordanceLayout, RunSteeringAffordanceLayout>(Lifetime.Singleton);
+            builder.Register<IRunSteeringPointerPressGuard, UnityEventSystemRunSteeringPointerPressGuard>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 
             builder.Register<IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);
@@ -197,7 +202,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
             builder.RegisterEntryPoint<FinishCelebrationPresenter>();
-            
+
             if (_runDiagnosticsOverlayEnabled)
             {
                 builder.RegisterComponentOnNewGameObject<RunDiagnosticsOverlay>(Lifetime.Singleton, "RunDiagnosticsOverlay");

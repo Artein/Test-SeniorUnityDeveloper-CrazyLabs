@@ -21,6 +21,7 @@ namespace Game.Gameplay
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
+        internal RunSteeringAffordanceView RunSteeringAffordanceViewForTests => _runSteeringAffordanceView;
         internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
 
         internal void SetReferencesForTests(
@@ -53,6 +54,7 @@ namespace Game.Gameplay
             Transform preLaunchLaunchTargetPose,
             SlingshotView slingshotView,
             PullHintView pullHintView,
+            RunSteeringAffordanceView runSteeringAffordanceView,
             RunPreparationUIView runPreparationView,
             RunEndedUIView runEndedView,
             RigidbodyLaunchTarget launchTarget,
@@ -89,6 +91,7 @@ namespace Game.Gameplay
             _preLaunchLaunchTargetPose = preLaunchLaunchTargetPose;
             _slingshotView = slingshotView;
             _pullHintView = pullHintView;
+            _runSteeringAffordanceView = runSteeringAffordanceView;
             _runPreparationView = runPreparationView;
             _runEndedView = runEndedView;
             _launchTarget = launchTarget;
@@ -105,6 +108,11 @@ namespace Game.Gameplay
         internal void SetRunDiagnosticsOverlayEnabledForTests(bool enabled)
         {
             _runDiagnosticsOverlayEnabled = enabled;
+        }
+
+        internal void SetRunSteeringAffordanceViewForTests(RunSteeringAffordanceView runSteeringAffordanceView)
+        {
+            _runSteeringAffordanceView = runSteeringAffordanceView;
         }
 
         internal void ValidateRequiredReferencesForTests()

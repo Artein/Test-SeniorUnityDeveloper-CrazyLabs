@@ -68,7 +68,6 @@ internal static class GameplaySceneBandShapePlayModeTestUtils
         InputSystem.QueueStateEvent(mouse, mouseState);
         InputSystem.Update();
         yield return null;
-        yield return new WaitForEndOfFrame();
     }
 
     public static Vector3[] ReadWorldLinePositions(LineRenderer lineRenderer)
