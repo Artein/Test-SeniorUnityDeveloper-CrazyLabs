@@ -1,27 +1,33 @@
 # Player Max Speed Product Decision
 
-Type: HITL
+Status: Resolved
+
+Type: HITL decision
 
 ## Parent
 
-`docs/prd/prd-run-body-natural-speed-ownership.md`
+Historical parent: [Run Body Natural Speed Ownership](../../prd/prd-run-body-natural-speed-ownership.md)
 
-## What to build
+Authoritative replacement: [Run Body Explicit Speed Ownership](../../prd/prd-run-body-explicit-speed-ownership.md)
 
-Decide the product meaning of any player-facing **Player Max Speed** upgrade, stat, copy, icon, or economy entry after **Run Steering Control** stops consuming it as a velocity cap.
+Architecture decision: [ADR-0010](../../adr/adr-0010-use-explicit-run-body-speed-model-with-rigidbody-contact-physics.md)
 
-This is intentionally not a blocker for the movement fix. The immediate implementation should stop hidden steering-owned speed caps from shaping **Run Body** motion. This HITL issue exists so the remaining player-facing upgrade promise is not left ambiguous.
+## Decision
 
-Possible outcomes include removing the upgrade, renaming it, repurposing it into launch energy, repurposing it into surface interaction, repurposing it into steering responsiveness, or explicitly deferring it with a known compatibility risk.
+Keep the player-facing `PlayerMaxSpeed` stat and make it modify the soft **Run Body Speed Envelope** during **Running**. The existing gameplay stat resolver supplies the active-run value to **Run Body Movement Controller**, and **Run Body Speed Model** uses it as the speed around which above-envelope resistance begins.
+
+A higher value lets the player sustain a higher useful grounded speed and can increase course reach. It is not a hard velocity clamp: launch, gravity, or collision overspeed remains visible and settles through authored resistance. It does not modify **Launch Impulse**, steering responsiveness, or physical contact response.
+
+This gives the upgrade one observable product promise while keeping speed ownership out of **Run Steering Control**. See the [actor-aware model diagram](../../diagrams/run-body-speed-model.md) for the configuration and runtime path.
 
 ## Acceptance criteria
 
-- [ ] Inventory all player-facing uses of Player Max Speed terminology, upgrade data, UI copy, and stat bindings.
-- [ ] Decide whether the upgrade is removed, renamed, repurposed, or deferred.
-- [ ] If removed or renamed, define the migration/cleanup scope for data, UI, tests, and assets.
-- [ ] If repurposed, define the new owner of the gameplay effect and how it is visible to the player.
-- [ ] If deferred, document the risk that an exposed upgrade may no longer match runtime movement behavior.
-- [ ] Create follow-up implementation issue(s) if the decision requires code, asset, UI, or economy changes.
+- [x] Retain `PlayerMaxSpeed` and define one gameplay owner: **Run Body Speed Model**.
+- [x] Define the player-visible effect as a higher soft speed envelope and higher sustainable grounded speed.
+- [x] Keep launch energy, steering responsiveness, contact response, and the defensive sanity guard separate.
+- [ ] Inventory player-facing terminology, upgrade data, UI copy, icons, and stat bindings during implementation.
+- [ ] Implement and test active-run stat resolution, soft-envelope behavior, and neutral-upgrade compatibility.
+- [ ] Add any required UI, asset, or economy cleanup to the feature implementation scope after the inventory.
 
 ## Verification
 
@@ -30,7 +36,7 @@ Possible outcomes include removing the upgrade, renaming it, repurposing it into
 - PlayMode tests:
   - Not required for the decision itself.
 - Static checks:
-  - Search current project terminology and upgrade definitions to support the decision.
+  - Confirm all `PlayerMaxSpeed` movement references describe a soft envelope rather than steering-owned limiting.
 - Manual Unity smoke check:
   - Review upgrade UI/copy if the upgrade is currently exposed.
 - Package version/changelog:
@@ -38,4 +44,4 @@ Possible outcomes include removing the upgrade, renaming it, repurposing it into
 
 ## Blocked by
 
-None - can start immediately.
+None - decision is complete; implementation follows the replacement PRD.

@@ -7,7 +7,9 @@ namespace Game.Gameplay
     internal interface IRunSteeringGesture
     {
         bool IsActive { get; }
+        bool HasCapturedMetrics { get; }
         float RequestedSteering { get; }
+        RunSteeringInputMetrics CapturedMetrics { get; }
         RunSteeringAffordanceSnapshot AffordanceSnapshot { get; }
 
         bool TryBegin(PointerInput pointerInput, float rawDpi);
@@ -19,7 +21,7 @@ namespace Game.Gameplay
 
     internal sealed class RunSteeringGesture : IRunSteeringGesture
     {
-        private readonly IPlayerSteeringConfig _config;
+        private readonly IRunSteeringInputMetricsResolver _metricsResolver;
 
         internal bool isActive;
         internal Vector2 origin;
@@ -27,15 +29,18 @@ namespace Game.Gameplay
         private int _activePointerId;
         internal float capturedRangePixels;
         private float _capturedDeadzoneFraction;
+        private RunSteeringInputMetrics _capturedMetrics;
         private float _requestedSteering;
 
         public float RequestedSteering => _requestedSteering;
         bool IRunSteeringGesture.IsActive => isActive;
+        bool IRunSteeringGesture.HasCapturedMetrics => isActive;
+        RunSteeringInputMetrics IRunSteeringGesture.CapturedMetrics => _capturedMetrics;
         RunSteeringAffordanceSnapshot IRunSteeringGesture.AffordanceSnapshot => CreateAffordanceSnapshot();
 
-        public RunSteeringGesture(IPlayerSteeringConfig config)
+        public RunSteeringGesture(IRunSteeringInputMetricsResolver metricsResolver)
         {
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _metricsResolver = metricsResolver ?? throw new ArgumentNullException(nameof(metricsResolver));
         }
 
         bool IRunSteeringGesture.TryBegin(PointerInput pointerInput, float rawDpi)
@@ -47,8 +52,9 @@ namespace Game.Gameplay
             _activePointerId = pointerInput.PointerId;
             origin = pointerInput.ScreenPosition;
             _currentScreenPosition = pointerInput.ScreenPosition;
-            capturedRangePixels = Mathf.Max(0.0001f, _config.ResolveRunSteeringRangePixels(rawDpi));
-            _capturedDeadzoneFraction = Mathf.Clamp(_config.RunSteeringDeadzoneFraction, 0f, 0.95f);
+            _capturedMetrics = _metricsResolver.Resolve(rawDpi);
+            capturedRangePixels = _capturedMetrics.RangePixels;
+            _capturedDeadzoneFraction = _capturedMetrics.DeadzoneFraction;
             _requestedSteering = 0f;
             return true;
         }
@@ -89,6 +95,7 @@ namespace Game.Gameplay
             _currentScreenPosition = Vector2.zero;
             capturedRangePixels = 0f;
             _capturedDeadzoneFraction = 0f;
+            _capturedMetrics = default;
             _requestedSteering = 0f;
         }
 

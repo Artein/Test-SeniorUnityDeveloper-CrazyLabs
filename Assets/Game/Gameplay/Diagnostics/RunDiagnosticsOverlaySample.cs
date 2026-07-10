@@ -20,6 +20,7 @@ namespace Game.Gameplay.Diagnostics
         public bool HasEstimatedVisualSnap => EstimatedVisualSnapReason != RunDiagnosticsOverlaySnapReason.None;
         public int FixedStepsThisFrame { get; }
         public bool IsGrounded { get; }
+        public RunBodySpeedDiagnosticsSnapshot SpeedDiagnostics { get; }
 
         public RunDiagnosticsOverlaySample(
             float speedMetersPerSecond,
@@ -36,7 +37,8 @@ namespace Game.Gameplay.Diagnostics
             float cameraRotationDeltaDegrees,
             RunDiagnosticsOverlaySnapReason estimatedVisualSnapReason,
             int fixedStepsThisFrame,
-            bool isGrounded)
+            bool isGrounded,
+            RunBodySpeedDiagnosticsSnapshot speedDiagnostics)
         {
             SpeedMetersPerSecond = float.IsFinite(speedMetersPerSecond) ? Mathf.Max(0f, speedMetersPerSecond) : 0f;
             MotionStepMetersPerSecond = float.IsFinite(motionStepMetersPerSecond) ? Mathf.Max(0f, motionStepMetersPerSecond) : 0f;
@@ -47,12 +49,44 @@ namespace Game.Gameplay.Diagnostics
             VisualLagCentimeters = float.IsFinite(visualLagCentimeters) ? Mathf.Max(0f, visualLagCentimeters) : 0f;
             CameraStepMetersPerSecond = float.IsFinite(cameraStepMetersPerSecond) ? Mathf.Max(0f, cameraStepMetersPerSecond) : 0f;
             TargetToMotionCentimeters = float.IsFinite(targetToMotionCentimeters) ? Mathf.Max(0f, targetToMotionCentimeters) : 0f;
-            VisualTargetRotationDeltaDegrees = float.IsFinite(visualTargetRotationDeltaDegrees) ? Mathf.Clamp(visualTargetRotationDeltaDegrees, 0f, 180f) : 0f;
+
+            VisualTargetRotationDeltaDegrees =
+                float.IsFinite(visualTargetRotationDeltaDegrees) ? Mathf.Clamp(visualTargetRotationDeltaDegrees, 0f, 180f) : 0f;
             VisualRotationDeltaDegrees = float.IsFinite(visualRotationDeltaDegrees) ? Mathf.Clamp(visualRotationDeltaDegrees, 0f, 180f) : 0f;
             CameraRotationDeltaDegrees = float.IsFinite(cameraRotationDeltaDegrees) ? Mathf.Clamp(cameraRotationDeltaDegrees, 0f, 180f) : 0f;
             EstimatedVisualSnapReason = estimatedVisualSnapReason;
             FixedStepsThisFrame = Mathf.Max(0, fixedStepsThisFrame);
             IsGrounded = isGrounded;
+            SpeedDiagnostics = speedDiagnostics;
+        }
+
+        public float SelectMetric(int metricIndex)
+        {
+            switch (metricIndex)
+            {
+                case 0:
+                    return SpeedMetersPerSecond;
+                case 1:
+                    return MotionStepMetersPerSecond;
+                case 2:
+                    return VisualTargetStepMetersPerSecond;
+                case 3:
+                    return RawGroundNormalDeltaDegrees;
+                case 4:
+                    return SteeringUpDeltaDegrees;
+                case 5:
+                    return HasEstimatedVisualSnap ? 1f : 0f;
+                case 6:
+                    return VisualTargetRotationDeltaDegrees;
+                case 7:
+                    return VisualRotationDeltaDegrees;
+                case 8:
+                    return VisualLagCentimeters;
+                case 9:
+                    return CameraStepMetersPerSecond;
+                default:
+                    return 0f;
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ ADR Markdown files in this directory are canonical. This index is for quick disc
 
 ## Counts
 
-- approved: 8
+- approved: 9
 - proposed: 1
 - superseded: 0
 
@@ -21,3 +21,4 @@ ADR Markdown files in this directory are canonical. This index is for quick disc
 | ADR-0007 | approved | Centralize Unity Input Behind UnityInput | 2026-06-25 | Input, Gameplay | input, unity-input-system, enhanced-touch |  |  | [adr-0007-centralize-unity-input-behind-unityinput.md](adr-0007-centralize-unity-input-behind-unityinput.md) | Centralize Unity Enhanced Touch enablement and pointer event translation behind a root-scoped UnityInput service. |
 | ADR-0008 | approved | Use Deterministic Taut Band Shape Solver Instead Of Rope Physics | 2026-06-26 | Gameplay, Slingshot | slingshot, band-shape, physics, testability |  |  | [adr-0008-use-deterministic-taut-band-shape-solver-instead-of-rope-physics.md](adr-0008-use-deterministic-taut-band-shape-solver-instead-of-rope-physics.md) | Represent natural slingshot Band Shape as a deterministic taut visual path around the Launch Target Silhouette instead of runtime rope physics. |
 | ADR-0009 | approved | Use Cinemachine For Run Camera | 2026-06-28 | Gameplay, Camera, Composition | camera, cinemachine, run-camera, composition |  |  | [adr-0009-use-cinemachine-for-run-camera.md](adr-0009-use-cinemachine-for-run-camera.md) | Use Cinemachine for Run Camera composition, collision, occlusion, and blending while project code owns Run Camera Anchor motion and launch-gated activation. |
+| ADR-0010 | approved | Use Explicit Run Body Speed Model With Rigidbody Contact Physics | 2026-07-10 | Gameplay, Physics, Composition | gameplay, movement, physics, rigidbody, speed-ownership |  |  | [adr-0010-use-explicit-run-body-speed-model-with-rigidbody-contact-physics.md](adr-0010-use-explicit-run-body-speed-model-with-rigidbody-contact-physics.md) | Use an explicit gameplay model for intentional grounded Run Body tangent speed while Unity Rigidbody physics retains gravity, contacts, and collision response. |

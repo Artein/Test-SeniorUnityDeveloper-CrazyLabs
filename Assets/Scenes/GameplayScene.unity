@@ -11054,10 +11054,10 @@ MonoBehaviour:
   _coinPickupMultiplierStatId: {fileID: 11400000, guid: 6d2b3c99a75a4cedabb1878c9513dab1, type: 2}
   _slingshotConfig: {fileID: 11400000, guid: 6454db76b261c41cca31feece26b9777, type: 2}
   _gameplaySlingshotLaunchConfig: {fileID: 11400000, guid: b688a42718cd461fb04a7438f5c8a6a6, type: 2}
-  _playerSteeringConfig: {fileID: 11400000, guid: bd2c80f3680341359fc50b94915fdba7, type: 2}
+  _runBodyMovementConfig: {fileID: 11400000, guid: bd2c80f3680341359fc50b94915fdba7, type: 2}
   _runCameraConfig: {fileID: 11400000, guid: f25920d4d9e6d4ff6b97661ba824019e, type: 2}
   _runEndConfig: {fileID: 11400000, guid: 712b8e8669464ccf9da84c8be5c7e1dc, type: 2}
-  _playerSteeringTarget: {fileID: 1918570527}
+  _runBodyMovementTarget: {fileID: 1918570527}
   _runCameraSource: {fileID: 1918570528}
   _runProgressFrameSource: {fileID: 2200000002}
   _sceneCompositionInstallers:
@@ -14383,7 +14383,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab44011bdda643eaad74d3544f988ba4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RigidbodyPlayerSteeringTarget
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RigidbodyRunBodyMovementTarget
   _rigidbody: {fileID: 1918570525}
 --- !u!114 &1918570528
 MonoBehaviour:

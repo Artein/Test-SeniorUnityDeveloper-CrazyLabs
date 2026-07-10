@@ -13,6 +13,7 @@ namespace Game.Gameplay
     internal interface IRunSteeringFrameResetter
     {
         void Reset(Vector3 launchUpDirection);
+        void Clear();
     }
 
     internal sealed class RunSurfaceSteeringFrameSource : IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable
@@ -21,7 +22,7 @@ namespace Game.Gameplay
         private const float SameDirectionDot = 0.9999f;
 
         private readonly IRunSurfaceContextSource _surfaceContextSource;
-        private readonly IPlayerSteeringConfig _config;
+        private readonly IRunSteeringFrameConfig _config;
         private readonly ITime _clock;
 
         private Vector3 _stableUpDirection = Vector3.up;
@@ -35,7 +36,7 @@ namespace Game.Gameplay
 
         public RunSurfaceSteeringFrameSource(
             IRunSurfaceContextSource surfaceContextSource,
-            IPlayerSteeringConfig config,
+            IRunSteeringFrameConfig config,
             ITime clock)
         {
             _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
@@ -59,6 +60,18 @@ namespace Game.Gameplay
             _suspectUpDirection = Vector3.up;
             _isActive = true;
             _hasStableUpDirection = true;
+            _hasGroundingContinuity = false;
+            _hasSuspectUpDirection = false;
+            _ungroundedSeconds = 0f;
+            _suspectSeconds = 0f;
+        }
+
+        void IRunSteeringFrameResetter.Clear()
+        {
+            _stableUpDirection = Vector3.up;
+            _suspectUpDirection = Vector3.up;
+            _isActive = false;
+            _hasStableUpDirection = false;
             _hasGroundingContinuity = false;
             _hasSuspectUpDirection = false;
             _ungroundedSeconds = 0f;
@@ -209,29 +222,22 @@ namespace Game.Gameplay
 
         private float ResolveNormalSlewDegreesPerSecond()
         {
-            return GetFiniteNonNegativeOrDefault(_config.RunSteeringFrameNormalSlewDegreesPerSecond, 180f);
+            return _config.RunSteeringFrameNormalSlewDegreesPerSecond;
         }
 
         private float ResolveSnapDegrees()
         {
-            return Mathf.Clamp(GetFiniteNonNegativeOrDefault(_config.RunSteeringFrameSnapDegrees, 60f), 0f, 180f);
+            return _config.RunSteeringFrameSnapDegrees;
         }
 
         private float ResolveUngroundedGraceSeconds()
         {
-            return GetFiniteNonNegativeOrDefault(_config.RunSteeringFrameUngroundedGraceSeconds, 0.08f);
+            return _config.RunSteeringFrameUngroundedGraceSeconds;
         }
 
         private float ResolveSuspectNormalConfirmationSeconds()
         {
-            return GetFiniteNonNegativeOrDefault(_config.RunSteeringFrameSuspectNormalConfirmationSeconds, 0.04f);
-        }
-
-        private static float GetFiniteNonNegativeOrDefault(float value, float defaultValue)
-        {
-            return !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f
-                ? value
-                : defaultValue;
+            return _config.RunSteeringFrameSuspectNormalConfirmationSeconds;
         }
     }
 }

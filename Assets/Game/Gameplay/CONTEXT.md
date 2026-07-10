@@ -32,6 +32,10 @@ _Avoid_: Run Preparation, aiming mode
 The accepted release that starts a **Run**.
 _Avoid_: Pull release, shot preview, impulse value
 
+**Launch Applied**:
+The handoff point where the accepted **Launch** has applied its movement impulse to the **Run Body** for the current **Run**.
+_Avoid_: Running state, launch request, launch preview, landing stabilization
+
 **Running**:
 The **Gameplay State** where the **Run Body** is moving through the **Run Course**.
 _Avoid_: Sliding state, animation run
@@ -44,9 +48,41 @@ _Avoid_: Launch Target, Character, player model
 The gameplay-owned contact shape used by the **Run Body** for movement support and default run-ending contact authority during **Running**.
 _Avoid_: Launch Target Collider Root, Animated Contact Sensor, Character collider, band silhouette, visual hitbox, single-collider assumption
 
+**Run Body Speed Model**:
+The gameplay authority for intentional player-facing **Run Body** speed during **Running** while Unity physics remains the contact and collision substrate. It shapes how fast the **Run Body** travels without selecting its travel heading.
+_Avoid_: our own physics, Rigidbody replacement, natural speed side effect, steering speed cap, automatic trajectory guidance
+
+**Run Body Movement Tuning**:
+The designer-facing authoring surface for related **Run Body** movement settings during **Running**.
+_Avoid_: speed-only config, scattered movement constants, runtime service interface
+
+**Run Body Movement Validity Tuning**:
+The designer-authored thresholds used to decide whether current support is valid for movement and speed effects.
+_Avoid_: speed tuning, launch landing tuning, raw grounded flag, PhysicMaterial
+
+**Run Body Speed Tuning**:
+The designer-authored values consumed by **Run Body Speed Model** to shape default **Run Body** acceleration, slowdown, recovery, and speed envelope.
+_Avoid_: hardcoded speed constants, surface profile, PhysicMaterial
+
+**Run Body Speed Envelope**:
+The soft player-facing speed range used by the **Run Body Speed Model** to guide speed without acting as an immediate hard cap.
+_Avoid_: hard cap, hidden wall, Run Body Speed Sanity Guard
+
+**Run Body Low-Speed Assist**:
+A bounded **Run Body Speed Model** behavior that helps the **Run Body** regain controllable speed during valid **Run Surface** traversal after a recoverable slowdown.
+_Avoid_: hard speed floor, continuous rescue, blocking-geometry push, airborne boost, Lost Momentum bypass
+
+**Course Forward Alignment**:
+The normalized signed alignment between current **Run Body** surface-tangent travel and the **Run Progress Frame** forward direction. It scales positive **Run Body Speed Model** effects without selecting a travel heading.
+_Avoid_: Course Forward Speed, steering input, preferred heading, automatic course correction
+
 **Run Steering Control**:
 The player touch control used during **Running** to steer the **Run Body**.
 _Avoid_: Virtual joystick, screen steering, Pull
+
+**Run Steering Tuning**:
+The designer-authored values that shape **Run Steering Control** input mapping and turn authority during **Running**.
+_Avoid_: speed tuning, launch tuning, movement validity, broad player config
 
 **Run Steering Affordance**:
 The visible presentation that helps the player perceive an active **Run Steering Control** gesture.
@@ -69,8 +105,12 @@ How quickly the **Run Body** responds to requested **Run Steering Control** duri
 _Avoid_: Input polling rate, touch sampling rate
 
 **Run Steering Frame**:
-The gameplay orientation used by **Run Steering Control** to steer the **Run Body** during **Running**.
-_Avoid_: Ground normal, support frame, locomotion frame, physics normal
+The stabilized gameplay orientation used by **Run Steering Control** to interpret steering intent during **Running**. It does not replace the **Run Surface** normal as the supported movement plane.
+_Avoid_: Ground normal, support frame, locomotion frame, physics normal, movement contact plane
+
+**Run Steering Frame Tuning**:
+The designer-authored stability values used to derive a usable **Run Steering Frame** from support facts.
+_Avoid_: speed tuning, movement validity, Run Progress Frame tuning, raw contact normal
 
 **Run Air Steering Control**:
 The weaker **Run Steering Control** behavior used while the **Run Body** is unsupported by a valid **Run Surface** during **Running**.
@@ -196,6 +236,10 @@ _Avoid_: Ground, floor, ramp
 The ordinary loss of **Run Body** speed caused by contact with a **Run Surface**.
 _Avoid_: steering speed cap, hidden drag, PlayerMaxSpeed
 
+**Run Surface Speed Profile**:
+A future optional authored tuning preset for distinct **Run Surface** speed behavior when surfaces need different gameplay speed rules.
+_Avoid_: first-slice speed tuning, PhysicMaterial, terrain texture, collider tag, visual material
+
 **Run Obstacle**:
 A **Run Contact Category** that can end a **Run** through **Obstacle Impact**.
 _Avoid_: Wall tag, hard mesh, visual prop
@@ -250,8 +294,43 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - **Run Body Contact Collider** is distinct from **Launch Target Collider Root** and **Animated Contact Sensors**.
 - **Run Body Contact Collider** is a gameplay role; it may be represented by one contact shape or by a compound contact shape.
 - **Run Body Contact Collider** should not be driven by current **Character** animation; animation-following body-part contacts belong to **Animated Contact Sensors**.
+- **Run Body Speed Model** owns intentional player-facing **Run Body** acceleration, slowdown, low-speed assist, and speed envelope during **Running**.
+- **Launch Impulse** establishes the initial **Run Body** speed; **Run Body Speed Model** shapes grounded surface-tangent speed afterward.
+- **Run Steering Control** changes direction without adding, removing, or capping player-facing **Run Body** speed.
+- The first **Run Body Speed Model** scope changes surface-tangent speed while preserving corrected surface-normal or vertical velocity.
+- Gravity, Unity collision response, **Run Body Speed Sanity Guard**, and **Launch Landing Stabilization** remain responsible for vertical or surface-normal velocity changes.
+- **Run Body Speed Model** effects apply only while the **Run Body** is supported by a valid **Run Surface**.
+- Support is not valid for speed effects when the **Run Body** is meaningfully moving away from the reported surface, even if contact still reports grounded; ordinary contact jitter remains tolerated.
+- When support is invalid or absent, **Run Body Speed Model** adds no slope acceleration, **Run Surface Contact Slowdown**, **Run Body Low-Speed Assist**, or **Run Body Speed Envelope** resistance.
+- Airborne speed changes come from Unity physics, collision response, and **Run Air Steering Control**, not hidden **Run Body Speed Model** acceleration or slowdown.
+- **Run Body Speed Model** does not replace Unity Rigidbody contact or collision resolution.
+- **Run Body Speed Envelope** is soft: it may reduce acceleration or add controlled resistance above the desired range, but it is not an immediate velocity clamp.
+- `PlayerMaxSpeed` may define or modify **Run Body Speed Envelope** when it remains a player-facing upgrade.
+- **Run Body Speed Envelope** remains separate from **Run Body Speed Sanity Guard**, which is defensive only.
+- **Run Body Movement Tuning** may group **Run Body Speed Tuning**, **Run Body Movement Validity Tuning**, **Launch Landing Stabilization** tuning, **Run Steering Tuning**, and **Run Steering Frame Tuning** into one designer-facing authoring surface.
+- Each grouped tuning concern keeps its own gameplay meaning and consumer.
+- **Run Body Speed Tuning** owns default speed behavior and default **Run Body Speed Envelope** values, not player progression state or support-validity thresholds.
+- **Run Body Speed Tuning** uses designer-readable concepts and guardrails; technical units and implementation details belong in engineering documentation.
+- **Run Body Movement Tuning** and speed-upgrade authoring must be valid before **Running** movement begins; invalid authored values are authoring errors, not values the **Run Body Speed Model** silently repairs.
+- Expected runtime support absence remains a movement observation, while **Run Body Speed Sanity Guard** remains defensive containment for impossible physics velocity.
+- **Run Body Speed Model** does not require **Run Surface Speed Profiles** for the first explicit speed-ownership slice.
+- Future **Run Surface Speed Profiles** may replace or augment default speed tuning when distinct surface behavior becomes a gameplay requirement.
+- **Run Body Low-Speed Assist** may help after recoverable **Run Surface** slowdowns such as surface seams, soft non-ending obstacle scrapes, slow-surface exits, valid post-launch landings, or short flat/uphill patches.
+- **Run Body Low-Speed Assist** has separate target-speed and acceleration tuning so designers can control the intended recovery speed independently from how quickly it is approached.
+- Each eligible slowdown receives a bounded **Run Body Low-Speed Assist** attempt; recovery cannot continuously replace speed removed by blocking geometry or ordinary slowdown.
+- Positive **Run Body Speed Model** effects scale with **Course Forward Alignment**: full while course-forward, reduced while diagonally forward, and absent while lateral, course-reversed, directionless, or invalid.
+- Downhill acceleration rises continuously with positive forward-downhill slope and contributes nothing on flat or uphill traversal.
+- **Run Surface Contact Slowdown** and **Run Body Speed Envelope** resistance remain direction-independent.
+- **Run Body Speed Envelope** resistance rises continuously with overspeed; model-added acceleration cannot cross the envelope, while speed received from launch, gravity, contacts, or collisions settles toward it instead of being immediately clamped.
+- **Run Body Low-Speed Assist** should not apply after accepted **Obstacle Impact**, **Run Safety Net**, **Run Finish**, **Lost Momentum**, invalid support, or airborne travel.
+- **Run Body Low-Speed Assist** does not claim to identify blocking geometry before trying; its bounded attempt prevents indefinite pushing and leaves genuine stalls available to **Lost Momentum**.
+- **Run Body Low-Speed Assist** is an assist toward controllable speed, not a hard minimum speed.
+- **Launch Landing Stabilization** is a post-launch lift correction, not **Run Body Speed Model** gameplay or **Run Steering Control** behavior.
+- **Launch Landing Stabilization** may keep a separate post-launch lift tolerance even if its initial value matches the general support-validity tolerance.
 - **Run Steering Control** belongs to **Running**, not **Pre-Launch**.
 - **Run Steering Control** steers the **Run Body** during **Running**.
+- **Run Steering Control** becomes available only after **Launch Applied** for the current **Run**.
+- **Launch Applied** establishes the initial orientation for **Run Steering Frame**.
 - **Run Steering Affordance** presents **Run Steering Control**; it does not redefine movement axes or steering authority.
 - **Run Steering Affordance** may show **Run Steering Origin**, active displacement, **Run Steering Range**, and **Run Steering Deadzone**.
 - **Run Steering Affordance** presents the same **Run Steering Range** and **Run Steering Deadzone** used by **Run Steering Control**.
@@ -294,6 +373,7 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - **Run Steering Frame** defines the orientation used by **Run Steering Control**.
 - **Run Steering Frame** is a gameplay control concept, not a **Run Progress Frame** metric reference.
 - **Run Steering Frame** may be derived from **Run Surface** traversal facts without being identical to a raw contact normal.
+- **Run Steering Frame Tuning** shapes steering-frame stability without changing speed or touch mapping.
 - **Run Steering Control** uses horizontal displacement; vertical displacement has no steering meaning.
 - **Run Steering Control** preserves player-facing **Run Body** speed while changing steering direction.
 - **Run Air Steering Control** belongs to **Running**, not **Slingshot** or **Character Presentation**.
@@ -446,8 +526,11 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - First-pass **Gameplay Pickups Scene Composition Installer** should reject null, duplicate, or inactive explicit **Pickup** references during setup validation when references are present.
 - Initial pickup unavailability should require an explicit future policy, not a disabled referenced **Pickup**.
 - **Gameplay Pickups Scene Composition Installer** should not own pickup collection rules, rewards, **Gameplay State** gating, or **Level Pickup State** idempotency.
-- Ordinary **Run Body** slowdown comes from **Run Surface Contact Slowdown**, not from **Run Steering Control**.
-- **Run Surface Contact Slowdown** should be tuned through authored **Run Surface** behavior before adding a separate gameplay resistance owner.
+- Ordinary **Run Body** slowdown is represented as **Run Surface Contact Slowdown**, not as **Run Steering Control** speed loss.
+- **Run Surface Contact Slowdown** should be tuned through authored **Run Body Speed Model** drag, not hidden inside steering or unreachable physics-material side effects.
+- **Run Surface Speed Profile** selection is deferred until multiple surface-specific speed behaviors need separate authored presets.
+- If added, **Run Surface Speed Profile** selection should stay outside traversal surface facts such as grounded state, support normal, and downhill angle.
+- Future terrain material names such as ice, snow, or roof tile may choose a **Run Surface Speed Profile**; they should not replace the profile itself.
 - **Run Body Speed Sanity Guard** catches impossible velocities without shaping normal launch distance or sliding feel.
 - **Run Body Speed Sanity Guard** must be unreachable by normal **Launch**, upgrades, and authored **Run Surface** traversal.
 - **Run Body Speed Sanity Guard** is allowed to log or clamp impossible velocities, not to define expected run distance.
@@ -563,7 +646,13 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 > **Domain expert:** "No - **Run Steering Frame** orients player control, while **Run Progress Frame** defines run metrics."
 
 > **Dev:** "Should **Run Steering Control** cap how fast the **Run Body** can slide?"
-> **Domain expert:** "No - it steers direction; **Run Surface Contact Slowdown** slows the **Run Body**, with only a defensive **Run Body Speed Sanity Guard** for impossible values."
+> **Domain expert:** "No - it steers direction; **Run Body Speed Model** owns intentional supported speed effects such as **Run Surface Contact Slowdown**, while **Run Body Speed Sanity Guard** handles only impossible values."
+
+> **Dev:** "If I paint ice or snow on terrain, should the first speed model read that material directly?"
+> **Domain expert:** "No - first resolve default **Run Body Speed Model** ownership; terrain paint can later select a **Run Surface Speed Profile** if surface-specific behavior is needed."
+
+> **Dev:** "Should surface speed profile selection be part of the first explicit speed ownership change?"
+> **Domain expert:** "No - profile selection is a future extension and stays separate from grounded state, support normal, and downhill angle."
 
 > **Dev:** "Do we still need launch speed recovery after removing the steering speed cap?"
 > **Domain expert:** "No - **Run Steering Mode Selector** and **Launch Landing Stabilization** may still exist, but neither is a speed recovery system."
@@ -693,7 +782,8 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - "No-takeoff timeout" should not be used to enable grounded steering after **Launch**.
 - "Landing stabilization" resolves to **Launch Landing Stabilization**, not slowdown, downforce, or speed recovery.
 - "Speed cap" resolves to **Run Body Speed Sanity Guard** only when discussing impossible velocity validation; normal sliding speed should not be capped by **Run Steering Control**.
-- "Friction", "drag", and "slowdown" resolve first to **Run Surface Contact Slowdown** for ordinary sliding speed loss.
+- "Friction", "drag", and "slowdown" resolve to **Run Surface Contact Slowdown** as the player-facing effect; **Run Body Speed Model** owns its authored amount, while physics materials remain part of Rigidbody contact response.
+- "Ice", "snow", "mud", "roof tile", "terrain material", and "visual material" resolve to future optional **Run Surface Speed Profile** discussion, not to the first explicit speed ownership model.
 - "Joystick" does not imply two-dimensional movement for **Run Steering Control**.
 - "Stops" resolves to **Lost Momentum**, not arbitrary one-frame low velocity.
 - "Boundary" resolves to **Run Safety Net** only when it catches the below-course failure case.

@@ -8,7 +8,7 @@ using VContainer.Unity;
 public sealed class RunSurfaceSteeringFrameSourceTests
 {
     private FakeRunSurfaceContextSource _surfaceContextSource;
-    private FakePlayerSteeringConfig _config;
+    private FakeRunSteeringFrameConfig _config;
     private FakeTime _clock;
     private RunSurfaceSteeringFrameSource _source;
     private IRunSteeringFrameResetter _resetter;
@@ -19,7 +19,7 @@ public sealed class RunSurfaceSteeringFrameSourceTests
     {
         _surfaceContextSource = new FakeRunSurfaceContextSource();
 
-        _config = new FakePlayerSteeringConfig
+        _config = new FakeRunSteeringFrameConfig
         {
             RunSteeringFrameNormalSlewDegreesPerSecond = 90f,
             RunSteeringFrameSnapDegrees = 60f,
@@ -315,34 +315,12 @@ public sealed class RunSurfaceSteeringFrameSourceTests
         }
     }
 
-    private sealed class FakePlayerSteeringConfig : IPlayerSteeringConfig
+    private sealed class FakeRunSteeringFrameConfig : IRunSteeringFrameConfig
     {
-        public float RunSteeringRangeCentimeters { get; set; } = 1.5f;
-        public float RunSteeringDeadzoneFraction { get; set; } = 0.15f;
-        public float RunSteeringResponsiveness { get; set; } = 8f;
-        public float FallbackDpi { get; set; } = 326f;
-        public float MinimumAcceptedDpi { get; set; } = 1f;
-        public float MaximumAcceptedDpi { get; set; } = 1000f;
-        public float MaximumTurnDegreesPerSecond { get; set; } = 120f;
-        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 45f;
-        public float MinimumSteerSpeed { get; set; } = 0.25f;
-        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
-        public float LaunchLandingStabilizationSeconds { get; set; } = 0.3f;
-        public float LaunchLandingMaximumLiftSpeed { get; set; } = 0f;
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
         public float RunSteeringFrameSnapDegrees { get; set; }
         public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
         public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; }
-
-        public float ResolveRunSteeringDpi(float rawDpi)
-        {
-            return rawDpi;
-        }
-
-        public float ResolveRunSteeringRangePixels(float rawDpi)
-        {
-            return RunSteeringRangeCentimeters / 2.54f * rawDpi;
-        }
     }
 
     private sealed class FakeTime : ITime

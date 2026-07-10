@@ -384,6 +384,8 @@ public sealed class GameplayFlowControllerTests
         var preLaunch = CreateStateId("Pre-Launch");
         var running = CreateStateId("Running");
         var runEnded = CreateStateId("Run Ended");
+        var playerMaxSpeed = CreateStatId("PlayerMaxSpeed");
+        var speedConfig = new FakeRunBodyMovementConfig();
         var builder = new ContainerBuilder();
         builder.RegisterInstance(new FakeSlingshotCapture(_observations)).As<ISlingshotCapture>();
         builder.RegisterInstance(new FakeSlingshotRunPreparationReset(_observations)).As<ISlingshotRunPreparationReset>();
@@ -392,6 +394,10 @@ public sealed class GameplayFlowControllerTests
         builder.RegisterInstance(new FakeGameplaySlingshotLauncher(_observations)).As<IGameplaySlingshotLauncher>();
         builder.RegisterInstance(new FakeRunModifierSnapshotFactory()).As<IRunModifierSnapshotFactory>();
         builder.RegisterInstance(new FakeRunModifierSnapshotStore()).As<IRunModifierSnapshotStore>();
+        builder.RegisterInstance(new PassThroughRunGameplayStatResolver()).As<IRunGameplayStatResolver>();
+        builder.RegisterInstance<IRunBodySpeedConfig, IRunBodyMovementValidityConfig>(speedConfig);
+        builder.RegisterInstance(new RunBodySpeedEnvelopeValidator(speedConfig));
+        builder.RegisterInstance(playerMaxSpeed).Keyed(InjectKey.GameplayStatId.PlayerMaxSpeed);
         builder.RegisterInstance(new FakePreLaunchRigPoseResetter(_observations)).As<IPreLaunchRigPoseResetter>();
         var installer = new GameplayFlowInstaller(runPreparation, preLaunch, running, runEnded);
 
@@ -428,10 +434,25 @@ public sealed class GameplayFlowControllerTests
         preLaunchRigPoseResetter ??= new FakePreLaunchRigPoseResetter(_observations);
         slingshotRunPreparationReset ??= new FakeSlingshotRunPreparationReset(_observations);
         runPreparationStateId ??= CreateStateId("Run Preparation");
+        var playerMaxSpeed = CreateStatId("PlayerMaxSpeed");
+        var speedConfig = new FakeRunBodyMovementConfig();
 
-        var controller = new GameplayFlowController(capture, slingshotRunPreparationReset, notifier, stateService, launcher,
-            new FakeRunModifierSnapshotFactory(), new FakeRunModifierSnapshotStore(), preLaunchRigPoseResetter,
-            runPreparationStateId, preLaunchStateId, runningStateId);
+        var controller = new GameplayFlowController(
+            capture,
+            slingshotRunPreparationReset,
+            notifier,
+            stateService,
+            launcher,
+            new FakeRunModifierSnapshotFactory(),
+            new FakeRunModifierSnapshotStore(),
+            new PassThroughRunGameplayStatResolver(),
+            speedConfig,
+            new RunBodySpeedEnvelopeValidator(speedConfig),
+            preLaunchRigPoseResetter,
+            playerMaxSpeed,
+            runPreparationStateId,
+            preLaunchStateId,
+            runningStateId);
         ((IInitializable)controller).Initialize();
 
         if (clearObservationsAfterInitialize)
@@ -446,6 +467,13 @@ public sealed class GameplayFlowControllerTests
         stateId.name = stateName;
 
         return stateId;
+    }
+
+    private GameplayStatId CreateStatId(string statName)
+    {
+        var statId = Track(ScriptableObject.CreateInstance<GameplayStatId>());
+        statId.name = statName;
+        return statId;
     }
 
     private T Track<T>(T value)
@@ -494,6 +522,26 @@ public sealed class GameplayFlowControllerTests
         {
             CurrentSnapshot = snapshot;
         }
+    }
+
+    private sealed class PassThroughRunGameplayStatResolver : IRunGameplayStatResolver
+    {
+        public float Resolve(GameplayStatId statId, float baseValue)
+        {
+            return baseValue;
+        }
+    }
+
+    private sealed class FakeRunBodyMovementConfig : IRunBodySpeedConfig, IRunBodyMovementValidityConfig
+    {
+        public float DownhillAcceleration => 8f;
+        public float SurfaceSlowdown => 0f;
+        public float LowSpeedAssistTargetSpeed => 0f;
+        public float LowSpeedAssistAcceleration => 0f;
+        public float BaseSoftMaximumSpeed => 20f;
+        public float AboveMaximumSpeedResistance => 12f;
+        public float MaximumSupportedSurfaceNormalLiftSpeed => 5f;
+        public float RunBodySpeedSanityGuardMetersPerSecond => 250f;
     }
 
     private sealed class FakeGameplayStateService : IGameplayStateService

@@ -71,6 +71,7 @@ public sealed class RunDiagnosticsOverlayBufferTests
             cameraRotationDeltaDegrees: speed + 9f,
             estimatedVisualSnapReason: RunDiagnosticsOverlaySnapReason.None,
             fixedStepsThisFrame: 1,
-            isGrounded: true);
+            isGrounded: true,
+            speedDiagnostics: default);
     }
 }

@@ -25,7 +25,7 @@ When air steering is selected and the player has an active **Run Steering Contro
 
 When air steering is selected and the player has no active steering gesture, do not apply hidden guidance. The **Run Body** should keep its current velocity except for separate velocity-only systems such as **Launch Landing Stabilization** or the defensive **Run Body Speed Sanity Guard**.
 
-The result should feel simple to the player: the **Slingshot** creates the launch energy, the course and **Run Surface Contact Slowdown** shape speed, and steering can gently bend direction both on the ground and in the air without creating an invisible wall.
+The result should feel simple to the player: the **Slingshot** creates launch energy, the grounded **Run Body Speed Model** shapes intentional surface-tangent speed from course facts and tuning, and steering can gently bend direction both on the ground and in the air without creating an invisible wall.
 
 ## Unity Surfaces
 
@@ -99,12 +99,12 @@ Project settings, package manifests, and helper commands:
 24. As a designer, I want air steering not to depend on **Airborne**, so that fall presentation can remain a visual classification.
 25. As a designer, I want a separate air turn authority value, so that air agency can be tuned without weakening grounded steering.
 26. As a designer, I want shared steering responsiveness, so that input feel remains consistent across grounded and air steering.
-27. As a designer, I want no player-facing speed cap in steering, so that launch strength and surface slowdown remain the main speed knobs.
+27. As a designer, I want no player-facing speed cap in steering, so that launch strength and the explicit grounded speed model remain the visible speed knobs.
 28. As a designer, I want no no-takeoff timeout, so that steering mode changes follow physical support rather than hidden time.
 29. As a designer, I want stale grounded launch samples with positive lift to be treated as air steering, so that support hysteresis does not fight takeoff.
 30. As a designer, I want valid grounded support with no lift to use grounded steering, so that weak grounded launches do not get stuck in air rules.
 31. As a designer, I want landing stabilization to stay focused on lift removal only, so that it does not become artificial damping.
-32. As a designer, I want speed balancing to remain available through **Launch Impulse** and **Run Surface Contact Slowdown**, so that tuning remains visible and physical.
+32. As a designer, I want speed balancing to remain available through **Launch Impulse** and **Run Body Speed Model** tuning, so that ownership remains visible and physical interactions remain intact.
 33. As a designer, I want no new animation requirement, so that movement improvement is not blocked by art.
 34. As a designer, I want no new camera requirement, so that camera work remains separate.
 35. As a gameplay engineer, I want **Run Steering Mode Selector** to be a deep module, so that support-to-mode decisions are easy to test.
@@ -154,7 +154,7 @@ Project settings, package manifests, and helper commands:
 - Do not model **Run Air Steering Control** as a Slingshot feature.
 - Do not model **Run Air Steering Control** as a **Character Presentation** feature.
 - Keep **Slingshot** responsible for **Launch Impulse** only.
-- Keep **Run Surface Contact Slowdown** responsible for ordinary speed loss.
+- Keep **Run Body Speed Model** responsible for intentional grounded tangent-speed gain, slowdown, recovery, and the soft envelope.
 - Keep **Run Steering Control** responsible for direction changes only.
 - Replace the current post-launch steering blocker concept with **Run Steering Mode Selector**.
 - **Run Steering Mode Selector** should select one of two modes: grounded or air.
@@ -270,7 +270,7 @@ Manual Unity smoke checks should cover:
 ## Out of Scope
 
 - Changing **Launch Impulse** values.
-- Changing **Run Surface Contact Slowdown** or physics material friction.
+- Changing **Run Body Speed Model** tuning or physics material friction.
 - Reintroducing player-facing speed caps.
 - Reintroducing launch speed recovery.
 - Adding downforce, global drag, or artificial air braking.
@@ -290,7 +290,7 @@ Assumptions:
 
 - "In-flight steering" means **Run Air Steering Control** while the gameplay state is **Running**.
 - "Touch ground" for steering mode means valid **Run Surface** support, not any collider contact.
-- Existing slingshot launch energy and natural speed ownership decisions remain in force.
+- Existing slingshot launch energy and explicit speed-ownership decisions remain in force; the grounded speed model stays neutral while unsupported.
 - Air steering should be weaker enough to feel like nudging trajectory, not steering on rails.
 - The exact air turn authority default is a tuning decision for implementation; the PRD only requires it to be positive, authored, and lower than grounded authority.
 - The exact accepted lift tolerance is an implementation tuning detail; it should be high enough to ignore numerical noise and low enough to catch stale grounded takeoff samples.

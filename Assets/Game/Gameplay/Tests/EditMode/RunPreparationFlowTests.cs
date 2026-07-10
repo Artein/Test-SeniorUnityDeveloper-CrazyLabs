@@ -57,7 +57,10 @@ public sealed class RunPreparationFlowTests
         Assert.That(stateService.CurrentStateId, Is.SameAs(preLaunch));
         Assert.That(stateService.RequestedStateIds, Is.EqualTo(new[] { preLaunch }));
         Assert.That(capture.EnableCallCount, Is.EqualTo(1));
-        Assert.That(_observations, Is.EqualTo(new[] { "snapshot-create", "snapshot-set", "transition", "capture-enable" }));
+
+        Assert.That(
+            _observations,
+            Is.EqualTo(new[] { "snapshot-create", "snapshot-set", "speed-resolve", "transition", "capture-enable" }));
     }
 
     [Test]
@@ -120,6 +123,56 @@ public sealed class RunPreparationFlowTests
     }
 
     [Test]
+    public void TryContinue_InvalidResolvedSpeedEnvelope_RestoresPreviousSnapshotAndDoesNotTransition()
+    {
+        var runPreparation = CreateStateId("Run Preparation");
+        var preLaunch = CreateStateId("Pre-Launch");
+        var running = CreateStateId("Running");
+        var nextSnapshot = new RunModifierSnapshot(Array.Empty<GameplayStatModifier>());
+
+        var snapshotFactory = new FakeRunModifierSnapshotFactory(_observations)
+        {
+            Snapshot = nextSnapshot
+        };
+        var snapshotStore = new FakeRunModifierSnapshotStore(_observations);
+        var previousSnapshot = snapshotStore.CurrentSnapshot;
+
+        var speedResolver = new FakeRunGameplayStatResolver(_observations)
+        {
+            ResolvedValue = 250f
+        };
+        var capture = new FakeSlingshotCapture(_observations);
+        var notifier = new FakeSlingshotLaunchNotifier();
+        var stateService = new FakeGameplayStateService(runPreparation, _observations);
+        var launcher = new FakeGameplaySlingshotLauncher(_observations);
+
+        using var controller = CreateInitializedController(
+            capture,
+            notifier,
+            stateService,
+            launcher,
+            snapshotFactory,
+            snapshotStore,
+            runPreparation,
+            preLaunch,
+            running,
+            speedResolver);
+        var command = (IRunPreparationContinueCommand)controller;
+
+        Assert.That(command.TryContinue, Throws.TypeOf<InvalidOperationException>());
+        Assert.That(snapshotStore.CurrentSnapshot, Is.SameAs(previousSnapshot));
+        Assert.That(snapshotStore.SetCallCount, Is.EqualTo(2));
+        Assert.That(stateService.CurrentStateId, Is.SameAs(runPreparation));
+        Assert.That(stateService.RequestedStateIds, Is.Empty);
+        Assert.That(capture.EnableCallCount, Is.Zero);
+        Assert.That(speedResolver.LastBaseValue, Is.EqualTo(20f));
+
+        Assert.That(
+            _observations,
+            Is.EqualTo(new[] { "snapshot-create", "snapshot-set", "speed-resolve", "snapshot-set" }));
+    }
+
+    [Test]
     public void LaunchRequested_CurrentStateIsNotPreLaunch_IgnoresLaunchRequest()
     {
         var runPreparation = CreateStateId("Run Preparation");
@@ -152,10 +205,29 @@ public sealed class RunPreparationFlowTests
         IRunModifierSnapshotStore snapshotStore,
         GameplayStateId runPreparationStateId,
         GameplayStateId preLaunchStateId,
-        GameplayStateId runningStateId)
+        GameplayStateId runningStateId,
+        FakeRunGameplayStatResolver runGameplayStatResolver = null)
     {
-        var controller = new GameplayFlowController(capture, new SilentSlingshotRunPreparationReset(), notifier, stateService, launcher,
-            snapshotFactory, snapshotStore, new SilentPreLaunchRigPoseResetter(), runPreparationStateId, preLaunchStateId, runningStateId);
+        var speedConfig = new FakeRunBodyMovementConfig();
+        var speedResolver = runGameplayStatResolver ?? new FakeRunGameplayStatResolver(_observations);
+        var playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
+
+        var controller = new GameplayFlowController(
+            capture,
+            new SilentSlingshotRunPreparationReset(),
+            notifier,
+            stateService,
+            launcher,
+            snapshotFactory,
+            snapshotStore,
+            speedResolver,
+            speedConfig,
+            new RunBodySpeedEnvelopeValidator(speedConfig),
+            new SilentPreLaunchRigPoseResetter(),
+            playerMaxSpeedStatId,
+            runPreparationStateId,
+            preLaunchStateId,
+            runningStateId);
         ((IInitializable)controller).Initialize();
         _observations.Clear();
         return controller;
@@ -166,6 +238,13 @@ public sealed class RunPreparationFlowTests
         var stateId = Track(ScriptableObject.CreateInstance<GameplayStateId>());
         stateId.name = stateName;
         return stateId;
+    }
+
+    private GameplayStatId CreateStatId(string statName)
+    {
+        var statId = Track(ScriptableObject.CreateInstance<GameplayStatId>());
+        statId.name = statName;
+        return statId;
     }
 
     private T Track<T>(T value)
@@ -230,6 +309,38 @@ public sealed class RunPreparationFlowTests
             CurrentSnapshot = snapshot;
             _observations.Add("snapshot-set");
         }
+    }
+
+    private sealed class FakeRunGameplayStatResolver : IRunGameplayStatResolver
+    {
+        private readonly List<string> _observations;
+
+        public float? ResolvedValue { get; set; }
+        public float LastBaseValue { get; private set; }
+
+        public FakeRunGameplayStatResolver(List<string> observations)
+        {
+            _observations = observations;
+        }
+
+        public float Resolve(GameplayStatId statId, float baseValue)
+        {
+            LastBaseValue = baseValue;
+            _observations.Add("speed-resolve");
+            return ResolvedValue ?? baseValue;
+        }
+    }
+
+    private sealed class FakeRunBodyMovementConfig : IRunBodySpeedConfig, IRunBodyMovementValidityConfig
+    {
+        public float DownhillAcceleration => 8f;
+        public float SurfaceSlowdown => 0f;
+        public float LowSpeedAssistTargetSpeed => 0f;
+        public float LowSpeedAssistAcceleration => 0f;
+        public float BaseSoftMaximumSpeed => 20f;
+        public float AboveMaximumSpeedResistance => 12f;
+        public float MaximumSupportedSurfaceNormalLiftSpeed => 5f;
+        public float RunBodySpeedSanityGuardMetersPerSecond => 250f;
     }
 
     private sealed class FakeSlingshotLaunchNotifier : ISlingshotLaunchNotifier

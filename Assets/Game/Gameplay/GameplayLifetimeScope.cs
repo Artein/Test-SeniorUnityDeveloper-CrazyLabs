@@ -13,6 +13,7 @@ using Game.Gameplay.Pickups;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VContainer;
 using VContainer.Unity;
 
@@ -33,10 +34,16 @@ namespace Game.Gameplay
         [SerializeField] private GameplayStatId _coinPickupMultiplierStatId;
         [SerializeField] private SlingshotConfig _slingshotConfig;
         [SerializeField] private GameplaySlingshotLaunchConfig _gameplaySlingshotLaunchConfig;
-        [SerializeField] private PlayerSteeringConfig _playerSteeringConfig;
+
+        [FormerlySerializedAs("_playerSteeringConfig")] [SerializeField]
+        private RunBodyMovementConfig _runBodyMovementConfig;
+
         [SerializeField] private RunCameraConfig _runCameraConfig;
         [SerializeField] private RunEndConfig _runEndConfig;
-        [SerializeField] private RigidbodyPlayerSteeringTarget _playerSteeringTarget;
+
+        [FormerlySerializedAs("_playerSteeringTarget")] [SerializeField]
+        private RigidbodyRunBodyMovementTarget _runBodyMovementTarget;
+
         [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
         [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
         [SerializeField] private BaseSceneCompositionMonoInstaller[] _sceneCompositionInstallers;
@@ -98,7 +105,7 @@ namespace Game.Gameplay
 
             builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
                 .As<ILaunchTargetPreLaunchReset, IRunEndPoseLockTarget>();
-            builder.RegisterInstance<IPlayerSteeringTarget>(_playerSteeringTarget);
+            builder.RegisterInstance<IRunBodyMovementTarget>(_runBodyMovementTarget);
             builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
             builder.Register<IRunSupportColliderProbeFactory, RunSupportColliderProbeFactory>(Lifetime.Singleton);
@@ -126,7 +133,11 @@ namespace Game.Gameplay
             new SlingshotInstaller(_slingshotConfig, _slingshotView, _inputCamera).Install(builder);
             new GameplayFlowInstaller(_runPreparationStateId, _preLaunchStateId, _runningStateId, _runEndedStateId).Install(builder);
 
-            builder.RegisterInstance<IPlayerSteeringConfig>(_playerSteeringConfig);
+            builder.RegisterInstance<IRunBodySpeedConfig>(_runBodyMovementConfig);
+            builder.RegisterInstance<IRunBodyMovementValidityConfig>(_runBodyMovementConfig);
+            builder.RegisterInstance<IRunLaunchLandingStabilizationConfig>(_runBodyMovementConfig);
+            builder.RegisterInstance<IRunSteeringConfig>(_runBodyMovementConfig);
+            builder.RegisterInstance<IRunSteeringFrameConfig>(_runBodyMovementConfig);
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.RegisterInstance<IRunRewardConfig>(_runEndConfig);
@@ -139,9 +150,15 @@ namespace Game.Gameplay
             builder.RegisterInstance(_playerSteeringResponsivenessStatId).Keyed(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
 
             builder.Register<IScreen, UnityScreen>(Lifetime.Singleton);
+            builder.Register<IRunSteeringInputMetricsResolver, DefaultRunSteeringInputMetricsResolver>(Lifetime.Singleton);
             builder.Register<IRunSteeringGesture, RunSteeringGesture>(Lifetime.Transient);
             builder.Register<IRunSteeringAffordanceLayout, RunSteeringAffordanceLayout>(Lifetime.Singleton);
             builder.Register<IRunSteeringPointerPressGuard, UnityEventSystemRunSteeringPointerPressGuard>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<RunSteeringInputController>().As<IRunSteeringInputSource>();
+            builder.Register<IRunBodySpeedEvaluator, DefaultRunBodySpeedEvaluator>(Lifetime.Singleton);
+            builder.Register<IRunBodySpeedDiagnosticsSource, IRunBodySpeedDiagnosticsSink, RunBodySpeedDiagnostics>(Lifetime.Singleton);
+            builder.Register<IRunSteeringEvaluator, DefaultRunSteeringEvaluator>(Lifetime.Singleton);
+            builder.Register<IRunLaunchLandingStabilizer, RunLaunchLandingStabilizer>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 
             builder.Register<IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);
@@ -178,6 +195,7 @@ namespace Game.Gameplay
             builder.Register<UpgradePurchaseService>(Lifetime.Singleton);
             builder.Register<IRunModifierSnapshotFactory, RunModifierSnapshotFactory>(Lifetime.Singleton);
             builder.Register<IRunGameplayStatResolver, RunGameplayStatResolver>(Lifetime.Singleton);
+            builder.Register<RunBodySpeedEnvelopeValidator>(Lifetime.Singleton);
             builder.Register<IPickupCurrencyGrantResolver, CoinPickupCurrencyGrantResolver>(Lifetime.Singleton);
             builder.Register<SlingshotLaunchImpulseCalculator>(Lifetime.Singleton);
             builder.Register<ILaunchImpulseApplier, SlingshotLaunchImpulseApplier>(Lifetime.Singleton);
@@ -187,7 +205,7 @@ namespace Game.Gameplay
 
             builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
             builder.RegisterEntryPoint<RunProgressService>();
-            builder.RegisterEntryPoint<PlayerSteeringController>();
+            builder.RegisterEntryPoint<RunBodyMovementController>();
             builder.RegisterEntryPoint<RunCameraController>();
             builder.RegisterEntryPoint<CharacterVisualFollower>();
             builder.RegisterEntryPoint<AnimatedContactSensorPoseSync>();

@@ -42,7 +42,13 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(activeScene, "GameplayLifetimeScope");
         var slingshotView = FindSingleInScene<SlingshotView>(activeScene, "SlingshotView");
         var launchTarget = FindSingleInScene<RigidbodyLaunchTarget>(activeScene, "RigidbodyLaunchTarget");
-        var playerSteeringTarget = FindSingleInScene<RigidbodyPlayerSteeringTarget>(activeScene, "RigidbodyPlayerSteeringTarget");
+        var runBodyMovementTarget = FindSingleInScene<RigidbodyRunBodyMovementTarget>(activeScene, "RigidbodyRunBodyMovementTarget");
+        var runBodyMovementTargets = FindComponentsInScene<RigidbodyRunBodyMovementTarget>(activeScene);
+
+        var legacyMovementWriters = FindComponentsInScene<MonoBehaviour>(activeScene)
+            .Where(component => component.GetType().Name == "PlayerSteeringController")
+            .ToArray();
+
         var runCameraSource = FindSingleInScene<RigidbodyRunCameraSource>(activeScene, "RigidbodyRunCameraSource");
         var contactNotifier = FindSingleInScene<RigidbodyContactNotifier>(activeScene, "RigidbodyContactNotifier");
         var runProgressFrameSource = FindSingleInScene<RunProgressFrameSource>(activeScene, "RunProgressFrameSource");
@@ -118,9 +124,18 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
 
         var bandShapeProvider = lifetimeScope.Container.Resolve<ISlingshotBandShapeProvider>();
         var preLaunchRigPoseResetter = lifetimeScope.Container.Resolve<IPreLaunchRigPoseResetter>();
-        var resolvedPlayerSteeringTarget = lifetimeScope.Container.Resolve<IPlayerSteeringTarget>();
+        var resolvedRunBodyMovementTarget = lifetimeScope.Container.Resolve<IRunBodyMovementTarget>();
+        var resolvedRunSteeringInputSource = lifetimeScope.Container.Resolve<IRunSteeringInputSource>();
+        var resolvedRunBodySpeedEvaluator = lifetimeScope.Container.Resolve<IRunBodySpeedEvaluator>();
+        var resolvedRunBodySpeedDiagnostics = lifetimeScope.Container.Resolve<IRunBodySpeedDiagnosticsSource>();
+        var resolvedRunSteeringEvaluator = lifetimeScope.Container.Resolve<IRunSteeringEvaluator>();
+        var resolvedRunLaunchLandingStabilizer = lifetimeScope.Container.Resolve<IRunLaunchLandingStabilizer>();
         var gameplaySlingshotLaunchConfig = lifetimeScope.Container.Resolve<IGameplaySlingshotLaunchConfig>();
-        var playerSteeringConfig = lifetimeScope.Container.Resolve<IPlayerSteeringConfig>();
+        var runBodySpeedConfig = lifetimeScope.Container.Resolve<IRunBodySpeedConfig>();
+        var runBodyMovementValidityConfig = lifetimeScope.Container.Resolve<IRunBodyMovementValidityConfig>();
+        var runLaunchLandingStabilizationConfig = lifetimeScope.Container.Resolve<IRunLaunchLandingStabilizationConfig>();
+        var runSteeringConfig = lifetimeScope.Container.Resolve<IRunSteeringConfig>();
+        var runSteeringFrameConfig = lifetimeScope.Container.Resolve<IRunSteeringFrameConfig>();
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
         var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
         var resolvedRunProgressFrameSource = lifetimeScope.Container.Resolve<IRunProgressFrameSource>();
@@ -152,7 +167,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedRunCameraRig = lifetimeScope.Container.Resolve<IRunCameraRig>();
         var resolvedLaunchTargetPreLaunchReset = lifetimeScope.Container.Resolve<ILaunchTargetPreLaunchReset>();
         var runCameraConfig = lifetimeScope.Container.Resolve<IRunCameraConfig>();
-        var assignedPlayerSteeringConfigs = GetAssignedPlayerSteeringConfigs(activeScene);
+        var assignedRunBodyMovementConfigs = GetAssignedRunBodyMovementConfigs(activeScene);
         var assignedRunCameraConfigs = GetAssignedRunCameraConfigs(activeScene);
         var assignedRunEndConfigs = GetAssignedRunEndConfigs(activeScene);
         var assignedRunProgressFrameSources = GetAssignedRunProgressFrameSources(activeScene);
@@ -239,11 +254,18 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(Vector3.Dot(geometry.LaunchFrameForward, Vector3.forward), Is.GreaterThan(0.99f));
         Assert.That(playerRigidbody, Is.Not.Null);
         Assert.That(runCameraSource.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
-        Assert.That(playerSteeringTarget.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
+        Assert.That(runBodyMovementTarget.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
+        Assert.That(runBodyMovementTargets, Has.Length.EqualTo(1));
+        Assert.That(legacyMovementWriters, Is.Empty);
         Assert.That(contactNotifier.GetComponent<Rigidbody>(), Is.SameAs(playerRigidbody));
         Assert.That(preLaunchRigPoseResetter, Is.Not.Null);
         Assert.That(resolvedLaunchTargetPreLaunchReset, Is.SameAs(launchTarget));
-        Assert.That(resolvedPlayerSteeringTarget, Is.SameAs(playerSteeringTarget));
+        Assert.That(resolvedRunBodyMovementTarget, Is.SameAs(runBodyMovementTarget));
+        Assert.That(resolvedRunSteeringInputSource, Is.TypeOf<RunSteeringInputController>());
+        Assert.That(resolvedRunBodySpeedEvaluator, Is.TypeOf<DefaultRunBodySpeedEvaluator>());
+        Assert.That(resolvedRunBodySpeedDiagnostics, Is.Not.Null);
+        Assert.That(resolvedRunSteeringEvaluator, Is.TypeOf<DefaultRunSteeringEvaluator>());
+        Assert.That(resolvedRunLaunchLandingStabilizer, Is.TypeOf<RunLaunchLandingStabilizer>());
         Assert.That(resolvedRunCameraSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunMotionSource, Is.SameAs(runCameraSource));
         Assert.That(resolvedRunProgressFrameSource, Is.SameAs(runProgressFrameSource));
@@ -296,7 +318,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedRunEndCandidateReceiver, Is.Not.Null);
         Assert.That(resolvedRunCameraAnchor, Is.SameAs(runCameraAnchor));
         Assert.That(resolvedRunCameraRig, Is.SameAs(runCameraRig));
-        Assert.That(((IPlayerSteeringTarget)playerSteeringTarget).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
+        Assert.That(((IRunBodyMovementTarget)runBodyMovementTarget).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(((IRunMotionSource)runCameraSource).Position, Is.EqualTo(playerRigidbody.transform.position));
         Assert.That(((IRunMotionSource)runCameraSource).LinearVelocity, Is.EqualTo(playerRigidbody.linearVelocity));
         Assert.That(targetCollider, Is.Not.Null);
@@ -356,23 +378,33 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(bandShapePointCount, Is.GreaterThan(3));
         Assert.That(bandShapeProvider, Is.TypeOf<SlingshotBandShapeProvider>());
         Assert.That(((SlingshotBandShapeProvider)bandShapeProvider).UsesLaunchTargetBandShapeClearanceSourceForTests, Is.True);
-        Assert.That(assignedPlayerSteeringConfigs, Has.Length.EqualTo(1));
+        Assert.That(assignedRunBodyMovementConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunCameraConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunEndConfigs, Has.Length.EqualTo(1));
         Assert.That(assignedRunProgressFrameSources, Has.Length.EqualTo(1));
-        Assert.That(playerSteeringConfig, Is.SameAs(assignedPlayerSteeringConfigs[0]));
+        Assert.That(runBodySpeedConfig, Is.SameAs(assignedRunBodyMovementConfigs[0]));
+        Assert.That(runBodyMovementValidityConfig, Is.SameAs(assignedRunBodyMovementConfigs[0]));
+        Assert.That(runLaunchLandingStabilizationConfig, Is.SameAs(assignedRunBodyMovementConfigs[0]));
+        Assert.That(runSteeringConfig, Is.SameAs(assignedRunBodyMovementConfigs[0]));
+        Assert.That(runSteeringFrameConfig, Is.SameAs(assignedRunBodyMovementConfigs[0]));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
-        Assert.That(playerSteeringConfig, Is.Not.Null);
-        Assert.That(playerSteeringConfig.MaximumTurnDegreesPerSecond, Is.EqualTo(30f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(12f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.LessThan(playerSteeringConfig.MaximumTurnDegreesPerSecond));
-        Assert.That(playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(120f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunSteeringFrameSnapDegrees, Is.EqualTo(60f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.12f).Within(0.0001f));
-        Assert.That(playerSteeringConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.DownhillAcceleration, Is.EqualTo(8f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.SurfaceSlowdown, Is.EqualTo(0.5f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.LowSpeedAssistTargetSpeed, Is.EqualTo(5f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.LowSpeedAssistAcceleration, Is.EqualTo(8f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.BaseSoftMaximumSpeed, Is.EqualTo(20f).Within(0.0001f));
+        Assert.That(runBodySpeedConfig.AboveMaximumSpeedResistance, Is.EqualTo(12f).Within(0.0001f));
+        Assert.That(runBodyMovementValidityConfig.MaximumSupportedSurfaceNormalLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(runBodyMovementValidityConfig.RunBodySpeedSanityGuardMetersPerSecond, Is.EqualTo(250f).Within(0.0001f));
+        Assert.That(runLaunchLandingStabilizationConfig.LaunchLandingStabilizationSeconds, Is.EqualTo(0.3f).Within(0.0001f));
+        Assert.That(runLaunchLandingStabilizationConfig.LaunchLandingMaximumLiftSpeed, Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(runSteeringConfig.MaximumTurnDegreesPerSecond, Is.EqualTo(30f).Within(0.0001f));
+        Assert.That(runSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(12f).Within(0.0001f));
+        Assert.That(runSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.LessThan(runSteeringConfig.MaximumTurnDegreesPerSecond));
+        Assert.That(runSteeringFrameConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(120f).Within(0.0001f));
+        Assert.That(runSteeringFrameConfig.RunSteeringFrameSnapDegrees, Is.EqualTo(60f).Within(0.0001f));
+        Assert.That(runSteeringFrameConfig.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.12f).Within(0.0001f));
+        Assert.That(runSteeringFrameConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.Not.Null);
         Assert.That(resolvedRunEndConfig, Is.Not.Null);
         Assert.That(gameplaySlingshotLaunchConfig.MinimumForwardImpulse, Is.EqualTo(10f).Within(0.0001f));
@@ -380,7 +412,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(gameplaySlingshotLaunchConfig.UpwardImpulse, Is.EqualTo(3f).Within(0.0001f));
 
         Assert.That(
-            playerSteeringConfig.RunBodySpeedSanityGuardMetersPerSecond,
+            runBodyMovementValidityConfig.RunBodySpeedSanityGuardMetersPerSecond,
             Is.GreaterThan(gameplaySlingshotLaunchConfig.MaximumForwardImpulse * 4f));
 
         Assert.That(gameplaySlingshotLaunchConfig.MaximumLateralLaunchAngleDegrees, Is.EqualTo(35f).Within(0.0001f));
@@ -692,10 +724,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         yield return null;
     }
 
-    private PlayerSteeringConfig[] GetAssignedPlayerSteeringConfigs(Scene scene)
+    private RunBodyMovementConfig[] GetAssignedRunBodyMovementConfigs(Scene scene)
     {
         return FindComponentsInScene<GameplayLifetimeScope>(scene)
-            .Select(lifetimeScope => lifetimeScope.PlayerSteeringConfigForTests)
+            .Select(lifetimeScope => lifetimeScope.RunBodyMovementConfigForTests)
             .Where(config => config != null)
             .Distinct()
             .ToArray();

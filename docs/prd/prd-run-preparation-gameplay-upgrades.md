@@ -174,7 +174,7 @@ Developer-facing stories:
 - As a developer, gameplay calculates a `LaunchImpulse` from pull data, launch config, and resolved `SlingshotLaunchPower`.
 - As a developer, launch impulse calculation is pure and unit tested.
 - As a developer, launch impulse application is the narrow physics mutation boundary.
-- As a developer, player steering resolves `PlayerMaxSpeed` and `PlayerSteeringResponsiveness` during the running state.
+- As a developer, **Run Body Movement Controller** resolves `PlayerMaxSpeed` for the soft speed envelope, while steering resolves `PlayerSteeringResponsiveness`, during the running state.
 - As a developer, pickup collection resolves `CoinPickupMultiplier` only for coin pickup grants.
 - As a developer, coin multiplier fractional carry is per-run and resets with run currency accumulation.
 - As a developer, run currency snapshots store final earned totals only.
@@ -296,7 +296,7 @@ Slingshot and launch:
 
 Movement and pickups:
 
-- `PlayerMaxSpeed` is resolved during running movement.
+- `PlayerMaxSpeed` is resolved during running movement and modifies the soft **Run Body Speed Envelope**.
 - `PlayerSteeringResponsiveness` is resolved during running movement.
 - Movement controllers should not read upgrade levels directly.
 - `CoinPickupMultiplier` applies only to coin grants from collectible pickups.
