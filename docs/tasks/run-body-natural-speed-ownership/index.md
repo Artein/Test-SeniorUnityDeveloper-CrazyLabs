@@ -1,8 +1,12 @@
 # Run Body Natural Speed Ownership Issues
 
+Status: Historical issue suite; parent PRD superseded
+
 Parent PRD: `docs/prd/prd-run-body-natural-speed-ownership.md`
 
-These issues are ordered by dependency. AFK slices can be implemented without further human input. The HITL slice records a product decision that should not block the movement fix.
+Replacement PRD: [Run Body Explicit Speed Ownership](../../prd/prd-run-body-explicit-speed-ownership.md)
+
+These issues preserve the earlier steering-cap and launch-recovery cleanup. The replacement PRD and ADR-0010 now own intentional grounded speed behavior. The former HITL product decision is resolved.
 
 ## Issues
 
@@ -22,7 +26,7 @@ These issues are ordered by dependency. AFK slices can be implemented without fu
    - Type: AFK
    - Blocked by: Post-Launch Steering Gate, Direction-Only Run Steering, Run Body Speed Sanity Guard, Launch Energy Regression Guards
 6. [Player Max Speed Product Decision](06-player-max-speed-product-decision.md)
-   - Type: HITL
+   - Type: Resolved HITL decision
    - Blocked by: None
 
 ## Dependency Shape
@@ -34,7 +38,7 @@ flowchart TD
     C["03 Run Body Speed Sanity Guard"]
     D["04 Launch Energy Regression Guards"]
     E["05 Scene Contract And Terminology Cleanup"]
-    F["06 Player Max Speed Product Decision (HITL)"]
+    F["06 Player Max Speed Product Decision (Resolved)"]
 
     A --> B
     B --> C
@@ -47,5 +51,6 @@ flowchart TD
 
 ## Notes
 
-- Issue 6 is intentionally non-blocking for issues 1-5. The movement bug can be fixed while the player-facing meaning of any Player Max Speed upgrade is decided separately.
-- The implementation issues should preserve the PRD rule: **Run Steering Control** steers direction; **Run Surface Contact Slowdown** owns ordinary speed loss.
+- Issue 6 resolves `PlayerMaxSpeed` as the modifier for the soft **Run Body Speed Envelope**.
+- Issues 1-5 remain useful historical slices for direction-only steering, launch/landing boundaries, and the defensive sanity guard.
+- New implementation follows the replacement rule: **Run Steering Control** owns direction; **Run Body Speed Model** owns intentional grounded tangent-speed effects; Rigidbody physics owns contacts and collision response.

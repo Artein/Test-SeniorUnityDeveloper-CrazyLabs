@@ -10,7 +10,7 @@ Type: AFK
 
 Update the protected scene/config/test/docs contract so it matches the new speed ownership model.
 
-The final contract should say: **Launch Impulse** creates fired energy, **Run Steering Control** changes direction without player-facing speed caps, **Run Surface Contact Slowdown** owns ordinary speed loss, **Launch Landing Stabilization** only removes first-landing lift, and **Character Presentation Mode** changes never alter **Run Body** velocity.
+The final contract should say: **Launch Impulse** creates fired energy, **Run Steering Control** changes direction without player-facing speed caps, **Run Body Speed Model** owns intentional grounded tangent-speed effects, Rigidbody physics owns contacts and collision response, **Launch Landing Stabilization** only removes first-landing lift, and **Character Presentation Mode** changes never alter **Run Body** velocity.
 
 This slice should remove or retire obsolete launch burst/recovery assertions and terminology from tests, fakes, scene composition checks, and local context docs. It should keep naming cleanup scoped: broad code/asset renames are not required unless they are needed to remove a misleading active contract.
 
@@ -21,7 +21,7 @@ This slice should remove or retire obsolete launch burst/recovery assertions and
 - [ ] Test fakes no longer expose obsolete speed-cap or launch-recovery fields unless required for compatibility with untouched interfaces.
 - [ ] Local context docs use **Run Body** for post-launch physical movement and **Launch Target** only for slingshot-facing role.
 - [ ] Documentation states that **Launch Flight** and **Airborne** are presentation-only and must not change velocity.
-- [ ] Documentation states that ordinary slowdown belongs to **Run Surface Contact Slowdown**.
+- [ ] Documentation states that intentional ordinary grounded slowdown belongs to **Run Body Speed Model** while physics materials remain part of Rigidbody contact response.
 - [ ] No unrelated scene, prefab, art, UI, economy, or run-end behavior is changed.
 
 ## Verification

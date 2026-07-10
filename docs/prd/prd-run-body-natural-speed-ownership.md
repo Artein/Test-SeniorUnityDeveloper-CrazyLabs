@@ -1,5 +1,9 @@
 # PRD: Run Body Natural Speed Ownership
 
+Status: Superseded
+
+> Superseded by [PRD: Run Body Explicit Speed Ownership](./prd-run-body-explicit-speed-ownership.md) and [ADR-0010](../adr/adr-0010-use-explicit-run-body-speed-model-with-rigidbody-contact-physics.md). This document remains as historical context for removing steering-owned speed caps and launch recovery; its claim that physics-material contact slowdown alone owns ordinary speed loss is no longer authoritative.
+
 ## Problem Statement
 
 The game is about sliding down a course after being fired by a **Slingshot**. The player expects the **Run Body** speed to come from the **Launch Impulse**, the course, and **Run Surface Contact Slowdown**. Instead, the current movement stack can make speed feel like it hits an invisible wall.

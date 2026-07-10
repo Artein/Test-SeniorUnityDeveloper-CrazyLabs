@@ -42,4 +42,4 @@ flowchart TD
 
 - The first four issues are implementation and regression-test slices.
 - The fifth issue is intentionally HITL because final air turn authority and lift tolerance are feel-tuning decisions.
-- All slices preserve the PRD rule: **Run Air Steering Control** changes direction only; **Launch Impulse** and **Run Surface Contact Slowdown** own speed.
+- All slices preserve the PRD rule: **Run Air Steering Control** changes direction only; **Launch Impulse** owns fired energy, and the grounded **Run Body Speed Model** owns intentional supported tangent-speed effects.
