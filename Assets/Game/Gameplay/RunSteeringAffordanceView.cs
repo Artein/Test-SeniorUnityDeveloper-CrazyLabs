@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace Game.Gameplay
 {
-    internal interface IRunSteeringAffordancePresentationView
+    internal interface IRunSteeringAffordanceView
     {
         void Present(RunSteeringAffordancePresentationState state);
         void ApplyAnimation(float alpha, float scale);
@@ -20,15 +20,9 @@ namespace Game.Gameplay
 
     public sealed partial class RunSteeringAffordanceView :
         MonoBehaviour,
-        IRunSteeringAffordancePresentationView,
+        IRunSteeringAffordanceView,
         IRunSteeringAffordanceTuning
     {
-        private const float RangeEndMinimumFadeStartFraction = 0.06f;
-        private const float RangeEndDeadzoneFadeStartMultiplier = 0.5f;
-        private const float RangeEndDefaultFullOpacityFraction = 0.4f;
-        private const float RangeEndMinimumFadeSpanFraction = 0.08f;
-        private const float RangeEndMinimumRangePixels = 0.001f;
-
         [SerializeField] private RectTransform _root;
         [SerializeField] private CanvasGroup _canvasGroup;
         [SerializeField] private RectTransform _knobRoot;
@@ -53,7 +47,7 @@ namespace Game.Gameplay
         float IRunSteeringAffordanceTuning.ShowDurationSeconds => Mathf.Max(0f, _showSeconds);
         float IRunSteeringAffordanceTuning.HideDurationSeconds => Mathf.Max(0f, _hideSeconds);
 
-        void IRunSteeringAffordancePresentationView.Present(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordanceView.Present(RunSteeringAffordancePresentationState state)
         {
             if (IsDestroyed())
                 return;
@@ -67,7 +61,7 @@ namespace Game.Gameplay
             ApplyNonInteractiveSettings();
         }
 
-        void IRunSteeringAffordancePresentationView.ApplyAnimation(float alpha, float scale)
+        void IRunSteeringAffordanceView.ApplyAnimation(float alpha, float scale)
         {
             if (IsDestroyed())
                 return;
@@ -78,7 +72,7 @@ namespace Game.Gameplay
             ApplyNonInteractiveSettings();
         }
 
-        void IRunSteeringAffordancePresentationView.Deactivate()
+        void IRunSteeringAffordanceView.Deactivate()
         {
             if (IsDestroyed())
                 return;
@@ -190,11 +184,9 @@ namespace Game.Gameplay
 
         private void ApplyImageSettings(RunSteeringAffordancePresentationState state)
         {
-            GetRangeEndAlphaMultipliers(state, out var leftAlphaMultiplier, out var rightAlphaMultiplier);
-
             ApplyImageSettings(_knobImage, _knobTint);
-            ApplyImageSettings(_leftRangeEndImage, CreateRangeEndTint(leftAlphaMultiplier));
-            ApplyImageSettings(_rightRangeEndImage, CreateRangeEndTint(rightAlphaMultiplier));
+            ApplyImageSettings(_leftRangeEndImage, CreateRangeEndTint(state.LeftRangeEndAlphaMultiplier));
+            ApplyImageSettings(_rightRangeEndImage, CreateRangeEndTint(state.RightRangeEndAlphaMultiplier));
             ApplyImageSettings(_deadzoneImage, _deadzoneTint);
         }
 
@@ -205,51 +197,6 @@ namespace Game.Gameplay
 
             image.color = tint;
             ApplyNonInteractiveImageSettings(image);
-        }
-
-        private void GetRangeEndAlphaMultipliers(
-            RunSteeringAffordancePresentationState state,
-            out float leftAlphaMultiplier,
-            out float rightAlphaMultiplier)
-        {
-            leftAlphaMultiplier = 0f;
-            rightAlphaMultiplier = 0f;
-
-            var rangePixels = Mathf.Max(
-                state.OriginScreenPosition.x - state.LeftRangeEndScreenPosition.x,
-                state.RightRangeEndScreenPosition.x - state.OriginScreenPosition.x);
-
-            if (rangePixels <= RangeEndMinimumRangePixels)
-                return;
-
-            var offset = state.KnobScreenPosition.x - state.OriginScreenPosition.x;
-
-            if (Mathf.Abs(offset) <= RangeEndMinimumRangePixels)
-                return;
-
-            var normalized = Mathf.Clamp01(Mathf.Abs(offset) / rangePixels);
-            var deadzoneFraction = Mathf.Clamp01(state.DeadzoneDiameterPixels / (rangePixels * 2f));
-
-            var fadeStart = Mathf.Clamp01(Mathf.Max(
-                RangeEndMinimumFadeStartFraction,
-                deadzoneFraction * RangeEndDeadzoneFadeStartMultiplier));
-
-            var fadeFull = Mathf.Clamp(
-                Mathf.Max(RangeEndDefaultFullOpacityFraction, fadeStart + RangeEndMinimumFadeSpanFraction),
-                fadeStart,
-                1f);
-
-            var progress = fadeFull > fadeStart
-                ? Mathf.InverseLerp(fadeStart, fadeFull, normalized)
-                : normalized >= fadeFull
-                    ? 1f
-                    : 0f;
-            var alphaMultiplier = Mathf.SmoothStep(0f, 1f, progress);
-
-            if (offset > 0f)
-                rightAlphaMultiplier = alphaMultiplier;
-            else
-                leftAlphaMultiplier = alphaMultiplier;
         }
 
         private Color CreateRangeEndTint(float alphaMultiplier)

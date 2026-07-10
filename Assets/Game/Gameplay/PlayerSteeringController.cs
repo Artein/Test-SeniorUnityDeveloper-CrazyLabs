@@ -26,7 +26,7 @@ namespace Game.Gameplay
         private readonly IScreen _screen;
         private readonly IRunSteeringGesture _runSteeringGesture;
         private readonly IRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
-        private readonly IRunSteeringAffordanceView _runSteeringAffordanceView;
+        private readonly IRunSteeringAffordancePresenter _runSteeringAffordancePresenter;
         private readonly IRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
         private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
         private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
@@ -62,7 +62,7 @@ namespace Game.Gameplay
             IScreen screen,
             IRunSteeringGesture runSteeringGesture,
             IRunSteeringAffordanceLayout runSteeringAffordanceLayout,
-            IRunSteeringAffordanceView runSteeringAffordanceView,
+            IRunSteeringAffordancePresenter runSteeringAffordancePresenter,
             IRunSteeringPointerPressGuard runSteeringPointerPressGuard,
             [Key(InjectKey.GameplayStateId.Running)]
             GameplayStateId runningStateId,
@@ -82,7 +82,9 @@ namespace Game.Gameplay
             _screen = screen ?? throw new ArgumentNullException(nameof(screen));
             _runSteeringGesture = runSteeringGesture ?? throw new ArgumentNullException(nameof(runSteeringGesture));
             _runSteeringAffordanceLayout = runSteeringAffordanceLayout ?? throw new ArgumentNullException(nameof(runSteeringAffordanceLayout));
-            _runSteeringAffordanceView = runSteeringAffordanceView ?? throw new ArgumentNullException(nameof(runSteeringAffordanceView));
+
+            _runSteeringAffordancePresenter =
+                runSteeringAffordancePresenter ?? throw new ArgumentNullException(nameof(runSteeringAffordancePresenter));
             _runSteeringPointerPressGuard = runSteeringPointerPressGuard ?? throw new ArgumentNullException(nameof(runSteeringPointerPressGuard));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
 
@@ -192,7 +194,7 @@ namespace Game.Gameplay
 
         private void ResetAffordancePointerAndSteerState()
         {
-            _runSteeringAffordanceView.Reset();
+            _runSteeringAffordancePresenter.Reset();
             ResetPointerAndSteerState();
         }
 
@@ -213,7 +215,7 @@ namespace Game.Gameplay
             }
 
             _desiredSteer = _runSteeringGesture.RequestedSteering;
-            _runSteeringAffordanceView.Show(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+            _runSteeringAffordancePresenter.Show(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
         }
 
         private void OnInputPointerMoved(PointerInput pointerInput)
@@ -225,7 +227,7 @@ namespace Game.Gameplay
             }
 
             _desiredSteer = _runSteeringGesture.RequestedSteering;
-            _runSteeringAffordanceView.Update(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
+            _runSteeringAffordancePresenter.Update(_runSteeringAffordanceLayout.Create(_runSteeringGesture.AffordanceSnapshot));
         }
 
         private void OnInputPointerReleased(PointerInput pointerInput)
@@ -239,7 +241,7 @@ namespace Game.Gameplay
                 return;
 
             _desiredSteer = 0f;
-            _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
+            _runSteeringAffordancePresenter.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
         }
 
         private void OnInputPointerCanceled(PointerInput pointerInput)
@@ -251,9 +253,9 @@ namespace Game.Gameplay
 
             if (!_runSteeringGesture.TryCancel(pointerInput))
                 return;
-            
+
             _desiredSteer = 0f;
-            _runSteeringAffordanceView.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
+            _runSteeringAffordancePresenter.Hide(_runSteeringAffordanceLayout.Create(finalSnapshot));
         }
 
         private void UpdateSmoothedSteer()

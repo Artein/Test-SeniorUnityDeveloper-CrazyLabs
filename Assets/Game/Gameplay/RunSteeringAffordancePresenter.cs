@@ -5,9 +5,17 @@ using VContainer.Unity;
 
 namespace Game.Gameplay
 {
-    internal sealed class RunSteeringAffordancePresenter : IInitializable, ITickable, IRunSteeringAffordanceView
+    internal interface IRunSteeringAffordancePresenter
     {
-        private readonly IRunSteeringAffordancePresentationView _view;
+        void Show(RunSteeringAffordancePresentationState state);
+        void Update(RunSteeringAffordancePresentationState state);
+        void Hide(RunSteeringAffordancePresentationState state);
+        void Reset();
+    }
+
+    internal sealed class RunSteeringAffordancePresenter : IInitializable, ITickable, IRunSteeringAffordancePresenter
+    {
+        private readonly IRunSteeringAffordanceView _view;
         private readonly IRunSteeringAffordanceTuning _tuning;
         private readonly ITime _clock;
 
@@ -27,7 +35,7 @@ namespace Game.Gameplay
         private float HideDurationSeconds => Mathf.Max(0f, _tuning.HideDurationSeconds);
 
         public RunSteeringAffordancePresenter(
-            IRunSteeringAffordancePresentationView view,
+            IRunSteeringAffordanceView view,
             IRunSteeringAffordanceTuning tuning,
             ITime clock)
         {
@@ -61,7 +69,7 @@ namespace Game.Gameplay
                 CompleteAnimation();
         }
 
-        void IRunSteeringAffordanceView.Show(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Show(RunSteeringAffordancePresentationState state)
         {
             if (!state.IsVisible)
             {
@@ -73,7 +81,7 @@ namespace Game.Gameplay
             BeginAnimation(1f, 1f, HiddenScale, 1f, ShowDurationSeconds, false);
         }
 
-        void IRunSteeringAffordanceView.Update(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Update(RunSteeringAffordancePresentationState state)
         {
             if (!state.IsVisible)
             {
@@ -84,7 +92,7 @@ namespace Game.Gameplay
             _view.Present(state);
         }
 
-        void IRunSteeringAffordanceView.Hide(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Hide(RunSteeringAffordancePresentationState state)
         {
             if (state.IsVisible)
                 _view.Present(state);
@@ -92,7 +100,7 @@ namespace Game.Gameplay
             BeginAnimation(_currentAlpha, 0f, _currentScale, HiddenScale, HideDurationSeconds, deactivateWhenAnimationCompletes: true);
         }
 
-        void IRunSteeringAffordanceView.Reset()
+        void IRunSteeringAffordancePresenter.Reset()
         {
             Reset();
         }

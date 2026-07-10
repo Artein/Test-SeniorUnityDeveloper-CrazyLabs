@@ -28,7 +28,7 @@ public sealed class RunSteeringAffordancePresenterTests
         var fixture = CreateFixture(showSeconds: 0.2f);
         InitializeAndClear(fixture);
 
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState(knobX: 120f));
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState(knobX: 120f));
 
         Assert.That(fixture.View.PresentedStates, Has.Count.EqualTo(1));
         Assert.That(fixture.View.PresentedStates[0].KnobScreenPosition.x, Is.EqualTo(120f));
@@ -42,7 +42,7 @@ public sealed class RunSteeringAffordancePresenterTests
     {
         var fixture = CreateFixture(showSeconds: 0.2f);
         InitializeAndClear(fixture);
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState());
 
         fixture.Time.DeltaTime = 0.1f;
         ((ITickable)fixture.Presenter).Tick();
@@ -60,10 +60,10 @@ public sealed class RunSteeringAffordancePresenterTests
     {
         var fixture = CreateFixture(hideSeconds: 0.2f);
         InitializeAndClear(fixture);
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState());
         fixture.View.Clear();
 
-        ((IRunSteeringAffordanceView)fixture.Presenter).Hide(CreateState(knobX: 180f));
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Hide(CreateState(knobX: 180f));
 
         Assert.That(fixture.View.PresentedStates, Has.Count.EqualTo(1));
         Assert.That(fixture.View.PresentedStates[0].KnobScreenPosition.x, Is.EqualTo(180f));
@@ -87,14 +87,14 @@ public sealed class RunSteeringAffordancePresenterTests
     {
         var fixture = CreateFixture(hideSeconds: 0.2f);
         InitializeAndClear(fixture);
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState());
-        ((IRunSteeringAffordanceView)fixture.Presenter).Hide(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Hide(CreateState());
 
         fixture.Time.DeltaTime = 0.1f;
         ((ITickable)fixture.Presenter).Tick();
         fixture.View.Clear();
 
-        ((IRunSteeringAffordanceView)fixture.Presenter).Reset();
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Reset();
 
         Assert.That(fixture.View.AnimationFrames, Has.Count.EqualTo(1));
         AssertAnimationFrame(fixture.View.AnimationFrames[0], 0f, HiddenScale);
@@ -111,14 +111,14 @@ public sealed class RunSteeringAffordancePresenterTests
     {
         var fixture = CreateFixture(showSeconds: 0.1f, hideSeconds: 0.2f);
         InitializeAndClear(fixture);
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState());
-        ((IRunSteeringAffordanceView)fixture.Presenter).Hide(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Hide(CreateState());
 
         fixture.Time.DeltaTime = 0.1f;
         ((ITickable)fixture.Presenter).Tick();
         fixture.View.Clear();
 
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState(knobX: 140f));
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState(knobX: 140f));
         ((ITickable)fixture.Presenter).Tick();
 
         Assert.That(fixture.View.PresentedStates, Has.Count.EqualTo(1));
@@ -131,11 +131,11 @@ public sealed class RunSteeringAffordancePresenterTests
     {
         var fixture = CreateFixture(showSeconds: 0.2f);
         InitializeAndClear(fixture);
-        ((IRunSteeringAffordanceView)fixture.Presenter).Show(CreateState());
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Show(CreateState());
 
         fixture.Time.DeltaTime = 0.1f;
         ((ITickable)fixture.Presenter).Tick();
-        ((IRunSteeringAffordanceView)fixture.Presenter).Update(CreateState(knobX: 160f));
+        ((IRunSteeringAffordancePresenter)fixture.Presenter).Update(CreateState(knobX: 160f));
         ((ITickable)fixture.Presenter).Tick();
 
         Assert.That(fixture.View.PresentedStates[^1].KnobScreenPosition.x, Is.EqualTo(160f));
@@ -165,7 +165,9 @@ public sealed class RunSteeringAffordancePresenterTests
             knobScreenPosition: new Vector2(knobX, 200f),
             leftRangeEndScreenPosition: new Vector2(20f, 200f),
             rightRangeEndScreenPosition: new Vector2(180f, 200f),
-            deadzoneDiameterPixels: 40f);
+            deadzoneDiameterPixels: 40f,
+            leftRangeEndAlphaMultiplier: 0f,
+            rightRangeEndAlphaMultiplier: 0f);
     }
 
     private static void AssertAnimationFrame(AnimationFrame frame, float expectedAlpha, float expectedScale)
@@ -200,7 +202,7 @@ public sealed class RunSteeringAffordancePresenterTests
         }
     }
 
-    private sealed class FakePresentationView : IRunSteeringAffordancePresentationView
+    private sealed class FakePresentationView : IRunSteeringAffordanceView
     {
         public List<RunSteeringAffordancePresentationState> PresentedStates { get; } = new();
         public List<AnimationFrame> AnimationFrames { get; } = new();

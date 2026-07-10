@@ -382,8 +382,8 @@ public sealed class GameplayLifetimeScopeTests
         var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
         var runSteeringAffordanceLayout = container.Resolve<IRunSteeringAffordanceLayout>();
+        var runSteeringAffordancePresenter = container.Resolve<IRunSteeringAffordancePresenter>();
         var runSteeringAffordanceView = container.Resolve<IRunSteeringAffordanceView>();
-        var runSteeringAffordancePresentationView = container.Resolve<IRunSteeringAffordancePresentationView>();
         var runSteeringAffordanceTuning = container.Resolve<IRunSteeringAffordanceTuning>();
         var runSteeringPointerPressGuard = container.Resolve<IRunSteeringPointerPressGuard>();
         var runSteeringFrameSource = container.Resolve<IRunSteeringFrameSource>();
@@ -503,10 +503,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(steeringConfig, Is.Not.Null);
         Assert.That(runSteeringGesture, Is.Not.Null);
         Assert.That(runSteeringAffordanceLayout, Is.TypeOf<RunSteeringAffordanceLayout>());
-        Assert.That(runSteeringAffordanceView, Is.Not.InstanceOf<MonoBehaviour>());
-        Assert.That(runSteeringAffordanceView, Is.InstanceOf<ITickable>());
-        Assert.That(tickables, Has.Some.SameAs(runSteeringAffordanceView));
-        Assert.That(runSteeringAffordancePresentationView, Is.SameAs(fixture.RunSteeringAffordanceView));
+        Assert.That(runSteeringAffordancePresenter, Is.Not.InstanceOf<MonoBehaviour>());
+        Assert.That(runSteeringAffordancePresenter, Is.InstanceOf<ITickable>());
+        Assert.That(tickables, Has.Some.SameAs(runSteeringAffordancePresenter));
+        Assert.That(runSteeringAffordanceView, Is.SameAs(fixture.RunSteeringAffordanceView));
         Assert.That(runSteeringAffordanceTuning, Is.SameAs(fixture.RunSteeringAffordanceView));
         Assert.That(runSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(runSteeringFrameSource, Is.Not.Null);

@@ -84,12 +84,12 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         ActivateSteering();
         _input.Press(1, new Vector2(500f, 100f));
         _input.Move(1, new Vector2(620f, 900f));
-        var resetCallCountBeforeLeavingRunning = _runSteeringAffordanceView.ResetCallCount;
+        var resetCallCountBeforeLeavingRunning = _runSteeringAffordancePresenter.ResetCallCount;
 
         _stateService.ChangeTo(_preLaunchStateId);
 
-        Assert.That(_runSteeringAffordanceView.ResetCallCount, Is.EqualTo(resetCallCountBeforeLeavingRunning + 1));
-        Assert.That(_runSteeringAffordanceView.HideStates, Is.Empty);
+        Assert.That(_runSteeringAffordancePresenter.ResetCallCount, Is.EqualTo(resetCallCountBeforeLeavingRunning + 1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Is.Empty);
     }
 
     [Test]
@@ -735,8 +735,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         AssertVector2(snapshot.CurrentScreenPosition, new Vector2(500f, 100f));
         Assert.That(snapshot.CapturedRangePixels, Is.EqualTo(100f).Within(0.0001f));
         Assert.That(snapshot.CapturedDeadzoneFraction, Is.EqualTo(0.25f).Within(0.0001f));
-        Assert.That(_runSteeringAffordanceView.ShowStates, Has.Count.EqualTo(1));
-        Assert.That(_runSteeringAffordanceView.ShowStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+        Assert.That(_runSteeringAffordancePresenter.ShowStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.ShowStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -749,8 +749,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
         AssertVector2(_runSteeringAffordanceLayout.Snapshots[1].CurrentScreenPosition, new Vector2(650f, 900f));
-        Assert.That(_runSteeringAffordanceView.UpdateStates, Has.Count.EqualTo(1));
-        Assert.That(_runSteeringAffordanceView.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -764,8 +764,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
         AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(650f, 900f));
-        Assert.That(_runSteeringAffordanceView.HideStates, Has.Count.EqualTo(1));
-        Assert.That(_runSteeringAffordanceView.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -779,8 +779,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(3));
         AssertVector2(_runSteeringAffordanceLayout.Snapshots[2].CurrentScreenPosition, new Vector2(350f, -200f));
-        Assert.That(_runSteeringAffordanceView.HideStates, Has.Count.EqualTo(1));
-        Assert.That(_runSteeringAffordanceView.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+        Assert.That(_runSteeringAffordancePresenter.HideStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.HideStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]
@@ -795,8 +795,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
         Assert.That(_runSteeringAffordanceLayout.Snapshots, Is.Empty);
-        Assert.That(_runSteeringAffordanceView.ShowStates, Is.Empty);
-        Assert.That(_runSteeringAffordanceView.UpdateStates, Is.Empty);
+        Assert.That(_runSteeringAffordancePresenter.ShowStates, Is.Empty);
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Is.Empty);
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
     }
 
@@ -811,8 +811,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_runSteeringPointerPressGuard.Requests, Has.Count.EqualTo(1));
         Assert.That(_runSteeringAffordanceLayout.Snapshots, Has.Count.EqualTo(2));
-        Assert.That(_runSteeringAffordanceView.UpdateStates, Has.Count.EqualTo(1));
-        Assert.That(_runSteeringAffordanceView.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates, Has.Count.EqualTo(1));
+        Assert.That(_runSteeringAffordancePresenter.UpdateStates[0], Is.EqualTo(_runSteeringAffordanceLayout.Result));
     }
 
     [Test]

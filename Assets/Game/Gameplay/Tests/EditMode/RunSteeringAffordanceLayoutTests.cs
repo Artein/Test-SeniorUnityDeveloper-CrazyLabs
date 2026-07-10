@@ -9,6 +9,7 @@ public sealed class RunSteeringAffordanceLayoutTests
     public void Create_InactiveSnapshot_ReturnsHiddenState()
     {
         var layout = new RunSteeringAffordanceLayout();
+
         var snapshot = new RunSteeringAffordanceSnapshot(
             isActive: false,
             pointerId: 0,
@@ -20,12 +21,15 @@ public sealed class RunSteeringAffordanceLayoutTests
         var state = layout.Create(snapshot);
 
         Assert.That(state.IsVisible, Is.False);
+        Assert.That(state.LeftRangeEndAlphaMultiplier, Is.Zero);
+        Assert.That(state.RightRangeEndAlphaMultiplier, Is.Zero);
     }
 
     [Test]
     public void Create_ActiveSnapshot_PlacesKnobAtOriginAndRangeEndsAroundOrigin()
     {
         var layout = new RunSteeringAffordanceLayout();
+
         var snapshot = new RunSteeringAffordanceSnapshot(
             isActive: true,
             pointerId: 1,
@@ -42,12 +46,72 @@ public sealed class RunSteeringAffordanceLayoutTests
         Assert.That(state.LeftRangeEndScreenPosition, Is.EqualTo(new Vector2(20f, 200f)));
         Assert.That(state.RightRangeEndScreenPosition, Is.EqualTo(new Vector2(180f, 200f)));
         Assert.That(state.DeadzoneDiameterPixels, Is.EqualTo(40f));
+        Assert.That(state.LeftRangeEndAlphaMultiplier, Is.Zero);
+        Assert.That(state.RightRangeEndAlphaMultiplier, Is.Zero);
+    }
+
+    [Test]
+    public void Create_RightMovementInsideFadeRamp_FadesOnlyRightRangeEnd()
+    {
+        var layout = new RunSteeringAffordanceLayout();
+
+        var snapshot = new RunSteeringAffordanceSnapshot(
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(100f, 200f),
+            currentScreenPosition: new Vector2(120f, 200f),
+            capturedRangePixels: 80f,
+            capturedDeadzoneFraction: 0.25f);
+
+        var state = layout.Create(snapshot);
+
+        Assert.That(state.LeftRangeEndAlphaMultiplier, Is.Zero);
+        Assert.That(state.RightRangeEndAlphaMultiplier, Is.GreaterThan(0f).And.LessThan(1f));
+    }
+
+    [Test]
+    public void Create_FullLeftMovement_ShowsOnlyLeftRangeEndAtFullOpacity()
+    {
+        var layout = new RunSteeringAffordanceLayout();
+
+        var snapshot = new RunSteeringAffordanceSnapshot(
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(100f, 200f),
+            currentScreenPosition: new Vector2(20f, 200f),
+            capturedRangePixels: 80f,
+            capturedDeadzoneFraction: 0.25f);
+
+        var state = layout.Create(snapshot);
+
+        Assert.That(state.LeftRangeEndAlphaMultiplier, Is.EqualTo(1f));
+        Assert.That(state.RightRangeEndAlphaMultiplier, Is.Zero);
+    }
+
+    [Test]
+    public void Create_InvalidRange_HidesBothRangeEnds()
+    {
+        var layout = new RunSteeringAffordanceLayout();
+
+        var snapshot = new RunSteeringAffordanceSnapshot(
+            isActive: true,
+            pointerId: 1,
+            originScreenPosition: new Vector2(100f, 200f),
+            currentScreenPosition: new Vector2(20f, 200f),
+            capturedRangePixels: -80f,
+            capturedDeadzoneFraction: 0.25f);
+
+        var state = layout.Create(snapshot);
+
+        Assert.That(state.LeftRangeEndAlphaMultiplier, Is.Zero);
+        Assert.That(state.RightRangeEndAlphaMultiplier, Is.Zero);
     }
 
     [Test]
     public void Create_ActiveSnapshot_ClampsKnobHorizontallyAndIgnoresVerticalMovement()
     {
         var layout = new RunSteeringAffordanceLayout();
+
         var snapshot = new RunSteeringAffordanceSnapshot(
             isActive: true,
             pointerId: 1,
@@ -65,6 +129,7 @@ public sealed class RunSteeringAffordanceLayoutTests
     public void Create_ActiveSnapshot_PreservesEdgeOriginAndPhysicalRange()
     {
         var layout = new RunSteeringAffordanceLayout();
+
         var snapshot = new RunSteeringAffordanceSnapshot(
             isActive: true,
             pointerId: 1,

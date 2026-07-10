@@ -138,8 +138,8 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var resolvedFinishPresentationView = lifetimeScope.Container.Resolve<IFinishPresentationView>();
         var resolvedPullHintView = lifetimeScope.Container.Resolve<IPullHintView>();
         var resolvedPullHintTuning = lifetimeScope.Container.Resolve<IPullHintTuning>();
+        var resolvedRunSteeringAffordancePresenter = lifetimeScope.Container.Resolve<IRunSteeringAffordancePresenter>();
         var resolvedRunSteeringAffordanceView = lifetimeScope.Container.Resolve<IRunSteeringAffordanceView>();
-        var resolvedRunSteeringAffordancePresentationView = lifetimeScope.Container.Resolve<IRunSteeringAffordancePresentationView>();
         var resolvedRunSteeringAffordanceTuning = lifetimeScope.Container.Resolve<IRunSteeringAffordanceTuning>();
         var resolvedRunSteeringPointerPressGuard = lifetimeScope.Container.Resolve<IRunSteeringPointerPressGuard>();
         var resolvedCharacterPresentationModeClassifier = lifetimeScope.Container.Resolve<ICharacterPresentationModeClassifier>();
@@ -283,9 +283,9 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(resolvedFinishPresentationView, Is.SameAs(finishPresentationView));
         Assert.That(resolvedPullHintView, Is.SameAs(pullHintView));
         Assert.That(resolvedPullHintTuning, Is.SameAs(pullHintView));
-        Assert.That(resolvedRunSteeringAffordanceView, Is.TypeOf<RunSteeringAffordancePresenter>());
-        Assert.That(resolvedRunSteeringAffordanceView, Is.InstanceOf<ITickable>());
-        Assert.That(resolvedRunSteeringAffordancePresentationView, Is.SameAs(runSteeringAffordanceView));
+        Assert.That(resolvedRunSteeringAffordancePresenter, Is.TypeOf<RunSteeringAffordancePresenter>());
+        Assert.That(resolvedRunSteeringAffordancePresenter, Is.InstanceOf<ITickable>());
+        Assert.That(resolvedRunSteeringAffordanceView, Is.SameAs(runSteeringAffordanceView));
         Assert.That(resolvedRunSteeringAffordanceTuning, Is.SameAs(runSteeringAffordanceView));
         Assert.That(resolvedRunSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(resolvedCharacterPresentationModeClassifier, Is.Not.Null);
@@ -474,7 +474,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             capturedRangePixels: 100f,
             capturedDeadzoneFraction: 0.25f));
 
-        resolvedRunSteeringAffordanceView.Show(affordanceStartState);
+        resolvedRunSteeringAffordancePresenter.Show(affordanceStartState);
         Assert.That(runSteeringAffordance.activeSelf, Is.True);
         Assert.That(canvas.scaleFactor, Is.GreaterThan(0f));
         Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f / canvas.scaleFactor).Within(0.001f));
@@ -487,10 +487,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
             capturedRangePixels: 100f,
             capturedDeadzoneFraction: 0.25f));
 
-        resolvedRunSteeringAffordanceView.Update(affordanceMovedState);
+        resolvedRunSteeringAffordancePresenter.Update(affordanceMovedState);
         Assert.That(runSteeringKnobRectTransform.anchoredPosition.x, Is.EqualTo(600f / canvas.scaleFactor).Within(0.001f));
         Assert.That(runSteeringKnobRectTransform.anchoredPosition.y, Is.EqualTo(700f / canvas.scaleFactor).Within(0.001f));
-        resolvedRunSteeringAffordanceView.Reset();
+        resolvedRunSteeringAffordancePresenter.Reset();
         Assert.That(runSteeringAffordance.activeSelf, Is.False);
         Assert.That(runSteeringAffordanceCanvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
         Assert.That(touchIndicator.transform.IsChildOf(canvas.transform), Is.True);

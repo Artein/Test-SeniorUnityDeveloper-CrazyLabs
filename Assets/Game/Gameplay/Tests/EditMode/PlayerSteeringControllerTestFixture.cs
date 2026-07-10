@@ -29,7 +29,7 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeScreen _screen;
     protected FakeRunSteeringFrameSource _steeringFrameSource;
     protected FakeRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
-    protected FakeRunSteeringAffordanceView _runSteeringAffordanceView;
+    protected FakeRunSteeringAffordancePresenter _runSteeringAffordancePresenter;
     protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
@@ -95,7 +95,7 @@ public abstract class PlayerSteeringControllerTestFixture
         _steeringFrameSource = new FakeRunSteeringFrameSource();
         _runSteeringGesture = new RunSteeringGesture(_config);
         _runSteeringAffordanceLayout = new FakeRunSteeringAffordanceLayout();
-        _runSteeringAffordanceView = new FakeRunSteeringAffordanceView();
+        _runSteeringAffordancePresenter = new FakeRunSteeringAffordancePresenter();
         _runSteeringPointerPressGuard = new FakeRunSteeringPointerPressGuard();
         _controller = CreateController();
         ((IInitializable)_controller).Initialize();
@@ -245,7 +245,7 @@ public abstract class PlayerSteeringControllerTestFixture
     {
         return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
             _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture,
-            _runSteeringAffordanceLayout, _runSteeringAffordanceView, _runSteeringPointerPressGuard, _runningStateId,
+            _runSteeringAffordanceLayout, _runSteeringAffordancePresenter, _runSteeringPointerPressGuard, _runningStateId,
             _playerSteeringResponsivenessStatId);
     }
 
@@ -518,7 +518,9 @@ public abstract class PlayerSteeringControllerTestFixture
                 new Vector2(21f, 22f),
                 new Vector2(31f, 32f),
                 new Vector2(41f, 42f),
-                51f);
+                51f,
+                0f,
+                0f);
         }
 
         internal List<RunSteeringAffordanceSnapshot> Snapshots { get; } = new();
@@ -531,24 +533,24 @@ public abstract class PlayerSteeringControllerTestFixture
         }
     }
 
-    protected sealed class FakeRunSteeringAffordanceView : IRunSteeringAffordanceView
+    protected sealed class FakeRunSteeringAffordancePresenter : IRunSteeringAffordancePresenter
     {
         internal List<RunSteeringAffordancePresentationState> ShowStates { get; } = new();
         internal List<RunSteeringAffordancePresentationState> UpdateStates { get; } = new();
         internal List<RunSteeringAffordancePresentationState> HideStates { get; } = new();
         public int ResetCallCount { get; private set; }
 
-        void IRunSteeringAffordanceView.Show(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Show(RunSteeringAffordancePresentationState state)
         {
             ShowStates.Add(state);
         }
 
-        void IRunSteeringAffordanceView.Update(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Update(RunSteeringAffordancePresentationState state)
         {
             UpdateStates.Add(state);
         }
 
-        void IRunSteeringAffordanceView.Hide(RunSteeringAffordancePresentationState state)
+        void IRunSteeringAffordancePresenter.Hide(RunSteeringAffordancePresentationState state)
         {
             HideStates.Add(state);
         }

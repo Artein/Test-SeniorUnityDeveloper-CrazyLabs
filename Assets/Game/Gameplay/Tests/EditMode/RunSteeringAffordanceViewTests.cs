@@ -83,7 +83,7 @@ public sealed class RunSteeringAffordanceViewTests
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
 
-        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
+        ((IRunSteeringAffordanceView)view).Present(CreateState(
             knob: new Vector2(180f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
@@ -95,7 +95,7 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
-    public void Present_OriginState_HidesBothRangeEnds()
+    public void Present_ExplicitRangeEndAlphaMultipliers_AppliesEachMultiplierToTint()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -115,14 +115,16 @@ public sealed class RunSteeringAffordanceViewTests
             knob: new Vector2(100f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
-            deadzoneDiameter: 40f));
+            deadzoneDiameter: 40f,
+            leftRangeEndAlphaMultiplier: 0.25f,
+            rightRangeEndAlphaMultiplier: 0.75f));
 
-        AssertImageAlpha(leftRangeEndImage, 0f);
-        AssertImageAlpha(rightRangeEndImage, 0f);
+        AssertImageAlpha(leftRangeEndImage, RangeEndTintAlpha * 0.25f);
+        AssertImageAlpha(rightRangeEndImage, RangeEndTintAlpha * 0.75f);
     }
 
     [Test]
-    public void Present_RightMovement_FadesOnlyRightRangeEndDuringRamp()
+    public void Present_OutOfRangeAlphaMultipliers_ClampsBeforeApplyingTint()
     {
         var view = CreateView(
             showSeconds: 0f,
@@ -139,40 +141,15 @@ public sealed class RunSteeringAffordanceViewTests
             out _);
 
         Present(view, CreateState(
-            knob: new Vector2(120f, 200f),
+            knob: new Vector2(100f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
-            deadzoneDiameter: 40f));
+            deadzoneDiameter: 40f,
+            leftRangeEndAlphaMultiplier: -1f,
+            rightRangeEndAlphaMultiplier: 2f));
 
         AssertImageAlpha(leftRangeEndImage, 0f);
-        Assert.That(rightRangeEndImage.color.a, Is.GreaterThan(0f).And.LessThan(RangeEndTintAlpha));
-    }
-
-    [Test]
-    public void Present_FullLeftMovement_ShowsLeftRangeEndAtMaxAlpha()
-    {
-        var view = CreateView(
-            showSeconds: 0f,
-            hideSeconds: 0f,
-            out _,
-            out _,
-            out _,
-            out _,
-            out _,
-            out var leftRangeEndImage,
-            out _,
-            out var rightRangeEndImage,
-            out _,
-            out _);
-
-        Present(view, CreateState(
-            knob: new Vector2(20f, 200f),
-            leftRangeEnd: new Vector2(20f, 200f),
-            rightRangeEnd: new Vector2(180f, 200f),
-            deadzoneDiameter: 40f));
-
-        AssertImageAlpha(leftRangeEndImage, RangeEndTintAlpha);
-        AssertImageAlpha(rightRangeEndImage, 0f);
+        AssertImageAlpha(rightRangeEndImage, RangeEndTintAlpha);
     }
 
     [Test]
@@ -241,13 +218,13 @@ public sealed class RunSteeringAffordanceViewTests
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
 
-        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
+        ((IRunSteeringAffordanceView)view).Present(CreateState(
             knob: new Vector2(180f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
-        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(0f, 0.86f);
-        ((IRunSteeringAffordancePresentationView)view).Deactivate();
+        ((IRunSteeringAffordanceView)view).ApplyAnimation(0f, 0.86f);
+        ((IRunSteeringAffordanceView)view).Deactivate();
 
         Assert.That(root.gameObject.activeSelf, Is.False);
         Assert.That(canvasGroup.alpha, Is.EqualTo(0f).Within(0.001f));
@@ -271,12 +248,12 @@ public sealed class RunSteeringAffordanceViewTests
             out _,
             out _);
 
-        ((IRunSteeringAffordancePresentationView)view).Present(CreateState(
+        ((IRunSteeringAffordanceView)view).Present(CreateState(
             knob: new Vector2(150f, 200f),
             leftRangeEnd: new Vector2(20f, 200f),
             rightRangeEnd: new Vector2(180f, 200f),
             deadzoneDiameter: 40f));
-        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(1f, 0.86f);
+        ((IRunSteeringAffordanceView)view).ApplyAnimation(1f, 0.86f);
 
         Assert.That(root.gameObject.activeSelf, Is.True);
         Assert.That(canvasGroup.alpha, Is.EqualTo(1f).Within(0.001f));
@@ -321,8 +298,8 @@ public sealed class RunSteeringAffordanceViewTests
         Assert.That(
             () =>
             {
-                ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(0f, 0.86f);
-                ((IRunSteeringAffordancePresentationView)view).Deactivate();
+                ((IRunSteeringAffordanceView)view).ApplyAnimation(0f, 0.86f);
+                ((IRunSteeringAffordanceView)view).Deactivate();
             },
             Throws.Nothing);
     }
@@ -380,7 +357,9 @@ public sealed class RunSteeringAffordanceViewTests
         Vector2 knob,
         Vector2 leftRangeEnd,
         Vector2 rightRangeEnd,
-        float deadzoneDiameter)
+        float deadzoneDiameter,
+        float leftRangeEndAlphaMultiplier = 0f,
+        float rightRangeEndAlphaMultiplier = 0f)
     {
         return new RunSteeringAffordancePresentationState(
             isVisible: true,
@@ -388,15 +367,17 @@ public sealed class RunSteeringAffordanceViewTests
             knob,
             leftRangeEnd,
             rightRangeEnd,
-            deadzoneDiameter);
+            deadzoneDiameter,
+            leftRangeEndAlphaMultiplier,
+            rightRangeEndAlphaMultiplier);
     }
 
     private static void Present(
         RunSteeringAffordanceView view,
         RunSteeringAffordancePresentationState state)
     {
-        ((IRunSteeringAffordancePresentationView)view).Present(state);
-        ((IRunSteeringAffordancePresentationView)view).ApplyAnimation(1f, 1f);
+        ((IRunSteeringAffordanceView)view).Present(state);
+        ((IRunSteeringAffordanceView)view).ApplyAnimation(1f, 1f);
     }
 
     private T Track<T>(T value)

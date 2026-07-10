@@ -115,7 +115,7 @@ namespace Game.Gameplay
             builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
-            builder.RegisterInstance<IRunSteeringAffordancePresentationView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
+            builder.RegisterInstance<IRunSteeringAffordanceView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
             builder.RegisterEntryPoint<RunSteeringAffordancePresenter>();
             builder.RegisterInstance<IRunPreparationView>(_runPreparationView);
             builder.RegisterInstance<IRunEndedView>(_runEndedView);
