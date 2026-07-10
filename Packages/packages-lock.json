@@ -8,7 +8,7 @@
         "com.unity.nuget.newtonsoft-json": "3.2.1",
         "com.unity.test-framework": "1.6.0"
       },
-      "hash": "9ab9eb8b862e94be7c84403cfe86dce33f0bfbbd"
+      "hash": "7fbf027dafdd0b3b44ce36658e52a7d52b529259"
     },
     "com.eflatun.scenereference": {
       "version": "https://github.com/starikcetin/Eflatun.SceneReference.git#5.0.0",
@@ -253,11 +253,11 @@
       "hash": "6e6972730ce316fab2408f20e7a160aec070e48b"
     },
     "today.comes.saintsfield": {
-      "version": "https://github.com/TylerTemp/SaintsField.git#5.21.0",
+      "version": "https://github.com/TylerTemp/SaintsField.git#5.22.3",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "b0475479fd67118d6348021cedc1b7642b2f2201"
+      "hash": "3b91968ddd61d255e9e643ac52d25c3aca5a8418"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",
