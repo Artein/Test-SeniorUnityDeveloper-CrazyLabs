@@ -14,22 +14,22 @@ This slice should make the feature demoable in the actual game scene: the serial
 
 ## Acceptance criteria
 
-- [ ] Gameplay scene contains exactly one authored Run Steering Affordance view when the feature is enabled.
+- [ ] Gameplay scene contains exactly one authored Run Steering Affordance view.
 - [ ] The view is wired through existing composition conventions without runtime hierarchy creation.
 - [ ] The view has serialized references for root, knob, left/right endpoint hints, deadzone hint, CanvasGroup, and generated sprites.
 - [ ] The view starts hidden or fully transparent before an active Running steering gesture.
 - [ ] Press/move/release during Running shows, updates, and hides the affordance in the Gameplay scene.
 - [ ] Presses outside Running do not show the affordance.
 - [ ] Pre-Launch Pull behavior is unchanged.
-- [ ] Missing or disabled presentation still does not prevent Run Steering Control from functioning in non-authored contexts.
-- [ ] Scene validation reports broken authored references clearly.
+- [ ] Missing production view authoring fails lifetime-scope validation before gameplay starts.
+- [ ] Scene validation reports missing view authoring and broken required child references clearly.
 - [ ] No package manifest, save data, Addressables, input action asset, haptic, audio, or analytics changes are introduced.
 
 ## Verification
 
 - EditMode tests:
-  - Composition registration resolves the affordance view or safe fallback according to the chosen policy.
-  - Lifetime/scope validation reports missing required references on an authored view.
+  - Composition registration resolves the presenter command contract and serialized view presentation/tuning contracts.
+  - Lifetime/scope validation rejects a missing view and reports missing required child references on an authored view.
   - Existing steering controller and gesture regression tests still pass.
 - PlayMode tests:
   - Gameplay scene contains the authored affordance view.
@@ -53,4 +53,3 @@ This slice should make the feature demoable in the actual game scene: the serial
 - Range-End And Deadzone Hint Tracer
 - Non-Positional Animation And Serialized Styling
 - Interactive UI Priority And Raycast Guardrails
-

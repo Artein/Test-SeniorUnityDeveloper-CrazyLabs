@@ -273,7 +273,8 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - **Run Steering Affordance** may show horizontal touch movement inside **Run Steering Deadzone** while **Run Steering Control** remains neutral.
 - **Run Steering Affordance** observes **Run Steering Control** input state; it is not an input-emitting UI control.
 - **Run Steering Affordance** is not interactive UI and does not consume touches or block **Run Steering Control**.
-- **Run Steering Control** does not depend on **Run Steering Affordance** being present.
+- **Run Steering Control** logic does not derive steering values from **Run Steering Affordance** presentation output.
+- Every production `GameplayLifetimeScope` requires a serialized **Run Steering Affordance** view; missing or invalid authoring fails composition validation before gameplay starts.
 - **Run Steering Control** may begin from any touch during **Running**.
 - **Run Steering Control** does not begin from a touch that begins on interactive UI during **Running**.
 - **Run Steering Affordance** does not introduce a left-side or screen-region start requirement for **Run Steering Control**.
@@ -507,8 +508,8 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 > **Dev:** "Since the **Run Steering Affordance** is serialized UI, should its graphics block touches like other UI?"
 > **Domain expert:** "No - it is not interactive UI; it presents **Run Steering Control** without consuming touches."
 
-> **Dev:** "If the **Run Steering Affordance** view is missing, should **Run Steering Control** stop working?"
-> **Domain expert:** "No - **Run Steering Control** stays usable; the missing affordance is a presentation/setup issue."
+> **Dev:** "If the **Run Steering Affordance** view is missing, should production gameplay compose with steering only?"
+> **Domain expert:** "No - the serialized view is required production authoring, so composition fails validation before gameplay starts. Isolated steering tests use injected fakes instead of scene UI."
 
 > **Dev:** "Should the **Run Steering Affordance** require touches to start on the left side of the screen?"
 > **Domain expert:** "No - **Run Steering Control** may begin from any touch during **Running**; the affordance appears from that touch."
@@ -660,7 +661,7 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - "Fixed joystick base" conflicts with **Run Steering Origin** unless **Run Steering Control** semantics are explicitly changed.
 - "UI joystick control" conflicts with **Run Steering Affordance** if it emits gameplay input instead of presenting **Run Steering Control** state.
 - "Raycast-blocking joystick UI" conflicts with **Run Steering Affordance** because the affordance is not interactive UI and does not consume touches.
-- "Missing joystick view means no steering" conflicts with **Run Steering Control** because steering does not depend on **Run Steering Affordance** being present.
+- "Missing joystick view is a supported steering-only production scene" conflicts with required `GameplayLifetimeScope` composition; missing view authoring is a validation error even though steering values do not derive from presentation output.
 - "Joystick zone" and "left-side joystick" conflict with **Run Steering Control** unless touch eligibility is explicitly changed.
 - "Idle joystick" and "persistent joystick" conflict with **Run Steering Affordance** unless its active-gesture lifecycle is explicitly changed.
 - "Circular joystick", "2D knob", and "vertical joystick movement" conflict with **Run Steering Affordance** unless **Run Steering Control** gains vertical steering meaning.

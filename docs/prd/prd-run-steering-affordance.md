@@ -24,7 +24,7 @@ The affordance is presentation-only:
 - It does not own input, poll input, receive interactive UI events, or consume raycasts.
 - It does not change requested steering values.
 - It does not add active smoothing or spring lag to the knob position.
-- If the affordance view is missing or misconfigured, Running steering continues to work and the issue is reported as a setup/presentation problem.
+- Run Steering Control remains logically independent from presentation, but every production Gameplay scene must provide a valid serialized affordance view; missing or invalid authoring fails composition validation before gameplay starts.
 
 The UI hierarchy must be authored and serialized in the Gameplay scene or a prefab instance. The implementation must not create the joystick UI hierarchy at runtime. Runtime code may enable, hide, position, tint, scale, and animate already-authored serialized elements.
 
@@ -64,7 +64,7 @@ Runtime assemblies and asmdefs:
 
 Test assemblies and asmdefs:
 
-- Gameplay EditMode tests cover pure layout/state calculation, gesture snapshot data, controller-to-affordance coordination, and missing-view safety.
+- Gameplay EditMode tests cover pure layout/state calculation, gesture snapshot data, controller-to-presenter coordination with fakes, and required-view composition validation.
 - Gameplay PlayMode tests cover serialized scene/prefab composition, sprite assignment, raycast transparency, and view registration where EditMode cannot cover Unity scene behavior.
 - Existing steering and slingshot tests remain the regression safety net for unchanged control semantics.
 
@@ -76,7 +76,7 @@ Editor assemblies, windows, inspectors, importers, or menu items:
 
 Scenes, prefabs, ScriptableObjects, package manifests, or ProjectSettings:
 
-- The Gameplay scene gets a serialized Run Steering Affordance view reference through the existing scene composition style.
+- The Gameplay scene requires a serialized Run Steering Affordance view reference through the existing scene composition style.
 - The affordance hierarchy may live as a prefab instance or directly authored scene hierarchy, but all required RectTransforms, Images, CanvasGroup, and sprite references must be serialized.
 - Existing Player Steering Config remains the source for Run Steering Range, Run Steering Deadzone, fallback DPI, and Run Steering Responsiveness.
 - Visual style and animation tuning live on the affordance view or a small serialized tuning object referenced by the view.
@@ -120,7 +120,7 @@ Package versioning, changelog, and installation/sync behavior:
 22. As a player, releasing my finger hides the affordance.
 23. As a player, touch cancellation hides the affordance.
 24. As a player, leaving Running hides the affordance even if a touch was active.
-25. As a player, steering continues to work if the affordance fails to render.
+25. As a player, the affordance does not alter Run Steering Control behavior after valid gameplay composition.
 26. As a player, the affordance does not block future interactive UI during Running.
 27. As a player, the affordance does not steal my steering touch by being an invisible UI button.
 28. As a designer, I can tune the affordance opacity without changing gameplay steering.
@@ -145,7 +145,7 @@ Package versioning, changelog, and installation/sync behavior:
 47. As a developer, I can keep layout math in plain C# where it can be EditMode tested.
 48. As a developer, I can use VContainer registration for existing serialized scene view instances.
 49. As a developer, I can avoid runtime hierarchy creation for the affordance UI.
-50. As a developer, I can make missing optional presentation fail softly while preserving control behavior.
+50. As a developer, I can make missing production affordance authoring fail composition with an actionable validation error.
 51. As a developer, I can keep missing required serialized child references visible through validation and tests.
 52. As a developer, I can make all visual Images raycast-transparent from code and from authored settings.
 53. As a developer, I can verify CanvasGroup raycast blocking is disabled.
@@ -171,7 +171,7 @@ Package versioning, changelog, and installation/sync behavior:
 73. As a tester, I can verify all affordance graphics have raycast targets disabled.
 74. As a tester, I can verify the serialized view has sprites assigned.
 75. As a tester, I can verify the generated PNGs import as sprites with alpha.
-76. As a tester, I can verify missing view setup does not break Run Steering Control.
+76. As a tester, I can verify missing production view authoring is rejected before gameplay starts.
 77. As a maintainer, I can understand from documentation that Run Steering Affordance is not Run Steering Control.
 78. As a maintainer, I can change visuals later without reopening the input model.
 79. As a maintainer, I can convert this PRD to independently grabbable implementation issues.
@@ -215,11 +215,11 @@ Package versioning, changelog, and installation/sync behavior:
 - Keep screen-to-canvas conversion in the view adapter or another Unity-facing adapter.
 - Keep pure layout decisions testable without a scene where practical.
 - Keep the MonoBehaviour view shallow: serialized references, Unity coordinate conversion, applying RectTransform/Image/CanvasGroup state, and validation.
-- Register serialized scene/prefab view instances through the existing composition style.
+- Register the required serialized scene/prefab view instance through the existing composition style.
 - Do not use dynamic scene searches for normal production composition.
-- Avoid mandatory presentation dependency if it would make missing affordance break steering.
-- If the project chooses optional affordance registration, use a null-object or optional interface pattern that keeps controller code simple.
-- If the project chooses mandatory scene reference validation, classify missing affordance as presentation setup debt and ensure steering control still has a fallback path in non-authored contexts.
+- Validate the required affordance view and its required child references before installing GameplayLifetimeScope dependencies.
+- Do not register a production null-object or no-op affordance fallback; it would hide invalid scene authoring.
+- Keep isolated controller and presenter tests independent from scene authoring by injecting fakes at their interface boundaries.
 - Validate that CanvasGroup blocksRaycasts is false.
 - Validate that CanvasGroup interactable is false.
 - Validate that every affordance Image has raycastTarget false.
@@ -239,7 +239,7 @@ Package versioning, changelog, and installation/sync behavior:
 
 Primary test level:
 
-- Use EditMode NUnit tests for pure layout, gesture snapshot exposure, controller coordination, and missing-view behavior.
+- Use EditMode NUnit tests for pure layout, gesture snapshot exposure, controller coordination with fakes, and required-view composition validation.
 - Use PlayMode tests for serialized scene/prefab wiring, Canvas/Image raycast settings, sprite assignment, and any Unity lifecycle behavior that cannot be covered deterministically in EditMode.
 - Run Unity compile before tests during implementation.
 
@@ -269,7 +269,7 @@ Controller/presenter tests should cover:
 - Release by non-active pointer does not hide active affordance.
 - Running exit hides affordance and resets presentation state.
 - Disposal hides affordance.
-- Missing affordance view does not throw and does not block requested steering.
+- Isolated controller and presenter tests use injected fakes and do not require authored Unity UI.
 - Affordance update uses the same captured range as the steering gesture.
 - Affordance update uses the same captured deadzone fraction as the steering gesture.
 - Requested steering values remain unchanged compared with existing Run Steering Control tests.
@@ -282,12 +282,12 @@ View tests should cover:
 - Applying a visible state positions knob, endpoints, and deadzone from the state.
 - Applying a visible state disables raycast targets on all images.
 - On validation/initialization disables CanvasGroup interaction and raycast blocking.
-- Missing optional visual references degrade according to the chosen view contract.
+- Disabled optional deadzone presentation does not require deadzone references; enabled presentation validates them.
 - Required serialized references report actionable validation errors.
 
 Scene/prefab PlayMode tests should cover:
 
-- Gameplay scene contains one authored Run Steering Affordance view if the feature is enabled in the scene.
+- Gameplay scene contains one authored Run Steering Affordance view.
 - The view is registered through composition consistently with other gameplay UI views.
 - Knob, endpoint, and deadzone sprites are assigned.
 - All affordance Images are raycast-transparent.
@@ -316,8 +316,8 @@ Manual QA should cover:
 - No new package dependency is required.
 - Binary generated PNGs are part of the change and should follow the repository's existing asset storage conventions.
 - Scene/prefab changes may create normal Unity YAML merge risk and should be kept focused.
-- Missing or disabled affordance presentation should not prevent the game from running or steering.
-- A misconfigured mandatory serialized view should be caught by validation/tests before release.
+- Missing or invalid affordance authoring makes production GameplayLifetimeScope composition invalid and is caught by validation/tests before release.
+- Run Steering Control logic remains testable without scene UI through injected interface fakes.
 - The feature should be compatible with future Running UI by preserving the rule that interactive UI can claim new touches and the affordance itself is raycast-transparent.
 - The feature should be compatible with future visual iteration because sprites, tint, opacity, scale, and timing are serialized presentation choices.
 
@@ -345,8 +345,8 @@ Manual QA should cover:
 - Assumption: the first implementation can use the existing Gameplay assembly and scene-level VContainer composition.
 - Assumption: the generated PNGs are first-pass art direction inputs, not final locked art.
 - Assumption: visual tuning values should be authored after seeing the sprites in the actual Gameplay Canvas.
-- Assumption: missing affordance view should be non-fatal for steering, while broken required references on an authored view should still be visible through validation.
-- Open decision for implementation: represent the affordance as an optional dependency, null-object view, or mandatory serialized view with a safe fallback in tests/non-authored contexts.
+- Resolved decision: every production GameplayLifetimeScope requires a valid serialized affordance view and fails fast when that authoring is missing or invalid.
+- Resolved decision: isolated controller and presenter tests use injected fakes; production composition does not register a null-object or no-op fallback.
 - Open decision for implementation: exact default fade, scale, color, and opacity values.
 - Open decision for implementation: whether endpoint and deadzone hints clip only, fade near edges, or use a simple alpha falloff when partially off-screen.
 - Open decision for implementation: whether the deadzone hint ships enabled by default after in-scene visual QA.

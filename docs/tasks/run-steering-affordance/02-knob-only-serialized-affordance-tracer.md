@@ -48,5 +48,4 @@ The knob should appear at the active Run Steering Origin, move horizontally from
 
 ## Blocked by
 
-- Affordance Snapshot And Optional View Contract
-
+- Affordance Snapshot And Presenter Contract
