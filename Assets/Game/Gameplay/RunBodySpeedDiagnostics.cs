@@ -16,10 +16,12 @@ namespace Game.Gameplay
         public float EffectiveSoftMaximumSpeed { get; }
         public float ForwardDownhillDegrees { get; }
         public float CourseForwardAlignment { get; }
-        public RunBodySpeedDecisionContributors Contributors { get; }
+        public RunBodySpeedDecisionContributors PolicyContributors { get; }
+        public RunBodySpeedDecisionContributors RequestedContributors { get; }
+        public float RequestedLowSpeedAssistVelocityDelta { get; }
         public float EffectiveLowSpeedAssistTargetSpeed { get; }
         public RunBodyLowSpeedAssistAttemptState LowSpeedAssistAttemptState { get; }
-        public bool IsLowSpeedAssistEligible { get; }
+        public bool MeetsLowSpeedAssistPolicyConditions { get; }
         public float RemainingRequestedLowSpeedAssistVelocityBudget { get; }
 
         public RunBodySpeedDiagnosticsSnapshot(
@@ -31,10 +33,12 @@ namespace Game.Gameplay
             float effectiveSoftMaximumSpeed,
             float forwardDownhillDegrees,
             float courseForwardAlignment,
-            RunBodySpeedDecisionContributors contributors,
+            RunBodySpeedDecisionContributors policyContributors,
+            RunBodySpeedDecisionContributors requestedContributors,
+            float requestedLowSpeedAssistVelocityDelta,
             float effectiveLowSpeedAssistTargetSpeed,
             RunBodyLowSpeedAssistAttemptState lowSpeedAssistAttemptState,
-            bool isLowSpeedAssistEligible,
+            bool meetsLowSpeedAssistPolicyConditions,
             float remainingRequestedLowSpeedAssistVelocityBudget)
         {
             State = state;
@@ -45,10 +49,12 @@ namespace Game.Gameplay
             EffectiveSoftMaximumSpeed = effectiveSoftMaximumSpeed;
             ForwardDownhillDegrees = forwardDownhillDegrees;
             CourseForwardAlignment = courseForwardAlignment;
-            Contributors = contributors;
+            PolicyContributors = policyContributors;
+            RequestedContributors = requestedContributors;
+            RequestedLowSpeedAssistVelocityDelta = requestedLowSpeedAssistVelocityDelta;
             EffectiveLowSpeedAssistTargetSpeed = effectiveLowSpeedAssistTargetSpeed;
             LowSpeedAssistAttemptState = lowSpeedAssistAttemptState;
-            IsLowSpeedAssistEligible = isLowSpeedAssistEligible;
+            MeetsLowSpeedAssistPolicyConditions = meetsLowSpeedAssistPolicyConditions;
             RemainingRequestedLowSpeedAssistVelocityBudget = remainingRequestedLowSpeedAssistVelocityBudget;
         }
     }

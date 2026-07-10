@@ -194,7 +194,8 @@ public sealed class RunBodySpeedModelPlayModeTests
         Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(20f));
         Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(30f));
         Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(1f).Within(0.0001f));
-        Assert.That(snapshot.Contributors, Is.EqualTo(expectedContributors));
+        Assert.That(snapshot.PolicyContributors, Is.EqualTo(expectedContributors));
+        Assert.That(snapshot.RequestedContributors, Is.EqualTo(expectedContributors));
 
         Assert.That(
             snapshot.LowSpeedAssistAttemptState,
@@ -213,10 +214,18 @@ public sealed class RunBodySpeedModelPlayModeTests
             Vector3.forward * 2f);
 
         var snapshot = scenario.CurrentSpeedDiagnostics;
-        Assert.That(snapshot.Contributors, Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+
+        Assert.That(
+            snapshot.PolicyContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+
+        Assert.That(
+            snapshot.RequestedContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
         Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
         Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Active));
-        Assert.That(snapshot.IsLowSpeedAssistEligible, Is.True);
+        Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
 
         Assert.That(
             snapshot.RemainingRequestedLowSpeedAssistVelocityBudget,

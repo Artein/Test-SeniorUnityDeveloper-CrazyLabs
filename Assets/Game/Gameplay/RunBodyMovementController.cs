@@ -34,6 +34,7 @@ namespace Game.Gameplay
         private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
         private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly RunBodyLowSpeedAssistAttempt _lowSpeedAssistAttempt = new();
+        private readonly RunBodySpeedResolver _speedResolver;
         private readonly float _minimumDirectionSqrMagnitude = 0.000001f;
         private readonly float _surfaceNormalLiftEpsilon = 0.0001f;
 
@@ -85,6 +86,7 @@ namespace Game.Gameplay
             _steeringConfig = steeringConfig ?? throw new ArgumentNullException(nameof(steeringConfig));
             _speedEnvelopeValidator = speedEnvelopeValidator ?? throw new ArgumentNullException(nameof(speedEnvelopeValidator));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            _speedResolver = new RunBodySpeedResolver(_lowSpeedAssistAttempt);
 
             _playerMaxSpeedStatId = playerMaxSpeedStatId != null
                 ? playerMaxSpeedStatId
@@ -152,7 +154,8 @@ namespace Game.Gameplay
                 speedDecision,
                 fixedDeltaTime,
                 out var sampledTangentSpeed,
-                out var hasUsableTangentDirection);
+                out var hasUsableTangentDirection,
+                out var speedResolution);
 
             _movementTarget.ApplyTargetState(targetState);
 
@@ -160,6 +163,7 @@ namespace Game.Gameplay
                 surfaceContext,
                 speedContext,
                 speedDecision,
+                speedResolution,
                 sampledTangentSpeed,
                 hasUsableTangentDirection);
         }
@@ -232,7 +236,8 @@ namespace Game.Gameplay
             RunBodySpeedDecision speedDecision,
             float fixedDeltaTime,
             out float sampledTangentSpeed,
-            out bool hasUsableTangentDirection)
+            out bool hasUsableTangentDirection,
+            out RunBodySpeedResolution speedResolution)
         {
             var movementPlaneNormal = ResolveMovementPlaneNormal(
                 surfaceContext,
@@ -254,7 +259,7 @@ namespace Game.Gameplay
                     fixedDeltaTime,
                     inputState.IsGestureActive));
 
-            var tangentSpeed = ResolveTangentSpeed(
+            speedResolution = _speedResolver.Resolve(
                 sampledTangentSpeed,
                 speedContext.HasValidGroundedRunSurface,
                 hasUsableTangentDirection,
@@ -279,8 +284,8 @@ namespace Game.Gameplay
                 }
             }
 
-            var finalTangentVelocity = hasFinalDirection && float.IsFinite(tangentSpeed)
-                ? finalTangentDirection * tangentSpeed
+            var finalTangentVelocity = hasFinalDirection && float.IsFinite(speedResolution.ResolvedTangentSpeed)
+                ? finalTangentDirection * speedResolution.ResolvedTangentSpeed
                 : Vector3.zero;
             var finalVelocity = finalTangentVelocity + normalVelocity;
             var rotation = Quaternion.identity;
@@ -299,10 +304,11 @@ namespace Game.Gameplay
             RunSurfaceContext surfaceContext,
             RunBodySpeedContext speedContext,
             RunBodySpeedDecision speedDecision,
+            RunBodySpeedResolution speedResolution,
             float sampledTangentSpeed,
             bool hasUsableTangentDirection)
         {
-            var assistAttempt = _lowSpeedAssistAttempt.Snapshot;
+            var assistAttempt = speedResolution.LowSpeedAssistAttempt;
 
             _speedDiagnosticsSink.Publish(new RunBodySpeedDiagnosticsSnapshot(
                 RunBodySpeedDiagnosticsState.Active,
@@ -313,8 +319,10 @@ namespace Game.Gameplay
                 speedDecision.SoftMaximumSpeed,
                 speedContext.ForwardDownhillDegrees,
                 speedContext.CourseForwardAlignment,
-                speedDecision.Contributors,
-                speedDecision.LowSpeedAssistTargetSpeed,
+                speedResolution.PolicyContributors,
+                speedResolution.RequestedContributors,
+                speedResolution.RequestedLowSpeedAssistVelocityDelta,
+                assistAttempt.EffectiveTargetSpeed,
                 assistAttempt.State,
                 assistAttempt.IsEligible,
                 assistAttempt.RemainingRequestedVelocityBudget));
@@ -364,42 +372,6 @@ namespace Game.Gameplay
             }
 
             return Mathf.Clamp(Vector3.Dot(tangentDirection, courseForwardDirection), -1f, 1f);
-        }
-
-        private float ResolveTangentSpeed(
-            float currentTangentSpeed,
-            bool hasValidGroundedRunSurface,
-            bool hasUsableTangentDirection,
-            RunBodySpeedDecision speedDecision,
-            float fixedDeltaTime)
-        {
-            if (!float.IsFinite(currentTangentSpeed))
-                return 0f;
-
-            var resolvedSpeed = currentTangentSpeed;
-            var accelerationDelta = Mathf.Max(0f, speedDecision.TangentAcceleration) * fixedDeltaTime;
-
-            if (resolvedSpeed < speedDecision.SoftMaximumSpeed)
-            {
-                resolvedSpeed = Mathf.Min(
-                    resolvedSpeed + accelerationDelta,
-                    speedDecision.SoftMaximumSpeed);
-            }
-
-            var dragDelta = Mathf.Max(0f, speedDecision.TangentDrag) * fixedDeltaTime;
-            var naturallyIntegratedSpeed = Mathf.Max(0f, resolvedSpeed - dragDelta);
-
-            var requestedAssistDelta = _lowSpeedAssistAttempt.Advance(
-                new RunBodyLowSpeedAssistAttemptContext(
-                    currentTangentSpeed,
-                    naturallyIntegratedSpeed,
-                    hasValidGroundedRunSurface,
-                    hasUsableTangentDirection,
-                    speedDecision.LowSpeedAssistTargetSpeed,
-                    speedDecision.LowSpeedAssistAcceleration,
-                    fixedDeltaTime));
-
-            return naturallyIntegratedSpeed + requestedAssistDelta;
         }
 
         private Vector3 ResolveMovementPlaneNormal(

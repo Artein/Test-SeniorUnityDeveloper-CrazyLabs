@@ -23,7 +23,8 @@ namespace Game.Gameplay.Diagnostics
                    + $"speed:{snapshot.SampledTangentSpeed:0.0}/{snapshot.EffectiveSoftMaximumSpeed:0.0}m/s "
                    + $"downhill:{snapshot.ForwardDownhillDegrees:0.0}deg "
                    + $"align:{snapshot.CourseForwardAlignment:0.00} "
-                   + $"effects:{FormatContributors(snapshot.Contributors)}";
+                   + $"policy:{FormatContributors(snapshot.PolicyContributors)} "
+                   + $"requested:{FormatContributors(snapshot.RequestedContributors)}";
         }
 
         public string FormatLowSpeedAssist(RunBodySpeedDiagnosticsSnapshot snapshot)
@@ -33,7 +34,8 @@ namespace Game.Gameplay.Diagnostics
 
             return $"Low-Speed Assist | target:{snapshot.EffectiveLowSpeedAssistTargetSpeed:0.0}m/s "
                    + $"state:{snapshot.LowSpeedAssistAttemptState} "
-                   + $"eligible:{FormatBoolean(snapshot.IsLowSpeedAssistEligible)} "
+                   + $"conditions:{FormatBoolean(snapshot.MeetsLowSpeedAssistPolicyConditions)} "
+                   + $"request:{snapshot.RequestedLowSpeedAssistVelocityDelta:+0.0;-0.0;0.0}m/s "
                    + $"budget:{snapshot.RemainingRequestedLowSpeedAssistVelocityBudget:0.0}m/s";
         }
 

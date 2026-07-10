@@ -292,7 +292,16 @@ public sealed class RunBodyMovementControllerTests
         ActivateMovement();
         FixedTick();
 
+        var diagnostics = _speedDiagnostics.Current;
+
+        var expectedRequestedContributors = RunBodySpeedDecisionContributors.DownhillAcceleration
+                                            | RunBodySpeedDecisionContributors.SurfaceSlowdown
+                                            | RunBodySpeedDecisionContributors.LowSpeedAssist;
+
         Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(4.5f).Within(0.0001f));
+        Assert.That(diagnostics.PolicyContributors, Is.EqualTo(expectedRequestedContributors));
+        Assert.That(diagnostics.RequestedContributors, Is.EqualTo(expectedRequestedContributors));
+        Assert.That(diagnostics.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(2f));
         Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
     }
 
@@ -355,6 +364,96 @@ public sealed class RunBodyMovementControllerTests
     }
 
     [Test]
+    public void FixedTick_ActiveAssistLosesSupport_DiagnosticsRetainPausedAttemptTarget()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        _speedEvaluator.Decision = new RunBodySpeedDecision(
+            tangentAcceleration: 0f,
+            tangentDrag: 0f,
+            lowSpeedAssistTargetSpeed: 5f,
+            lowSpeedAssistAcceleration: 1f,
+            softMaximumSpeed: 20f,
+            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+        _clock.FixedDeltaTime = 1f;
+
+        ActivateMovement();
+        _target.CurrentVelocity = Vector3.forward * 2f;
+        FixedTick();
+
+        _target.CurrentVelocity = Vector3.forward * 2f;
+        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        FixedTick();
+
+        var snapshot = _speedDiagnostics.Current;
+        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+        Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Paused));
+        Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.False);
+        Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.EqualTo(2f));
+        Assert.That(snapshot.PolicyContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_AssistBudgetFinalSpendAndFollowingExhaustedPass_DiagnosticsDistinguishRequests()
+    {
+        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        _speedEvaluator.Decision = new RunBodySpeedDecision(
+            tangentAcceleration: 0f,
+            tangentDrag: 0f,
+            lowSpeedAssistTargetSpeed: 5f,
+            lowSpeedAssistAcceleration: 1f,
+            softMaximumSpeed: 20f,
+            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+        _clock.FixedDeltaTime = 1f;
+
+        ActivateMovement();
+
+        for (var passIndex = 0; passIndex < 3; passIndex++)
+        {
+            _target.CurrentVelocity = Vector3.forward * 2f;
+            FixedTick();
+        }
+
+        var finalSpendSnapshot = _speedDiagnostics.Current;
+        _target.CurrentVelocity = Vector3.forward * 2f;
+        FixedTick();
+        var exhaustedSnapshot = _speedDiagnostics.Current;
+
+        Assert.That(
+            finalSpendSnapshot.PolicyContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+
+        Assert.That(
+            finalSpendSnapshot.RequestedContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+        Assert.That(finalSpendSnapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
+
+        Assert.That(
+            finalSpendSnapshot.LowSpeedAssistAttemptState,
+            Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Exhausted));
+        Assert.That(finalSpendSnapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
+
+        Assert.That(
+            exhaustedSnapshot.PolicyContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+
+        Assert.That(
+            exhaustedSnapshot.RequestedContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(exhaustedSnapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
+
+        Assert.That(
+            exhaustedSnapshot.LowSpeedAssistAttemptState,
+            Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Exhausted));
+        Assert.That(exhaustedSnapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
+        Assert.That(exhaustedSnapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+        Assert.That(exhaustedSnapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
+    }
+
+    [Test]
     public void FixedTick_ActivePass_PublishesExactSpeedContextDecisionAndAssistState()
     {
         var contributors = RunBodySpeedDecisionContributors.DownhillAcceleration
@@ -387,10 +486,15 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(24f));
         Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(28f));
         Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(Mathf.Sqrt(0.5f)).Within(0.0001f));
-        Assert.That(snapshot.Contributors, Is.EqualTo(contributors));
+        Assert.That(snapshot.PolicyContributors, Is.EqualTo(contributors));
+
+        Assert.That(
+            snapshot.RequestedContributors,
+            Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
         Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
         Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Active));
-        Assert.That(snapshot.IsLowSpeedAssistEligible, Is.True);
+        Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
 
         Assert.That(
             snapshot.RemainingRequestedLowSpeedAssistVelocityBudget,
@@ -416,13 +520,15 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(snapshot.SampledTangentSpeed, Is.Zero);
         Assert.That(snapshot.ForwardDownhillDegrees, Is.Zero);
         Assert.That(snapshot.CourseForwardAlignment, Is.Zero);
-        Assert.That(snapshot.Contributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.PolicyContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
         Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.Zero);
 
         Assert.That(
             snapshot.LowSpeedAssistAttemptState,
             Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Unavailable));
-        Assert.That(snapshot.IsLowSpeedAssistEligible, Is.False);
+        Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.False);
         Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
     }
 

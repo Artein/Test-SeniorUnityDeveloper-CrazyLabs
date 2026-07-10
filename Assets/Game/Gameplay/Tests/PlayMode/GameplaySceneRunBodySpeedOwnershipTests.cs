@@ -234,7 +234,8 @@ public sealed class GameplaySceneRunBodySpeedOwnershipTests : BaseGameplaySceneP
             var snapshot = diagnostics.Current;
 
             if (snapshot.State == RunBodySpeedDiagnosticsState.Active
-                && snapshot.Contributors.HasFlag(RunBodySpeedDecisionContributors.LowSpeedAssist)
+                && snapshot.RequestedContributors.HasFlag(RunBodySpeedDecisionContributors.LowSpeedAssist)
+                && snapshot.RequestedLowSpeedAssistVelocityDelta > 0f
                 && snapshot.RemainingRequestedLowSpeedAssistVelocityBudget > 0f)
             {
                 yield break;

@@ -26,13 +26,16 @@ public sealed class RunBodySpeedDiagnosticsTests
             effectiveSoftMaximumSpeed: 24f,
             forwardDownhillDegrees: 28f,
             courseForwardAlignment: 0.75f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration
-                          | RunBodySpeedDecisionContributors.SurfaceSlowdown
-                          | RunBodySpeedDecisionContributors.AboveEnvelopeResistance
-                          | RunBodySpeedDecisionContributors.LowSpeedAssist,
+            policyContributors: RunBodySpeedDecisionContributors.DownhillAcceleration
+                                | RunBodySpeedDecisionContributors.SurfaceSlowdown
+                                | RunBodySpeedDecisionContributors.AboveEnvelopeResistance
+                                | RunBodySpeedDecisionContributors.LowSpeedAssist,
+            requestedContributors: RunBodySpeedDecisionContributors.SurfaceSlowdown
+                                   | RunBodySpeedDecisionContributors.LowSpeedAssist,
+            requestedLowSpeedAssistVelocityDelta: 0.75f,
             effectiveLowSpeedAssistTargetSpeed: 6f,
             lowSpeedAssistAttemptState: RunBodyLowSpeedAssistAttemptState.Active,
-            isLowSpeedAssistEligible: true,
+            meetsLowSpeedAssistPolicyConditions: true,
             remainingRequestedLowSpeedAssistVelocityBudget: 1.25f);
 
         ((IRunBodySpeedDiagnosticsSink)diagnostics).Publish(expected);
@@ -55,6 +58,8 @@ public sealed class RunBodySpeedDiagnosticsTests
             28f,
             0.75f,
             RunBodySpeedDecisionContributors.DownhillAcceleration,
+            RunBodySpeedDecisionContributors.DownhillAcceleration,
+            0f,
             6f,
             RunBodyLowSpeedAssistAttemptState.Active,
             true,
@@ -75,13 +80,15 @@ public sealed class RunBodySpeedDiagnosticsTests
         Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.Zero);
         Assert.That(snapshot.ForwardDownhillDegrees, Is.Zero);
         Assert.That(snapshot.CourseForwardAlignment, Is.Zero);
-        Assert.That(snapshot.Contributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.PolicyContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
         Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.Zero);
 
         Assert.That(
             snapshot.LowSpeedAssistAttemptState,
             Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Unavailable));
-        Assert.That(snapshot.IsLowSpeedAssistEligible, Is.False);
+        Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.False);
         Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
     }
 }
