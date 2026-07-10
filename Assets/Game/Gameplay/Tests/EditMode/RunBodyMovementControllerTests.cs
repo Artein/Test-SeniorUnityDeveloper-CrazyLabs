@@ -114,7 +114,8 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(_inputSource.AdvanceCallCount, Is.EqualTo(1));
         Assert.That(_target.ReadCallCount, Is.EqualTo(1));
         Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
-        AssertVector(_steeringEvaluator.LastContext.CurrentVelocity, Vector3.forward * 25f + Vector3.up * 2f);
+        Assert.That(_steeringEvaluator.LastContext.TangentSpeed, Is.EqualTo(25f).Within(0.0001f));
+        Assert.That(_steeringEvaluator.LastContext.HasUsableTangentDirection, Is.True);
         AssertVector(_target.LastTargetState.LinearVelocity, Vector3.forward * 25f + Vector3.up * 2f);
     }
 
@@ -512,12 +513,14 @@ public sealed class RunBodyMovementControllerTests
         var originalNormal = surfaceNormal * 2f;
         _target.CurrentVelocity = originalTangent + originalNormal;
         _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 20f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, Vector3.forward);
+        _steeringEvaluator.Decision = new RunSteeringDecision(true, 35f, true);
 
         ActivateMovement();
         FixedTick();
 
-        var expectedDirection = Vector3.ProjectOnPlane(Vector3.forward, surfaceNormal).normalized;
+        var expectedDirection = Vector3.ProjectOnPlane(
+            Quaternion.AngleAxis(35f, Vector3.up) * originalTangent.normalized,
+            surfaceNormal).normalized;
         var finalVelocity = _target.LastTargetState.LinearVelocity;
         var finalTangent = Vector3.ProjectOnPlane(finalVelocity, surfaceNormal);
 
@@ -537,7 +540,7 @@ public sealed class RunBodyMovementControllerTests
         var surfaceNormal = Vector3.forward;
         _target.CurrentVelocity = Vector3.right * 6f + surfaceNormal * 2f;
         _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, surfaceNormal);
+        _steeringEvaluator.Decision = new RunSteeringDecision(true, -90f, true);
 
         ActivateMovement();
         FixedTick();
@@ -556,7 +559,7 @@ public sealed class RunBodyMovementControllerTests
         var surfaceNormal = Vector3.forward;
         _target.CurrentVelocity = surfaceNormal * 2f;
         _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, surfaceNormal);
+        _steeringEvaluator.Decision = new RunSteeringDecision(true, 90f, true);
 
         ActivateMovement();
         FixedTick();
@@ -570,7 +573,7 @@ public sealed class RunBodyMovementControllerTests
     {
         _target.CurrentVelocity = Vector3.forward * 7f + Vector3.up * 2f;
         _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, Vector3.right);
+        _steeringEvaluator.Decision = new RunSteeringDecision(true, 90f, true);
 
         ActivateMovement();
         FixedTick();

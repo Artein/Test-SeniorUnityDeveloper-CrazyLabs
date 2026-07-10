@@ -141,6 +141,29 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
     }
 
     [Test]
+    public void FixedTick_GroundedNeutralInputWithLaggingSteeringFrame_PreservesPhysicalVelocity()
+    {
+        var groundNormal = new Vector3(0f, 1f, 1f).normalized;
+        var tangentDirection = (Vector3.right + Vector3.ProjectOnPlane(Vector3.forward, groundNormal)).normalized;
+        var tangentVelocity = tangentDirection * DefaultPlanarSpeed;
+        var normalVelocity = groundNormal * -DefaultVerticalSpeed;
+        var expectedVelocity = tangentVelocity + normalVelocity;
+        ActivateSteering(Vector3.up);
+        _steeringFrameSource.UpDirection = Vector3.up;
+        SetGroundedSurface(groundNormal);
+        _steeringTarget.LinearVelocity = expectedVelocity;
+
+        FixedTick();
+
+        var actualVelocity = _steeringTarget.LinearVelocity;
+        var actualTangentVelocity = Vector3.ProjectOnPlane(actualVelocity, groundNormal);
+        Assert.That(actualTangentVelocity.magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(0.0001f));
+        Assert.That(Vector3.Dot(actualVelocity, groundNormal), Is.EqualTo(-DefaultVerticalSpeed).Within(0.0001f));
+        AssertVectorEqual(actualTangentVelocity.normalized, tangentDirection);
+        AssertVectorEqual(actualVelocity, expectedVelocity);
+    }
+
+    [Test]
     public void FixedTick_InvalidSteeringFrame_UsesLaunchUpFallback()
     {
         var launchUp = new Vector3(0f, 1f, 1f).normalized;

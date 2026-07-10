@@ -1,6 +1,5 @@
 using Game.Gameplay;
 using NUnit.Framework;
-using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 public sealed class DefaultRunSteeringEvaluatorTests
@@ -14,105 +13,112 @@ public sealed class DefaultRunSteeringEvaluatorTests
     }
 
     [Test]
-    public void Evaluate_GroundedSteering_RotatesDirectionWithoutOwningSpeed()
+    public void Evaluate_GroundedSteering_ReturnsTurnAndFacingIntentsWithoutOwningDirection()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.forward * 12f + Vector3.up * 3f,
+            tangentSpeed: 12f,
             steeringMode: RunSteeringMode.Grounded,
             smoothedSteer: 1f,
             maximumTurnDegreesPerSecond: 90f,
             fixedDeltaTime: 1f,
             isGestureActive: true));
 
-        Assert.That(decision.ShouldApplySteering, Is.True);
-        Assert.That(decision.SteeringIntentDirection.magnitude, Is.EqualTo(1f).Within(0.0001f));
-        Assert.That(Vector3.Dot(decision.SteeringIntentDirection, Vector3.right), Is.GreaterThan(0.9999f));
+        Assert.That(decision.ShouldTurnVelocity, Is.True);
+        Assert.That(decision.SignedTurnDegrees, Is.EqualTo(90f));
+        Assert.That(decision.ShouldUpdateFacing, Is.True);
     }
 
     [Test]
-    public void Evaluate_GroundedNeutralInput_PreservesUsableCurrentDirectionForFacing()
+    public void Evaluate_GroundedNeutralInput_ReturnsFacingWithoutVelocityTurn()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.forward * 4f,
+            tangentSpeed: 4f,
             steeringMode: RunSteeringMode.Grounded,
             smoothedSteer: 0f,
             maximumTurnDegreesPerSecond: 90f,
             fixedDeltaTime: 0.02f,
             isGestureActive: false));
 
-        Assert.That(decision.ShouldApplySteering, Is.True);
-        Assert.That(Vector3.Dot(decision.SteeringIntentDirection, Vector3.forward), Is.GreaterThan(0.9999f));
+        Assert.That(decision.ShouldTurnVelocity, Is.False);
+        Assert.That(decision.SignedTurnDegrees, Is.Zero);
+        Assert.That(decision.ShouldUpdateFacing, Is.True);
     }
 
     [Test]
-    public void Evaluate_BelowMinimumSteerSpeed_ReturnsNoSteeringIntent()
+    public void Evaluate_BelowMinimumSteerSpeed_ReturnsNoTurnOrFacingIntent()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.forward * 0.1f,
+            tangentSpeed: 0.1f,
             steeringMode: RunSteeringMode.Grounded,
             smoothedSteer: 1f,
             maximumTurnDegreesPerSecond: 90f,
             fixedDeltaTime: 1f,
             isGestureActive: true));
 
-        Assert.That(decision.ShouldApplySteering, Is.False);
-        Assert.That(decision.SteeringIntentDirection, Is.EqualTo(Vector3.zero));
+        Assert.That(decision.ShouldTurnVelocity, Is.False);
+        Assert.That(decision.SignedTurnDegrees, Is.Zero);
+        Assert.That(decision.ShouldUpdateFacing, Is.False);
     }
 
     [Test]
-    public void Evaluate_AirWithoutActiveGesture_ReturnsNoSteeringIntent()
+    public void Evaluate_AirWithoutActiveGesture_ReturnsNoTurnOrFacingIntent()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.forward * 8f,
+            tangentSpeed: 8f,
             steeringMode: RunSteeringMode.Air,
             smoothedSteer: 1f,
             maximumTurnDegreesPerSecond: 30f,
             fixedDeltaTime: 1f,
             isGestureActive: false));
 
-        Assert.That(decision.ShouldApplySteering, Is.False);
+        Assert.That(decision.ShouldTurnVelocity, Is.False);
+        Assert.That(decision.ShouldUpdateFacing, Is.False);
     }
 
     [Test]
-    public void Evaluate_AirWithNeutralSteer_ReturnsNoSteeringIntent()
+    public void Evaluate_AirWithNeutralSteer_ReturnsNoTurnOrFacingIntent()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.forward * 8f,
+            tangentSpeed: 8f,
             steeringMode: RunSteeringMode.Air,
             smoothedSteer: 0.00001f,
             maximumTurnDegreesPerSecond: 30f,
             fixedDeltaTime: 1f,
             isGestureActive: true));
 
-        Assert.That(decision.ShouldApplySteering, Is.False);
+        Assert.That(decision.ShouldTurnVelocity, Is.False);
+        Assert.That(decision.ShouldUpdateFacing, Is.False);
     }
 
     [Test]
-    public void Evaluate_InvalidSteeringPlaneVelocity_DoesNotInventDirection()
+    public void Evaluate_MissingTangentDirection_ReturnsNoTurnOrFacingIntent()
     {
         var decision = _evaluator.Evaluate(CreateContext(
-            currentVelocity: Vector3.up * 8f,
+            tangentSpeed: 8f,
             steeringMode: RunSteeringMode.Grounded,
             smoothedSteer: 1f,
             maximumTurnDegreesPerSecond: 90f,
             fixedDeltaTime: 1f,
-            isGestureActive: true));
+            isGestureActive: true,
+            hasUsableTangentDirection: false));
 
-        Assert.That(decision.ShouldApplySteering, Is.False);
-        Assert.That(decision.SteeringIntentDirection, Is.EqualTo(Vector3.zero));
+        Assert.That(decision.ShouldTurnVelocity, Is.False);
+        Assert.That(decision.SignedTurnDegrees, Is.Zero);
+        Assert.That(decision.ShouldUpdateFacing, Is.False);
     }
 
     private RunSteeringContext CreateContext(
-        Vector3 currentVelocity,
+        float tangentSpeed,
         RunSteeringMode steeringMode,
         float smoothedSteer,
         float maximumTurnDegreesPerSecond,
         float fixedDeltaTime,
-        bool isGestureActive)
+        bool isGestureActive,
+        bool hasUsableTangentDirection = true)
     {
         return new RunSteeringContext(
-            currentVelocity,
-            Vector3.up,
+            tangentSpeed,
+            hasUsableTangentDirection,
             steeringMode,
             smoothedSteer,
             maximumTurnDegreesPerSecond,

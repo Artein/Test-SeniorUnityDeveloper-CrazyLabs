@@ -142,23 +142,12 @@ namespace Game.Gameplay
                 ResolveMaximumSupportedSurfaceNormalLiftSpeed());
             var steeringUp = ResolveSteeringUp();
 
-            var steeringDecision = _steeringEvaluator.Evaluate(
-                new RunSteeringContext(
-                    correctedVelocity,
-                    steeringUp,
-                    steeringMode,
-                    inputState.SmoothedSteer,
-                    ResolveMaximumTurnDegreesPerSecond(steeringMode),
-                    _steeringConfig.MinimumSteerSpeed,
-                    fixedDeltaTime,
-                    inputState.IsGestureActive));
-
             var targetState = ComposeTargetState(
                 correctedVelocity,
                 surfaceContext,
                 steeringMode,
                 steeringUp,
-                steeringDecision,
+                inputState,
                 speedContext,
                 speedDecision,
                 fixedDeltaTime,
@@ -238,7 +227,7 @@ namespace Game.Gameplay
             RunSurfaceContext surfaceContext,
             RunSteeringMode steeringMode,
             Vector3 steeringUp,
-            RunSteeringDecision steeringDecision,
+            RunSteeringInputState inputState,
             RunBodySpeedContext speedContext,
             RunBodySpeedDecision speedDecision,
             float fixedDeltaTime,
@@ -252,7 +241,18 @@ namespace Game.Gameplay
             var normalVelocity = Vector3.Project(correctedVelocity, movementPlaneNormal);
             var tangentVelocity = correctedVelocity - normalVelocity;
             sampledTangentSpeed = tangentVelocity.magnitude;
-            hasUsableTangentDirection = TryNormalize(tangentVelocity, out _);
+            hasUsableTangentDirection = TryNormalize(tangentVelocity, out var currentTangentDirection);
+
+            var steeringDecision = _steeringEvaluator.Evaluate(
+                new RunSteeringContext(
+                    sampledTangentSpeed,
+                    hasUsableTangentDirection,
+                    steeringMode,
+                    inputState.SmoothedSteer,
+                    ResolveMaximumTurnDegreesPerSecond(steeringMode),
+                    _steeringConfig.MinimumSteerSpeed,
+                    fixedDeltaTime,
+                    inputState.IsGestureActive));
 
             var tangentSpeed = ResolveTangentSpeed(
                 sampledTangentSpeed,
@@ -261,21 +261,22 @@ namespace Game.Gameplay
                 speedDecision,
                 fixedDeltaTime);
 
-            var selectedIntent = steeringDecision.ShouldApplySteering
-                ? steeringDecision.SteeringIntentDirection
-                : tangentVelocity;
+            var hasFinalDirection = hasUsableTangentDirection;
+            var finalTangentDirection = currentTangentDirection;
 
-            var hasFinalDirection = TryProjectAndNormalize(
-                selectedIntent,
-                movementPlaneNormal,
-                out var finalTangentDirection);
-
-            if (!hasFinalDirection)
+            if (hasFinalDirection && steeringDecision.ShouldTurnVelocity)
             {
-                hasFinalDirection = TryProjectAndNormalize(
-                    tangentVelocity,
-                    movementPlaneNormal,
-                    out finalTangentDirection);
+                var rotatedTangentDirection = Quaternion.AngleAxis(
+                    steeringDecision.SignedTurnDegrees,
+                    steeringUp) * currentTangentDirection;
+
+                if (TryProjectAndNormalize(
+                        rotatedTangentDirection,
+                        movementPlaneNormal,
+                        out var projectedTurnDirection))
+                {
+                    finalTangentDirection = projectedTurnDirection;
+                }
             }
 
             var finalTangentVelocity = hasFinalDirection && float.IsFinite(tangentSpeed)
@@ -284,7 +285,7 @@ namespace Game.Gameplay
             var finalVelocity = finalTangentVelocity + normalVelocity;
             var rotation = Quaternion.identity;
 
-            var hasRotation = steeringDecision.ShouldApplySteering
+            var hasRotation = steeringDecision.ShouldUpdateFacing
                               && hasFinalDirection
                               && TryCreateFacing(finalTangentDirection, steeringUp, out rotation);
 
