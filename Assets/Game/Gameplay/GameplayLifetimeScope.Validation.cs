@@ -71,8 +71,17 @@ namespace Game.Gameplay
             if (_gameplaySlingshotLaunchConfig == null)
                 yield return "GameplayLifetimeScope requires a Gameplay Slingshot Launch Config reference.";
 
-            if (_playerSteeringConfig == null)
-                yield return "GameplayLifetimeScope requires a Player Steering Config reference.";
+            if (_runBodyMovementConfig == null)
+            {
+                yield return "GameplayLifetimeScope requires a Run Body Movement Tuning reference.";
+            }
+            else
+            {
+                var validator = new RunBodyMovementConfigValidator();
+
+                foreach (var error in validator.Validate(_runBodyMovementConfig))
+                    yield return $"GameplayLifetimeScope Run Body Movement Tuning is invalid: {error}";
+            }
 
             if (_runCameraConfig == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Config reference.";
@@ -80,8 +89,8 @@ namespace Game.Gameplay
             if (_runEndConfig == null)
                 yield return "GameplayLifetimeScope requires a Run End Config reference.";
 
-            if (_playerSteeringTarget == null)
-                yield return "GameplayLifetimeScope requires a Player Steering Target reference.";
+            if (_runBodyMovementTarget == null)
+                yield return "GameplayLifetimeScope requires a Run Body Movement Target reference.";
 
             if (_runCameraSource == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Source reference.";

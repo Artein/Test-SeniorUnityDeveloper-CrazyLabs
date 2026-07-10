@@ -16,22 +16,28 @@ The replacement and legacy writers must never be active together. Lifecycle stat
 
 ## Acceptance criteria
 
-- [ ] The **Run Body Movement Controller** is the only active fixed-step owner of Run Body movement target writes.
-- [ ] The legacy steering controller cannot write movement while the replacement controller is registered.
-- [ ] Each active fixed pass advances and reads steering input once into a coherent snapshot.
-- [ ] Defensive velocity sanitation occurs before landing stabilization and movement policy evaluation.
-- [ ] Existing launch-landing stabilization behavior is preserved as a separate collaborator.
-- [ ] Run steering evaluation changes direction intent without intentionally changing tangent-speed magnitude.
-- [ ] Steering intent is projected onto the accepted **Run Surface** plane before the final movement target is built.
-- [ ] An invalid projected steering intent falls back only to a usable existing tangent direction.
-- [ ] Directionless motion does not receive a synthesized heading.
-- [ ] Corrected surface-normal velocity is preserved when the final tangent velocity is composed.
-- [ ] Final facing derives from the final projected tangent direction, not a pre-projection steering result.
-- [ ] Exactly one final target-state write occurs during each active fixed pass.
-- [ ] Inactive lifecycle state writes no movement target and clears movement-owned input, stabilization, and frame state.
-- [ ] A new launch resets and activates the expected movement lifecycle.
-- [ ] Unsupported motion keeps speed policy neutral while existing direction-only air steering behavior remains intact.
-- [ ] Existing launch strength, airborne motion, landing tangent momentum, steering feel, and defensive speed containment remain behaviorally equivalent.
+- [x] The **Run Body Movement Controller** is the only active fixed-step owner of Run Body movement target writes.
+- [x] The legacy steering controller cannot write movement while the replacement controller is registered.
+- [x] Each active fixed pass advances and reads steering input once into a coherent snapshot.
+- [x] Defensive velocity sanitation occurs before landing stabilization and movement policy evaluation.
+- [x] Existing launch-landing stabilization behavior is preserved as a separate collaborator.
+- [x] Run steering evaluation changes direction intent without intentionally changing tangent-speed magnitude.
+- [x] Steering intent is projected onto the accepted **Run Surface** plane before the final movement target is built.
+- [x] An invalid projected steering intent falls back only to a usable existing tangent direction.
+- [x] Directionless motion does not receive a synthesized heading.
+- [x] Corrected surface-normal velocity is preserved when the final tangent velocity is composed.
+- [x] Final facing derives from the final projected tangent direction, not a pre-projection steering result.
+- [x] Exactly one final target-state write occurs during each active fixed pass.
+- [x] Inactive lifecycle state writes no movement target and clears movement-owned input, stabilization, and frame state.
+- [x] A new launch resets and activates the expected movement lifecycle.
+- [x] Unsupported motion keeps speed policy neutral while existing direction-only air steering behavior remains intact.
+- [x] Existing launch strength, airborne motion, landing tangent momentum, steering feel, and defensive speed containment remain behaviorally equivalent.
+
+## Completion evidence
+
+- Controller orchestration and target EditMode slices: 97/97 passed (`r_jgw3v5f5`) and 52/52 passed (`r_mkv25bxu`).
+- Rigidbody movement-target PlayMode slice: 9/9 passed (`r_6i200411`).
+- Static writer search found one production movement-target call and one Run Body Rigidbody velocity assignment; scene composition contains no legacy steering writer.
 
 ## Verification
 

@@ -16,20 +16,25 @@ The movement controller integrates the decision using fixed-step elapsed time, p
 
 ## Acceptance criteria
 
-- [ ] A pure **Run Body Speed Evaluator** can be exercised without Rigidbody, scene lifecycle, or Unity callbacks.
-- [ ] The evaluator returns tangent acceleration and diagnostic contributor data rather than a final velocity.
-- [ ] Missing, invalid, ungrounded, stale, or meaningfully departing support produces a neutral speed decision.
-- [ ] Flat and uphill traversal add no downhill acceleration.
-- [ ] Positive forward-downhill angle produces monotonic acceleration based on its sine.
-- [ ] Positive downhill acceleration scales proportionally from zero to full strength using positive **Course Forward Alignment**.
-- [ ] Lateral, reversed, and directionless travel receives no downhill acceleration.
-- [ ] The speed decision never selects, rotates, or repairs travel heading.
-- [ ] The downhill contributor appears only when downhill acceleration is active and does not alter numerical output.
-- [ ] Decision rates are integrated once by movement orchestration using fixed-step elapsed time.
-- [ ] Model-authored downhill acceleration cannot cross the configured base soft envelope.
-- [ ] Corrected surface-normal velocity remains unchanged by downhill tangent acceleration.
-- [ ] Airborne or unsupported motion remains driven by Rigidbody physics and direction-only air steering.
-- [ ] No surface profile or terrain/material lookup is introduced.
+- [x] A pure **Run Body Speed Evaluator** can be exercised without Rigidbody, scene lifecycle, or Unity callbacks.
+- [x] The evaluator returns tangent acceleration and diagnostic contributor data rather than a final velocity.
+- [x] Missing, invalid, ungrounded, stale, or meaningfully departing support produces a neutral speed decision.
+- [x] Flat and uphill traversal add no downhill acceleration.
+- [x] Positive forward-downhill angle produces monotonic acceleration based on its sine.
+- [x] Positive downhill acceleration scales proportionally from zero to full strength using positive **Course Forward Alignment**.
+- [x] Lateral, reversed, and directionless travel receives no downhill acceleration.
+- [x] The speed decision never selects, rotates, or repairs travel heading.
+- [x] The downhill contributor appears only when downhill acceleration is active and does not alter numerical output.
+- [x] Decision rates are integrated once by movement orchestration using fixed-step elapsed time.
+- [x] Model-authored downhill acceleration cannot cross the configured base soft envelope.
+- [x] Corrected surface-normal velocity remains unchanged by downhill tangent acceleration.
+- [x] Airborne or unsupported motion remains driven by Rigidbody physics and direction-only air steering.
+- [x] No surface profile or terrain/material lookup is introduced.
+
+## Completion evidence
+
+- Pure evaluator, integration, and downhill PlayMode slice: 35/35 passed (`r_ecq5f0tw`).
+- Static dependency inspection confirms the evaluator has no Rigidbody, lifecycle, scene, surface-profile, or terrain/material dependency.
 
 ## Verification
 

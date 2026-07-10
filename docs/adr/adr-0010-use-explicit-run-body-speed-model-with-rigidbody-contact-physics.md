@@ -10,15 +10,20 @@ components: ["Gameplay", "Physics", "Composition"]
 supersedes: []
 superseded_by: []
 code_refs:
-  - "Assets/Game/Gameplay/PlayerSteeringController.cs"
+  - "Assets/Game/Gameplay/RunBodyMovementController.cs"
+  - "Assets/Game/Gameplay/DefaultRunBodySpeedEvaluator.cs"
+  - "Assets/Game/Gameplay/RunBodyMovementConfig.cs"
   - "Assets/Game/Gameplay/RunSurfaceContext.cs"
   - "Assets/Game/Gameplay/RunBodyVelocitySanityGuard.cs"
   - "Assets/Game/Gameplay/RunGameplayStatResolver.cs"
   - "Assets/Game/Gameplay/GameplayLifetimeScope.cs"
 test_refs:
-  - "Assets/Game/Gameplay/Tests/EditMode/PlayerSteeringControllerTests.cs"
+  - "Assets/Game/Gameplay/Tests/EditMode/DefaultRunBodySpeedEvaluatorTests.cs"
+  - "Assets/Game/Gameplay/Tests/EditMode/RunBodyMovementControllerTests.cs"
   - "Assets/Game/Gameplay/Tests/EditMode/RunBodyVelocitySanityGuardTests.cs"
   - "Assets/Game/Gameplay/Tests/EditMode/RunGameplayStatResolverTests.cs"
+  - "Assets/Game/Gameplay/Tests/PlayMode/RunBodySpeedModelPlayModeTests.cs"
+  - "Assets/Game/Gameplay/Tests/PlayMode/GameplaySceneRunBodySpeedOwnershipTests.cs"
 issue_refs:
   - "docs/diagrams/run-body-speed-model.md"
   - "docs/prd/prd-run-body-explicit-speed-ownership.md"
@@ -35,7 +40,7 @@ We will use an explicit gameplay model for intentional grounded **Run Body** tan
 
 ## Context
 
-The current steering flow sanitizes and rotates existing Rigidbody velocity but largely preserves its magnitude. Player-facing speed therefore emerges from launch impulse, gravity, contact geometry, physics materials, collisions, and solver behavior.
+Before this change, the steering flow sanitized and rotated existing Rigidbody velocity but largely preserved its magnitude. Player-facing speed therefore emerged from launch impulse, gravity, contact geometry, physics materials, collisions, and solver behavior.
 
 That emergent model does not provide a clear gameplay authority for slope acceleration, ordinary slowdown, recoverable near-stalls, the upgraded `PlayerMaxSpeed` envelope, or high-speed readability. Changing geometry, materials, launch tuning, or solver behavior can alter speed feel through unrelated side effects.
 

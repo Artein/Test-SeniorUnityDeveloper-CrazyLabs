@@ -18,6 +18,7 @@ namespace Game.Gameplay.Diagnostics
         private readonly RunDiagnosticsOverlayLayout _layout = new();
         private readonly RunDiagnosticsOverlayMath _math = new();
         private readonly RunDiagnosticsOverlaySnapEstimator _snapEstimator = new();
+        private readonly RunDiagnosticsOverlayTextFormatter _textFormatter = new();
 
         private IRunMotionSource _motionSource;
         private IRunSurfaceContextSource _surfaceContextSource;
@@ -26,12 +27,14 @@ namespace Game.Gameplay.Diagnostics
         private ICharacterVisualFollowView _visualFollowView;
         private ICharacterVisualFollowTuning _visualFollowTuning;
         private IRunCameraAnchor _cameraAnchor;
+        private IRunBodySpeedDiagnosticsSource _speedDiagnosticsSource;
 
         private RunDiagnosticsOverlayBuffer _samples;
         private Texture2D _pixelTexture;
         private GUIStyle _titleStyle;
         private GUIStyle _labelStyle;
         private GUIStyle _smallLabelStyle;
+        private GUIStyle _diagnosticStyle;
 
         private Vector3 _previousMotionPosition;
         private Vector3 _previousVisualTargetPosition;
@@ -59,7 +62,8 @@ namespace Game.Gameplay.Diagnostics
             ICharacterVisualTargetPoseSource visualTargetPoseSource,
             ICharacterVisualFollowView visualFollowView,
             ICharacterVisualFollowTuning visualFollowTuning,
-            IRunCameraAnchor cameraAnchor)
+            IRunCameraAnchor cameraAnchor,
+            IRunBodySpeedDiagnosticsSource speedDiagnosticsSource)
         {
             _motionSource = motionSource;
             _surfaceContextSource = surfaceContextSource;
@@ -68,6 +72,7 @@ namespace Game.Gameplay.Diagnostics
             _visualFollowView = visualFollowView;
             _visualFollowTuning = visualFollowTuning;
             _cameraAnchor = cameraAnchor;
+            _speedDiagnosticsSource = speedDiagnosticsSource;
         }
 
         private void Awake()
@@ -138,7 +143,8 @@ namespace Game.Gameplay.Diagnostics
             && _visualTargetPoseSource != null
             && _visualFollowView != null
             && _visualFollowTuning != null
-            && _cameraAnchor != null;
+            && _cameraAnchor != null
+            && _speedDiagnosticsSource != null;
 
         private RunDiagnosticsOverlaySample CreateSample(float deltaTime)
         {
@@ -151,24 +157,28 @@ namespace Game.Gameplay.Diagnostics
             var cameraPosition = _cameraAnchor.Position;
             var cameraRotation = _cameraAnchor.Rotation;
             var surfaceContext = _surfaceContextSource.Current;
+
             var rawGroundNormal = surfaceContext.IsGrounded && surfaceContext.HasValidGroundNormal
                 ? surfaceContext.GroundNormal
                 : Vector3.up;
             var steeringUp = _steeringFrameSource.GetUpDirection(rawGroundNormal);
 
             var speed = motionVelocity.IsFinite() ? motionVelocity.magnitude : 0f;
+
             var motionStep = _math.CalculateStepSpeed(
                 motionPosition,
                 ref _previousMotionPosition,
                 ref _hasPreviousMotionPosition,
                 deltaTime,
                 out _);
+
             var visualTargetStep = _math.CalculateStepSpeed(
                 targetPose.Position,
                 ref _previousVisualTargetPosition,
                 ref _hasPreviousVisualTargetPosition,
                 deltaTime,
                 out var visualTargetStepMeters);
+
             var cameraStep = _math.CalculateStepSpeed(
                 cameraPosition,
                 ref _previousCameraPosition,
@@ -179,15 +189,18 @@ namespace Game.Gameplay.Diagnostics
             var steeringUpDelta = _math.CalculateDirectionDelta(steeringUp, ref _previousSteeringUp, ref _hasPreviousSteeringUp);
             var visualLag = _math.CalculateDistanceCentimeters(targetPose.Position, visualPose.Position);
             var targetToMotion = _math.CalculateDistanceCentimeters(targetPose.Position, motionPosition);
+
             var targetRotationDelta = _math.CalculateRotationDelta(
                 targetPose.Rotation,
                 ref _previousVisualTargetRotation,
                 ref _hasPreviousVisualTargetRotation);
+
             var visualRotationDelta = _math.CalculateRotationDelta(
                 visualPose.Rotation,
                 ref _previousVisualRotation,
                 ref _hasPreviousVisualRotation);
             var cameraRotationDelta = _math.CalculateRotationDelta(cameraRotation, ref _previousCameraRotation, ref _hasPreviousCameraRotation);
+
             var estimatedSnapReason = _snapEstimator.Estimate(
                 visualTargetStepMeters,
                 targetRotationDelta,
@@ -209,7 +222,8 @@ namespace Game.Gameplay.Diagnostics
                 cameraRotationDelta,
                 estimatedSnapReason,
                 fixedStepsThisFrame,
-                surfaceContext.IsGrounded);
+                surfaceContext.IsGrounded,
+                _speedDiagnosticsSource.Current);
         }
 
         private float ResolveDeltaTime()
@@ -224,16 +238,29 @@ namespace Game.Gameplay.Diagnostics
             var contentWidth = panelRect.width - 20f;
             var titleRect = new Rect(contentX, panelRect.y + 7f, contentWidth, 22f);
             var detailRect = new Rect(contentX, panelRect.y + 29f, contentWidth, 18f);
-            var chartTop = panelRect.y + 52f;
-            var chartHeight = panelRect.height - 60f;
+            var speedDiagnosticsRect = new Rect(contentX, panelRect.y + 47f, contentWidth, 44f);
+            var assistDiagnosticsRect = new Rect(contentX, panelRect.y + 91f, contentWidth, 30f);
+            var chartTop = panelRect.y + 126f;
+            var chartHeight = Mathf.Max(1f, panelRect.height - 134f);
             var rowCount = 10f;
-            var rowHeight = Mathf.Max(22f, chartHeight / rowCount);
+            var rowHeight = Mathf.Max(1f, chartHeight / rowCount);
 
             DrawText(titleRect, "RUN DIAG | high-speed shake source", Color.white, _titleStyle);
+
             DrawText(detailRect,
-                $"G:{(latest.IsGrounded ? 1 : 0)} fx:{latest.FixedStepsThisFrame} snap:{FormatSnapReason(latest.EstimatedVisualSnapReason)} rb-tgt:{latest.TargetToMotionCentimeters:0.0}cm camrot:{latest.CameraRotationDeltaDegrees:0.0}",
+                _textFormatter.FormatMotionSummary(latest),
                 new Color(0.78f, 0.84f, 0.88f, 1f),
                 _smallLabelStyle);
+
+            DrawText(speedDiagnosticsRect,
+                _textFormatter.FormatRunBodySpeed(latest.SpeedDiagnostics),
+                new Color(0.65f, 0.9f, 1f, 1f),
+                _diagnosticStyle);
+
+            DrawText(assistDiagnosticsRect,
+                _textFormatter.FormatLowSpeedAssist(latest.SpeedDiagnostics),
+                new Color(0.72f, 1f, 0.72f, 1f),
+                _diagnosticStyle);
 
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 0f), contentWidth, rowHeight - 2f),
@@ -243,6 +270,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_speedScaleMetersPerSecond, 80f),
                 new Color(1f, 1f, 1f, 0.95f),
                 latest.SpeedMetersPerSecond);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 1f), contentWidth, rowHeight - 2f),
                 1,
@@ -251,6 +279,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_speedScaleMetersPerSecond, 80f),
                 new Color(1f, 0.38f, 0.32f, 0.95f),
                 latest.MotionStepMetersPerSecond);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 2f), contentWidth, rowHeight - 2f),
                 2,
@@ -259,6 +288,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_speedScaleMetersPerSecond, 80f),
                 new Color(1f, 0.58f, 0.16f, 0.95f),
                 latest.VisualTargetStepMetersPerSecond);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 3f), contentWidth, rowHeight - 2f),
                 3,
@@ -267,6 +297,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_normalDeltaScaleDegrees, 25f),
                 new Color(1f, 0.88f, 0.16f, 0.95f),
                 latest.RawGroundNormalDeltaDegrees);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 4f), contentWidth, rowHeight - 2f),
                 4,
@@ -275,6 +306,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_normalDeltaScaleDegrees, 25f),
                 new Color(0.35f, 1f, 0.45f, 0.95f),
                 latest.SteeringUpDeltaDegrees);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 5f), contentWidth, rowHeight - 2f),
                 5,
@@ -283,6 +315,7 @@ namespace Game.Gameplay.Diagnostics
                 1f,
                 new Color(1f, 0.95f, 0.22f, 0.95f),
                 latest.HasEstimatedVisualSnap ? 1f : 0f);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 6f), contentWidth, rowHeight - 2f),
                 6,
@@ -291,6 +324,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_normalDeltaScaleDegrees, 25f),
                 new Color(0.52f, 0.82f, 1f, 0.95f),
                 latest.VisualTargetRotationDeltaDegrees);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 7f), contentWidth, rowHeight - 2f),
                 7,
@@ -299,6 +333,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_normalDeltaScaleDegrees, 25f),
                 new Color(0.62f, 0.65f, 1f, 0.95f),
                 latest.VisualRotationDeltaDegrees);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 8f), contentWidth, rowHeight - 2f),
                 8,
@@ -307,6 +342,7 @@ namespace Game.Gameplay.Diagnostics
                 ResolveScale(_visualLagScaleCentimeters, 15f),
                 new Color(0.22f, 0.9f, 1f, 0.95f),
                 latest.VisualLagCentimeters);
+
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 9f), contentWidth, rowHeight - 2f),
                 9,
@@ -328,6 +364,7 @@ namespace Game.Gameplay.Diagnostics
         {
             var labelWidth = Mathf.Min(122f, rowRect.width * 0.34f);
             var labelRect = new Rect(rowRect.x, rowRect.y + 1f, labelWidth, rowRect.height - 2f);
+
             var chartRect = new Rect(
                 rowRect.x + labelWidth + 6f,
                 rowRect.y + 3f,
@@ -350,8 +387,9 @@ namespace Game.Gameplay.Diagnostics
             for (var sampleIndex = 0; sampleIndex < sampleCount; sampleIndex += 1)
             {
                 var sample = _samples.GetChronological(sampleIndex);
-                var normalizedValue = Mathf.Clamp01(SelectMetric(sample, metricIndex) / scaleMax);
+                var normalizedValue = Mathf.Clamp01(sample.SelectMetric(metricIndex) / scaleMax);
                 var barHeight = Mathf.Max(1f, normalizedValue * chartRect.height);
+
                 var barRect = new Rect(
                     chartRect.x + (sampleIndex * barWidth),
                     chartRect.yMax - barHeight,
@@ -359,50 +397,6 @@ namespace Game.Gameplay.Diagnostics
                     barHeight);
 
                 DrawRect(barRect, color);
-            }
-        }
-
-        private float SelectMetric(RunDiagnosticsOverlaySample sample, int metricIndex)
-        {
-            switch (metricIndex)
-            {
-                case 0:
-                    return sample.SpeedMetersPerSecond;
-                case 1:
-                    return sample.MotionStepMetersPerSecond;
-                case 2:
-                    return sample.VisualTargetStepMetersPerSecond;
-                case 3:
-                    return sample.RawGroundNormalDeltaDegrees;
-                case 4:
-                    return sample.SteeringUpDeltaDegrees;
-                case 5:
-                    return sample.HasEstimatedVisualSnap ? 1f : 0f;
-                case 6:
-                    return sample.VisualTargetRotationDeltaDegrees;
-                case 7:
-                    return sample.VisualRotationDeltaDegrees;
-                case 8:
-                    return sample.VisualLagCentimeters;
-                case 9:
-                    return sample.CameraStepMetersPerSecond;
-                default:
-                    return 0f;
-            }
-        }
-
-        private string FormatSnapReason(RunDiagnosticsOverlaySnapReason reason)
-        {
-            switch (reason)
-            {
-                case RunDiagnosticsOverlaySnapReason.Position:
-                    return "pos";
-                case RunDiagnosticsOverlaySnapReason.Rotation:
-                    return "rot";
-                case RunDiagnosticsOverlaySnapReason.PositionAndRotation:
-                    return "pos+rot";
-                default:
-                    return "-";
             }
         }
 
@@ -463,6 +457,16 @@ namespace Game.Gameplay.Diagnostics
                 _smallLabelStyle = new GUIStyle(GUI.skin.label)
                 {
                     fontSize = Mathf.Max(8, _labelFontSize - 2),
+                    clipping = TextClipping.Clip
+                };
+            }
+
+            if (_diagnosticStyle == null)
+            {
+                _diagnosticStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = Mathf.Max(8, _labelFontSize - 3),
+                    wordWrap = true,
                     clipping = TextClipping.Clip
                 };
             }

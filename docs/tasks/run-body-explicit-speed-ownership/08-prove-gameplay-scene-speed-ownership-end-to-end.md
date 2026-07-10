@@ -16,22 +16,29 @@ This slice proves the architecture in the production scene; it does not introduc
 
 ## Acceptance criteria
 
-- [ ] Gameplay composition resolves one movement-tuning asset through every implemented narrow config interface.
-- [ ] Exactly one active movement controller and one movement target own fixed-step Run Body writes.
-- [ ] The legacy steering controller is absent as an active Rigidbody movement writer.
-- [ ] Launch applies its full initial velocity without speed-model or envelope clamping.
-- [ ] Unsupported launch flight preserves Rigidbody gravity, collision, and direction-only air-steering behavior.
-- [ ] First valid landing preserves tangent momentum while the existing landing collaborator corrects surface-normal lift.
-- [ ] Valid grounded traversal applies downhill acceleration, ordinary slowdown, soft-envelope resistance, and eligible bounded assist through one final write.
-- [ ] Collision-produced overspeed is visible initially and settles without a hard clamp.
-- [ ] Neutral and upgraded PlayerMaxSpeed runs produce different effective envelopes in the production scene.
-- [ ] High-speed obstacle approach still produces reliable physical collision and existing run-end behavior.
-- [ ] Blocking geometry remains capable of stopping the Run Body after assist budget is exhausted.
-- [ ] Leaving **Running** clears input, steering frame, landing stabilization, decision diagnostics, and low-speed-assist attempt state.
-- [ ] A new launch begins with clean movement state and the active-run stat snapshot expected for that run.
-- [ ] Existing camera, character presentation, reward, economy, pickup, finish, and run-end behavior remains compatible.
-- [ ] The historical natural-speed PRD and task suite remain preserved and marked superseded; the replacement PRD and ADR remain authoritative.
-- [ ] No Unity version, package, ProjectSettings, Addressables, save-format, or UPM release change is introduced.
+- [x] Gameplay composition resolves one movement-tuning asset through every implemented narrow config interface.
+- [x] Exactly one active movement controller and one movement target own fixed-step Run Body writes.
+- [x] The legacy steering controller is absent as an active Rigidbody movement writer.
+- [x] Launch applies its full initial velocity without speed-model or envelope clamping.
+- [x] Unsupported launch flight preserves Rigidbody gravity, collision, and direction-only air-steering behavior.
+- [x] First valid landing preserves tangent momentum while the existing landing collaborator corrects surface-normal lift.
+- [x] Valid grounded traversal applies downhill acceleration, ordinary slowdown, soft-envelope resistance, and eligible bounded assist through one final write.
+- [x] Collision-produced overspeed is visible initially and settles without a hard clamp.
+- [x] Neutral and upgraded PlayerMaxSpeed runs produce different effective envelopes in the production scene.
+- [x] High-speed obstacle approach still produces reliable physical collision and existing run-end behavior.
+- [x] Blocking geometry remains capable of stopping the Run Body after assist budget is exhausted.
+- [x] Leaving **Running** clears input, steering frame, landing stabilization, decision diagnostics, and low-speed-assist attempt state.
+- [x] A new launch begins with clean movement state and the active-run stat snapshot expected for that run.
+- [x] Existing camera, character presentation, reward, economy, pickup, finish, and run-end behavior remains compatible.
+- [x] The historical natural-speed PRD and task suite remain preserved and marked superseded; the replacement PRD and ADR remain authoritative.
+- [x] No Unity version, package, ProjectSettings, Addressables, save-format, or UPM release change is introduced.
+
+## Completion evidence
+
+- Production-scene ownership scenarios: 2/2 passed (`r_njwedred`).
+- Focused scene composition, controller, lifecycle, and compatibility slice: 50/50 passed (`r_ipa77xph`).
+- Final changed-test regression: 696/696 passed (`r_c9stm43x`); final full project regression: 970/970 passed (`r_1mhs0tfi`).
+- Documentation supersession links resolve, ADR validation passes, and static diff checks found no package, Unity version, ProjectSettings, Addressables, save-format, or UPM release change.
 
 ## Verification
 

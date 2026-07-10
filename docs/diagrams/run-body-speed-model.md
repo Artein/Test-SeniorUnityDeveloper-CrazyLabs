@@ -1,6 +1,6 @@
 # Run Body Movement And Speed Model Diagram
 
-This artifact gives a high-level overview of the planned **Run Body Movement Controller** and **Run Body Speed Model** split. It is intentionally separate from any PRD so future product or implementation documents can reference it without duplicating the diagram.
+This artifact gives a high-level overview of the **Run Body Movement Controller** and **Run Body Speed Model** split. It is intentionally separate from any PRD so future product or implementation documents can reference it without duplicating the diagram.
 
 ## Related Documents
 
@@ -25,13 +25,14 @@ flowchart TD
         D4["Future optional surface profiles<br/>ice, snow, roof tile"]
         D5["Movement validity tuning<br/>surface-normal lift threshold"]
         D6["Inspector validation feedback<br/>invalid tuning shown before Play"]
+        D7["In-game diagnostics observation<br/>speed effects, support, assist budget"]
     end
 
     subgraph Engineer["Engineer"]
         E1["Run Body Movement Controller<br/>fixed-step orchestration + tests"]
         E2["Run Body Speed Model<br/>plain C# speed policy + tests"]
         E3["Run Body Movement Target<br/>Rigidbody adapter/code boundary"]
-        E4["Diagnostics<br/>speed, slope, contact graphs"]
+        E4["Diagnostics presentation<br/>read-only overlay + tests"]
         E5["Authoring validation rules<br/>pure validator + EditMode tests"]
     end
 
@@ -59,6 +60,7 @@ flowchart TD
         R21["Fallback LaunchUpDirection<br/>movement-side launch fact"]
         R22["Low-Speed Assist Attempt<br/>bounded velocity budget"]
         R23["Movement Authoring Invariant Gate<br/>startup/run preparation"]
+        R24["Run Body Speed Diagnostics Snapshot<br/>exact context, decision, assist attempt"]
     end
 
     subgraph Future["Future Optional Extension"]
@@ -86,13 +88,10 @@ flowchart TD
     R5 --> E1
     E1 --> R6
     R6 --> E3
-    E4 -. observes .-> R2
-    E4 -. observes .-> R3
-    E4 -. observes .-> R13
-    E4 -. observes .-> R14
-    E4 -. observes .-> R5
-    E4 -. observes .-> R6
-    E4 -. observes .-> R22
+    E4 -. observes legacy motion graphs .-> R2
+    E4 -. observes legacy surface graphs .-> R3
+    R24 -. read-only observation .-> E4
+    E4 --> D7
     E5 --> D6
     E5 --> R23
 
@@ -129,6 +128,7 @@ flowchart TD
     R13 --> R22
     E1 -. owns attempt state .-> R22
     R22 --> E1
+    E1 -. publishes after the movement write .-> R24
     D2 --> R23
     D3 --> R23
     R23 -. validated values .-> E1
@@ -144,7 +144,7 @@ flowchart TD
 ## Actor Responsibilities
 
 - **Player:** supplies pull and steering input, then observes speed, control, obstacle readability, and fairness on screen.
-- **Designer:** changes serialized launch, movement, validity, and upgrade configuration; receives fail-fast Inspector validation.
-- **Engineer:** changes policy, orchestration, adapters, diagnostics, validation rules, and automated tests.
+- **Designer:** changes serialized launch, movement, validity, and upgrade configuration; receives fail-fast Inspector validation and observes the read-only in-game speed explanation.
+- **Engineer:** changes policy, orchestration, adapters, diagnostics, validation rules, and automated tests; observes the exact production snapshot without duplicating speed policy.
 - **Runtime:** combines validated configuration with current Rigidbody, Run Surface, input, and active-run stat observations.
 - **Unity physics:** retains gravity, contacts, collisions, separation, and external normal-velocity behavior.

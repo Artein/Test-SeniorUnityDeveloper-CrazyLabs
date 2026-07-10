@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Game.Gameplay
 {
-    public sealed partial class RigidbodyPlayerSteeringTarget
+    public sealed partial class RigidbodyRunBodyMovementTarget
     {
         internal void SetRigidbodyForTests(Rigidbody body)
         {

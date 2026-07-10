@@ -18,17 +18,24 @@ Use the standalone actor-aware movement diagram as the high-level documentation 
 
 ## Acceptance criteria
 
-- [ ] Diagnostics expose sampled tangent speed and the effective soft envelope for the active fixed pass.
-- [ ] Diagnostics expose valid grounded support, forward-downhill angle, and course-forward alignment used by the evaluator.
-- [ ] Diagnostics expose every active speed-decision contributor as a combinable flags-style list.
-- [ ] Diagnostics distinguish downhill acceleration, ordinary slowdown, above-envelope resistance, and low-speed assist.
-- [ ] Diagnostics expose effective assist target, attempt state, and remaining requested assist budget.
-- [ ] Inactive, unsupported, directionless, reset, and unavailable states are represented explicitly rather than as misleading stale values.
-- [ ] Values come from the production movement context and decision boundary rather than a second policy implementation.
-- [ ] Diagnostic capture and display do not change evaluator output, movement integration, lifecycle state, or Rigidbody writes.
-- [ ] Contributor flags remain descriptive metadata and are never used as gameplay branch conditions.
-- [ ] Labels use the approved **Run Body**, **Run Surface**, speed-envelope, sanity-guard, and low-speed-assist terminology.
-- [ ] The actor-aware Mermaid artifact remains the canonical high-level overview and is referenced rather than duplicated.
+- [x] Diagnostics expose sampled tangent speed and the effective soft envelope for the active fixed pass.
+- [x] Diagnostics expose valid grounded support, forward-downhill angle, and course-forward alignment used by the evaluator.
+- [x] Diagnostics expose every active speed-decision contributor as a combinable flags-style list.
+- [x] Diagnostics distinguish downhill acceleration, ordinary slowdown, above-envelope resistance, and low-speed assist.
+- [x] Diagnostics expose effective assist target, attempt state, and remaining requested assist budget.
+- [x] Inactive, unsupported, directionless, reset, and unavailable states are represented explicitly rather than as misleading stale values.
+- [x] Values come from the production movement context and decision boundary rather than a second policy implementation.
+- [x] Diagnostic capture and display do not change evaluator output, movement integration, lifecycle state, or Rigidbody writes.
+- [x] Contributor flags remain descriptive metadata and are never used as gameplay branch conditions.
+- [x] Labels use the approved **Run Body**, **Run Surface**, speed-envelope, sanity-guard, and low-speed-assist terminology.
+- [x] The actor-aware Mermaid artifact remains the canonical high-level overview and is referenced rather than duplicated.
+
+## Completion evidence
+
+- Diagnostics implementation plus all then-changed tests: 694/694 passed (`r_xmy0m4x5`).
+- PlayMode equivalence proves observed and unobserved diagnostics produce identical movement output.
+- Static inspection confirms contributor flags are only produced by policy and consumed by diagnostics/tests, never by gameplay branching.
+- The standalone actor-aware Mermaid artifact remains the linked high-level system overview.
 
 ## Verification
 

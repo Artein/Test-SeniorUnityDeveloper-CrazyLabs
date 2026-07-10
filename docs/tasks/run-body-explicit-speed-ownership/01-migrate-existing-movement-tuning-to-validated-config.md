@@ -18,19 +18,26 @@ Keep a temporary compatibility adapter only where needed to migrate existing con
 
 ## Acceptance criteria
 
-- [ ] One **Run Body Movement Tuning** ScriptableObject groups speed, movement-validity, launch-landing, steering, steering-frame, and defensive sanity settings in visibly distinct sections.
-- [ ] Existing authored steering, steering-frame, movement-validity, launch-landing, and sanity-guard values survive migration without changing player behavior.
-- [ ] Speed tuning exposes raw downhill acceleration, ordinary surface slowdown, low-speed assist target, low-speed assist acceleration, base soft maximum, and above-maximum resistance values.
-- [ ] The single asset implements and is registered through narrow read-only interfaces for each implemented consumer.
-- [ ] Runtime services depend on narrow interfaces, not the concrete asset or a broad all-settings interface.
-- [ ] The asset returns authored values without silently resolving, clamping, defaulting, or repairing cross-field combinations.
-- [ ] Inspector labels and tooltips use designer-facing behavior and units; field names do not expose squared-unit implementation details.
-- [ ] Min attributes enforce unconditional lower bounds, and Range attributes appear only where a real upper design limit exists.
-- [ ] A pure validator rejects non-finite values, invalid signs, required zero values, and defined cross-field violations while accepting valid raw combinations that gameplay will resolve later.
-- [ ] Editor validation reports all detected errors, not only the first failure.
-- [ ] Composition or movement initialization fails before fixed-step evaluation when authored config is invalid.
-- [ ] The **Run Body Speed Sanity Guard** remains explicitly defensive and far above normal launch, upgrade, and course speeds.
-- [ ] No surface-profile, terrain-material inference, package, ProjectSettings, or save-format behavior is introduced.
+- [x] One **Run Body Movement Tuning** ScriptableObject groups speed, movement-validity, launch-landing, steering, steering-frame, and defensive sanity settings in visibly distinct sections.
+- [x] Existing authored steering, steering-frame, movement-validity, launch-landing, and sanity-guard values survive migration without changing player behavior.
+- [x] Speed tuning exposes raw downhill acceleration, ordinary surface slowdown, low-speed assist target, low-speed assist acceleration, base soft maximum, and above-maximum resistance values.
+- [x] The single asset implements and is registered through narrow read-only interfaces for each implemented consumer.
+- [x] Runtime services depend on narrow interfaces, not the concrete asset or a broad all-settings interface.
+- [x] The asset returns authored values without silently resolving, clamping, defaulting, or repairing cross-field combinations.
+- [x] Inspector labels and tooltips use designer-facing behavior and units; field names do not expose squared-unit implementation details.
+- [x] Min attributes enforce unconditional lower bounds, and Range attributes appear only where a real upper design limit exists.
+- [x] A pure validator rejects non-finite values, invalid signs, required zero values, and defined cross-field violations while accepting valid raw combinations that gameplay will resolve later.
+- [x] Editor validation reports all detected errors, not only the first failure.
+- [x] Composition or movement initialization fails before fixed-step evaluation when authored config is invalid.
+- [x] The **Run Body Speed Sanity Guard** remains explicitly defensive and far above normal launch, upgrade, and course speeds.
+- [x] No surface-profile, terrain-material inference, package, ProjectSettings, or save-format behavior is introduced.
+
+## Completion evidence
+
+- Config, validation, and composition EditMode slice: 124/124 passed (`r_p64382lx`).
+- Production-scene composition resolves the same asset through all five narrow interfaces.
+- Serialized legacy steering, steering-frame, launch-landing, and sanity values were compared directly with the replaced asset and remain unchanged.
+- Static diff checks found no package, ProjectSettings, Addressables, save-format, surface-profile, or terrain-material addition.
 
 ## Verification
 

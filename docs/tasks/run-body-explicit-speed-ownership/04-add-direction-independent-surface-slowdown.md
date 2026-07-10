@@ -16,16 +16,21 @@ This is one default gameplay slowdown, not a **Run Surface Speed Profile** syste
 
 ## Acceptance criteria
 
-- [ ] The movement-tuning asset exposes one readable global ordinary surface slowdown control.
-- [ ] Valid grounded tangent motion receives the configured slowdown regardless of course-forward alignment.
-- [ ] Forward, diagonal, lateral, and reversed motion at equal tangent speed receives equal authored slowdown.
-- [ ] Missing, invalid, ungrounded, stale, or meaningfully departing support receives no authored slowdown.
-- [ ] Ordinary slowdown never invents a heading, reverses tangent direction, or changes corrected surface-normal velocity.
-- [ ] Downhill acceleration and ordinary slowdown combine deterministically in the documented integration order.
-- [ ] The surface-slowdown contributor appears only when authored slowdown is active.
-- [ ] Authored slowdown remains separately testable from physics-material friction and contact-solver loss.
-- [ ] Unsupported and airborne motion remains physically driven.
-- [ ] No surface profile, terrain layer, visual material, physics-material identity, or course-section override selects gameplay tuning.
+- [x] The movement-tuning asset exposes one readable global ordinary surface slowdown control.
+- [x] Valid grounded tangent motion receives the configured slowdown regardless of course-forward alignment.
+- [x] Forward, diagonal, lateral, and reversed motion at equal tangent speed receives equal authored slowdown.
+- [x] Missing, invalid, ungrounded, stale, or meaningfully departing support receives no authored slowdown.
+- [x] Ordinary slowdown never invents a heading, reverses tangent direction, or changes corrected surface-normal velocity.
+- [x] Downhill acceleration and ordinary slowdown combine deterministically in the documented integration order.
+- [x] The surface-slowdown contributor appears only when authored slowdown is active.
+- [x] Authored slowdown remains separately testable from physics-material friction and contact-solver loss.
+- [x] Unsupported and airborne motion remains physically driven.
+- [x] No surface profile, terrain layer, visual material, physics-material identity, or course-section override selects gameplay tuning.
+
+## Completion evidence
+
+- Evaluator, orchestration, and contact-independent slowdown slice: 44/44 passed (`r_peknudrt`).
+- Static searches found no profile, layer, visual-material, physics-material identity, or course-section tuning selector.
 
 ## Verification
 

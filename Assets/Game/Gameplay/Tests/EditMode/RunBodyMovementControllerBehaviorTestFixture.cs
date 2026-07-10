@@ -12,7 +12,7 @@ using UnityEngine;
 using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
-public abstract class PlayerSteeringControllerTestFixture
+public abstract class RunBodyMovementControllerBehaviorTestFixture
 {
     protected const float DefaultPlanarSpeed = 10f, DefaultVerticalSpeed = 2f;
 
@@ -21,9 +21,10 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeUnityInput _input;
     protected FakeGameplayStateService _stateService;
     protected FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
-    protected FakePlayerSteeringTarget _steeringTarget;
-    protected FakePlayerSteeringConfig _config;
+    protected FakeRunBodyMovementTarget _steeringTarget;
+    protected FakeRunBodyMovementConfig _config;
     protected FakeRunSurfaceContextSource _surfaceContextSource;
+    protected FakeRunProgressService _runProgressService;
     protected FakeRunGameplayStatResolver _statResolver;
     protected FakeTime _clock;
     protected FakeScreen _screen;
@@ -33,28 +34,32 @@ public abstract class PlayerSteeringControllerTestFixture
     protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
     protected GameplayStateId _preLaunchStateId;
     protected GameplayStateId _runningStateId;
+    protected GameplayStatId _playerMaxSpeedStatId;
     protected GameplayStatId _playerSteeringResponsivenessStatId;
-    private PlayerSteeringController _controller;
+    private RunSteeringInputController _inputController;
+    private RunBodyMovementController _movementController;
     private IRunSteeringGesture _runSteeringGesture;
+    protected RecordingRunSteeringInputMetricsResolver _inputMetricsResolver;
 
     [SetUp]
     public void OnSetUp()
     {
         _preLaunchStateId = CreateStateId("PreLaunch");
         _runningStateId = CreateStateId("Running");
+        _playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
         _playerSteeringResponsivenessStatId = CreateStatId("PlayerSteeringResponsiveness");
         _input = new FakeUnityInput();
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _statResolver = new FakeRunGameplayStatResolver();
 
-        _steeringTarget = new FakePlayerSteeringTarget
+        _steeringTarget = new FakeRunBodyMovementTarget
         {
             LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, DefaultPlanarSpeed),
             Rotation = Quaternion.identity
         };
 
-        _config = new FakePlayerSteeringConfig
+        _config = new FakeRunBodyMovementConfig
         {
             RunSteeringRangeCentimeters = 2.54f,
             RunSteeringDeadzoneFraction = 0f,
@@ -65,19 +70,18 @@ public abstract class PlayerSteeringControllerTestFixture
             MaximumTurnDegreesPerSecond = 90f,
             RunAirSteeringMaximumTurnDegreesPerSecond = 30f,
             MinimumSteerSpeed = 0.25f,
+            MaximumSupportedSurfaceNormalLiftSpeed = 0f,
             RunBodySpeedSanityGuardMetersPerSecond = 250f,
             LaunchLandingStabilizationSeconds = 0.3f,
             LaunchLandingMaximumLiftSpeed = 0f,
-            RunSteeringFrameNormalSlewDegreesPerSecond = 180f,
-            RunSteeringFrameSnapDegrees = 60f,
-            RunSteeringFrameUngroundedGraceSeconds = 0.08f,
-            RunSteeringFrameSuspectNormalConfirmationSeconds = 0.04f
+            BaseSoftMaximumSpeed = 20f
         };
 
         _surfaceContextSource = new FakeRunSurfaceContextSource
         {
             Current = new RunSurfaceContext(false, Vector3.up, 0f)
         };
+        _runProgressService = new FakeRunProgressService();
 
         _clock = new FakeTime
         {
@@ -93,18 +97,22 @@ public abstract class PlayerSteeringControllerTestFixture
         };
 
         _steeringFrameSource = new FakeRunSteeringFrameSource();
-        _runSteeringGesture = new RunSteeringGesture(_config);
+        _inputMetricsResolver = new RecordingRunSteeringInputMetricsResolver(_config);
+        _runSteeringGesture = new RunSteeringGesture(_inputMetricsResolver);
         _runSteeringAffordanceLayout = new FakeRunSteeringAffordanceLayout();
         _runSteeringAffordancePresenter = new FakeRunSteeringAffordancePresenter();
         _runSteeringPointerPressGuard = new FakeRunSteeringPointerPressGuard();
-        _controller = CreateController();
-        ((IInitializable)_controller).Initialize();
+        _inputController = CreateInputController();
+        _movementController = CreateMovementController(_inputController);
+        ((IInitializable)_inputController).Initialize();
+        ((IInitializable)_movementController).Initialize();
     }
 
     [TearDown]
     public void OnTearDown()
     {
-        ((IDisposable)_controller).Dispose();
+        ((IDisposable)_movementController).Dispose();
+        ((IDisposable)_inputController).Dispose();
 
         foreach (var unityObject in _objects)
         {
@@ -136,7 +144,7 @@ public abstract class PlayerSteeringControllerTestFixture
 
     protected void FixedTick()
     {
-        ((IFixedTickable)_controller).FixedTick();
+        ((IFixedTickable)_movementController).FixedTick();
     }
 
     private void SettleLaunchStateForSteadySteering(Vector3 launchUpDirection)
@@ -241,12 +249,46 @@ public abstract class PlayerSteeringControllerTestFixture
         Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
     }
 
-    private PlayerSteeringController CreateController()
+    private RunSteeringInputController CreateInputController()
     {
-        return new PlayerSteeringController(_input, _stateService, _launchAppliedNotifier, _steeringTarget, _steeringFrameSource,
-            _steeringFrameSource, _surfaceContextSource, _config, _statResolver, _clock, _screen, _runSteeringGesture,
-            _runSteeringAffordanceLayout, _runSteeringAffordancePresenter, _runSteeringPointerPressGuard, _runningStateId,
+        return new RunSteeringInputController(
+            _input,
+            _stateService,
+            _launchAppliedNotifier,
+            _config,
+            _statResolver,
+            _screen,
+            _runSteeringGesture,
+            _runSteeringAffordanceLayout,
+            _runSteeringAffordancePresenter,
+            _runSteeringPointerPressGuard,
+            _runningStateId,
             _playerSteeringResponsivenessStatId);
+    }
+
+    private RunBodyMovementController CreateMovementController(IRunSteeringInputSource inputSource)
+    {
+        return new RunBodyMovementController(
+            _stateService,
+            _launchAppliedNotifier,
+            _steeringTarget,
+            inputSource,
+            new DefaultRunBodySpeedEvaluator(_config),
+            new DefaultRunSteeringEvaluator(),
+            new RunLaunchLandingStabilizer(_config),
+            _steeringFrameSource,
+            _steeringFrameSource,
+            _surfaceContextSource,
+            _runProgressService,
+            _statResolver,
+            new RunBodySpeedDiagnostics(),
+            _config,
+            _config,
+            _config,
+            new RunBodySpeedEnvelopeValidator(_config),
+            _clock,
+            _playerMaxSpeedStatId,
+            _runningStateId);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -366,24 +408,26 @@ public abstract class PlayerSteeringControllerTestFixture
         }
     }
 
-    protected sealed class FakePlayerSteeringTarget : IPlayerSteeringTarget
+    protected sealed class FakeRunBodyMovementTarget : IRunBodyMovementTarget
     {
         public Vector3 LinearVelocity { get; set; }
         public Quaternion Rotation { get; set; }
         public int ApplyVelocityCallCount { get; private set; }
         public int ApplyCallCount { get; private set; }
 
-        public void ApplyVelocity(Vector3 linearVelocity)
+        public void ApplyTargetState(RunBodyMovementTargetState targetState)
         {
-            LinearVelocity = linearVelocity;
-            ApplyVelocityCallCount += 1;
-        }
+            LinearVelocity = targetState.LinearVelocity;
 
-        public void ApplySteering(Vector3 linearVelocity, Quaternion rotation)
-        {
-            LinearVelocity = linearVelocity;
-            Rotation = rotation;
-            ApplyCallCount += 1;
+            if (targetState.HasRotation)
+            {
+                Rotation = targetState.Rotation;
+                ApplyCallCount += 1;
+            }
+            else
+            {
+                ApplyVelocityCallCount += 1;
+            }
         }
 
         public void ResetApplyCallCounts()
@@ -393,8 +437,18 @@ public abstract class PlayerSteeringControllerTestFixture
         }
     }
 
-    protected sealed class FakePlayerSteeringConfig : IPlayerSteeringConfig
+    protected sealed class FakeRunBodyMovementConfig :
+        IRunBodySpeedConfig,
+        IRunSteeringConfig,
+        IRunBodyMovementValidityConfig,
+        IRunLaunchLandingStabilizationConfig
     {
+        public float DownhillAcceleration { get; set; }
+        public float SurfaceSlowdown { get; set; }
+        public float LowSpeedAssistTargetSpeed { get; set; }
+        public float LowSpeedAssistAcceleration { get; set; }
+        public float BaseSoftMaximumSpeed { get; set; }
+        public float AboveMaximumSpeedResistance { get; set; }
         public float RunSteeringRangeCentimeters { get; set; }
         public float RunSteeringDeadzoneFraction { get; set; }
         public float RunSteeringResponsiveness { get; set; }
@@ -404,36 +458,57 @@ public abstract class PlayerSteeringControllerTestFixture
         public float MaximumTurnDegreesPerSecond { get; set; }
         public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
         public float MinimumSteerSpeed { get; set; }
+        public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; }
         public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
         public float LaunchLandingStabilizationSeconds { get; set; }
         public float LaunchLandingMaximumLiftSpeed { get; set; }
-        public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
-        public float RunSteeringFrameSnapDegrees { get; set; }
-        public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
-        public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; }
-        public List<float> RangePixelRawDpiRequests { get; } = new();
+    }
 
-        public float ResolveRunSteeringDpi(float rawDpi)
+    protected sealed class RecordingRunSteeringInputMetricsResolver : IRunSteeringInputMetricsResolver
+    {
+        private readonly DefaultRunSteeringInputMetricsResolver _resolver;
+
+        public List<float> RawDpiRequests { get; } = new();
+
+        public RecordingRunSteeringInputMetricsResolver(IRunSteeringConfig config)
         {
-            if (float.IsNaN(rawDpi) || float.IsInfinity(rawDpi))
-                return FallbackDpi;
-
-            if (rawDpi < MinimumAcceptedDpi || rawDpi > MaximumAcceptedDpi)
-                return FallbackDpi;
-
-            return rawDpi;
+            _resolver = new DefaultRunSteeringInputMetricsResolver(config);
         }
 
-        public float ResolveRunSteeringRangePixels(float rawDpi)
+        public RunSteeringInputMetrics Resolve(float rawDpi)
         {
-            RangePixelRawDpiRequests.Add(rawDpi);
-            return RunSteeringRangeCentimeters / 2.54f * ResolveRunSteeringDpi(rawDpi);
+            RawDpiRequests.Add(rawDpi);
+            return _resolver.Resolve(rawDpi);
         }
     }
 
     protected sealed class FakeRunSurfaceContextSource : IRunSurfaceContextSource
     {
         public RunSurfaceContext Current { get; set; }
+    }
+
+    protected sealed class FakeRunProgressService : IRunProgressService
+    {
+        public bool HasValidSnapshot => false;
+        public string SnapshotError => string.Empty;
+        public RunProgressFrameSnapshot Snapshot => default;
+        public float CurrentForwardProgress => 0f;
+        public float MaximumForwardProgress => 0f;
+        public RunProgressSample CurrentSample => default;
+
+        public bool TryBeginRun(Vector3 origin, out string error)
+        {
+            error = string.Empty;
+            return false;
+        }
+
+        public void SamplePosition(Vector3 position)
+        {
+        }
+
+        public void Reset()
+        {
+        }
     }
 
     protected sealed class FakeRunGameplayStatResolver : IRunGameplayStatResolver
@@ -499,6 +574,10 @@ public abstract class PlayerSteeringControllerTestFixture
         {
             LastResetLaunchUpDirection = launchUpDirection;
             ResetCallCount += 1;
+        }
+
+        public void Clear()
+        {
         }
 
         public void ResetFixedTickCallCounts()

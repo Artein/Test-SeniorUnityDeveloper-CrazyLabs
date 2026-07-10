@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Game.Gameplay;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
@@ -81,10 +82,10 @@ public sealed class GameplayLifetimeScopeTests
                 .And.Message.Contains("Coin Pickup Multiplier Stat Id")
                 .And.Message.Contains("Slingshot Config")
                 .And.Message.Contains("Gameplay Slingshot Launch Config")
-                .And.Message.Contains("Player Steering Config")
+                .And.Message.Contains("Run Body Movement Tuning")
                 .And.Message.Contains("Run Camera Config")
                 .And.Message.Contains("Run End Config")
-                .And.Message.Contains("Player Steering Target")
+                .And.Message.Contains("Run Body Movement Target")
                 .And.Message.Contains("Run Camera Source")
                 .And.Message.Contains("Run Progress Frame Source")
                 .And.Message.Contains("Scene Composition Installer")
@@ -113,6 +114,26 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
+    public void ValidateRequiredReferencesForTests_InvalidMovementConfig_ThrowsWithEveryConfigError()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.RunBodyMovementConfig.SetSpeedValuesForTests(
+            downhillAcceleration: float.NaN,
+            surfaceSlowdown: -1f,
+            lowSpeedAssistTargetSpeed: 5f,
+            lowSpeedAssistAcceleration: 8f,
+            baseSoftMaximumSpeed: 20f,
+            aboveMaximumSpeedResistance: 12f);
+
+        Assert.That(
+            fixture.Scope.ValidateRequiredReferencesForTests,
+            Throws.TypeOf<InvalidOperationException>()
+                .With.Message.Contains(nameof(IRunBodySpeedConfig.DownhillAcceleration))
+                .And.Message.Contains(nameof(IRunBodySpeedConfig.SurfaceSlowdown)));
     }
 
     [Test]
@@ -321,9 +342,13 @@ public sealed class GameplayLifetimeScopeTests
         using var container = builder.Build();
 
         var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var diagnosticsSource = container.Resolve<IRunBodySpeedDiagnosticsSource>();
+        var diagnosticsSink = container.Resolve<IRunBodySpeedDiagnosticsSink>();
 
         Assert.That(overlays, Is.Empty);
         Assert.That(() => container.Resolve<RunDiagnosticsOverlay>(), Throws.TypeOf<VContainerException>());
+        Assert.That(diagnosticsSource, Is.SameAs(diagnosticsSink));
+        Assert.That(diagnosticsSource.Current.State, Is.EqualTo(RunBodySpeedDiagnosticsState.Inactive));
     }
 
     [Test]
@@ -338,10 +363,14 @@ public sealed class GameplayLifetimeScopeTests
         using var container = builder.Build();
 
         var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var diagnosticsSource = container.Resolve<IRunBodySpeedDiagnosticsSource>();
+        var diagnosticsSink = container.Resolve<IRunBodySpeedDiagnosticsSink>();
 
         Assert.That(overlays, Has.Length.EqualTo(1));
         Assert.That(overlays[0].gameObject.name, Is.EqualTo("RunDiagnosticsOverlay"));
         Assert.That(container.Resolve<RunDiagnosticsOverlay>(), Is.SameAs(overlays[0]));
+        Assert.That(diagnosticsSource, Is.SameAs(diagnosticsSink));
+        Assert.That(diagnosticsSource.Current.State, Is.EqualTo(RunBodySpeedDiagnosticsState.Inactive));
     }
 
     [Test]
@@ -378,8 +407,19 @@ public sealed class GameplayLifetimeScopeTests
         var launchTargetPreLaunchReset = container.Resolve<ILaunchTargetPreLaunchReset>();
         var runEndPoseLockTarget = container.Resolve<IRunEndPoseLockTarget>();
         var preLaunchRigPoseResetter = container.Resolve<IPreLaunchRigPoseResetter>();
-        var steeringTarget = container.Resolve<IPlayerSteeringTarget>();
-        var steeringConfig = container.Resolve<IPlayerSteeringConfig>();
+        var movementTarget = container.Resolve<IRunBodyMovementTarget>();
+        var speedConfig = container.Resolve<IRunBodySpeedConfig>();
+        var movementValidityConfig = container.Resolve<IRunBodyMovementValidityConfig>();
+        var landingStabilizationConfig = container.Resolve<IRunLaunchLandingStabilizationConfig>();
+        var steeringConfig = container.Resolve<IRunSteeringConfig>();
+        var steeringFrameConfig = container.Resolve<IRunSteeringFrameConfig>();
+        var steeringInputMetricsResolver = container.Resolve<IRunSteeringInputMetricsResolver>();
+        var steeringInputSource = container.Resolve<IRunSteeringInputSource>();
+        var speedEvaluator = container.Resolve<IRunBodySpeedEvaluator>();
+        var speedDiagnosticsSource = container.Resolve<IRunBodySpeedDiagnosticsSource>();
+        var speedDiagnosticsSink = container.Resolve<IRunBodySpeedDiagnosticsSink>();
+        var steeringEvaluator = container.Resolve<IRunSteeringEvaluator>();
+        var launchLandingStabilizer = container.Resolve<IRunLaunchLandingStabilizer>();
         var runSteeringGesture = container.Resolve<IRunSteeringGesture>();
         var runSteeringAffordanceLayout = container.Resolve<IRunSteeringAffordanceLayout>();
         var runSteeringAffordancePresenter = container.Resolve<IRunSteeringAffordancePresenter>();
@@ -466,8 +506,8 @@ public sealed class GameplayLifetimeScopeTests
         var runSurfaceContextSourceFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSurfaceContextSource));
 
-        var playerSteeringControllerFixedTickableIndex =
-            GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is PlayerSteeringController);
+        var runBodyMovementControllerFixedTickableIndex =
+            GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is RunBodyMovementController);
         var characterVisualFollowerLateTickableIndex = GetLateTickableIndex(lateTickables, lateTickable => lateTickable is CharacterVisualFollower);
 
         var animatedContactSensorPoseSyncLateTickableIndex =
@@ -488,7 +528,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(21));
+        Assert.That(initializables.Count, Is.EqualTo(22));
         Assert.That(tickables.Count, Is.EqualTo(5));
         Assert.That(fixedTickables.Count, Is.EqualTo(7));
         Assert.That(lateTickables.Count, Is.EqualTo(3));
@@ -498,9 +538,19 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchTargetPreLaunchReset, Is.SameAs(fixture.LaunchTarget));
         Assert.That(runEndPoseLockTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(preLaunchRigPoseResetter, Is.Not.Null);
-        Assert.That(steeringTarget, Is.SameAs(fixture.PlayerSteeringTarget));
-        Assert.That(steeringTarget, Is.Not.SameAs(fixture.LaunchTarget));
-        Assert.That(steeringConfig, Is.Not.Null);
+        Assert.That(movementTarget, Is.SameAs(fixture.RunBodyMovementTarget));
+        Assert.That(movementTarget, Is.Not.SameAs(fixture.LaunchTarget));
+        Assert.That(speedConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(movementValidityConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(landingStabilizationConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(steeringConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(steeringFrameConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(steeringInputMetricsResolver, Is.TypeOf<DefaultRunSteeringInputMetricsResolver>());
+        Assert.That(steeringInputSource, Is.TypeOf<RunSteeringInputController>());
+        Assert.That(speedEvaluator, Is.TypeOf<DefaultRunBodySpeedEvaluator>());
+        Assert.That(speedDiagnosticsSource, Is.SameAs(speedDiagnosticsSink));
+        Assert.That(steeringEvaluator, Is.TypeOf<DefaultRunSteeringEvaluator>());
+        Assert.That(launchLandingStabilizer, Is.TypeOf<RunLaunchLandingStabilizer>());
         Assert.That(runSteeringGesture, Is.Not.Null);
         Assert.That(runSteeringAffordanceLayout, Is.TypeOf<RunSteeringAffordanceLayout>());
         Assert.That(runSteeringAffordancePresenter, Is.Not.InstanceOf<MonoBehaviour>());
@@ -513,9 +563,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
         Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(runSteeringFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(playerSteeringControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(runBodyMovementControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(fixedTickables.Count(fixedTickable => fixedTickable is RunBodyMovementController), Is.EqualTo(1));
         Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.LessThan(runSteeringFrameFixedTickableIndex));
-        Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(playerSteeringControllerFixedTickableIndex));
+        Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(runBodyMovementControllerFixedTickableIndex));
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
         Assert.That(runRewardConfig, Is.SameAs(fixture.RunEndConfig));
@@ -625,7 +676,7 @@ public sealed class GameplayLifetimeScopeTests
         var coinPickupMultiplierStatId = CreateStatId("coin_pickup_multiplier");
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
         var gameplaySlingshotLaunchConfig = Track(ScriptableObject.CreateInstance<GameplaySlingshotLaunchConfig>());
-        var playerSteeringConfig = Track(ScriptableObject.CreateInstance<PlayerSteeringConfig>());
+        var runBodyMovementConfig = Track(ScriptableObject.CreateInstance<RunBodyMovementConfig>());
         var runCameraConfig = Track(ScriptableObject.CreateInstance<RunCameraConfig>());
         var runEndConfig = Track(ScriptableObject.CreateInstance<RunEndConfig>());
         var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
@@ -634,7 +685,7 @@ public sealed class GameplayLifetimeScopeTests
         var runSteeringAffordanceView = CreateRunSteeringAffordanceView();
         var runPreparationView = CreateRunPreparationView();
         var runEndedView = CreateRunEndedView();
-        var launchTarget = CreateLaunchTarget(out var playerSteeringTarget, out var runCameraSource, out var contactNotifier);
+        var launchTarget = CreateLaunchTarget(out var runBodyMovementTarget, out var runCameraSource, out var contactNotifier);
         var slingshotRig = CreateGameObject("Slingshot Rig").transform;
         var preLaunchSlingshotRigPose = CreateGameObject("Pre-Launch Slingshot Rig Pose").transform;
         var preLaunchLaunchTargetPose = CreateGameObject("Pre-Launch Launch Target Pose").transform;
@@ -666,7 +717,7 @@ public sealed class GameplayLifetimeScopeTests
 
         scope.SetReferencesForTests(gameplayStateConfig, runPreparation, preLaunch, running, runEnded, upgradeCatalog, slingshotLaunchPowerStatId,
             playerMaxSpeedStatId, playerSteeringResponsivenessStatId, currencyDefinition, coinPickupMultiplierStatId, slingshotConfig,
-            gameplaySlingshotLaunchConfig, playerSteeringConfig, runCameraConfig, runEndConfig, playerSteeringTarget, runCameraSource,
+            gameplaySlingshotLaunchConfig, runBodyMovementConfig, runCameraConfig, runEndConfig, runBodyMovementTarget, runCameraSource,
             runProgressFrameSource, sceneCompositionInstallers: new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller, pickupsInstaller },
             contactNotifier, runCameraAnchor, runCameraRig, camera, slingshotRig, preLaunchSlingshotRigPose, preLaunchLaunchTargetPose,
             slingshotView, pullHintView, runSteeringAffordanceView, runPreparationView, runEndedView, launchTarget, characterPresentationView,
@@ -686,12 +737,13 @@ public sealed class GameplayLifetimeScopeTests
             CoinPickupMultiplierStatId = coinPickupMultiplierStatId,
             UpgradeCatalog = upgradeCatalog,
             GameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig,
+            RunBodyMovementConfig = runBodyMovementConfig,
             LaunchTarget = launchTarget,
             LevelPickup = levelPickup,
             LevelPickups = levelPickups,
             PickupsInstaller = pickupsInstaller,
             PickupSensorSource = pickupSensorSource,
-            PlayerSteeringTarget = playerSteeringTarget,
+            RunBodyMovementTarget = runBodyMovementTarget,
             RunCameraConfig = runCameraConfig,
             RunEndConfig = runEndConfig,
             RunCameraSource = runCameraSource,
@@ -922,7 +974,7 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     private RigidbodyLaunchTarget CreateLaunchTarget(
-        out RigidbodyPlayerSteeringTarget playerSteeringTarget,
+        out RigidbodyRunBodyMovementTarget runBodyMovementTarget,
         out RigidbodyRunCameraSource runCameraSource,
         out RigidbodyContactNotifier contactNotifier)
     {
@@ -932,8 +984,8 @@ public sealed class GameplayLifetimeScopeTests
         bandCenter.SetParent(rigidbody.transform, false);
         var launchTarget = rigidbody.gameObject.AddComponent<RigidbodyLaunchTarget>();
         launchTarget.SetReferencesForTests(rigidbody, collider, bandCenter);
-        playerSteeringTarget = rigidbody.gameObject.AddComponent<RigidbodyPlayerSteeringTarget>();
-        playerSteeringTarget.SetRigidbodyForTests(rigidbody);
+        runBodyMovementTarget = rigidbody.gameObject.AddComponent<RigidbodyRunBodyMovementTarget>();
+        runBodyMovementTarget.SetRigidbodyForTests(rigidbody);
         runCameraSource = rigidbody.gameObject.AddComponent<RigidbodyRunCameraSource>();
         runCameraSource.SetRigidbodyForTests(rigidbody);
         contactNotifier = rigidbody.gameObject.AddComponent<RigidbodyContactNotifier>();
@@ -1043,12 +1095,13 @@ public sealed class GameplayLifetimeScopeTests
         public GameplayStatId CoinPickupMultiplierStatId { get; set; }
         public UpgradeCatalog UpgradeCatalog { get; set; }
         public GameplaySlingshotLaunchConfig GameplaySlingshotLaunchConfig { get; set; }
+        public RunBodyMovementConfig RunBodyMovementConfig { get; set; }
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
         public Pickup LevelPickup { get; set; }
         public IReadOnlyList<Pickup> LevelPickups { get; set; }
         public GameplayPickupsSceneCompositionMonoInstaller PickupsInstaller { get; set; }
         public PickupSensorSource PickupSensorSource { get; set; }
-        public RigidbodyPlayerSteeringTarget PlayerSteeringTarget { get; set; }
+        public RigidbodyRunBodyMovementTarget RunBodyMovementTarget { get; set; }
         public RunCameraConfig RunCameraConfig { get; set; }
         public RunEndConfig RunEndConfig { get; set; }
         public RigidbodyRunCameraSource RunCameraSource { get; set; }

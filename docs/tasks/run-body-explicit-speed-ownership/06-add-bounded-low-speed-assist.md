@@ -18,22 +18,28 @@ Keep the first slice observation-based. Do not add obstruction raycasts, persist
 
 ## Acceptance criteria
 
-- [ ] Designers can tune low-speed assist target and low-speed assist acceleration independently.
-- [ ] The effective assist target is the lower of the raw target and resolved soft envelope.
-- [ ] Assist starts only with valid grounded support, below-target speed, positive course-forward alignment, and a usable existing tangent direction.
-- [ ] One eligible low-speed episode opens one attempt whose total requested velocity budget equals its initial deficit.
-- [ ] Requested assist delta spends budget before physics resolution.
-- [ ] Repeated solver cancellation cannot replenish or extend the attempt budget.
-- [ ] Assist approaches the effective target at the authored rate without crossing the target or soft envelope.
-- [ ] Support loss pauses the current attempt and does not replenish it.
-- [ ] Exact-zero and directionless states do not synthesize heading, open propulsion in an arbitrary direction, or spend budget.
-- [ ] Lateral and reversed movement receive no positive assist.
-- [ ] Independent sampled recovery above the effective target plus numeric tolerance rearms assistance.
-- [ ] Starting a new run rearms assistance and leaving **Running** clears attempt state.
-- [ ] Blocking geometry can exhaust one attempt and still stop the Run Body.
-- [ ] **Lost Momentum** remains an independent observer and can end a genuine stall.
-- [ ] No obstruction raycast, persistent blocking-contact tracker, or dependency on **Lost Momentum** internals is introduced.
-- [ ] Diagnostic state exposes whether assist is eligible, active, paused, exhausted, or rearmed and how much requested budget remains.
+- [x] Designers can tune low-speed assist target and low-speed assist acceleration independently.
+- [x] The effective assist target is the lower of the raw target and resolved soft envelope.
+- [x] Assist starts only with valid grounded support, below-target speed, positive course-forward alignment, and a usable existing tangent direction.
+- [x] One eligible low-speed episode opens one attempt whose total requested velocity budget equals its initial deficit.
+- [x] Requested assist delta spends budget before physics resolution.
+- [x] Repeated solver cancellation cannot replenish or extend the attempt budget.
+- [x] Assist approaches the effective target at the authored rate without crossing the target or soft envelope.
+- [x] Support loss pauses the current attempt and does not replenish it.
+- [x] Exact-zero and directionless states do not synthesize heading, open propulsion in an arbitrary direction, or spend budget.
+- [x] Lateral and reversed movement receive no positive assist.
+- [x] Independent sampled recovery above the effective target plus numeric tolerance rearms assistance.
+- [x] Starting a new run rearms assistance and leaving **Running** clears attempt state.
+- [x] Blocking geometry can exhaust one attempt and still stop the Run Body.
+- [x] **Lost Momentum** remains an independent observer and can end a genuine stall.
+- [x] No obstruction raycast, persistent blocking-contact tracker, or dependency on **Lost Momentum** internals is introduced.
+- [x] Diagnostic state exposes whether assist is eligible, active, paused, exhausted, or rearmed and how much requested budget remains.
+
+## Completion evidence
+
+- Assist state, orchestration, lifecycle, and diagnostic slice: 141/141 passed (`r_bdkwi22u`).
+- Focused movement PlayMode slice: 9/9 passed (`r_7rc81e91`), including recoverable motion, solver-cancelled budget exhaustion, and unsupported pause/resume.
+- Static inspection found no obstruction sensing, persistent blocking-contact tracker, or dependency on Lost Momentum internals.
 
 ## Verification
 

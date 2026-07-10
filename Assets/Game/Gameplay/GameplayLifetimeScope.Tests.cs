@@ -17,7 +17,7 @@ namespace Game.Gameplay
         internal GameplayStateId RunPreparationStateIdForTests => _runPreparationStateId;
         internal GameplayStateId RunningStateIdForTests => _runningStateId;
         internal GameplayStateId RunEndedStateIdForTests => _runEndedStateId;
-        internal PlayerSteeringConfig PlayerSteeringConfigForTests => _playerSteeringConfig;
+        internal RunBodyMovementConfig RunBodyMovementConfigForTests => _runBodyMovementConfig;
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
         internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
@@ -38,10 +38,10 @@ namespace Game.Gameplay
             GameplayStatId coinPickupMultiplierStatId,
             SlingshotConfig slingshotConfig,
             GameplaySlingshotLaunchConfig gameplaySlingshotLaunchConfig,
-            PlayerSteeringConfig playerSteeringConfig,
+            RunBodyMovementConfig runBodyMovementConfig,
             RunCameraConfig runCameraConfig,
             RunEndConfig runEndConfig,
-            RigidbodyPlayerSteeringTarget playerSteeringTarget,
+            RigidbodyRunBodyMovementTarget runBodyMovementTarget,
             RigidbodyRunCameraSource runCameraSource,
             RunProgressFrameSource runProgressFrameSource,
             BaseSceneCompositionMonoInstaller[] sceneCompositionInstallers,
@@ -75,10 +75,10 @@ namespace Game.Gameplay
             _coinPickupMultiplierStatId = coinPickupMultiplierStatId;
             _slingshotConfig = slingshotConfig;
             _gameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig;
-            _playerSteeringConfig = playerSteeringConfig;
+            _runBodyMovementConfig = runBodyMovementConfig;
             _runCameraConfig = runCameraConfig;
             _runEndConfig = runEndConfig;
-            _playerSteeringTarget = playerSteeringTarget;
+            _runBodyMovementTarget = runBodyMovementTarget;
             _runCameraSource = runCameraSource;
             _runProgressFrameSource = runProgressFrameSource;
             _sceneCompositionInstallers = sceneCompositionInstallers;

@@ -6,19 +6,19 @@ using UnityEngine;
 // ReSharper disable once CheckNamespace
 public sealed class RunSteeringGestureTests
 {
-    private FakePlayerSteeringConfig _config;
+    private FakeRunSteeringInputMetricsResolver _metricsResolver;
     private RunSteeringGesture _gesture;
 
     [SetUp]
     public void OnSetUp()
     {
-        _config = new FakePlayerSteeringConfig
+        _metricsResolver = new FakeRunSteeringInputMetricsResolver
         {
-            RunSteeringDeadzoneFraction = 0.2f,
-            RunSteeringRangePixels = 100f
+            DeadzoneFraction = 0.2f,
+            RangePixels = 100f
         };
 
-        _gesture = new RunSteeringGesture(_config);
+        _gesture = new RunSteeringGesture(_metricsResolver);
     }
 
     [Test]
@@ -32,7 +32,7 @@ public sealed class RunSteeringGestureTests
         Assert.That(_gesture.origin, Is.EqualTo(new Vector2(25f, 40f)));
         Assert.That(_gesture.capturedRangePixels, Is.EqualTo(100f));
         Assert.That(_gesture.RequestedSteering, Is.Zero);
-        Assert.That(_config.RangePixelRawDpiRequest, Is.EqualTo(96f));
+        Assert.That(_metricsResolver.RawDpiRequest, Is.EqualTo(96f));
         Assert.That(snapshot.IsActive, Is.True);
         Assert.That(snapshot.PointerId, Is.EqualTo(1));
         Assert.That(snapshot.OriginScreenPosition, Is.EqualTo(new Vector2(25f, 40f)));
@@ -194,10 +194,10 @@ public sealed class RunSteeringGestureTests
     [Test]
     public void TryMove_ConfigRangeChangesAfterBegin_UsesCapturedRangeUntilNextGesture()
     {
-        _config.RunSteeringDeadzoneFraction = 0f;
-        _config.RunSteeringRangePixels = 100f;
+        _metricsResolver.DeadzoneFraction = 0f;
+        _metricsResolver.RangePixels = 100f;
         ((IRunSteeringGesture)_gesture).TryBegin(new PointerInput(1, new Vector2(0f, 0f)), 96f);
-        _config.RunSteeringRangePixels = 200f;
+        _metricsResolver.RangePixels = 200f;
 
         ((IRunSteeringGesture)_gesture).TryMove(new PointerInput(1, new Vector2(100f, 0f)));
 
@@ -213,7 +213,7 @@ public sealed class RunSteeringGestureTests
     [Test]
     public void TryMove_EdgeOrigin_UsesStrictPhysicalRange()
     {
-        _config.RunSteeringDeadzoneFraction = 0f;
+        _metricsResolver.DeadzoneFraction = 0f;
         ((IRunSteeringGesture)_gesture).TryBegin(new PointerInput(1, new Vector2(0f, 50f)), 96f);
 
         ((IRunSteeringGesture)_gesture).TryMove(new PointerInput(1, new Vector2(100f, 50f)));
@@ -221,36 +221,16 @@ public sealed class RunSteeringGestureTests
         Assert.That(_gesture.RequestedSteering, Is.EqualTo(1f));
     }
 
-    private sealed class FakePlayerSteeringConfig : IPlayerSteeringConfig
+    private sealed class FakeRunSteeringInputMetricsResolver : IRunSteeringInputMetricsResolver
     {
-        public float RunSteeringRangeCentimeters { get; set; }
-        public float RunSteeringDeadzoneFraction { get; set; }
-        public float RunSteeringResponsiveness { get; set; }
-        public float FallbackDpi { get; set; }
-        public float MinimumAcceptedDpi { get; set; }
-        public float MaximumAcceptedDpi { get; set; }
-        public float MaximumTurnDegreesPerSecond { get; set; }
-        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
-        public float MinimumSteerSpeed { get; set; }
-        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
-        public float LaunchLandingStabilizationSeconds { get; set; }
-        public float LaunchLandingMaximumLiftSpeed { get; set; }
-        public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; }
-        public float RunSteeringFrameSnapDegrees { get; set; }
-        public float RunSteeringFrameUngroundedGraceSeconds { get; set; }
-        public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; }
-        public float RunSteeringRangePixels { get; set; }
-        public float RangePixelRawDpiRequest { get; private set; }
+        public float DeadzoneFraction { get; set; }
+        public float RangePixels { get; set; }
+        public float RawDpiRequest { get; private set; }
 
-        public float ResolveRunSteeringDpi(float rawDpi)
+        public RunSteeringInputMetrics Resolve(float rawDpi)
         {
-            return rawDpi;
-        }
-
-        public float ResolveRunSteeringRangePixels(float rawDpi)
-        {
-            RangePixelRawDpiRequest = rawDpi;
-            return RunSteeringRangePixels;
+            RawDpiRequest = rawDpi;
+            return new RunSteeringInputMetrics(rawDpi, RangePixels, DeadzoneFraction);
         }
     }
 }

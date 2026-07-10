@@ -2,7 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
-public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTestFixture
+public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementControllerBehaviorTestFixture
 {
     [Test]
     public void BeforeLaunch_DoesNotEnableInputOrSteer()
@@ -170,7 +170,8 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         FixedTick();
 
         AssertResolved(_playerSteeringResponsivenessStatId, 100f);
-        Assert.That(_statResolver.ResolveRequests, Has.Count.EqualTo(resolveRequestCountBeforeTick + 1));
+        AssertResolved(_playerMaxSpeedStatId, _config.BaseSoftMaximumSpeed);
+        Assert.That(_statResolver.ResolveRequests, Has.Count.EqualTo(resolveRequestCountBeforeTick + 2));
         AssertPlanarAndVerticalSpeedPreserved(_steeringTarget.LinearVelocity);
     }
 
@@ -187,7 +188,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_AirWithoutActiveGesture_DoesNotWriteVelocityOrFacing()
+    public void FixedTick_AirWithoutActiveGesture_WritesUnchangedVelocityWithoutFacing()
     {
         SetUngroundedSurface();
         var launchVelocity = new Vector3(0f, DefaultVerticalSpeed, 35f);
@@ -197,7 +198,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         FixedTick();
 
         AssertVectorEqual(_steeringTarget.LinearVelocity, launchVelocity);
-        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(1));
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
     }
 
@@ -333,7 +334,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_NoTakeoffGroundedWithPositiveLiftWithoutGesture_DoesNotApplyHiddenGuidance()
+    public void FixedTick_NoTakeoffGroundedWithPositiveLiftWithoutGesture_WritesUnchangedVelocityWithoutFacing()
     {
         SetGroundedSurface(Vector3.up);
         var launchVelocity = new Vector3(0f, 2f, 12f);
@@ -345,7 +346,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         FixedTick();
 
         AssertVectorEqual(_steeringTarget.LinearVelocity, launchVelocity);
-        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(2));
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
     }
 
@@ -490,7 +491,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         Assert.That(_steeringTarget.LinearVelocity.y, Is.EqualTo(0f).Within(0.0001f));
         AssertPlanarSpeed(_steeringTarget.LinearVelocity, 0.1f);
-        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(1));
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(3));
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
         Assert.That(_steeringTarget.Rotation, Is.EqualTo(Quaternion.identity));
     }
@@ -714,7 +715,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
 
         _input.Press(1, new Vector2(500f, 100f));
 
-        Assert.That(_config.RangePixelRawDpiRequests, Contains.Item(96f));
+        Assert.That(_inputMetricsResolver.RawDpiRequests, Contains.Item(96f));
     }
 
     [Test]
@@ -830,7 +831,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
     }
 
     [Test]
-    public void FixedTick_BelowMinimumSteerSpeed_DoesNotApplySteering()
+    public void FixedTick_BelowMinimumSteerSpeed_WritesUnchangedVelocityWithoutFacing()
     {
         _steeringTarget.LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, 0.1f);
         ActivateSteering();
@@ -839,7 +840,7 @@ public sealed class PlayerSteeringControllerTests : PlayerSteeringControllerTest
         _input.Move(1, new Vector2(600f, 100f));
         FixedTick();
 
-        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.Zero);
+        Assert.That(_steeringTarget.ApplyVelocityCallCount, Is.EqualTo(1));
         Assert.That(_steeringTarget.ApplyCallCount, Is.Zero);
     }
 

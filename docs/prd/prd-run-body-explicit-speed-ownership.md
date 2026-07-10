@@ -1,6 +1,6 @@
 # PRD: Run Body Explicit Speed Ownership
 
-Status: Approved for implementation
+Status: Implemented and approved
 
 Related documents:
 

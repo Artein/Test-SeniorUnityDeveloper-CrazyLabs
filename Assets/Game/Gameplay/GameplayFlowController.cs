@@ -21,7 +21,11 @@ namespace Game.Gameplay
         private readonly IGameplaySlingshotLauncher _slingshotLauncher;
         private readonly IRunModifierSnapshotFactory _snapshotFactory;
         private readonly IRunModifierSnapshotStore _snapshotStore;
+        private readonly IRunGameplayStatResolver _runGameplayStatResolver;
+        private readonly IRunBodySpeedConfig _speedConfig;
+        private readonly RunBodySpeedEnvelopeValidator _speedEnvelopeValidator;
         private readonly IPreLaunchRigPoseResetter _preLaunchRigPoseResetter;
+        private readonly GameplayStatId _playerMaxSpeedStatId;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _preLaunchStateId;
         private readonly GameplayStateId _runningStateId;
@@ -37,10 +41,18 @@ namespace Game.Gameplay
             IGameplaySlingshotLauncher slingshotLauncher,
             IRunModifierSnapshotFactory snapshotFactory,
             IRunModifierSnapshotStore snapshotStore,
+            IRunGameplayStatResolver runGameplayStatResolver,
+            IRunBodySpeedConfig speedConfig,
+            RunBodySpeedEnvelopeValidator speedEnvelopeValidator,
             IPreLaunchRigPoseResetter preLaunchRigPoseResetter,
-            [Key(InjectKey.GameplayStateId.RunPreparation)] GameplayStateId runPreparationStateId,
-            [Key(InjectKey.GameplayStateId.PreLaunch)] GameplayStateId preLaunchStateId,
-            [Key(InjectKey.GameplayStateId.Running)] GameplayStateId runningStateId)
+            [Key(InjectKey.GameplayStatId.PlayerMaxSpeed)]
+            GameplayStatId playerMaxSpeedStatId,
+            [Key(InjectKey.GameplayStateId.RunPreparation)]
+            GameplayStateId runPreparationStateId,
+            [Key(InjectKey.GameplayStateId.PreLaunch)]
+            GameplayStateId preLaunchStateId,
+            [Key(InjectKey.GameplayStateId.Running)]
+            GameplayStateId runningStateId)
         {
             _slingshotCapture = slingshotCapture ?? throw new ArgumentNullException(nameof(slingshotCapture));
 
@@ -52,6 +64,13 @@ namespace Game.Gameplay
             _preLaunchRigPoseResetter = preLaunchRigPoseResetter ?? throw new ArgumentNullException(nameof(preLaunchRigPoseResetter));
             _snapshotFactory = snapshotFactory ?? throw new ArgumentNullException(nameof(snapshotFactory));
             _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
+            _runGameplayStatResolver = runGameplayStatResolver ?? throw new ArgumentNullException(nameof(runGameplayStatResolver));
+            _speedConfig = speedConfig ?? throw new ArgumentNullException(nameof(speedConfig));
+            _speedEnvelopeValidator = speedEnvelopeValidator ?? throw new ArgumentNullException(nameof(speedEnvelopeValidator));
+
+            _playerMaxSpeedStatId = playerMaxSpeedStatId != null
+                ? playerMaxSpeedStatId
+                : throw new ArgumentNullException(nameof(playerMaxSpeedStatId));
 
             _runPreparationStateId = runPreparationStateId != null
                 ? runPreparationStateId
@@ -72,6 +91,19 @@ namespace Game.Gameplay
             var previousSnapshot = _snapshotStore.CurrentSnapshot;
             var nextSnapshot = _snapshotFactory.CreateSnapshot();
             _snapshotStore.SetSnapshot(nextSnapshot);
+
+            try
+            {
+                var resolvedSoftMaximumSpeed = _runGameplayStatResolver.Resolve(
+                    _playerMaxSpeedStatId,
+                    _speedConfig.BaseSoftMaximumSpeed);
+                _speedEnvelopeValidator.ValidateOrThrow(resolvedSoftMaximumSpeed);
+            }
+            catch
+            {
+                _snapshotStore.SetSnapshot(previousSnapshot);
+                throw;
+            }
 
             if (_gameplayStateService.TryTransitionTo(_preLaunchStateId))
                 return true;

@@ -1,6 +1,6 @@
 # Run Body Explicit Speed Ownership Issues
 
-Status: Approved issue breakdown; ready for implementation
+Status: Implemented, verified, and movement-feel approved
 
 Parent PRD: [Run Body Explicit Speed Ownership](../../prd/prd-run-body-explicit-speed-ownership.md)
 
