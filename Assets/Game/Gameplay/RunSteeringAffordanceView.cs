@@ -52,7 +52,7 @@ namespace Game.Gameplay
             if (IsDestroyed())
                 return;
 
-            EnsureReferences();
+            RefreshCanvasContext();
 
             if (_root != null)
                 _root.gameObject.SetActive(true);
@@ -66,7 +66,6 @@ namespace Game.Gameplay
             if (IsDestroyed())
                 return;
 
-            EnsureReferences();
             SetAlpha(alpha);
             SetVisualScale(scale);
             ApplyNonInteractiveSettings();
@@ -77,20 +76,20 @@ namespace Game.Gameplay
             if (IsDestroyed())
                 return;
 
-            EnsureReferences();
-
             if (_root != null)
                 _root.gameObject.SetActive(false);
         }
 
         internal IReadOnlyList<string> GetReferenceValidationErrors()
         {
-            EnsureReferences();
+            RefreshCanvasContext();
 
             var errors = new List<string>();
 
             if (_root == null)
                 errors.Add("RunSteeringAffordanceView requires a Root RectTransform reference.");
+            else if (_canvas == null)
+                errors.Add("RunSteeringAffordanceView requires Root RectTransform to be under a Canvas.");
 
             if (_canvasGroup == null)
                 errors.Add("RunSteeringAffordanceView requires a CanvasGroup reference.");
@@ -109,54 +108,24 @@ namespace Game.Gameplay
 
         private void Awake()
         {
-            EnsureReferences();
+            RefreshCanvasContext();
             ApplyNonInteractiveSettings();
         }
 
         private void OnValidate()
         {
-            EnsureReferences();
+            RefreshCanvasContext();
             ApplyNonInteractiveSettings();
         }
 
-        private void EnsureReferences()
+        private void RefreshCanvasContext()
         {
             if (IsDestroyed())
                 return;
 
-            if (_root == null)
-                _root = transform as RectTransform;
-
-            if (_canvasGroup == null)
-                _canvasGroup = GetComponent<CanvasGroup>();
-
-            if (_knobRoot == null)
-                _knobRoot = transform.Find("Knob") as RectTransform;
-
-            if (_knobImage == null && _knobRoot != null)
-                _knobImage = _knobRoot.GetComponent<Image>();
-
-            if (_leftRangeEndRoot == null)
-                _leftRangeEndRoot = transform.Find("Left Range End Hint") as RectTransform;
-
-            if (_leftRangeEndImage == null && _leftRangeEndRoot != null)
-                _leftRangeEndImage = _leftRangeEndRoot.GetComponent<Image>();
-
-            if (_rightRangeEndRoot == null)
-                _rightRangeEndRoot = transform.Find("Right Range End Hint") as RectTransform;
-
-            if (_rightRangeEndImage == null && _rightRangeEndRoot != null)
-                _rightRangeEndImage = _rightRangeEndRoot.GetComponent<Image>();
-
-            if (_deadzoneRoot == null)
-                _deadzoneRoot = transform.Find("Deadzone Hint") as RectTransform;
-
-            if (_deadzoneImage == null && _deadzoneRoot != null)
-                _deadzoneImage = _deadzoneRoot.GetComponent<Image>();
-
             _canvas = _root != null
                 ? _root.GetComponentInParent<Canvas>(true)
-                : GetComponentInParent<Canvas>(true);
+                : null;
         }
 
         private bool IsDestroyed()

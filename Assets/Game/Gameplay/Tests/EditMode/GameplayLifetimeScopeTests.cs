@@ -732,8 +732,11 @@ public sealed class GameplayLifetimeScopeTests
 
     private RunSteeringAffordanceView CreateRunSteeringAffordanceView()
     {
+        var canvasObject = Track(new GameObject("Run Steering Affordance Canvas", typeof(RectTransform), typeof(Canvas)));
+        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         var rootObject = Track(new GameObject("Run Steering Affordance", typeof(RectTransform)));
         rootObject.SetActive(false);
+        rootObject.transform.SetParent(canvasObject.transform, false);
         var root = rootObject.GetComponent<RectTransform>();
         var canvasGroup = rootObject.AddComponent<CanvasGroup>();
         var deadzoneRoot = CreateChildImage(root, "Deadzone Hint");

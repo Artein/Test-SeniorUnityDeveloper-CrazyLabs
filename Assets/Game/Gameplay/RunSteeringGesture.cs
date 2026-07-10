@@ -98,7 +98,7 @@ namespace Game.Gameplay
                 return new RunSteeringAffordanceSnapshot(false, 0, Vector2.zero, Vector2.zero, 0f, 0f);
 
             return new RunSteeringAffordanceSnapshot(
-                true,
+                isActive: true,
                 _activePointerId,
                 origin,
                 _currentScreenPosition,

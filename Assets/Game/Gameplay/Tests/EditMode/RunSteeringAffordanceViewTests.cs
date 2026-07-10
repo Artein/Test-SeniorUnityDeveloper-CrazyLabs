@@ -277,6 +277,53 @@ public sealed class RunSteeringAffordanceViewTests
     }
 
     [Test]
+    public void GetReferenceValidationErrorsForTests_UnassignedReferencesWithMatchingHierarchy_ReportsSetupIssues()
+    {
+        var canvasObject = Track(new GameObject("Canvas", typeof(RectTransform), typeof(Canvas)));
+        canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+
+        var rootObject = Track(new GameObject("Run Steering Affordance", typeof(RectTransform), typeof(CanvasGroup)));
+        rootObject.transform.SetParent(canvasObject.transform, false);
+        var root = rootObject.GetComponent<RectTransform>();
+        CreateImageChild(root, "Deadzone Hint", out _);
+        CreateImageChild(root, "Left Range End Hint", out _);
+        CreateImageChild(root, "Right Range End Hint", out _);
+        CreateImageChild(root, "Knob", out _);
+
+        var view = rootObject.AddComponent<RunSteeringAffordanceView>();
+
+        var errors = view.GetReferenceValidationErrorsForTests();
+
+        Assert.That(errors, Has.Some.Contains("Root RectTransform"));
+        Assert.That(errors, Has.Some.Contains("CanvasGroup"));
+        Assert.That(errors, Has.Some.Contains("Knob"));
+        Assert.That(errors, Has.Some.Contains("Range End"));
+        Assert.That(errors, Has.Some.Contains("Deadzone"));
+    }
+
+    [Test]
+    public void GetReferenceValidationErrorsForTests_AssignedRootOutsideCanvas_ReportsCanvasSetupIssue()
+    {
+        var view = CreateView(
+            showSeconds: 0f,
+            hideSeconds: 0f,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _,
+            out _);
+
+        var errors = view.GetReferenceValidationErrorsForTests();
+
+        Assert.That(errors, Has.Some.EqualTo("RunSteeringAffordanceView requires Root RectTransform to be under a Canvas."));
+    }
+
+    [Test]
     public void PresentationCommands_DestroyedUnityObject_DoNotThrow()
     {
         var view = CreateView(
