@@ -8,3 +8,10 @@ resharper_csharp_place_property_attribute_on_same_line = true
 resharper_csharp_place_field_attribute_on_same_line = true
 resharper_csharp_place_accessor_attribute_on_same_line = true
 resharper_csharp_place_parameter_attribute_on_same_line = true
+
+# ReSharper properties
+resharper_arguments_literal = named
+resharper_blank_lines_after_multiline_statements = 1
+resharper_csharp_wrap_after_invocation_lpar = true
+resharper_csharp_wrap_arguments_style = chop_if_long
+resharper_instance_members_qualify_declared_in = base_class

@@ -6,33 +6,41 @@ using Game.Gameplay.GameplayState;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed class RunAirTimeTrackerTests
 {
-    private readonly List<UnityEngine.Object> _objects = new();
-    private GameplayStateId _runPreparationStateId;
+    private readonly List<Object> _objects = new();
+    private FakeTime _clock;
     private GameplayStateId _runningStateId;
+    private GameplayStateId _runPreparationStateId;
     private FakeGameplayStateService _stateService;
     private FakeRunSurfaceFrameSource _surfaceFrameSource;
-    private FakeTime _clock;
     private RunAirTimeTracker _tracker;
 
     [SetUp]
     public void OnSetUp()
     {
-        _runPreparationStateId = CreateStateId("Run Preparation");
-        _runningStateId = CreateStateId("Running");
-        _stateService = new FakeGameplayStateService(_runPreparationStateId);
-
+        _runPreparationStateId = CreateStateId(stateName: "Run Preparation");
+        _runningStateId = CreateStateId(stateName: "Running");
+        _stateService = new FakeGameplayStateService(currentStateId: _runPreparationStateId);
         _surfaceFrameSource = new FakeRunSurfaceFrameSource();
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Supported,
-            new RunSurfaceContext(isGrounded: true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired);
+            observationState: RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportAcquired);
+
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
-        _tracker = new RunAirTimeTracker(_stateService, _surfaceFrameSource, _clock, _runPreparationStateId, _runningStateId);
+
+        _tracker = new RunAirTimeTracker(
+            gameplayStateService: _stateService,
+            surfaceFrameSource: _surfaceFrameSource,
+            clock: _clock,
+            runPreparationStateId: _runPreparationStateId,
+            runningStateId: _runningStateId);
+
         ((IInitializable)_tracker).Initialize();
     }
 
@@ -43,7 +51,7 @@ public sealed class RunAirTimeTrackerTests
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(obj: unityObject);
         }
 
         _objects.Clear();
@@ -52,117 +60,123 @@ public sealed class RunAirTimeTrackerTests
     [Test]
     public void FixedTick_RunningAndUngrounded_AccumulatesFixedDeltaTime()
     {
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost);
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportLost);
 
         ((IFixedTickable)_tracker).FixedTick();
         ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.EqualTo(0.2f).Within(0.0001f));
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_GroundedOrNotRunning_DoesNotAccumulate()
     {
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost);
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportLost);
+
         ((IFixedTickable)_tracker).FixedTick();
 
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Supported,
-            new RunSurfaceContext(isGrounded: true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired);
+            observationState: RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportAcquired);
+
         ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, expression: Is.Zero);
     }
 
     [Test]
     public void GameplayStateChanged_RunPreparation_ResetsCurrentRunAirTime()
     {
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost);
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportLost);
+
         ((IFixedTickable)_tracker).FixedTick();
 
-        _stateService.ChangeTo(_runPreparationStateId);
+        _stateService.ChangeTo(nextStateId: _runPreparationStateId);
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, expression: Is.Zero);
     }
 
     [Test]
     public void FixedTick_ObservedMissHeldAsStableSupport_DoesNotAccumulate()
     {
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: true, Vector3.up, 0f),
-            RunSurfaceTransition.None,
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.None,
             isMissingSupportHeld: true);
 
         ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, expression: Is.Zero);
     }
 
     [Test]
     public void FixedTick_ConfirmedSupportLossThenReacquisition_AccumulatesUntilStableSupportReturns()
     {
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost);
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportLost);
+
         ((IFixedTickable)_tracker).FixedTick();
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Missing,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.None);
+            observationState: RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.None);
+
         ((IFixedTickable)_tracker).FixedTick();
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Supported,
-            new RunSurfaceContext(isGrounded: true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired);
+            observationState: RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.SupportAcquired);
+
         ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.EqualTo(0.2f).Within(0.0001f));
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_UnavailableHardReset_DoesNotAccumulate()
     {
-        _stateService.ChangeTo(_runningStateId);
+        _stateService.ChangeTo(nextStateId: _runningStateId);
 
         _surfaceFrameSource.Publish(
-            RunSupportObservationState.Unavailable,
-            new RunSurfaceContext(isGrounded: false, Vector3.up, 0f),
-            RunSurfaceTransition.HardReset);
+            observationState: RunSupportObservationState.Unavailable,
+            new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f),
+            transition: RunSurfaceTransition.HardReset);
 
         ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        Assert.That(actual: _tracker.CurrentRunAirTimeSeconds, expression: Is.Zero);
     }
 
     private GameplayStateId CreateStateId(string stateName)
     {
         var stateId = ScriptableObject.CreateInstance<GameplayStateId>();
         stateId.name = stateName;
-        _objects.Add(stateId);
+        _objects.Add(item: stateId);
         return stateId;
     }
 
@@ -170,8 +184,8 @@ public sealed class RunAirTimeTrackerTests
     {
         public GameplayStateId CurrentStateId { get; private set; }
 
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
 
         public FakeGameplayStateService(GameplayStateId currentStateId)
         {
@@ -180,21 +194,21 @@ public sealed class RunAirTimeTrackerTests
 
         public bool IsCurrent(GameplayStateId stateId)
         {
-            return ReferenceEquals(CurrentStateId, stateId);
+            return ReferenceEquals(objA: CurrentStateId, objB: stateId);
         }
 
         public bool TryTransitionTo(GameplayStateId nextStateId)
         {
-            ChangeTo(nextStateId);
+            ChangeTo(nextStateId: nextStateId);
             return true;
         }
 
         public void ChangeTo(GameplayStateId nextStateId)
         {
             var previousStateId = CurrentStateId;
-            GameplayStateChanging?.Invoke(nextStateId, previousStateId);
+            GameplayStateChanging?.Invoke(arg1: nextStateId, arg2: previousStateId);
             CurrentStateId = nextStateId;
-            GameplayStateChanged?.Invoke(nextStateId, previousStateId);
+            GameplayStateChanged?.Invoke(arg1: nextStateId, arg2: previousStateId);
         }
     }
 
@@ -211,29 +225,29 @@ public sealed class RunAirTimeTrackerTests
             bool isMissingSupportHeld = false)
         {
             RunProgressFrameSnapshot.TryCreate(
-                Vector3.zero,
-                Vector3.forward,
-                Vector3.up,
+                origin: Vector3.zero,
+                forwardDirection: Vector3.forward,
+                upDirection: Vector3.up,
                 out var progressFrame,
-                out _);
+                error: out _);
 
             var observedContext = observationState == RunSupportObservationState.Supported
-                ? new RunSurfaceContext(true, Vector3.up, 0f)
-                : new RunSurfaceContext(false, Vector3.up, 0f);
+                ? new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f)
+                : new RunSurfaceContext(isGrounded: false, groundNormal: Vector3.up, forwardDownhillDegrees: 0f);
 
             var observedSupport = new RunSupportObservation(
-                observationState,
+                state: observationState,
                 observationState == RunSupportObservationState.Unavailable ? default : progressFrame,
-                observedContext,
-                0f);
+                surfaceContext: observedContext,
+                supportDistance: 0f);
 
             _current = new RunSurfaceFrameSnapshot(
-                observedSupport,
-                stableSupport,
-                transition,
-                isMissingSupportHeld,
-                false,
-                default);
+                observedSupport: observedSupport,
+                stableSupport: stableSupport,
+                transition: transition,
+                isMissingSupportHeld: isMissingSupportHeld,
+                isConfirmingDiscontinuity: false,
+                steeringFrame: default);
         }
     }
 
