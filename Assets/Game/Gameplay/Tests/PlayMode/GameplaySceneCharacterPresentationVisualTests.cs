@@ -22,7 +22,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
     [UnityTest]
     public IEnumerator given_GameplayScene_when_RepresentativePullLaunches_then_CharacterPresentationDoesNotExposeReservedRun()
     {
-        var mouse = InputSystem.AddDevice<Mouse>("Character Presentation Visual Smoke Mouse");
+        var mouse = InputSystem.AddDevice<Mouse>(name: "Character Presentation Visual Smoke Mouse");
 
         try
         {
@@ -32,7 +32,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             var surfaceFrameSource = ResolveSurfaceFrameSource(activeScene);
             var slingshotPresentationContextSource = ResolveSlingshotPresentationContextSource(activeScene);
             var characterAnimator = FindCharacterAnimator(activeScene);
-            var visualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
+            var visualAnchor = FindGameObjectByName(activeScene, objectName: "CharacterVisualAnchor");
 
             yield return WaitUntilPlayerIsHeld(context);
             yield return null;
@@ -40,15 +40,20 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             Assert.That(characterAnimator.applyRootMotion, Is.False);
             Assert.That(characterAnimator.transform.IsChildOf(visualAnchor.transform), Is.True);
             Assert.That(visualAnchor.transform.IsChildOf(context.PlayerRigidbody.transform), Is.False);
-            AssertPresentationModeIsNotRun(characterAnimator, "pre-launch idle");
+            AssertPresentationModeIsNotRun(characterAnimator, phase: "pre-launch idle");
 
             var pullScreenPosition = GetPullScreenPosition(context, pullOffset: 0.35f, pullDepth: 1.25f);
-            yield return SendMouse(mouse, context.PressScreenPosition, true);
-            yield return SendMouse(mouse, pullScreenPosition, true);
-            yield return WaitForPresentationMode(characterAnimator, CharacterPresentationMode.PullAnticipation, "active pull");
-            AssertPresentationModeIsNotRun(characterAnimator, "active pull");
+            yield return SendMouse(mouse, context.PressScreenPosition, isPressed: true);
+            yield return SendMouse(mouse, pullScreenPosition, isPressed: true);
 
-            yield return SendMouse(mouse, pullScreenPosition, false);
+            yield return WaitForPresentationMode(
+                characterAnimator,
+                CharacterPresentationMode.PullAnticipation,
+                phase: "active pull");
+
+            AssertPresentationModeIsNotRun(characterAnimator, phase: "active pull");
+
+            yield return SendMouse(mouse, pullScreenPosition, isPressed: false);
             yield return WaitUntilPlayerLaunches(context.PlayerRigidbody);
 
             yield return AssertPostLaunchPresentation(
@@ -72,7 +77,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
         var probe = Object.Instantiate(sourceAnimator.gameObject);
 
         probe.name = "Ladybug Animator Interruption Probe";
-        probe.SetActive(false);
+        probe.SetActive(value: false);
         probe.transform.position += Vector3.right * 1000f;
 
         var animator = probe.GetComponent<Animator>();
@@ -84,31 +89,44 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
 
         try
         {
-            probe.SetActive(true);
+            probe.SetActive(value: true);
             animator.Rebind();
-            animator.Update(0f);
+            animator.Update(deltaTime: 0f);
             animator.Play(CharacterPresentationMode.Slide.ToString(), layer: 0, normalizedTime: 0f);
             SetPresentationMode(animator, CharacterPresentationMode.Slide);
-            animator.Update(0f);
+            animator.Update(deltaTime: 0f);
 
-            var initial = CaptureAnimatorSnapshot(animator, "initial Slide", trace);
+            var initial = CaptureAnimatorSnapshot(animator, label: "initial Slide", trace);
             AssertSnapshotState(initial, CharacterPresentationMode.Slide, hasTransition: false, trace);
 
             SetPresentationMode(animator, CharacterPresentationMode.Airborne);
             AdvanceAnimator(animator, seconds: 0.02f);
 
-            var airborneRequested = CaptureAnimatorSnapshot(animator, "0.02s after Airborne request", trace);
-            AssertSnapshotState(airborneRequested, CharacterPresentationMode.Slide, CharacterPresentationMode.Airborne, trace);
+            var airborneRequested = CaptureAnimatorSnapshot(animator, label: "0.02s after Airborne request", trace);
+
+            AssertSnapshotState(
+                airborneRequested,
+                CharacterPresentationMode.Slide,
+                CharacterPresentationMode.Airborne,
+                trace);
 
             SetPresentationMode(animator, CharacterPresentationMode.Slide);
             AdvanceAnimator(animator, seconds: 0.02f);
 
-            var slideRequestedDuringBlend = CaptureAnimatorSnapshot(animator, "0.02s after Slide request during Airborne blend", trace);
-            AssertSnapshotState(slideRequestedDuringBlend, CharacterPresentationMode.Slide, CharacterPresentationMode.Slide, trace);
+            var slideRequestedDuringBlend = CaptureAnimatorSnapshot(
+                animator,
+                label: "0.02s after Slide request during Airborne blend",
+                trace);
+
+            AssertSnapshotState(
+                slideRequestedDuringBlend,
+                CharacterPresentationMode.Slide,
+                CharacterPresentationMode.Slide,
+                trace);
 
             AdvanceAnimator(animator, seconds: 0.12f);
 
-            var recovered = CaptureAnimatorSnapshot(animator, "after recovery time", trace);
+            var recovered = CaptureAnimatorSnapshot(animator, label: "after recovery time", trace);
             TestContext.Out.WriteLine(trace.ToString());
             AssertSnapshotState(recovered, CharacterPresentationMode.Slide, hasTransition: false, trace);
         }
@@ -139,39 +157,46 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             var surfaceContext = surfaceFrameSource.Current.ObservedSupport.SurfaceContext;
             var slingshotContext = slingshotPresentationContextSource.Current;
 
-            if (!modeCounts.TryAdd(mode, 1))
+            if (!modeCounts.TryAdd(mode, value: 1))
                 modeCounts[mode] += 1;
 
             if (frameIndex == 0 || mode != previousMode || frameIndex % 30 == 0)
             {
-                _ = trace.Append("frame ")
+                _ = trace.Append(value: "frame ")
                     .Append(frameIndex)
-                    .Append(": mode=")
+                    .Append(value: ": mode=")
                     .Append(mode)
-                    .Append(", grounded=")
+                    .Append(value: ", grounded=")
                     .Append(surfaceContext.IsGrounded)
-                    .Append(", hasLaunchPush=")
+                    .Append(value: ", hasLaunchPush=")
                     .Append(slingshotContext.HasLaunchPush)
-                    .Append(", launchElapsed=")
-                    .Append(slingshotContext.LaunchPushElapsedSeconds.ToString("0.000"))
-                    .Append(", speed=")
-                    .Append(playerRigidbody.linearVelocity.magnitude.ToString("0.000"))
+                    .Append(value: ", launchElapsed=")
+                    .Append(slingshotContext.LaunchPushElapsedSeconds.ToString(format: "0.000"))
+                    .Append(value: ", speed=")
+                    .Append(playerRigidbody.linearVelocity.magnitude.ToString(format: "0.000"))
                     .AppendLine();
             }
 
             previousMode = mode;
             Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.Run), $"frame {frameIndex}");
 
-            Assert.That(mode, Is.Not.EqualTo(CharacterPresentationMode.LaunchPush),
+            Assert.That(
+                mode,
+                Is.Not.EqualTo(CharacterPresentationMode.LaunchPush),
                 $"normal slingshot launch should go straight to LaunchFlight, frame {frameIndex}");
+
             Assert.That(characterAnimator.applyRootMotion, Is.False, $"frame {frameIndex}");
 
             sawLaunchFlight |= mode == CharacterPresentationMode.LaunchFlight;
 
             if (mode == CharacterPresentationMode.Slide)
             {
-                Assert.That(sawLaunchFlight, Is.True, $"Slide should not appear before LaunchFlight after slingshot release, frame {frameIndex}");
-                Assert.That(characterAnimator.GetFloat(PlaybackSpeedParameterName), Is.InRange(0.5f, 1.5f), $"frame {frameIndex}");
+                Assert.That(
+                    sawLaunchFlight,
+                    Is.True,
+                    $"Slide should not appear before LaunchFlight after slingshot release, frame {frameIndex}");
+
+                Assert.That(characterAnimator.GetFloat(PlaybackSpeedParameterName), Is.InRange(from: 0.5f, to: 1.5f), $"frame {frameIndex}");
                 sawSlideAfterLaunchFlight |= sawLaunchFlight;
             }
 
@@ -205,12 +230,14 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
         StringBuilder trace)
     {
         var message = new StringBuilder();
-        _ = message.AppendLine().Append("Mode counts:");
+        _ = message.AppendLine().Append(value: "Mode counts:");
 
         foreach (var pair in modeCounts)
-            _ = message.Append("  ").Append(pair.Key).Append(": ").Append(pair.Value).AppendLine();
+        {
+            _ = message.Append(value: "  ").Append(pair.Key).Append(value: ": ").Append(pair.Value).AppendLine();
+        }
 
-        return message.Append("Trace:").AppendLine().Append(trace).ToString();
+        return message.Append(value: "Trace:").AppendLine().Append(trace).ToString();
     }
 
     private static IEnumerator WaitForPresentationMode(Animator animator, CharacterPresentationMode expectedMode, string phase)
@@ -236,36 +263,36 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             yield return null;
         }
 
-        Assert.Fail("Expected Slingshot pull release to launch the Player.");
+        Assert.Fail(message: "Expected Slingshot pull release to launch the Player.");
     }
 
     private static Vector2 GetPullScreenPosition(GameplaySceneBandShapePlayModeTestContext context, float pullOffset, float pullDepth)
     {
         var pullWorldPosition = context.Geometry.RestPoint
-                                + (context.Geometry.LaunchFrameRight * pullOffset)
-                                - (context.Geometry.LaunchFrameForward * pullDepth);
+                                + context.Geometry.LaunchFrameRight * pullOffset
+                                - context.Geometry.LaunchFrameForward * pullDepth;
 
         return GetScreenPosition(context.InputCamera, pullWorldPosition);
     }
 
     private IRunSurfaceFrameSource ResolveSurfaceFrameSource(Scene scene)
     {
-        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, objectDescription: "GameplayLifetimeScope");
         return lifetimeScope.Container.Resolve<IRunSurfaceFrameSource>();
     }
 
     private ISlingshotPresentationContextSource ResolveSlingshotPresentationContextSource(Scene scene)
     {
-        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
+        var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, objectDescription: "GameplayLifetimeScope");
         return lifetimeScope.Container.Resolve<ISlingshotPresentationContextSource>();
     }
 
     private Animator FindCharacterAnimator(Scene scene)
     {
-        var presentationView = FindSingleInScene<CharacterPresentationView>(scene, "CharacterPresentationView");
-        var animator = presentationView.GetComponentInChildren<Animator>(true);
+        var presentationView = FindSingleInScene<CharacterPresentationView>(scene, objectDescription: "CharacterPresentationView");
+        var animator = presentationView.GetComponentInChildren<Animator>(includeInactive: true);
 
-        Assert.That(animator, Is.Not.Null, "CharacterPresentationView should own the visible character Animator.");
+        Assert.That(animator, Is.Not.Null, message: "CharacterPresentationView should own the visible character Animator.");
         return animator;
     }
 
@@ -351,38 +378,6 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
         return stateInfo.shortNameHash == Animator.StringToHash(mode.ToString());
     }
 
-    private readonly struct AnimatorTransitionProbeSnapshot
-    {
-        public string Label { get; }
-        public bool IsInTransition { get; }
-        public AnimatorStateInfo CurrentState { get; }
-        public AnimatorStateInfo NextState { get; }
-        public float TransitionNormalizedTime { get; }
-        public bool IsAnyStateTransition { get; }
-
-        public AnimatorTransitionProbeSnapshot(
-            string label,
-            bool isInTransition,
-            AnimatorStateInfo currentState,
-            AnimatorStateInfo nextState,
-            float transitionNormalizedTime,
-            bool isAnyStateTransition)
-        {
-            Label = label;
-            IsInTransition = isInTransition;
-            CurrentState = currentState;
-            NextState = nextState;
-            TransitionNormalizedTime = transitionNormalizedTime;
-            IsAnyStateTransition = isAnyStateTransition;
-        }
-
-        public override string ToString()
-        {
-            return $"{Label}: inTransition={IsInTransition}, current={ResolveStateName(CurrentState)}, next={ResolveStateName(NextState)}, " +
-                   $"transitionNormalizedTime={TransitionNormalizedTime:0.000}, anyState={IsAnyStateTransition}";
-        }
-    }
-
     private static string ResolveStateName(AnimatorStateInfo stateInfo)
     {
         if (StateMatches(stateInfo, CharacterPresentationMode.Idle))
@@ -413,5 +408,38 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             return CharacterPresentationMode.LaunchFlight.ToString();
 
         return $"hash:{stateInfo.shortNameHash}";
+    }
+
+    private readonly struct AnimatorTransitionProbeSnapshot
+    {
+        public string Label { get; }
+        public bool IsInTransition { get; }
+        public AnimatorStateInfo CurrentState { get; }
+        public AnimatorStateInfo NextState { get; }
+        public float TransitionNormalizedTime { get; }
+        public bool IsAnyStateTransition { get; }
+
+        public AnimatorTransitionProbeSnapshot(
+            string label,
+            bool isInTransition,
+            AnimatorStateInfo currentState,
+            AnimatorStateInfo nextState,
+            float transitionNormalizedTime,
+            bool isAnyStateTransition)
+        {
+            Label = label;
+            IsInTransition = isInTransition;
+            CurrentState = currentState;
+            NextState = nextState;
+            TransitionNormalizedTime = transitionNormalizedTime;
+            IsAnyStateTransition = isAnyStateTransition;
+        }
+
+        public override string ToString()
+        {
+            return
+                $"{Label}: inTransition={IsInTransition}, current={ResolveStateName(CurrentState)}, next={ResolveStateName(NextState)}, " +
+                $"transitionNormalizedTime={TransitionNormalizedTime:0.000}, anyState={IsAnyStateTransition}";
+        }
     }
 }

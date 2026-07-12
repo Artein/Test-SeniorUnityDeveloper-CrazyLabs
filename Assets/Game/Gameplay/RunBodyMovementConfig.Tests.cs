@@ -44,22 +44,6 @@ namespace Game.Gameplay
             _maximumAcceptedDpi = maximumAcceptedDpi;
         }
 
-        internal void SetRunSurfaceStabilityForTests(
-            float normalSlewDegreesPerSecond,
-            float discontinuousNormalThresholdDegrees,
-            float supportLossConfirmationSeconds,
-            float discontinuousNormalConfirmationSeconds,
-            float candidateCoherenceDegrees,
-            float airborneUpRetentionSeconds)
-        {
-            _runSteeringFrameNormalSlewDegreesPerSecond = normalSlewDegreesPerSecond;
-            _runSurfaceDiscontinuousNormalThresholdDegrees = discontinuousNormalThresholdDegrees;
-            _runSurfaceSupportLossConfirmationSeconds = supportLossConfirmationSeconds;
-            _runSurfaceDiscontinuousNormalConfirmationSeconds = discontinuousNormalConfirmationSeconds;
-            _runSurfaceCandidateCoherenceDegrees = candidateCoherenceDegrees;
-            _runSteeringFrameAirborneUpRetentionSeconds = airborneUpRetentionSeconds;
-        }
-
         internal void SetRunSupportAttachmentForTests(
             float maximumAttachedSurfaceNormalLiftSpeed,
             float sameSurfaceReattachmentSeparationMeters,
@@ -70,24 +54,6 @@ namespace Game.Gameplay
             _runSupportSameSurfaceReattachmentSeparationMeters = sameSurfaceReattachmentSeparationMeters;
             _runSupportMinimumReattachmentNormalChangeDegrees = minimumReattachmentNormalChangeDegrees;
             _runSupportAttachmentTransitionConfirmationSeconds = transitionConfirmationSeconds;
-        }
-
-        internal void SetLaunchLandingStabilizationForTests(
-            float stabilizationSeconds,
-            float maximumLiftSpeed)
-        {
-            _launchLandingStabilizationSeconds = stabilizationSeconds;
-            _launchLandingMaximumLiftSpeed = maximumLiftSpeed;
-        }
-
-        internal void SetRunBodySpeedSanityGuardForTests(float metersPerSecond)
-        {
-            _runBodySpeedSanityGuardMetersPerSecond = metersPerSecond;
-        }
-
-        internal void SetRunAirSteeringMaximumTurnDegreesPerSecondForTests(float degreesPerSecond)
-        {
-            _runAirSteeringMaximumTurnDegreesPerSecond = degreesPerSecond;
         }
     }
 }

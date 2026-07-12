@@ -1,5 +1,4 @@
 using System;
-using Game.Gameplay;
 using Game.Gameplay.Diagnostics;
 using NUnit.Framework;
 
@@ -9,68 +8,68 @@ public sealed class RunDiagnosticsOverlayBufferTests
     [Test]
     public void Constructor_NonPositiveCapacity_Throws()
     {
-        Assert.That(() => new RunDiagnosticsOverlayBuffer(0), Throws.TypeOf<ArgumentOutOfRangeException>());
+        Assert.That(() => new RunDiagnosticsOverlayBuffer(capacity: 0), Throws.TypeOf<ArgumentOutOfRangeException>());
     }
 
     [Test]
     public void Add_UnderCapacity_StoresSamplesChronologically()
     {
-        var buffer = new RunDiagnosticsOverlayBuffer(3);
+        var buffer = new RunDiagnosticsOverlayBuffer(capacity: 3);
 
-        buffer.Add(CreateSample(1f));
-        buffer.Add(CreateSample(2f));
+        buffer.Add(CreateSample(speed: 1f));
+        buffer.Add(CreateSample(speed: 2f));
 
-        Assert.That(buffer.Count, Is.EqualTo(2));
-        Assert.That(buffer.GetChronological(0).SpeedMetersPerSecond, Is.EqualTo(1f));
-        Assert.That(buffer.GetChronological(1).SpeedMetersPerSecond, Is.EqualTo(2f));
-        Assert.That(buffer.Latest.SpeedMetersPerSecond, Is.EqualTo(2f));
+        Assert.That(buffer.Count, Is.EqualTo(expected: 2));
+        Assert.That(buffer.GetChronological(index: 0).SpeedMetersPerSecond, Is.EqualTo(expected: 1f));
+        Assert.That(buffer.GetChronological(index: 1).SpeedMetersPerSecond, Is.EqualTo(expected: 2f));
+        Assert.That(buffer.Latest.SpeedMetersPerSecond, Is.EqualTo(expected: 2f));
     }
 
     [Test]
     public void Add_OverCapacity_KeepsNewestSamplesChronologically()
     {
-        var buffer = new RunDiagnosticsOverlayBuffer(3);
+        var buffer = new RunDiagnosticsOverlayBuffer(capacity: 3);
 
-        buffer.Add(CreateSample(1f));
-        buffer.Add(CreateSample(2f));
-        buffer.Add(CreateSample(3f));
-        buffer.Add(CreateSample(4f));
+        buffer.Add(CreateSample(speed: 1f));
+        buffer.Add(CreateSample(speed: 2f));
+        buffer.Add(CreateSample(speed: 3f));
+        buffer.Add(CreateSample(speed: 4f));
 
-        Assert.That(buffer.Count, Is.EqualTo(3));
-        Assert.That(buffer.GetChronological(0).SpeedMetersPerSecond, Is.EqualTo(2f));
-        Assert.That(buffer.GetChronological(1).SpeedMetersPerSecond, Is.EqualTo(3f));
-        Assert.That(buffer.GetChronological(2).SpeedMetersPerSecond, Is.EqualTo(4f));
-        Assert.That(buffer.Latest.SpeedMetersPerSecond, Is.EqualTo(4f));
+        Assert.That(buffer.Count, Is.EqualTo(expected: 3));
+        Assert.That(buffer.GetChronological(index: 0).SpeedMetersPerSecond, Is.EqualTo(expected: 2f));
+        Assert.That(buffer.GetChronological(index: 1).SpeedMetersPerSecond, Is.EqualTo(expected: 3f));
+        Assert.That(buffer.GetChronological(index: 2).SpeedMetersPerSecond, Is.EqualTo(expected: 4f));
+        Assert.That(buffer.Latest.SpeedMetersPerSecond, Is.EqualTo(expected: 4f));
     }
 
     [Test]
     public void Clear_WithBufferedSamples_EmptiesBuffer()
     {
-        var buffer = new RunDiagnosticsOverlayBuffer(2);
-        buffer.Add(CreateSample(3f));
+        var buffer = new RunDiagnosticsOverlayBuffer(capacity: 2);
+        buffer.Add(CreateSample(speed: 3f));
 
         buffer.Clear();
 
         Assert.That(buffer.Count, Is.Zero);
-        Assert.That(() => buffer.GetChronological(0), Throws.TypeOf<ArgumentOutOfRangeException>());
+        Assert.That(() => buffer.GetChronological(index: 0), Throws.TypeOf<ArgumentOutOfRangeException>());
     }
 
     private RunDiagnosticsOverlaySample CreateSample(float speed)
     {
         return new RunDiagnosticsOverlaySample(
             speed,
-            motionStepMetersPerSecond: speed + 1f,
-            visualTargetStepMetersPerSecond: speed + 2f,
-            visualTargetStepMeters: speed + 3f,
-            observedGroundNormalDeltaDegrees: speed + 3f,
-            steeringUpDeltaDegrees: speed + 4f,
-            visualLagCentimeters: speed + 5f,
-            cameraStepMetersPerSecond: speed + 6f,
-            targetToMotionCentimeters: speed + 7f,
-            visualTargetRotationDeltaDegrees: speed + 8f,
-            visualRotationDeltaDegrees: speed + 8f,
-            cameraRotationDeltaDegrees: speed + 9f,
-            estimatedVisualSnapReason: RunDiagnosticsOverlaySnapReason.None,
+            speed + 1f,
+            speed + 2f,
+            speed + 3f,
+            speed + 3f,
+            speed + 4f,
+            speed + 5f,
+            speed + 6f,
+            speed + 7f,
+            speed + 8f,
+            speed + 8f,
+            speed + 9f,
+            RunDiagnosticsOverlaySnapReason.None,
             fixedStepsThisFrame: 1,
             surfaceFrame: default,
             speedDiagnostics: default);

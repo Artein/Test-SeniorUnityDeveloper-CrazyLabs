@@ -44,20 +44,20 @@ public sealed class RunBodyMovementConfigValidatorTests
     public void Config_InvalidAuthoredValues_ReturnsRawValuesWithoutRepair()
     {
         _config.SetSpeedValuesForTests(
-            downhillAcceleration: float.NaN,
+            float.NaN,
             surfaceSlowdown: -1f,
             lowSpeedAssistTargetSpeed: 30f,
             lowSpeedAssistAcceleration: -2f,
             baseSoftMaximumSpeed: 20f,
-            aboveMaximumSpeedResistance: float.PositiveInfinity);
+            float.PositiveInfinity);
 
         var speed = (IRunBodySpeedConfig)_config;
 
         Assert.That(speed.DownhillAcceleration, Is.NaN);
-        Assert.That(speed.SurfaceSlowdown, Is.EqualTo(-1f));
-        Assert.That(speed.LowSpeedAssistTargetSpeed, Is.EqualTo(30f));
-        Assert.That(speed.LowSpeedAssistAcceleration, Is.EqualTo(-2f));
-        Assert.That(speed.BaseSoftMaximumSpeed, Is.EqualTo(20f));
+        Assert.That(speed.SurfaceSlowdown, Is.EqualTo(expected: -1f));
+        Assert.That(speed.LowSpeedAssistTargetSpeed, Is.EqualTo(expected: 30f));
+        Assert.That(speed.LowSpeedAssistAcceleration, Is.EqualTo(expected: -2f));
+        Assert.That(speed.BaseSoftMaximumSpeed, Is.EqualTo(expected: 20f));
         Assert.That(speed.AboveMaximumSpeedResistance, Is.EqualTo(float.PositiveInfinity));
     }
 
@@ -65,9 +65,9 @@ public sealed class RunBodyMovementConfigValidatorTests
     public void Validate_MultipleInvalidValues_ReportsEveryError()
     {
         _config.SetSpeedValuesForTests(
-            downhillAcceleration: float.NaN,
+            float.NaN,
             surfaceSlowdown: -1f,
-            lowSpeedAssistTargetSpeed: float.PositiveInfinity,
+            float.PositiveInfinity,
             lowSpeedAssistAcceleration: -2f,
             baseSoftMaximumSpeed: 0f,
             aboveMaximumSpeedResistance: -3f);
@@ -86,7 +86,7 @@ public sealed class RunBodyMovementConfigValidatorTests
 
         _config.SetRunSupportAttachmentForTests(
             maximumAttachedSurfaceNormalLiftSpeed: -1f,
-            sameSurfaceReattachmentSeparationMeters: float.NaN,
+            float.NaN,
             minimumReattachmentNormalChangeDegrees: 181f,
             transitionConfirmationSeconds: -1f);
 
@@ -107,8 +107,8 @@ public sealed class RunBodyMovementConfigValidatorTests
         Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters)));
         Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees)));
         Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.TransitionConfirmationSeconds)));
-        Assert.That(errors, Has.Some.Contains("minimum accepted DPI"));
-        Assert.That(errors, Has.Some.Contains("fallback DPI"));
+        Assert.That(errors, Has.Some.Contains(expected: "minimum accepted DPI"));
+        Assert.That(errors, Has.Some.Contains(expected: "fallback DPI"));
     }
 
     [Test]
@@ -124,7 +124,7 @@ public sealed class RunBodyMovementConfigValidatorTests
 
         var errors = _validator.Validate(_config).ToArray();
 
-        Assert.That(errors, Has.Some.Contains("below the Run Body Speed Sanity Guard"));
+        Assert.That(errors, Has.Some.Contains(expected: "below the Run Body Speed Sanity Guard"));
     }
 
     [Test]

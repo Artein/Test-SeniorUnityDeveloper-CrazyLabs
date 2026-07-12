@@ -46,12 +46,12 @@ namespace Game.Gameplay
                 throw new ArgumentOutOfRangeException(nameof(state));
 
             if (state != RunSupportObservationState.Unavailable && !progressFrame.IsValid)
-                throw new ArgumentException("Missing and Supported observations require a valid Run Progress Frame.", nameof(progressFrame));
+                throw new ArgumentException(message: "Missing and Supported observations require a valid Run Progress Frame.", nameof(progressFrame));
 
             if (state == RunSupportObservationState.Supported
                 && (!surfaceContext.IsGrounded || !surfaceContext.HasValidGroundNormal))
             {
-                throw new ArgumentException("Supported observations require a valid grounded surface context.", nameof(surfaceContext));
+                throw new ArgumentException(message: "Supported observations require a valid grounded surface context.", nameof(surfaceContext));
             }
 
             if (!float.IsFinite(supportDistance) || supportDistance < 0f)
@@ -62,7 +62,8 @@ namespace Game.Gameplay
 
             SurfaceContext = state == RunSupportObservationState.Supported
                 ? surfaceContext
-                : new RunSurfaceContext(false, Vector3.up, 0f);
+                : new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
+
             SupportDistance = state == RunSupportObservationState.Supported ? supportDistance : 0f;
         }
     }

@@ -8,13 +8,13 @@ namespace Game.Gameplay
         private const int HitCapacity = 16;
 
         private readonly RunSurfaceProbeConfig _config;
-        private readonly IRunSupportColliderProbe _supportProbe;
-        private readonly RaycastHit[] _supportHits = new RaycastHit[HitCapacity];
         private readonly RaycastHit[] _normalProbeHits = new RaycastHit[HitCapacity];
         private readonly Collider[] _overlapHits = new Collider[HitCapacity];
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator;
-        private readonly RunSupportHitValidator _supportHitValidator;
         private readonly RunSupportFootprintResolver _supportFootprintResolver;
+        private readonly RaycastHit[] _supportHits = new RaycastHit[HitCapacity];
+        private readonly RunSupportHitValidator _supportHitValidator;
+        private readonly IRunSupportColliderProbe _supportProbe;
 
         public Vector3 SampleOrigin => _supportProbe.Collider.bounds.center;
 
@@ -53,25 +53,25 @@ namespace Game.Gameplay
             Vector3 continuityNormal)
         {
             if (!frame.IsValid)
-                throw new ArgumentException("A valid Run Progress Frame is required.", nameof(frame));
+                throw new ArgumentException(message: "A valid Run Progress Frame is required.", nameof(frame));
 
             if (!TryGetBestSupportHit(frame, hasContinuityNormal, continuityNormal, out var supportHit))
             {
                 return new RunSupportObservation(
                     RunSupportObservationState.Missing,
                     frame,
-                    new RunSurfaceContext(false, Vector3.up, 0f),
-                    0f);
+                    new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+                    supportDistance: 0f);
             }
 
             var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(supportHit.Normal, frame);
-            var context = new RunSurfaceContext(true, supportHit.Normal, downhillDegrees);
+            var context = new RunSurfaceContext(isGrounded: true, supportHit.Normal, downhillDegrees);
 
             return new RunSupportObservation(
                 RunSupportObservationState.Supported,
                 frame,
                 context,
-                Mathf.Max(0f, supportHit.Distance));
+                Mathf.Max(a: 0f, supportHit.Distance));
         }
 
         private bool TryGetBestSupportHit(
@@ -100,9 +100,7 @@ namespace Game.Gameplay
                     hasContinuityNormal,
                     continuityNormal,
                     out bestHit))
-            {
                 return true;
-            }
 
             var hitCount = _supportProbe.Cast(castOffset, direction, distance, _supportHits, _config.SurfaceMask);
             var hasHit = false;
@@ -115,17 +113,13 @@ namespace Game.Gameplay
 
                 if (!_supportHitValidator.IsValidSupportHit(hit)
                     || !TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
-                {
                     continue;
-                }
 
                 var normalDot = Vector3.Dot(normal, upDirection);
 
                 if (normalDot < bestNormalDot
                     || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
-                {
                     continue;
-                }
 
                 bestNormalDot = normalDot;
                 bestDistance = hit.distance;
@@ -171,9 +165,7 @@ namespace Game.Gameplay
                     Vector3.zero,
                     _config.SkinWidth,
                     out var probeOrigin))
-            {
                 return false;
-            }
 
             var hitCount = Physics.RaycastNonAlloc(
                 probeOrigin,
@@ -194,9 +186,7 @@ namespace Game.Gameplay
                     || !_supportHitValidator.IsValidSupportHit(hit)
                     || !_supportHitValidator.IsValidSupportNormal(hit.normal, upDirection)
                     || hit.distance >= bestDistance)
-                {
                     continue;
-                }
 
                 bestDistance = hit.distance;
                 normal = hit.normal.normalized;
@@ -232,9 +222,7 @@ namespace Game.Gameplay
                         hitCollider.transform.rotation,
                         out var separationDirection,
                         out var separationDistance))
-                {
                     continue;
-                }
 
                 if (!_supportHitValidator.IsValidSupportNormal(separationDirection, upDirection))
                     continue;
@@ -244,9 +232,7 @@ namespace Game.Gameplay
 
                 if (normalDot < bestNormalDot
                     || (Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance))
-                {
                     continue;
-                }
 
                 bestNormalDot = normalDot;
                 bestDistance = separationDistance;

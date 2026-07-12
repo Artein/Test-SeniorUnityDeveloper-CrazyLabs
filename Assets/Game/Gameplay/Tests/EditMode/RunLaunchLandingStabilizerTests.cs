@@ -16,6 +16,7 @@ public sealed class RunLaunchLandingStabilizerTests
             LaunchLandingStabilizationSeconds = 0.3f,
             LaunchLandingMaximumLiftSpeed = 0f
         };
+
         _stabilizer = new RunLaunchLandingStabilizer(_config);
     }
 
@@ -25,11 +26,12 @@ public sealed class RunLaunchLandingStabilizerTests
         _stabilizer.ArmForLaunch();
         var velocity = Vector3.forward * 10f + Vector3.up * 3f;
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            velocity,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.None,
-            0.02f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.None,
+                fixedDeltaTime: 0.02f));
 
         Assert.That(result, Is.EqualTo(velocity));
     }
@@ -39,20 +41,25 @@ public sealed class RunLaunchLandingStabilizerTests
     {
         _stabilizer.ArmForLaunch();
 
-        _stabilizer.Stabilize(CreateContext(
-            Vector3.forward * 10f + Vector3.up * 3f,
-            new RunSurfaceContext(false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost,
-            0.02f));
+        _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward * 10f + Vector3.up * 3f,
+                new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportLost,
+                fixedDeltaTime: 0.02f));
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            Vector3.forward * 10f + Vector3.up * 3f,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired,
-            0.02f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward * 10f + Vector3.up * 3f,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
 
-        Assert.That(result.y, Is.Zero.Within(0.0001f));
-        Assert.That(Vector3.ProjectOnPlane(result, Vector3.up).magnitude, Is.EqualTo(10f).Within(0.0001f));
+        Assert.That(result.y, Is.Zero.Within(amount: 0.0001f));
+
+        Assert.That(
+            Vector3.ProjectOnPlane(result, Vector3.up).magnitude,
+            Is.EqualTo(expected: 10f).Within(amount: 0.0001f));
     }
 
     [Test]
@@ -61,14 +68,18 @@ public sealed class RunLaunchLandingStabilizerTests
         _stabilizer.ArmForLaunch();
         var velocity = Vector3.forward * 10f + Vector3.up * 3f;
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            velocity,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired,
-            0.02f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
 
-        Assert.That(result.y, Is.Zero.Within(0.0001f));
-        Assert.That(Vector3.ProjectOnPlane(result, Vector3.up).magnitude, Is.EqualTo(10f).Within(0.0001f));
+        Assert.That(result.y, Is.Zero.Within(amount: 0.0001f));
+
+        Assert.That(
+            Vector3.ProjectOnPlane(result, Vector3.up).magnitude,
+            Is.EqualTo(expected: 10f).Within(amount: 0.0001f));
     }
 
     [Test]
@@ -76,18 +87,21 @@ public sealed class RunLaunchLandingStabilizerTests
     {
         _stabilizer.ArmForLaunch();
 
-        _stabilizer.Stabilize(CreateContext(
-            Vector3.forward,
-            new RunSurfaceContext(false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost,
-            0.02f));
+        _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward,
+                new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportLost,
+                fixedDeltaTime: 0.02f));
+
         var velocity = Vector3.forward * 10f + Vector3.down * 3f;
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            velocity,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired,
-            0.02f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
 
         Assert.That(result, Is.EqualTo(velocity));
     }
@@ -97,25 +111,28 @@ public sealed class RunLaunchLandingStabilizerTests
     {
         _stabilizer.ArmForLaunch();
 
-        _stabilizer.Stabilize(CreateContext(
-            Vector3.forward,
-            new RunSurfaceContext(false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost,
-            0.02f));
+        _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward,
+                new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportLost,
+                fixedDeltaTime: 0.02f));
 
-        _stabilizer.Stabilize(CreateContext(
-            Vector3.forward * 10f + Vector3.up * 3f,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired,
-            0.02f));
+        _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward * 10f + Vector3.up * 3f,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            Vector3.forward * 10f + Vector3.up * 3f,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.ContinuousUpdate,
-            0.31f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward * 10f + Vector3.up * 3f,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.ContinuousUpdate,
+                fixedDeltaTime: 0.31f));
 
-        Assert.That(result.y, Is.EqualTo(3f).Within(0.0001f));
+        Assert.That(result.y, Is.EqualTo(expected: 3f).Within(amount: 0.0001f));
     }
 
     [Test]
@@ -123,19 +140,22 @@ public sealed class RunLaunchLandingStabilizerTests
     {
         _stabilizer.ArmForLaunch();
 
-        _stabilizer.Stabilize(CreateContext(
-            Vector3.forward,
-            new RunSurfaceContext(false, Vector3.up, 0f),
-            RunSurfaceTransition.SupportLost,
-            0.02f));
+        _stabilizer.Stabilize(
+            CreateContext(
+                Vector3.forward,
+                new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportLost,
+                fixedDeltaTime: 0.02f));
+
         _stabilizer.Reset();
         var velocity = Vector3.forward * 10f + Vector3.up * 3f;
 
-        var result = _stabilizer.Stabilize(CreateContext(
-            velocity,
-            new RunSurfaceContext(true, Vector3.up, 0f),
-            RunSurfaceTransition.SupportAcquired,
-            0.02f));
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
 
         Assert.That(result, Is.EqualTo(velocity));
     }
@@ -155,7 +175,7 @@ public sealed class RunLaunchLandingStabilizerTests
 
     private sealed class FakeConfig : IRunLaunchLandingStabilizationConfig
     {
-        public float LaunchLandingStabilizationSeconds { get; set; }
         public float LaunchLandingMaximumLiftSpeed { get; set; }
+        public float LaunchLandingStabilizationSeconds { get; set; }
     }
 }

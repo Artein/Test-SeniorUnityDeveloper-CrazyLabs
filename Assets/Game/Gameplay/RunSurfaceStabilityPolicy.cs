@@ -7,12 +7,11 @@ namespace Game.Gameplay
     {
         private readonly RunSurfaceStabilityConfig _config;
         private readonly IRunSurfaceSlopeCalculator _slopeCalculator;
-
-        private RunSurfaceContext _stableSupport = new(false, Vector3.up, 0f);
-        private Vector3 _candidateNormalSum;
-        private int _candidateNormalCount;
-        private float _missingElapsedSeconds;
         private float _candidateElapsedSeconds;
+        private int _candidateNormalCount;
+        private Vector3 _candidateNormalSum;
+        private float _missingElapsedSeconds;
+        private RunSurfaceContext _stableSupport = new(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
 
         public RunSurfaceStabilityPolicy(
             RunSurfaceStabilityConfig config,
@@ -34,27 +33,23 @@ namespace Game.Gameplay
             RunSupportAttachmentTransition attachmentTransition,
             float fixedDeltaTime)
         {
-            var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime) ? Mathf.Max(0f, fixedDeltaTime) : 0f;
+            var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime) ? Mathf.Max(a: 0f, fixedDeltaTime) : 0f;
 
             if (attachmentTransition == RunSupportAttachmentTransition.Reattached
                 && observation.State == RunSupportObservationState.Supported)
             {
                 _missingElapsedSeconds = 0f;
                 AcceptObservedSupport(observation);
-                return CreateResult(RunSurfaceTransition.SupportReattached, false, false);
+                return CreateResult(RunSurfaceTransition.SupportReattached, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
             }
 
-            switch (observation.State)
+            return observation.State switch
             {
-                case RunSupportObservationState.Unavailable:
-                    return HardReset();
-                case RunSupportObservationState.Missing:
-                    return EvaluateMissing(safeFixedDeltaTime);
-                case RunSupportObservationState.Supported:
-                    return EvaluateSupported(observation, safeFixedDeltaTime);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(observation));
-            }
+                RunSupportObservationState.Unavailable => HardReset(),
+                RunSupportObservationState.Missing => EvaluateMissing(safeFixedDeltaTime),
+                RunSupportObservationState.Supported => EvaluateSupported(observation, safeFixedDeltaTime),
+                _ => throw new ArgumentOutOfRangeException(nameof(observation))
+            };
         }
 
         private RunSurfaceStabilityResult EvaluateMissing(float fixedDeltaTime)
@@ -62,7 +57,7 @@ namespace Game.Gameplay
             ClearCandidate();
 
             if (!_stableSupport.IsGrounded)
-                return CreateResult(RunSurfaceTransition.None, false, false);
+                return CreateResult(RunSurfaceTransition.None, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
 
             _missingElapsedSeconds += fixedDeltaTime;
 
@@ -70,12 +65,12 @@ namespace Game.Gameplay
                 && _missingElapsedSeconds < _config.SupportLossConfirmationSeconds
                 && !Mathf.Approximately(_missingElapsedSeconds, _config.SupportLossConfirmationSeconds))
             {
-                return CreateResult(RunSurfaceTransition.None, true, false);
+                return CreateResult(RunSurfaceTransition.None, isMissingSupportHeld: true, isConfirmingDiscontinuity: false);
             }
 
-            _stableSupport = new RunSurfaceContext(false, Vector3.up, 0f);
+            _stableSupport = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
             _missingElapsedSeconds = 0f;
-            return CreateResult(RunSurfaceTransition.SupportLost, false, false);
+            return CreateResult(RunSurfaceTransition.SupportLost, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
         }
 
         private RunSurfaceStabilityResult EvaluateSupported(
@@ -87,7 +82,7 @@ namespace Game.Gameplay
             if (!_stableSupport.IsGrounded || !_stableSupport.HasValidGroundNormal)
             {
                 AcceptObservedSupport(observation);
-                return CreateResult(RunSurfaceTransition.SupportAcquired, false, false);
+                return CreateResult(RunSurfaceTransition.SupportAcquired, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
             }
 
             var sampledNormal = observation.SurfaceContext.GroundNormal;
@@ -100,7 +95,7 @@ namespace Game.Gameplay
                     : RunSurfaceTransition.None;
 
                 AcceptObservedSupport(observation);
-                return CreateResult(transition, false, false);
+                return CreateResult(transition, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
             }
 
             return EvaluateDiscontinuousCandidate(observation, fixedDeltaTime);
@@ -132,7 +127,7 @@ namespace Game.Gameplay
                     _candidateElapsedSeconds,
                     _config.DiscontinuousNormalConfirmationSeconds))
             {
-                return CreateResult(RunSurfaceTransition.None, false, true);
+                return CreateResult(RunSurfaceTransition.None, isMissingSupportHeld: false, isConfirmingDiscontinuity: true);
             }
 
             var representativeNormal = GetCandidateRepresentative();
@@ -140,17 +135,18 @@ namespace Game.Gameplay
             var downhillDegrees = _slopeCalculator.CalculateForwardDownhillDegrees(
                 representativeNormal,
                 observation.ProgressFrame);
-            _stableSupport = new RunSurfaceContext(true, representativeNormal, downhillDegrees);
+
+            _stableSupport = new RunSurfaceContext(isGrounded: true, representativeNormal, downhillDegrees);
             ClearCandidate();
-            return CreateResult(RunSurfaceTransition.ConfirmedDiscontinuity, false, false);
+            return CreateResult(RunSurfaceTransition.ConfirmedDiscontinuity, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
         }
 
         private RunSurfaceStabilityResult HardReset()
         {
-            _stableSupport = new RunSurfaceContext(false, Vector3.up, 0f);
+            _stableSupport = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
             _missingElapsedSeconds = 0f;
             ClearCandidate();
-            return CreateResult(RunSurfaceTransition.HardReset, false, false);
+            return CreateResult(RunSurfaceTransition.HardReset, isMissingSupportHeld: false, isConfirmingDiscontinuity: false);
         }
 
         private void AcceptObservedSupport(RunSupportObservation observation)

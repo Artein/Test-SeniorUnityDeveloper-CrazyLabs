@@ -1,6 +1,5 @@
 using System;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Game.Gameplay.Tests.EditMode
 {
@@ -9,27 +8,33 @@ namespace Game.Gameplay.Tests.EditMode
         [Test]
         public void ProbeConfig_ValidValues_PreservesEveryAuthoredValue()
         {
-            var config = new RunSurfaceProbeConfig(0.08f, 0.02f, 1 << 7, 0.17f, 0.6f, 8f);
+            var config = new RunSurfaceProbeConfig(
+                distance: 0.08f,
+                skinWidth: 0.02f,
+                1 << 7,
+                minimumSupportNormalDot: 0.17f,
+                footprintSampleOffsetScale: 0.6f,
+                footprintNormalClusterAngleDegrees: 8f);
 
-            Assert.That(config.Distance, Is.EqualTo(0.08f));
-            Assert.That(config.SkinWidth, Is.EqualTo(0.02f));
+            Assert.That(config.Distance, Is.EqualTo(expected: 0.08f));
+            Assert.That(config.SkinWidth, Is.EqualTo(expected: 0.02f));
             Assert.That(config.SurfaceMask.value, Is.EqualTo(1 << 7));
-            Assert.That(config.MinimumSupportNormalDot, Is.EqualTo(0.17f));
-            Assert.That(config.FootprintSampleOffsetScale, Is.EqualTo(0.6f));
-            Assert.That(config.FootprintNormalClusterAngleDegrees, Is.EqualTo(8f));
+            Assert.That(config.MinimumSupportNormalDot, Is.EqualTo(expected: 0.17f));
+            Assert.That(config.FootprintSampleOffsetScale, Is.EqualTo(expected: 0.6f));
+            Assert.That(config.FootprintNormalClusterAngleDegrees, Is.EqualTo(expected: 8f));
         }
 
         [TestCase(float.NaN)]
         [TestCase(float.NegativeInfinity)]
-        [TestCase(-0.01f)]
+        [TestCase(arg: -0.01f)]
         public void ProbeConfig_InvalidDistance_Throws(float value)
         {
-            Assert.That(() => CreateProbeConfig(distance: value), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(() => CreateProbeConfig(value), Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
         [TestCase(float.NaN)]
         [TestCase(float.NegativeInfinity)]
-        [TestCase(-0.01f)]
+        [TestCase(arg: -0.01f)]
         public void ProbeConfig_InvalidSkinWidth_Throws(float value)
         {
             Assert.That(() => CreateProbeConfig(skinWidth: value), Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -42,24 +47,24 @@ namespace Game.Gameplay.Tests.EditMode
         }
 
         [TestCase(float.NaN)]
-        [TestCase(-1.01f)]
-        [TestCase(1.01f)]
+        [TestCase(arg: -1.01f)]
+        [TestCase(arg: 1.01f)]
         public void ProbeConfig_InvalidMinimumSupportNormalDot_Throws(float value)
         {
             Assert.That(() => CreateProbeConfig(minimumSupportNormalDot: value), Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
         [TestCase(float.NaN)]
-        [TestCase(-0.01f)]
-        [TestCase(1.01f)]
+        [TestCase(arg: -0.01f)]
+        [TestCase(arg: 1.01f)]
         public void ProbeConfig_InvalidFootprintSampleOffsetScale_Throws(float value)
         {
             Assert.That(() => CreateProbeConfig(footprintSampleOffsetScale: value), Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
         [TestCase(float.NaN)]
-        [TestCase(-0.01f)]
-        [TestCase(180.01f)]
+        [TestCase(arg: -0.01f)]
+        [TestCase(arg: 180.01f)]
         public void ProbeConfig_InvalidFootprintClusterAngle_Throws(float value)
         {
             Assert.That(() => CreateProbeConfig(footprintNormalClusterAngleDegrees: value), Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -68,12 +73,16 @@ namespace Game.Gameplay.Tests.EditMode
         [Test]
         public void AttachmentConfig_ValidValues_PreservesEveryAuthoredValue()
         {
-            var config = new RunSupportAttachmentConfig(0.35f, 0.08f, 30f, 0.04f);
+            var config = new RunSupportAttachmentConfig(
+                maximumAttachedSurfaceNormalLiftSpeed: 0.35f,
+                sameSurfaceReattachmentSeparationMeters: 0.08f,
+                minimumReattachmentNormalChangeDegrees: 30f,
+                transitionConfirmationSeconds: 0.04f);
 
-            Assert.That(config.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(0.35f));
-            Assert.That(config.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(0.08f));
-            Assert.That(config.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(30f));
-            Assert.That(config.TransitionConfirmationSeconds, Is.EqualTo(0.04f));
+            Assert.That(config.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(expected: 0.35f));
+            Assert.That(config.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(expected: 0.08f));
+            Assert.That(config.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(expected: 30f));
+            Assert.That(config.TransitionConfirmationSeconds, Is.EqualTo(expected: 0.04f));
         }
 
         [TestCase(float.NaN, 0.08f, 30f, 0.04f)]
@@ -106,7 +115,7 @@ namespace Game.Gameplay.Tests.EditMode
             return new RunSurfaceProbeConfig(
                 distance,
                 skinWidth,
-                (LayerMask)surfaceMask,
+                surfaceMask,
                 minimumSupportNormalDot,
                 footprintSampleOffsetScale,
                 footprintNormalClusterAngleDegrees);

@@ -6,11 +6,10 @@ namespace Game.Gameplay
     internal sealed class RunSteeringFramePolicy
     {
         private readonly RunSteeringFrameConfig _config;
-
-        private RunSteeringFrameSnapshot _current = new(false, Vector3.up);
-        private bool _isActive;
-        private bool _hasGroundedSupport;
         private float _airborneElapsedSeconds;
+        private RunSteeringFrameSnapshot _current = new(isValid: false, Vector3.up);
+        private bool _hasGroundedSupport;
+        private bool _isActive;
 
         public RunSteeringFrameSnapshot Current => _current;
 
@@ -32,8 +31,9 @@ namespace Game.Gameplay
         public void Reset(Vector3 launchUpDirection)
         {
             _current = new RunSteeringFrameSnapshot(
-                true,
+                isValid: true,
                 TryNormalize(launchUpDirection, out var launchUp) ? launchUp : Vector3.up);
+
             _isActive = true;
             _hasGroundedSupport = false;
             _airborneElapsedSeconds = 0f;
@@ -41,7 +41,7 @@ namespace Game.Gameplay
 
         public void Clear()
         {
-            _current = new RunSteeringFrameSnapshot(false, Vector3.up);
+            _current = new RunSteeringFrameSnapshot(isValid: false, Vector3.up);
             _isActive = false;
             _hasGroundedSupport = false;
             _airborneElapsedSeconds = 0f;
@@ -54,7 +54,7 @@ namespace Game.Gameplay
             if (!_isActive)
                 return _current;
 
-            var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime) ? Mathf.Max(0f, fixedDeltaTime) : 0f;
+            var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime) ? Mathf.Max(a: 0f, fixedDeltaTime) : 0f;
 
             if (stability.Transition == RunSurfaceTransition.HardReset)
             {
@@ -85,7 +85,7 @@ namespace Game.Gameplay
                 || stability.Transition == RunSurfaceTransition.SupportReattached
                 || stability.Transition == RunSurfaceTransition.ConfirmedDiscontinuity)
             {
-                _current = new RunSteeringFrameSnapshot(true, stableUp);
+                _current = new RunSteeringFrameSnapshot(isValid: true, stableUp);
                 _hasGroundedSupport = true;
                 return;
             }
@@ -96,8 +96,8 @@ namespace Game.Gameplay
                 return;
 
             var maximumRadiansDelta = _config.NormalSlewDegreesPerSecond * Mathf.Deg2Rad * fixedDeltaTime;
-            var slewedUp = Vector3.RotateTowards(_current.UpDirection, stableUp, maximumRadiansDelta, 0f);
-            _current = new RunSteeringFrameSnapshot(true, slewedUp);
+            var slewedUp = Vector3.RotateTowards(_current.UpDirection, stableUp, maximumRadiansDelta, maxMagnitudeDelta: 0f);
+            _current = new RunSteeringFrameSnapshot(isValid: true, slewedUp);
         }
 
         private void EvaluateUnsupported(float fixedDeltaTime)
@@ -115,13 +115,13 @@ namespace Game.Gameplay
                 return;
             }
 
-            _current = new RunSteeringFrameSnapshot(false, Vector3.up);
+            _current = new RunSteeringFrameSnapshot(isValid: false, Vector3.up);
             _airborneElapsedSeconds = 0f;
         }
 
         private void ResetRuntimeState()
         {
-            _current = new RunSteeringFrameSnapshot(false, Vector3.up);
+            _current = new RunSteeringFrameSnapshot(isValid: false, Vector3.up);
             _hasGroundedSupport = false;
             _airborneElapsedSeconds = 0f;
         }

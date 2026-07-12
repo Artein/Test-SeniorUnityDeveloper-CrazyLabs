@@ -11,38 +11,38 @@ namespace Game.Gameplay
 {
     internal sealed class RunBodyMovementController : IInitializable, IFixedTickable, IDisposable
     {
+        private readonly ITime _clock;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
-        private readonly IRunBodyMovementTarget _movementTarget;
-        private readonly IRunSteeringInputSource _steeringInputSource;
-        private readonly IRunBodySpeedEvaluator _speedEvaluator;
-        private readonly IRunSteeringEvaluator _steeringEvaluator;
         private readonly IRunLaunchLandingStabilizer _launchLandingStabilizer;
-        private readonly IRunSteeringFrameSource _steeringFrameSource;
-        private readonly IRunSteeringFrameResetter _steeringFrameResetter;
-        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
-        private readonly IRunProgressService _runProgressService;
-        private readonly IRunGameplayStatResolver _runGameplayStatResolver;
-        private readonly IRunBodySpeedDiagnosticsSink _speedDiagnosticsSink;
-        private readonly IRunBodySpeedConfig _speedConfig;
-        private readonly IRunBodyMovementValidityConfig _movementValidityConfig;
-        private readonly IRunSteeringConfig _steeringConfig;
-        private readonly RunBodySpeedEnvelopeValidator _speedEnvelopeValidator;
-        private readonly ITime _clock;
-        private readonly GameplayStatId _playerMaxSpeedStatId;
-        private readonly GameplayStateId _runningStateId;
-        private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
-        private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
         private readonly RunBodyLowSpeedAssistAttempt _lowSpeedAssistAttempt = new();
-        private readonly RunBodySpeedResolver _speedResolver;
         private readonly float _minimumDirectionSqrMagnitude = 0.000001f;
+        private readonly IRunBodyMovementTarget _movementTarget;
+        private readonly IRunBodyMovementValidityConfig _movementValidityConfig;
+        private readonly GameplayStatId _playerMaxSpeedStatId;
+        private readonly IRunGameplayStatResolver _runGameplayStatResolver;
+        private readonly GameplayStateId _runningStateId;
+        private readonly IRunProgressService _runProgressService;
+        private readonly IRunBodySpeedConfig _speedConfig;
+        private readonly IRunBodySpeedDiagnosticsSink _speedDiagnosticsSink;
+        private readonly RunBodySpeedEnvelopeValidator _speedEnvelopeValidator;
+        private readonly IRunBodySpeedEvaluator _speedEvaluator;
+        private readonly RunBodySpeedResolver _speedResolver;
+        private readonly IRunSteeringConfig _steeringConfig;
+        private readonly IRunSteeringEvaluator _steeringEvaluator;
+        private readonly IRunSteeringFrameResetter _steeringFrameResetter;
+        private readonly IRunSteeringFrameSource _steeringFrameSource;
+        private readonly IRunSteeringInputSource _steeringInputSource;
+        private readonly IRunSteeringModeSelector _steeringModeSelector = new RunSteeringModeSelector();
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly float _surfaceNormalLiftEpsilon = 0.0001f;
+        private readonly IRunBodyVelocitySanityGuard _velocitySanityGuard = new RunBodyVelocitySanityGuard();
+        private bool _hasLaunchApplied;
+        private bool _isDisposed;
+        private bool _isInitialized;
+        private bool _isMovementActive;
 
         private Vector3 _launchUpDirection = Vector3.up;
-        private bool _isInitialized;
-        private bool _isDisposed;
-        private bool _hasLaunchApplied;
-        private bool _isMovementActive;
 
         public RunBodyMovementController(
             IGameplayStateService gameplayStateService,
@@ -91,20 +91,19 @@ namespace Game.Gameplay
             _playerMaxSpeedStatId = playerMaxSpeedStatId != null
                 ? playerMaxSpeedStatId
                 : throw new ArgumentNullException(nameof(playerMaxSpeedStatId));
+
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
-        void IInitializable.Initialize()
+        void IDisposable.Dispose()
         {
             if (_isDisposed)
-                throw new ObjectDisposedException(nameof(RunBodyMovementController));
-
-            if (_isInitialized)
                 return;
 
-            _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
-            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
-            _isInitialized = true;
+            _isDisposed = true;
+            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+            ClearMovementLifecycle();
         }
 
         void IFixedTickable.FixedTick()
@@ -115,15 +114,17 @@ namespace Game.Gameplay
             var resolvedSoftMaximumSpeed = _runGameplayStatResolver.Resolve(
                 _playerMaxSpeedStatId,
                 _speedConfig.BaseSoftMaximumSpeed);
+
             _speedEnvelopeValidator.ValidateOrThrow(resolvedSoftMaximumSpeed);
 
-            var fixedDeltaTime = Mathf.Max(0f, _clock.FixedDeltaTime);
+            var fixedDeltaTime = Mathf.Max(a: 0f, _clock.FixedDeltaTime);
             var inputState = _steeringInputSource.AdvanceAndRead(fixedDeltaTime);
             var rawVelocity = _movementTarget.LinearVelocity;
 
             var sanityResult = _velocitySanityGuard.Sanitize(
                 rawVelocity,
                 _movementValidityConfig.RunBodySpeedSanityGuardMetersPerSecond);
+
             var surfaceFrame = _surfaceFrameSource.Current;
             var surfaceContext = surfaceFrame.StableSupport;
 
@@ -138,12 +139,14 @@ namespace Game.Gameplay
                 correctedVelocity,
                 surfaceContext,
                 resolvedSoftMaximumSpeed);
+
             var speedDecision = _speedEvaluator.Evaluate(speedContext);
 
             var steeringMode = _steeringModeSelector.Select(
                 surfaceContext,
                 correctedVelocity,
                 ResolveMaximumSupportedSurfaceNormalLiftSpeed());
+
             var steeringUp = ResolveSteeringUp();
 
             var targetState = ComposeTargetState(
@@ -170,15 +173,17 @@ namespace Game.Gameplay
                 hasUsableTangentDirection);
         }
 
-        void IDisposable.Dispose()
+        void IInitializable.Initialize()
         {
             if (_isDisposed)
+                throw new ObjectDisposedException(nameof(RunBodyMovementController));
+
+            if (_isInitialized)
                 return;
 
-            _isDisposed = true;
-            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
-            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
-            ClearMovementLifecycle();
+            _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
+            _isInitialized = true;
         }
 
         private void OnLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)
@@ -245,6 +250,7 @@ namespace Game.Gameplay
                 surfaceContext,
                 steeringMode,
                 steeringUp);
+
             var normalVelocity = Vector3.Project(correctedVelocity, movementPlaneNormal);
             var tangentVelocity = correctedVelocity - normalVelocity;
             sampledTangentSpeed = tangentVelocity.magnitude;
@@ -274,21 +280,21 @@ namespace Game.Gameplay
             if (hasFinalDirection && steeringDecision.ShouldTurnVelocity)
             {
                 var rotatedTangentDirection = Quaternion.AngleAxis(
-                    steeringDecision.SignedTurnDegrees,
-                    steeringUp) * currentTangentDirection;
+                                                  steeringDecision.SignedTurnDegrees,
+                                                  steeringUp)
+                                              * currentTangentDirection;
 
                 if (TryProjectAndNormalize(
                         rotatedTangentDirection,
                         movementPlaneNormal,
                         out var projectedTurnDirection))
-                {
                     finalTangentDirection = projectedTurnDirection;
-                }
             }
 
             var finalTangentVelocity = hasFinalDirection && float.IsFinite(speedResolution.ResolvedTangentSpeed)
                 ? finalTangentDirection * speedResolution.ResolvedTangentSpeed
                 : Vector3.zero;
+
             var finalVelocity = finalTangentVelocity + normalVelocity;
             var rotation = Quaternion.identity;
 
@@ -312,22 +318,23 @@ namespace Game.Gameplay
         {
             var assistAttempt = speedResolution.LowSpeedAssistAttempt;
 
-            _speedDiagnosticsSink.Publish(new RunBodySpeedDiagnosticsSnapshot(
-                RunBodySpeedDiagnosticsState.Active,
-                surfaceContext.IsGrounded,
-                speedContext.HasValidGroundedRunSurface,
-                hasUsableTangentDirection,
-                sampledTangentSpeed,
-                speedDecision.SoftMaximumSpeed,
-                speedContext.ForwardDownhillDegrees,
-                speedContext.CourseForwardAlignment,
-                speedResolution.PolicyContributors,
-                speedResolution.RequestedContributors,
-                speedResolution.RequestedLowSpeedAssistVelocityDelta,
-                assistAttempt.EffectiveTargetSpeed,
-                assistAttempt.State,
-                assistAttempt.IsEligible,
-                assistAttempt.RemainingRequestedVelocityBudget));
+            _speedDiagnosticsSink.Publish(
+                new RunBodySpeedDiagnosticsSnapshot(
+                    RunBodySpeedDiagnosticsState.Active,
+                    surfaceContext.IsGrounded,
+                    speedContext.HasValidGroundedRunSurface,
+                    hasUsableTangentDirection,
+                    sampledTangentSpeed,
+                    speedDecision.SoftMaximumSpeed,
+                    speedContext.ForwardDownhillDegrees,
+                    speedContext.CourseForwardAlignment,
+                    speedResolution.PolicyContributors,
+                    speedResolution.RequestedContributors,
+                    speedResolution.RequestedLowSpeedAssistVelocityDelta,
+                    assistAttempt.EffectiveTargetSpeed,
+                    assistAttempt.State,
+                    assistAttempt.IsEligible,
+                    assistAttempt.RemainingRequestedVelocityBudget));
         }
 
         private RunBodySpeedContext CreateSpeedContext(
@@ -335,8 +342,7 @@ namespace Game.Gameplay
             RunSurfaceContext surfaceContext,
             float resolvedSoftMaximumSpeed)
         {
-            var hasValidGroundedRunSurface = surfaceContext.IsGrounded
-                                             && surfaceContext.HasValidGroundNormal
+            var hasValidGroundedRunSurface = surfaceContext is { IsGrounded: true, HasValidGroundNormal: true }
                                              && Vector3.Dot(correctedVelocity, surfaceContext.GroundNormal)
                                              <= ResolveMaximumSupportedSurfaceNormalLiftSpeed();
 
@@ -373,7 +379,7 @@ namespace Game.Gameplay
                 return 0f;
             }
 
-            return Mathf.Clamp(Vector3.Dot(tangentDirection, courseForwardDirection), -1f, 1f);
+            return Mathf.Clamp(Vector3.Dot(tangentDirection, courseForwardDirection), min: -1f, max: 1f);
         }
 
         private Vector3 ResolveMovementPlaneNormal(
@@ -382,8 +388,7 @@ namespace Game.Gameplay
             Vector3 steeringUp)
         {
             if (steeringMode == RunSteeringMode.Grounded
-                && surfaceContext.IsGrounded
-                && surfaceContext.HasValidGroundNormal)
+                && surfaceContext is { IsGrounded: true, HasValidGroundNormal: true })
             {
                 return GetValidDirection(surfaceContext.GroundNormal, steeringUp);
             }

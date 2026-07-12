@@ -11,41 +11,41 @@ namespace Game.Gameplay.Tests.PlayMode
         IRunLaunchLandingStabilizationConfig,
         IRunSteeringConfig
     {
-        public float DownhillAcceleration { get; set; }
-        public float SurfaceSlowdown { get; set; }
-        public float LowSpeedAssistTargetSpeed { get; set; }
-        public float LowSpeedAssistAcceleration { get; set; }
-        public float BaseSoftMaximumSpeed { get; set; } = 20f;
         public float AboveMaximumSpeedResistance { get; set; }
-        public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; } = 0.05f;
-        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
-        public float LaunchLandingStabilizationSeconds { get; set; } = 0.4f;
-        public float LaunchLandingMaximumLiftSpeed { get; set; }
-        public float RunSteeringRangeCentimeters { get; set; } = 2.54f;
-        public float RunSteeringDeadzoneFraction { get; set; }
-        public float RunSteeringResponsiveness { get; set; } = 100f;
+        public float BaseSoftMaximumSpeed { get; set; } = 20f;
+        public float BodyBounciness { get; set; }
+        public float DownhillAcceleration { get; set; }
         public float FallbackDpi { get; set; } = 100f;
-        public float MinimumAcceptedDpi { get; set; } = 1f;
+        public float LaunchLandingMaximumLiftSpeed { get; set; }
+        public float LaunchLandingStabilizationSeconds { get; set; } = 0.4f;
+        public float LowSpeedAssistAcceleration { get; set; }
+        public float LowSpeedAssistTargetSpeed { get; set; }
         public float MaximumAcceptedDpi { get; set; } = 1000f;
+        public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; } = 0.05f;
         public float MaximumTurnDegreesPerSecond { get; set; } = 90f;
-        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 30f;
+        public float MinimumAcceptedDpi { get; set; } = 1f;
         public float MinimumSteerSpeed { get; set; } = 0.25f;
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 30f;
+        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
+        public float RunSteeringDeadzoneFraction { get; set; }
+        public float RunSteeringFrameAirborneUpRetentionSeconds { get; set; } = 0.12f;
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; } = 360f;
+        public float RunSteeringRangeCentimeters { get; set; } = 2.54f;
+        public float RunSteeringResponsiveness { get; set; } = 100f;
+        public float RunSurfaceCandidateCoherenceDegrees { get; set; } = 1f;
+        public float RunSurfaceDiscontinuousNormalConfirmationSeconds { get; set; } = 0.04f;
         public float RunSurfaceDiscontinuousNormalThresholdDegrees { get; set; } = 60f;
         public float RunSurfaceSupportLossConfirmationSeconds { get; set; } = 0.08f;
-        public float RunSurfaceDiscontinuousNormalConfirmationSeconds { get; set; } = 0.04f;
-        public float RunSurfaceCandidateCoherenceDegrees { get; set; } = 1f;
-        public float RunSteeringFrameAirborneUpRetentionSeconds { get; set; } = 0.12f;
         public float SupportProbeDistance { get; set; } = 0.3f;
-        public float BodyBounciness { get; set; }
+        public float SurfaceSlowdown { get; set; }
     }
 
     internal sealed class RunBodyContactPhysicsStateService : IGameplayStateService
     {
         public GameplayStateId CurrentStateId { get; private set; }
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public RunBodyContactPhysicsStateService(GameplayStateId runningStateId)
         {
@@ -97,13 +97,13 @@ namespace Game.Gameplay.Tests.PlayMode
     {
         private readonly Vector3 _forwardDirection;
         private readonly Vector3 _upDirection;
+        public float CurrentForwardProgress { get; private set; }
+        public RunProgressSample CurrentSample => default;
 
         public bool HasValidSnapshot { get; private set; }
-        public string SnapshotError { get; private set; } = string.Empty;
-        public RunProgressFrameSnapshot Snapshot { get; private set; }
-        public float CurrentForwardProgress { get; private set; }
         public float MaximumForwardProgress { get; private set; }
-        public RunProgressSample CurrentSample => default;
+        public RunProgressFrameSnapshot Snapshot { get; private set; }
+        public string SnapshotError { get; private set; } = string.Empty;
 
         public FixedRunProgressContext(Vector3 origin, Vector3 forwardDirection, Vector3 upDirection)
         {
@@ -135,6 +135,7 @@ namespace Game.Gameplay.Tests.PlayMode
                 _upDirection,
                 out var snapshot,
                 out error);
+
             Snapshot = snapshot;
             SnapshotError = error;
             CurrentForwardProgress = 0f;
@@ -164,23 +165,16 @@ namespace Game.Gameplay.Tests.PlayMode
     internal sealed class RecordingRunBodyMovementTarget : IRunBodyMovementTarget
     {
         private readonly IRunBodyMovementTarget _inner;
+        public bool HasLastTargetState { get; private set; }
+        public RunBodyMovementTargetState LastTargetState { get; private set; }
 
         public Vector3 LinearVelocity => _inner.LinearVelocity;
         public int StepWriteCount { get; private set; }
         public int TotalWriteCount { get; private set; }
-        public bool HasLastTargetState { get; private set; }
-        public RunBodyMovementTargetState LastTargetState { get; private set; }
 
         public RecordingRunBodyMovementTarget(IRunBodyMovementTarget inner)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        }
-
-        public void BeginStep()
-        {
-            StepWriteCount = 0;
-            HasLastTargetState = false;
-            LastTargetState = default;
         }
 
         public void ApplyTargetState(RunBodyMovementTargetState targetState)
@@ -191,15 +185,22 @@ namespace Game.Gameplay.Tests.PlayMode
             LastTargetState = targetState;
             _inner.ApplyTargetState(targetState);
         }
+
+        public void BeginStep()
+        {
+            StepWriteCount = 0;
+            HasLastTargetState = false;
+            LastTargetState = default;
+        }
     }
 
     internal sealed class TestRunMotionSource : IRunMotionSource
     {
-        private readonly Transform _transform;
         private readonly Rigidbody _rigidbody;
+        private readonly Transform _transform;
+        public Vector3 LinearVelocity => _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
 
         public Vector3 Position => _transform.position;
-        public Vector3 LinearVelocity => _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
 
         public TestRunMotionSource(Transform transform, Rigidbody rigidbody = null)
         {

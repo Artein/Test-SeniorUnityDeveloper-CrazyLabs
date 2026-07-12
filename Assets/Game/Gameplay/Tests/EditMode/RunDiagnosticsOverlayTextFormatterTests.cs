@@ -6,8 +6,6 @@ using UnityEngine;
 // ReSharper disable once CheckNamespace
 public sealed class RunDiagnosticsOverlayTextFormatterTests
 {
-    private readonly RunDiagnosticsOverlayTextFormatter _formatter = new();
-
     [Test]
     public void FormatMotionSummary_SurfaceSnapshot_UsesExplicitPolicyTerminology()
     {
@@ -19,18 +17,18 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             isConfirmingDiscontinuity: true,
             isSteeringFrameValid: true);
 
-        var text = _formatter.FormatMotionSummary(sample);
+        var text = RunDiagnosticsOverlayTextFormatter.FormatMotionSummary(sample);
 
-        Assert.That(text, Does.Contain("observed:Supported"));
-        Assert.That(text, Does.Contain("stable:grounded"));
-        Assert.That(text, Does.Contain("transition:ConfirmedDiscontinuity"));
-        Assert.That(text, Does.Contain("attachment:None"));
-        Assert.That(text, Does.Contain("held:yes"));
-        Assert.That(text, Does.Contain("confirming:yes"));
-        Assert.That(text, Does.Contain("steering:valid"));
-        Assert.That(text, Does.Contain("observed:Supported normal:(0.000,1.000,0.000)"));
-        Assert.That(text, Does.Contain("stable:grounded normal:(0.000,1.000,0.000)"));
-        Assert.That(text, Does.Contain("steering:valid up:(0.000,0.000,1.000)"));
+        Assert.That(text, Does.Contain(expected: "observed:Supported"));
+        Assert.That(text, Does.Contain(expected: "stable:grounded"));
+        Assert.That(text, Does.Contain(expected: "transition:ConfirmedDiscontinuity"));
+        Assert.That(text, Does.Contain(expected: "attachment:None"));
+        Assert.That(text, Does.Contain(expected: "held:yes"));
+        Assert.That(text, Does.Contain(expected: "confirming:yes"));
+        Assert.That(text, Does.Contain(expected: "steering:valid"));
+        Assert.That(text, Does.Contain(expected: "observed:Supported normal:(0.000,1.000,0.000)"));
+        Assert.That(text, Does.Contain(expected: "stable:grounded normal:(0.000,1.000,0.000)"));
+        Assert.That(text, Does.Contain(expected: "steering:valid up:(0.000,0.000,1.000)"));
     }
 
     [TestCase(RunSupportObservationState.Unavailable)]
@@ -38,7 +36,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
     [TestCase(RunSupportObservationState.Supported)]
     public void FormatMotionSummary_ObservedState_ReportsEveryState(RunSupportObservationState observedState)
     {
-        var text = _formatter.FormatMotionSummary(CreateSurfaceSample(observedState));
+        var text = RunDiagnosticsOverlayTextFormatter.FormatMotionSummary(CreateSurfaceSample(observedState));
 
         Assert.That(text, Does.Contain($"observed:{observedState}"));
     }
@@ -52,7 +50,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
     [TestCase(RunSurfaceTransition.SupportReattached)]
     public void FormatMotionSummary_Transition_ReportsEveryTransition(RunSurfaceTransition transition)
     {
-        var text = _formatter.FormatMotionSummary(CreateSurfaceSample(surfaceTransition: transition));
+        var text = RunDiagnosticsOverlayTextFormatter.FormatMotionSummary(CreateSurfaceSample(surfaceTransition: transition));
 
         Assert.That(text, Does.Contain($"transition:{transition}"));
     }
@@ -60,44 +58,44 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
     [Test]
     public void FormatMotionSummary_UnavailableSnapshot_ReportsAbsentDirectionsAndFalseFlags()
     {
-        var text = _formatter.FormatMotionSummary(CreateSurfaceSample());
+        var text = RunDiagnosticsOverlayTextFormatter.FormatMotionSummary(CreateSurfaceSample());
 
-        Assert.That(text, Does.Contain("observed:Unavailable normal:n/a"));
-        Assert.That(text, Does.Contain("stable:unsupported normal:n/a"));
-        Assert.That(text, Does.Contain("held:no"));
-        Assert.That(text, Does.Contain("confirming:no"));
-        Assert.That(text, Does.Contain("steering:unavailable up:n/a"));
+        Assert.That(text, Does.Contain(expected: "observed:Unavailable normal:n/a"));
+        Assert.That(text, Does.Contain(expected: "stable:unsupported normal:n/a"));
+        Assert.That(text, Does.Contain(expected: "held:no"));
+        Assert.That(text, Does.Contain(expected: "confirming:no"));
+        Assert.That(text, Does.Contain(expected: "steering:unavailable up:n/a"));
     }
 
     [Test]
     public void FormatRunBodySpeed_InactiveSnapshot_ReportsInactiveState()
     {
-        var text = _formatter.FormatRunBodySpeed(default);
+        var text = RunDiagnosticsOverlayTextFormatter.FormatRunBodySpeed(snapshot: default);
 
-        Assert.That(text, Is.EqualTo("Run Body Speed | state:inactive"));
+        Assert.That(text, Is.EqualTo(expected: "Run Body Speed | state:inactive"));
     }
 
     [Test]
     public void FormatRunBodySpeed_ActiveSnapshot_ReportsPolicyAndRequestedContributorsSeparately()
     {
         var snapshot = CreateSnapshot(
-            policyContributors: RunBodySpeedDecisionContributors.DownhillAcceleration
-                                | RunBodySpeedDecisionContributors.SurfaceSlowdown
-                                | RunBodySpeedDecisionContributors.AboveEnvelopeResistance
-                                | RunBodySpeedDecisionContributors.LowSpeedAssist,
-            requestedContributors: RunBodySpeedDecisionContributors.SurfaceSlowdown
-                                   | RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.DownhillAcceleration
+            | RunBodySpeedDecisionContributors.SurfaceSlowdown
+            | RunBodySpeedDecisionContributors.AboveEnvelopeResistance
+            | RunBodySpeedDecisionContributors.LowSpeedAssist,
+            RunBodySpeedDecisionContributors.SurfaceSlowdown
+            | RunBodySpeedDecisionContributors.LowSpeedAssist);
 
-        var text = _formatter.FormatRunBodySpeed(snapshot);
+        var text = RunDiagnosticsOverlayTextFormatter.FormatRunBodySpeed(snapshot);
 
-        Assert.That(text, Does.Contain("grounded:yes"));
-        Assert.That(text, Does.Contain("support:valid"));
-        Assert.That(text, Does.Contain("direction:valid"));
-        Assert.That(text, Does.Contain("speed:12.5/20.0m/s"));
-        Assert.That(text, Does.Contain("downhill:28.0deg"));
-        Assert.That(text, Does.Contain("align:0.75"));
-        Assert.That(text, Does.Contain("policy:downhill+slowdown+above-envelope+low-speed-assist"));
-        Assert.That(text, Does.Contain("requested:slowdown+low-speed-assist"));
+        Assert.That(text, Does.Contain(expected: "grounded:yes"));
+        Assert.That(text, Does.Contain(expected: "support:valid"));
+        Assert.That(text, Does.Contain(expected: "direction:valid"));
+        Assert.That(text, Does.Contain(expected: "speed:12.5/20.0m/s"));
+        Assert.That(text, Does.Contain(expected: "downhill:28.0deg"));
+        Assert.That(text, Does.Contain(expected: "align:0.75"));
+        Assert.That(text, Does.Contain(expected: "policy:downhill+slowdown+above-envelope+low-speed-assist"));
+        Assert.That(text, Does.Contain(expected: "requested:slowdown+low-speed-assist"));
     }
 
     [Test]
@@ -112,40 +110,40 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             effectiveSoftMaximumSpeed: 20f,
             forwardDownhillDegrees: 0f,
             courseForwardAlignment: 0f,
-            policyContributors: RunBodySpeedDecisionContributors.None,
-            requestedContributors: RunBodySpeedDecisionContributors.None,
+            RunBodySpeedDecisionContributors.None,
+            RunBodySpeedDecisionContributors.None,
             requestedLowSpeedAssistVelocityDelta: 0f,
             effectiveLowSpeedAssistTargetSpeed: 0f,
-            lowSpeedAssistAttemptState: RunBodyLowSpeedAssistAttemptState.Unavailable,
+            RunBodyLowSpeedAssistAttemptState.Unavailable,
             meetsLowSpeedAssistPolicyConditions: false,
             remainingRequestedLowSpeedAssistVelocityBudget: 0f);
 
-        var text = _formatter.FormatRunBodySpeed(snapshot);
+        var text = RunDiagnosticsOverlayTextFormatter.FormatRunBodySpeed(snapshot);
 
-        Assert.That(text, Does.Contain("grounded:no"));
-        Assert.That(text, Does.Contain("support:invalid"));
-        Assert.That(text, Does.Contain("direction:unavailable"));
-        Assert.That(text, Does.Contain("policy:none"));
-        Assert.That(text, Does.Contain("requested:none"));
+        Assert.That(text, Does.Contain(expected: "grounded:no"));
+        Assert.That(text, Does.Contain(expected: "support:invalid"));
+        Assert.That(text, Does.Contain(expected: "direction:unavailable"));
+        Assert.That(text, Does.Contain(expected: "policy:none"));
+        Assert.That(text, Does.Contain(expected: "requested:none"));
     }
 
     [Test]
     public void FormatLowSpeedAssist_ActiveSnapshot_ReportsAttemptStatePolicyConditionsRequestAndBudget()
     {
-        var text = _formatter.FormatLowSpeedAssist(CreateSnapshot());
+        var text = RunDiagnosticsOverlayTextFormatter.FormatLowSpeedAssist(CreateSnapshot());
 
         Assert.That(
             text,
             Is.EqualTo(
-                "Low-Speed Assist | target:5.0m/s state:Active conditions:yes request:+1.0m/s budget:2.5m/s"));
+                expected: "Low-Speed Assist | target:5.0m/s state:Active conditions:yes request:+1.0m/s budget:2.5m/s"));
     }
 
     [Test]
     public void FormatLowSpeedAssist_InactiveSnapshot_ReportsUnavailableState()
     {
-        var text = _formatter.FormatLowSpeedAssist(default);
+        var text = RunDiagnosticsOverlayTextFormatter.FormatLowSpeedAssist(snapshot: default);
 
-        Assert.That(text, Is.EqualTo("Low-Speed Assist | state:unavailable"));
+        Assert.That(text, Is.EqualTo(expected: "Low-Speed Assist | state:unavailable"));
     }
 
     private RunBodySpeedDiagnosticsSnapshot CreateSnapshot(
@@ -165,7 +163,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             requestedContributors,
             requestedLowSpeedAssistVelocityDelta: 1f,
             effectiveLowSpeedAssistTargetSpeed: 5f,
-            lowSpeedAssistAttemptState: RunBodyLowSpeedAssistAttemptState.Active,
+            RunBodyLowSpeedAssistAttemptState.Active,
             meetsLowSpeedAssistPolicyConditions: true,
             remainingRequestedLowSpeedAssistVelocityBudget: 2.5f);
     }
@@ -191,7 +189,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             visualTargetRotationDeltaDegrees: 0f,
             visualRotationDeltaDegrees: 0f,
             cameraRotationDeltaDegrees: 0f,
-            estimatedVisualSnapReason: RunDiagnosticsOverlaySnapReason.None,
+            RunDiagnosticsOverlaySnapReason.None,
             fixedStepsThisFrame: 1,
             CreateSurfaceFrame(
                 observedSupportState,
@@ -219,18 +217,18 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             out _);
 
         var observedContext = observedSupportState == RunSupportObservationState.Supported
-            ? new RunSurfaceContext(true, Vector3.up, 0f)
-            : new RunSurfaceContext(false, Vector3.up, 0f);
+            ? new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f)
+            : new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
 
         var observation = new RunSupportObservation(
             observedSupportState,
             observedSupportState == RunSupportObservationState.Unavailable ? default : progressFrame,
             observedContext,
-            0f);
+            supportDistance: 0f);
 
         return new RunSurfaceFrameSnapshot(
             observation,
-            new RunSurfaceContext(isStableGrounded, Vector3.up, 0f),
+            new RunSurfaceContext(isStableGrounded, Vector3.up, forwardDownhillDegrees: 0f),
             surfaceTransition,
             isMissingSupportHeld,
             isConfirmingDiscontinuity,

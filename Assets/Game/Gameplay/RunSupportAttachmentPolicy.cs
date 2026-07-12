@@ -26,25 +26,17 @@ namespace Game.Gameplay
 
     internal sealed class RunSupportAttachmentPolicy
     {
-        private enum CandidateKind
-        {
-            None = 0,
-            Detachment = 1,
-            Reattachment = 2
-        }
-
         private readonly RunSupportAttachmentConfig _config;
-
-        private RunSupportAttachmentState _state;
-        private CandidateKind _candidateKind;
         private Vector3 _candidateDetachmentNormal = Vector3.up;
         private Vector3 _candidateDetachmentPosition;
         private float _candidateElapsedSeconds;
-        private Vector3 _lastSupportNormal = Vector3.up;
-        private bool _hasLastSupportNormal;
+        private CandidateKind _candidateKind;
         private Vector3 _detachmentNormal = Vector3.up;
         private Vector3 _detachmentPosition;
         private bool _hasExceededSameSurfaceReattachmentSeparation;
+        private bool _hasLastSupportNormal;
+        private Vector3 _lastSupportNormal = Vector3.up;
+        private RunSupportAttachmentState _state;
 
         public RunSupportAttachmentPolicy(RunSupportAttachmentConfig config)
         {
@@ -70,7 +62,7 @@ namespace Game.Gameplay
             }
 
             var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime)
-                ? Mathf.Max(0f, fixedDeltaTime)
+                ? Mathf.Max(a: 0f, fixedDeltaTime)
                 : 0f;
 
             if (observation.State == RunSupportObservationState.Supported)
@@ -243,6 +235,13 @@ namespace Game.Gameplay
         private RunSupportAttachmentResult CreateResult(RunSupportAttachmentTransition transition)
         {
             return new RunSupportAttachmentResult(_state, transition);
+        }
+
+        private enum CandidateKind
+        {
+            None = 0,
+            Detachment = 1,
+            Reattachment = 2
         }
     }
 }

@@ -10,44 +10,45 @@ using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public abstract class RunBodyMovementControllerBehaviorTestFixture
 {
     protected const float DefaultPlanarSpeed = 10f, DefaultVerticalSpeed = 2f;
 
-    private readonly List<UnityEngine.Object> _objects = new();
+    private readonly List<Object> _objects = new();
+    protected FakeTime _clock;
+    protected FakeRunBodyMovementConfig _config;
 
     protected FakeUnityInput _input;
-    protected FakeGameplayStateService _stateService;
+    private RunSteeringInputController _inputController;
+    protected RecordingRunSteeringInputMetricsResolver _inputMetricsResolver;
     protected FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
-    protected FakeRunBodyMovementTarget _steeringTarget;
-    protected FakeRunBodyMovementConfig _config;
-    protected FakeRunSurfaceFrameSource _surfaceContextSource;
-    protected FakeRunProgressService _runProgressService;
-    protected FakeRunGameplayStatResolver _statResolver;
-    protected FakeTime _clock;
-    protected FakeScreen _screen;
-    protected FakeRunSteeringFrameSource _steeringFrameSource;
-    protected FakeRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
-    protected FakeRunSteeringAffordancePresenter _runSteeringAffordancePresenter;
-    protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
-    protected GameplayStateId _preLaunchStateId;
-    protected GameplayStateId _runningStateId;
+    private RunBodyMovementController _movementController;
     protected GameplayStatId _playerMaxSpeedStatId;
     protected GameplayStatId _playerSteeringResponsivenessStatId;
-    private RunSteeringInputController _inputController;
-    private RunBodyMovementController _movementController;
+    protected GameplayStateId _preLaunchStateId;
+    protected GameplayStateId _runningStateId;
+    protected FakeRunProgressService _runProgressService;
+    protected FakeRunSteeringAffordanceLayout _runSteeringAffordanceLayout;
+    protected FakeRunSteeringAffordancePresenter _runSteeringAffordancePresenter;
     private IRunSteeringGesture _runSteeringGesture;
-    protected RecordingRunSteeringInputMetricsResolver _inputMetricsResolver;
+    protected FakeRunSteeringPointerPressGuard _runSteeringPointerPressGuard;
+    protected FakeScreen _screen;
+    protected FakeGameplayStateService _stateService;
+    protected FakeRunGameplayStatResolver _statResolver;
+    protected FakeRunSteeringFrameSource _steeringFrameSource;
+    protected FakeRunBodyMovementTarget _steeringTarget;
+    protected FakeRunSurfaceFrameSource _surfaceContextSource;
 
     [SetUp]
     public void OnSetUp()
     {
-        _preLaunchStateId = CreateStateId("PreLaunch");
-        _runningStateId = CreateStateId("Running");
-        _playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
-        _playerSteeringResponsivenessStatId = CreateStatId("PlayerSteeringResponsiveness");
+        _preLaunchStateId = CreateStateId(stateName: "PreLaunch");
+        _runningStateId = CreateStateId(stateName: "Running");
+        _playerMaxSpeedStatId = CreateStatId(id: "PlayerMaxSpeed");
+        _playerSteeringResponsivenessStatId = CreateStatId(id: "PlayerSteeringResponsiveness");
         _input = new FakeUnityInput();
         _stateService = new FakeGameplayStateService(_preLaunchStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
@@ -55,7 +56,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
         _steeringTarget = new FakeRunBodyMovementTarget
         {
-            LinearVelocity = new Vector3(0f, DefaultVerticalSpeed, DefaultPlanarSpeed),
+            LinearVelocity = new Vector3(x: 0f, DefaultVerticalSpeed, DefaultPlanarSpeed),
             Rotation = Quaternion.identity
         };
 
@@ -79,8 +80,9 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
         _surfaceContextSource = new FakeRunSurfaceFrameSource
         {
-            Current = new RunSurfaceContext(false, Vector3.up, 0f)
+            Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f)
         };
+
         _runProgressService = new FakeRunProgressService();
 
         _clock = new FakeTime
@@ -116,7 +118,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(unityObject);
         }
 
         _objects.Clear();
@@ -131,7 +133,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     {
         _stateService.ChangeTo(_runningStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(launchUpDirection));
-        Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+        Assert.That(_input.ActiveHandleCount, Is.EqualTo(expected: 1));
         SettleLaunchStateForSteadySteering(launchUpDirection);
     }
 
@@ -139,7 +141,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     {
         _stateService.ChangeTo(_runningStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent(Vector3.up, launchVelocityChange));
-        Assert.That(_input.ActiveHandleCount, Is.EqualTo(1));
+        Assert.That(_input.ActiveHandleCount, Is.EqualTo(expected: 1));
     }
 
     protected void FixedTick()
@@ -188,15 +190,15 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
             pullDistance: 1f,
             pullOffset: 0f,
             normalizedLateralPull: 0f,
-            finalPullPoint: Vector3.zero,
-            launchFrameForward: Vector3.forward,
-            launchFrameUp: Vector3.up);
+            Vector3.zero,
+            Vector3.forward,
+            Vector3.up);
 
         return new SlingshotLaunchAppliedEvent(
             request,
             velocityChange,
-            launchDirection: Vector3.forward,
-            launchUpDirection: upDirection.normalized);
+            Vector3.forward,
+            upDirection.normalized);
     }
 
     protected void AssertResolved(GameplayStatId statId, float baseValue)
@@ -210,13 +212,15 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected void AssertPlanarAndVerticalSpeedPreserved(Vector3 velocity)
     {
-        Assert.That(velocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
+        Assert.That(velocity.y, Is.EqualTo(DefaultVerticalSpeed).Within(amount: 0.0001f));
         AssertPlanarSpeed(velocity, DefaultPlanarSpeed);
     }
 
     protected void AssertPlanarSpeed(Vector3 velocity, float expectedPlanarSpeed)
     {
-        Assert.That(new Vector3(velocity.x, 0f, velocity.z).magnitude, Is.EqualTo(expectedPlanarSpeed).Within(0.0001f));
+        Assert.That(
+            new Vector3(velocity.x, y: 0f, velocity.z).magnitude,
+            Is.EqualTo(expectedPlanarSpeed).Within(amount: 0.0001f));
     }
 
     protected void AssertSpeedComponentsPreservedAround(Vector3 velocity, Vector3 upDirection)
@@ -224,8 +228,8 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         var normalizedUpDirection = upDirection.normalized;
         var planarVelocity = ProjectPlanar(velocity, normalizedUpDirection);
 
-        Assert.That(Vector3.Dot(velocity, normalizedUpDirection), Is.EqualTo(DefaultVerticalSpeed).Within(0.0001f));
-        Assert.That(planarVelocity.magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(0.0001f));
+        Assert.That(Vector3.Dot(velocity, normalizedUpDirection), Is.EqualTo(DefaultVerticalSpeed).Within(amount: 0.0001f));
+        Assert.That(planarVelocity.magnitude, Is.EqualTo(DefaultPlanarSpeed).Within(amount: 0.0001f));
     }
 
     protected Vector3 ProjectPlanar(Vector3 velocity, Vector3 upDirection)
@@ -237,21 +241,21 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         Vector3 groundNormal,
         RunSurfaceTransition transition = RunSurfaceTransition.None)
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, groundNormal, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, groundNormal, forwardDownhillDegrees: 0f);
         _surfaceContextSource.Transition = transition;
     }
 
     protected void SetUngroundedSurface(RunSurfaceTransition transition = RunSurfaceTransition.None)
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
         _surfaceContextSource.Transition = transition;
     }
 
     protected void AssertVectorEqual(Vector3 actual, Vector3 expected)
     {
-        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
-        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
-        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(amount: 0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(amount: 0.0001f));
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(amount: 0.0001f));
     }
 
     private RunSteeringInputController CreateInputController()
@@ -317,11 +321,11 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     protected sealed class FakeUnityInput : IUnityInput
     {
         public int ActiveHandleCount { get; private set; }
+        public event Action<PointerInput> PointerCanceled;
+        public event Action<PointerInput> PointerMoved;
 
         public event Action<PointerInput> PointerPressed;
-        public event Action<PointerInput> PointerMoved;
         public event Action<PointerInput> PointerReleased;
-        public event Action<PointerInput> PointerCanceled;
 
         public IDisposable Enable()
         {
@@ -374,9 +378,9 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     protected sealed class FakeGameplayStateService : IGameplayStateService
     {
         public GameplayStateId CurrentStateId { get; private set; }
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public FakeGameplayStateService(GameplayStateId currentStateId)
         {
@@ -415,10 +419,10 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected sealed class FakeRunBodyMovementTarget : IRunBodyMovementTarget
     {
+        public int ApplyCallCount { get; private set; }
+        public int ApplyVelocityCallCount { get; private set; }
         public Vector3 LinearVelocity { get; set; }
         public Quaternion Rotation { get; set; }
-        public int ApplyVelocityCallCount { get; private set; }
-        public int ApplyCallCount { get; private set; }
 
         public void ApplyTargetState(RunBodyMovementTargetState targetState)
         {
@@ -430,9 +434,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
                 ApplyCallCount += 1;
             }
             else
-            {
                 ApplyVelocityCallCount += 1;
-            }
         }
 
         public void ResetApplyCallCounts()
@@ -448,25 +450,25 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         IRunBodyMovementValidityConfig,
         IRunLaunchLandingStabilizationConfig
     {
-        public float DownhillAcceleration { get; set; }
-        public float SurfaceSlowdown { get; set; }
-        public float LowSpeedAssistTargetSpeed { get; set; }
-        public float LowSpeedAssistAcceleration { get; set; }
-        public float BaseSoftMaximumSpeed { get; set; }
         public float AboveMaximumSpeedResistance { get; set; }
-        public float RunSteeringRangeCentimeters { get; set; }
-        public float RunSteeringDeadzoneFraction { get; set; }
-        public float RunSteeringResponsiveness { get; set; }
+        public float BaseSoftMaximumSpeed { get; set; }
+        public float DownhillAcceleration { get; set; }
         public float FallbackDpi { get; set; }
-        public float MinimumAcceptedDpi { get; set; }
-        public float MaximumAcceptedDpi { get; set; }
-        public float MaximumTurnDegreesPerSecond { get; set; }
-        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
-        public float MinimumSteerSpeed { get; set; }
-        public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; }
-        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
-        public float LaunchLandingStabilizationSeconds { get; set; }
         public float LaunchLandingMaximumLiftSpeed { get; set; }
+        public float LaunchLandingStabilizationSeconds { get; set; }
+        public float LowSpeedAssistAcceleration { get; set; }
+        public float LowSpeedAssistTargetSpeed { get; set; }
+        public float MaximumAcceptedDpi { get; set; }
+        public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; }
+        public float MaximumTurnDegreesPerSecond { get; set; }
+        public float MinimumAcceptedDpi { get; set; }
+        public float MinimumSteerSpeed { get; set; }
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; }
+        public float RunBodySpeedSanityGuardMetersPerSecond { get; set; }
+        public float RunSteeringDeadzoneFraction { get; set; }
+        public float RunSteeringRangeCentimeters { get; set; }
+        public float RunSteeringResponsiveness { get; set; }
+        public float SurfaceSlowdown { get; set; }
     }
 
     protected sealed class RecordingRunSteeringInputMetricsResolver : IRunSteeringInputMetricsResolver
@@ -490,20 +492,27 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     protected sealed class FakeRunSurfaceFrameSource : IRunSurfaceFrameSource
     {
         public RunSurfaceContext Current { get; set; }
-        public RunSurfaceTransition Transition { get; set; }
 
         RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current =>
-            new(default, Current, Transition, false, false, default);
+            new(
+                observedSupport: default,
+                Current,
+                Transition,
+                isMissingSupportHeld: false,
+                isConfirmingDiscontinuity: false,
+                steeringFrame: default);
+
+        public RunSurfaceTransition Transition { get; set; }
     }
 
     protected sealed class FakeRunProgressService : IRunProgressService
     {
-        public bool HasValidSnapshot => false;
-        public string SnapshotError => string.Empty;
-        public RunProgressFrameSnapshot Snapshot => default;
         public float CurrentForwardProgress => 0f;
-        public float MaximumForwardProgress => 0f;
         public RunProgressSample CurrentSample => default;
+        public bool HasValidSnapshot => false;
+        public float MaximumForwardProgress => 0f;
+        public RunProgressFrameSnapshot Snapshot => default;
+        public string SnapshotError => string.Empty;
 
         public bool TryBeginRun(Vector3 origin, out string error)
         {
@@ -526,15 +535,15 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
         public List<ResolveRequest> ResolveRequests { get; } = new();
 
-        public void SetResolvedValue(GameplayStatId statId, float resolvedValue)
-        {
-            _resolvedValues[statId] = resolvedValue;
-        }
-
         public float Resolve(GameplayStatId statId, float baseValue)
         {
             ResolveRequests.Add(new ResolveRequest(statId, baseValue));
             return _resolvedValues.GetValueOrDefault(statId, baseValue);
+        }
+
+        public void SetResolvedValue(GameplayStatId statId, float resolvedValue)
+        {
+            _resolvedValues[statId] = resolvedValue;
         }
     }
 
@@ -558,26 +567,18 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected sealed class FakeScreen : IScreen
     {
-        public int Width { get; set; }
-        public int Height { get; set; }
         public float Dpi { get; set; }
+        public int Height { get; set; }
+        public int Width { get; set; }
     }
 
     protected sealed class FakeRunSteeringFrameSource : IRunSteeringFrameSource, IRunSteeringFrameResetter
     {
-        public Vector3 UpDirection { get; set; } = Vector3.up;
+        public int GetUpDirectionCallCount { get; private set; }
         public Vector3 LastFallbackUpDirection { get; private set; }
         public Vector3 LastResetLaunchUpDirection { get; private set; }
-        public int GetUpDirectionCallCount { get; private set; }
         public int ResetCallCount { get; private set; }
-
-        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
-        {
-            LastFallbackUpDirection = fallbackUpDirection;
-            GetUpDirectionCallCount += 1;
-
-            return UpDirection;
-        }
+        public Vector3 UpDirection { get; set; } = Vector3.up;
 
         public void Reset(Vector3 launchUpDirection)
         {
@@ -589,6 +590,14 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         {
         }
 
+        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
+        {
+            LastFallbackUpDirection = fallbackUpDirection;
+            GetUpDirectionCallCount += 1;
+
+            return UpDirection;
+        }
+
         public void ResetFixedTickCallCounts()
         {
             LastFallbackUpDirection = Vector3.zero;
@@ -598,21 +607,22 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected sealed class FakeRunSteeringAffordanceLayout : IRunSteeringAffordanceLayout
     {
+        internal RunSteeringAffordancePresentationState Result { get; }
+
+        internal List<RunSteeringAffordanceSnapshot> Snapshots { get; } = new();
+
         public FakeRunSteeringAffordanceLayout()
         {
             Result = new RunSteeringAffordancePresentationState(
-                true,
-                new Vector2(11f, 12f),
-                new Vector2(21f, 22f),
-                new Vector2(31f, 32f),
-                new Vector2(41f, 42f),
-                51f,
-                0f,
-                0f);
+                isVisible: true,
+                new Vector2(x: 11f, y: 12f),
+                new Vector2(x: 21f, y: 22f),
+                new Vector2(x: 31f, y: 32f),
+                new Vector2(x: 41f, y: 42f),
+                deadzoneDiameterPixels: 51f,
+                leftRangeEndAlphaMultiplier: 0f,
+                rightRangeEndAlphaMultiplier: 0f);
         }
-
-        internal List<RunSteeringAffordanceSnapshot> Snapshots { get; } = new();
-        internal RunSteeringAffordancePresentationState Result { get; }
 
         RunSteeringAffordancePresentationState IRunSteeringAffordanceLayout.Create(RunSteeringAffordanceSnapshot snapshot)
         {
@@ -623,10 +633,10 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected sealed class FakeRunSteeringAffordancePresenter : IRunSteeringAffordancePresenter
     {
-        internal List<RunSteeringAffordancePresentationState> ShowStates { get; } = new();
-        internal List<RunSteeringAffordancePresentationState> UpdateStates { get; } = new();
         internal List<RunSteeringAffordancePresentationState> HideStates { get; } = new();
         public int ResetCallCount { get; private set; }
+        internal List<RunSteeringAffordancePresentationState> ShowStates { get; } = new();
+        internal List<RunSteeringAffordancePresentationState> UpdateStates { get; } = new();
 
         void IRunSteeringAffordancePresenter.Show(RunSteeringAffordancePresentationState state)
         {

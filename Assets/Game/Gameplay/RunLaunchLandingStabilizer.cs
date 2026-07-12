@@ -33,10 +33,9 @@ namespace Game.Gameplay
     internal sealed class RunLaunchLandingStabilizer : IRunLaunchLandingStabilizer
     {
         private readonly IRunLaunchLandingStabilizationConfig _config;
-
-        private bool _isArmed;
-        private bool _isActive;
         private float _elapsedSeconds;
+        private bool _isActive;
+        private bool _isArmed;
 
         public RunLaunchLandingStabilizer(IRunLaunchLandingStabilizationConfig config)
         {
@@ -94,7 +93,7 @@ namespace Game.Gameplay
 
             if (!startedThisTick)
             {
-                _elapsedSeconds += Mathf.Max(0f, context.FixedDeltaTime);
+                _elapsedSeconds += Mathf.Max(a: 0f, context.FixedDeltaTime);
 
                 if (_elapsedSeconds > duration)
                 {
@@ -111,7 +110,7 @@ namespace Game.Gameplay
                 context.SurfaceContext.GroundNormal);
 
             if (startedThisTick)
-                _elapsedSeconds += Mathf.Max(0f, context.FixedDeltaTime);
+                _elapsedSeconds += Mathf.Max(a: 0f, context.FixedDeltaTime);
 
             if (_elapsedSeconds >= duration)
                 Reset();

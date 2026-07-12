@@ -13,9 +13,29 @@ namespace Game.Gameplay
         [SerializeField] private float _supportProbeDistance = 0.08f;
         [SerializeField] private float _supportProbeSkinWidth = 0.02f;
         [SerializeField] private LayerMask _surfaceMask = Physics.DefaultRaycastLayers;
-        [SerializeField, Range(-1f, 1f)] private float _minimumSupportNormalDot = 0.17f;
-        [SerializeField, Range(0f, 1f)] private float _footprintSampleOffsetScale = 0.6f;
-        [SerializeField, Range(0f, 180f)] private float _footprintNormalClusterAngleDegrees = 8f;
+
+        [SerializeField, Range(min: -1f, max: 1f)]
+        private float _minimumSupportNormalDot = 0.17f;
+
+        [SerializeField, Range(min: 0f, max: 1f)] 
+        private float _footprintSampleOffsetScale = 0.6f;
+
+        [SerializeField, Range(min: 0f, max: 180f)] 
+        private float _footprintNormalClusterAngleDegrees = 8f;
+
+        private void Reset()
+        {
+            _supportCollider = GetComponentInChildren<Collider>();
+        }
+
+        private void OnValidate()
+        {
+            _supportProbeDistance = Mathf.Max(a: 0f, _supportProbeDistance);
+            _supportProbeSkinWidth = Mathf.Max(a: 0f, _supportProbeSkinWidth);
+            _minimumSupportNormalDot = Mathf.Clamp(_minimumSupportNormalDot, min: -1f, max: 1f);
+            _footprintSampleOffsetScale = Mathf.Clamp01(_footprintSampleOffsetScale);
+            _footprintNormalClusterAngleDegrees = Mathf.Clamp(_footprintNormalClusterAngleDegrees, min: 0f, max: 180f);
+        }
 
         public override void Install([NotNull] IContainerBuilder builder)
         {
@@ -46,21 +66,7 @@ namespace Game.Gameplay
             var errors = GetReferenceValidationErrors().ToArray();
 
             if (errors.Length > 0)
-                throw new InvalidOperationException(string.Join("\n", errors));
-        }
-
-        private void Reset()
-        {
-            _supportCollider = GetComponentInChildren<Collider>();
-        }
-
-        private void OnValidate()
-        {
-            _supportProbeDistance = Mathf.Max(0f, _supportProbeDistance);
-            _supportProbeSkinWidth = Mathf.Max(0f, _supportProbeSkinWidth);
-            _minimumSupportNormalDot = Mathf.Clamp(_minimumSupportNormalDot, -1f, 1f);
-            _footprintSampleOffsetScale = Mathf.Clamp01(_footprintSampleOffsetScale);
-            _footprintNormalClusterAngleDegrees = Mathf.Clamp(_footprintNormalClusterAngleDegrees, 0f, 180f);
+                throw new InvalidOperationException(string.Join(separator: "\n", errors));
         }
     }
 }

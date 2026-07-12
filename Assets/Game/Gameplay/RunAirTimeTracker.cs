@@ -14,14 +14,13 @@ namespace Game.Gameplay
 
     public sealed class RunAirTimeTracker : IInitializable, IFixedTickable, IDisposable, IRunAirTimeSource
     {
-        private readonly IGameplayStateService _gameplayStateService;
-        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly ITime _clock;
-        private readonly GameplayStateId _runPreparationStateId;
+        private readonly IGameplayStateService _gameplayStateService;
         private readonly GameplayStateId _runningStateId;
-
-        private bool _isInitialized;
+        private readonly GameplayStateId _runPreparationStateId;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private bool _isDisposed;
+        private bool _isInitialized;
 
         public float CurrentRunAirTimeSeconds { get; private set; }
 
@@ -41,7 +40,32 @@ namespace Game.Gameplay
             _runPreparationStateId = runPreparationStateId != null
                 ? runPreparationStateId
                 : throw new ArgumentNullException(nameof(runPreparationStateId));
+
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
+        }
+
+        void IDisposable.Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+        }
+
+        void IFixedTickable.FixedTick()
+        {
+            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
+                return;
+
+            var surfaceFrame = _surfaceFrameSource.Current;
+
+            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
+                || surfaceFrame.StableSupport.IsGrounded)
+                return;
+
+            CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
         }
 
         void IInitializable.Initialize()
@@ -57,30 +81,6 @@ namespace Game.Gameplay
 
             if (_gameplayStateService.IsCurrent(_runPreparationStateId))
                 CurrentRunAirTimeSeconds = 0f;
-        }
-
-        void IFixedTickable.FixedTick()
-        {
-            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
-                return;
-
-            var surfaceFrame = _surfaceFrameSource.Current;
-
-            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
-                || surfaceFrame.StableSupport.IsGrounded)
-                return;
-
-            CurrentRunAirTimeSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
-        }
-
-        void IDisposable.Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
-            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
         }
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)

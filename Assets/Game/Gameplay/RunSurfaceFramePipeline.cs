@@ -37,12 +37,12 @@ namespace Game.Gameplay
         IRunSteeringFrameResetter,
         IFixedTickable
     {
-        private readonly IRunProgressFrameSource _progressFrameSource;
-        private readonly IRunSupportProbe _supportProbe;
-        private readonly IRunMotionSource _motionSource;
         private readonly RunSupportAttachmentPolicy _attachmentPolicy;
+        private readonly IRunMotionSource _motionSource;
+        private readonly IRunProgressFrameSource _progressFrameSource;
         private readonly RunSurfaceStabilityPolicy _stabilityPolicy;
         private readonly RunSteeringFramePolicy _steeringPolicy;
+        private readonly IRunSupportProbe _supportProbe;
         private readonly ITime _time;
 
         public RunSurfaceFrameSnapshot Current { get; private set; }
@@ -65,29 +65,11 @@ namespace Game.Gameplay
             _time = time ?? throw new ArgumentNullException(nameof(time));
         }
 
-        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
-        {
-            return _steeringPolicy.GetUpDirection(fallbackUpDirection);
-        }
-
-        void IRunSteeringFrameResetter.Reset(Vector3 launchUpDirection)
-        {
-            _attachmentPolicy.Reset();
-            _steeringPolicy.Reset(launchUpDirection);
-        }
-
-        void IRunSteeringFrameResetter.Clear()
-        {
-            _attachmentPolicy.Reset();
-            _steeringPolicy.Clear();
-        }
-
         void IFixedTickable.FixedTick()
         {
             var previousStableSupport = Current.StableSupport;
 
-            var hasContinuityNormal = previousStableSupport.IsGrounded
-                                      && previousStableSupport.HasValidGroundNormal;
+            var hasContinuityNormal = previousStableSupport is { IsGrounded: true, HasValidGroundNormal: true };
 
             var continuityNormal = hasContinuityNormal
                 ? previousStableSupport.GroundNormal
@@ -106,9 +88,9 @@ namespace Game.Gameplay
             {
                 observation = new RunSupportObservation(
                     RunSupportObservationState.Unavailable,
-                    default,
-                    default,
-                    0f);
+                    progressFrame: default,
+                    surfaceContext: default,
+                    supportDistance: 0f);
             }
 
             var fixedDeltaTime = _time.FixedDeltaTime;
@@ -118,6 +100,7 @@ namespace Game.Gameplay
                 _motionSource.Position,
                 _motionSource.LinearVelocity,
                 fixedDeltaTime);
+
             var stability = _stabilityPolicy.Evaluate(observation, attachment.Transition, fixedDeltaTime);
             var steeringFrame = _steeringPolicy.Evaluate(stability, fixedDeltaTime);
 
@@ -131,6 +114,23 @@ namespace Game.Gameplay
                 attachment.Transition);
 
             Current = next;
+        }
+
+        void IRunSteeringFrameResetter.Reset(Vector3 launchUpDirection)
+        {
+            _attachmentPolicy.Reset();
+            _steeringPolicy.Reset(launchUpDirection);
+        }
+
+        void IRunSteeringFrameResetter.Clear()
+        {
+            _attachmentPolicy.Reset();
+            _steeringPolicy.Clear();
+        }
+
+        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
+        {
+            return _steeringPolicy.GetUpDirection(fallbackUpDirection);
         }
     }
 }
