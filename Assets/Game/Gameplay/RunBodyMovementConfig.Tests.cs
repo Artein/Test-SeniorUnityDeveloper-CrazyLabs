@@ -44,16 +44,20 @@ namespace Game.Gameplay
             _maximumAcceptedDpi = maximumAcceptedDpi;
         }
 
-        internal void SetRunSteeringFrameStabilityForTests(
+        internal void SetRunSurfaceStabilityForTests(
             float normalSlewDegreesPerSecond,
-            float snapDegrees,
-            float ungroundedGraceSeconds,
-            float suspectNormalConfirmationSeconds)
+            float discontinuousNormalThresholdDegrees,
+            float supportLossConfirmationSeconds,
+            float discontinuousNormalConfirmationSeconds,
+            float candidateCoherenceDegrees,
+            float airborneUpRetentionSeconds)
         {
             _runSteeringFrameNormalSlewDegreesPerSecond = normalSlewDegreesPerSecond;
-            _runSteeringFrameSnapDegrees = snapDegrees;
-            _runSteeringFrameUngroundedGraceSeconds = ungroundedGraceSeconds;
-            _runSteeringFrameSuspectNormalConfirmationSeconds = suspectNormalConfirmationSeconds;
+            _runSurfaceDiscontinuousNormalThresholdDegrees = discontinuousNormalThresholdDegrees;
+            _runSurfaceSupportLossConfirmationSeconds = supportLossConfirmationSeconds;
+            _runSurfaceDiscontinuousNormalConfirmationSeconds = discontinuousNormalConfirmationSeconds;
+            _runSurfaceCandidateCoherenceDegrees = candidateCoherenceDegrees;
+            _runSteeringFrameAirborneUpRetentionSeconds = airborneUpRetentionSeconds;
         }
 
         internal void SetLaunchLandingStabilizationForTests(

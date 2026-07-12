@@ -10,18 +10,18 @@ Make the shared stability policy the sole owner of cross-tick support-loss behav
 
 ## Acceptance criteria
 
-- [ ] A supported observation acquires or refreshes stable support immediately.
-- [ ] A missing observation holds the last stable support only while configured grace remains.
-- [ ] Support transitions to lost when accumulated missing duration reaches or exceeds the configured grace.
-- [ ] The first missing sample contributes its fixed delta time to accumulated duration.
-- [ ] Zero grace causes immediate support loss on the first missing observation.
-- [ ] An unavailable observation performs an immediate hard reset and never consumes grace.
-- [ ] Reacquisition clears missing duration and publishes the correct transition once.
-- [ ] The legacy source no longer owns missed-sample temporal state.
-- [ ] At 0.02 seconds, approved compatibility values reproduce the characterized loss boundary within one fixed tick.
-- [ ] At 0.01 and 0.02 seconds, the same seconds threshold differs by no more than one fixed tick.
-- [ ] Brief observed gaps do not falsely remove stable movement support.
-- [ ] Policy evaluation performs no managed allocation.
+- [x] A supported observation acquires or refreshes stable support immediately.
+- [x] A missing observation holds the last stable support only while configured grace remains.
+- [x] Support transitions to lost when accumulated missing duration reaches or exceeds the configured grace.
+- [x] The first missing sample contributes its fixed delta time to accumulated duration.
+- [x] Zero grace causes immediate support loss on the first missing observation.
+- [x] An unavailable observation performs an immediate hard reset and never consumes grace.
+- [x] Reacquisition clears missing duration and publishes the correct transition once.
+- [x] The legacy source no longer owns missed-sample temporal state.
+- [x] At 0.02 seconds, approved compatibility values reproduce the characterized loss boundary within one fixed tick.
+- [x] At 0.01 and 0.02 seconds, the same seconds threshold differs by no more than one fixed tick.
+- [x] Brief observed gaps do not falsely remove stable movement support.
+- [x] Policy evaluation performs no managed allocation.
 
 ## Verification
 

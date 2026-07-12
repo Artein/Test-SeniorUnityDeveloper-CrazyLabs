@@ -10,17 +10,17 @@ Introduce one ordered run-surface pipeline that resolves current-tick physics in
 
 ## Acceptance criteria
 
-- [ ] Observed support has explicit `Unavailable`, `Missing`, and `Supported` states.
-- [ ] Observed support contains only same-tick spatial resolution and no cross-tick history.
-- [ ] Stable support is published separately and mirrors the legacy filtered surface context in all characterization scenarios.
-- [ ] One immutable snapshot atomically exposes observed support, stable support, transition, held/confirming state, steering up, and steering validity.
-- [ ] A compatibility adapter exposes stable support to unmigrated consumers without a second temporal filter.
-- [ ] Probe configuration owns geometry and same-tick hit-selection parameters only.
-- [ ] Stability configuration owns temporal support and normal-confirmation parameters only.
-- [ ] Runtime state belongs to the policy instance and is not stored in shared authoring data.
-- [ ] Dependency injection guarantees probe, stability, steering derivation, and publication run once in the documented order per physics tick.
-- [ ] The pipeline performs no per-tick managed allocation.
-- [ ] Existing characterization remains green without intentional behavior changes.
+- [x] Observed support has explicit `Unavailable`, `Missing`, and `Supported` states.
+- [x] Observed support contains only same-tick spatial resolution and no cross-tick history.
+- [x] Stable support is published separately and mirrors the legacy filtered surface context in all characterization scenarios.
+- [x] One immutable snapshot atomically exposes observed support, stable support, transition, held/confirming state, steering up, and steering validity.
+- [x] A compatibility adapter exposes stable support to unmigrated consumers without a second temporal filter.
+- [x] Probe configuration owns geometry and same-tick hit-selection parameters only.
+- [x] Stability configuration owns temporal support and normal-confirmation parameters only.
+- [x] Runtime state belongs to the policy instance and is not stored in shared authoring data.
+- [x] Dependency injection guarantees probe, stability, steering derivation, and publication run once in the documented order per physics tick.
+- [x] The pipeline performs no per-tick managed allocation.
+- [x] Existing characterization remains green without intentional behavior changes.
 
 ## Verification
 

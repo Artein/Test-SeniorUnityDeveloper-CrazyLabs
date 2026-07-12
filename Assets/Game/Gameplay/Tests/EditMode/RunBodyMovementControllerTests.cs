@@ -992,9 +992,12 @@ public sealed class RunBodyMovementControllerTests
         }
     }
 
-    private sealed class FakeSurfaceContextSource : IRunSurfaceContextSource
+    private sealed class FakeSurfaceContextSource : IRunSurfaceFrameSource
     {
         public RunSurfaceContext Current { get; set; } = new(false, Vector3.up, 0f);
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current =>
+            new(default, Current, RunSurfaceTransition.None, false, false, default);
     }
 
     private sealed class FakeRunProgressService : IRunProgressService

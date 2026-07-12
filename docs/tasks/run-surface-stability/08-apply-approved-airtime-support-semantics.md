@@ -10,15 +10,15 @@ Apply the airtime support semantics approved in issue 01. Make reward timing and
 
 ## Acceptance criteria
 
-- [ ] Airtime consumes exactly the support context approved in issue 01.
-- [ ] The first tick considered airborne is defined by an explicit shared state or transition.
-- [ ] A one-tick observed miss produces the approved airtime result and cannot accidentally award airtime through a hidden raw-probe read.
-- [ ] Sustained support loss starts airtime exactly once.
-- [ ] Support reacquisition ends or commits airtime exactly once according to existing reward rules.
-- [ ] An unavailable probe source follows the approved hard-reset behavior and cannot create a reward exploit.
-- [ ] Airtime has no private miss grace, sample counter, or normal filter.
-- [ ] Existing reward thresholds and scoring remain unchanged except where necessary to apply the approved support semantics.
-- [ ] Timestep variation changes the transition boundary by no more than one fixed tick.
+- [x] Airtime consumes exactly the support context approved in issue 01.
+- [x] The first tick considered airborne is defined by an explicit shared state or transition.
+- [x] A one-tick observed miss produces the approved airtime result and cannot accidentally award airtime through a hidden raw-probe read.
+- [x] Sustained support loss starts airtime exactly once.
+- [x] Support reacquisition ends or commits airtime exactly once according to existing reward rules.
+- [x] An unavailable probe source follows the approved hard-reset behavior and cannot create a reward exploit.
+- [x] Airtime has no private miss grace, sample counter, or normal filter.
+- [x] Existing reward thresholds and scoring remain unchanged except where necessary to apply the approved support semantics.
+- [x] Timestep variation changes the transition boundary by no more than one fixed tick.
 
 ## Verification
 

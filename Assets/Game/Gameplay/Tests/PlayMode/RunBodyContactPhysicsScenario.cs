@@ -49,8 +49,7 @@ namespace Game.Gameplay.Tests.PlayMode
         private readonly HashSet<Collider> _collidedWith = new();
         private readonly RunBodyContactPhysicsConfig _config;
         private readonly SlingshotLaunchController _launchEvents;
-        private readonly PhysicsRunSurfaceContextSource _surfaceContextSource;
-        private readonly RunSurfaceSteeringFrameSource _steeringFrameSource;
+        private readonly RunSurfaceFramePipeline _surfaceFramePipeline;
         private readonly RunBodySpeedDiagnostics _diagnostics;
         private readonly RecordingRunBodyMovementTarget _recordingMovementTarget;
         private readonly RigidbodyContactNotifier _contactNotifier;
@@ -104,16 +103,34 @@ namespace Game.Gameplay.Tests.PlayMode
             var progressContext = new FixedRunProgressContext(origin, Vector3.forward, Vector3.up);
             var clock = new UnityTime();
 
-            _surfaceContextSource = new PhysicsRunSurfaceContextSource(
-                BodyCollider,
-                progressContext,
-                new RunSupportColliderProbeFactory(),
-                _config.SupportProbeDistance,
-                runSurfaceLayerMask);
+            var slopeCalculator = new RunSurfaceSlopeCalculator();
 
-            _steeringFrameSource = new RunSurfaceSteeringFrameSource(
-                _surfaceContextSource,
-                _config,
+            var supportProbe = new PhysicsRunSupportProbe(
+                BodyCollider,
+                new RunSupportColliderProbeFactory(),
+                new RunSurfaceProbeConfig(
+                    _config.SupportProbeDistance,
+                    0.02f,
+                    runSurfaceLayerMask,
+                    0.17f,
+                    0.6f,
+                    8f),
+                slopeCalculator);
+
+            _surfaceFramePipeline = new RunSurfaceFramePipeline(
+                progressContext,
+                supportProbe,
+                new RunSurfaceStabilityPolicy(
+                    new RunSurfaceStabilityConfig(
+                        _config.RunSurfaceSupportLossConfirmationSeconds,
+                        _config.RunSurfaceDiscontinuousNormalThresholdDegrees,
+                        _config.RunSurfaceDiscontinuousNormalConfirmationSeconds,
+                        _config.RunSurfaceCandidateCoherenceDegrees),
+                    slopeCalculator),
+                new RunSteeringFramePolicy(
+                    new RunSteeringFrameConfig(
+                        _config.RunSteeringFrameNormalSlewDegreesPerSecond,
+                        _config.RunSteeringFrameAirborneUpRetentionSeconds)),
                 clock);
 
             _diagnostics = new RunBodySpeedDiagnostics();
@@ -127,9 +144,9 @@ namespace Game.Gameplay.Tests.PlayMode
                 new DefaultRunBodySpeedEvaluator(_config),
                 new DefaultRunSteeringEvaluator(),
                 new RunLaunchLandingStabilizer(_config),
-                _steeringFrameSource,
-                _steeringFrameSource,
-                _surfaceContextSource,
+                _surfaceFramePipeline,
+                _surfaceFramePipeline,
+                _surfaceFramePipeline,
                 progressContext,
                 new FixedRunGameplayStatResolver(_config.BaseSoftMaximumSpeed),
                 _diagnostics,
@@ -244,13 +261,12 @@ namespace Game.Gameplay.Tests.PlayMode
 
         public IEnumerator Step()
         {
-            ((IFixedTickable)_surfaceContextSource).FixedTick();
-            ((IFixedTickable)_steeringFrameSource).FixedTick();
+            ((IFixedTickable)_surfaceFramePipeline).FixedTick();
 
             _recordingMovementTarget.BeginStep();
             var sampledVelocity = Body.linearVelocity;
             var sampledPosition = Body.position;
-            var surfaceContext = _surfaceContextSource.Current;
+            var surfaceContext = _surfaceFramePipeline.Current.StableSupport;
 
             ((IFixedTickable)_controller).FixedTick();
 

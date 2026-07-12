@@ -137,7 +137,20 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunBodyMovementValidityConfig>(_runBodyMovementConfig);
             builder.RegisterInstance<IRunLaunchLandingStabilizationConfig>(_runBodyMovementConfig);
             builder.RegisterInstance<IRunSteeringConfig>(_runBodyMovementConfig);
-            builder.RegisterInstance<IRunSteeringFrameConfig>(_runBodyMovementConfig);
+
+            var surfaceStabilityAuthoringConfig = (IRunSurfaceStabilityAuthoringConfig)_runBodyMovementConfig;
+            var steeringFrameAuthoringConfig = (IRunSteeringFrameAuthoringConfig)_runBodyMovementConfig;
+
+            builder.RegisterInstance(new RunSurfaceStabilityConfig(
+                surfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds,
+                surfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees,
+                surfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds,
+                surfaceStabilityAuthoringConfig.CandidateCoherenceDegrees));
+
+            builder.RegisterInstance(new RunSteeringFrameConfig(
+                steeringFrameAuthoringConfig.NormalSlewDegreesPerSecond,
+                steeringFrameAuthoringConfig.AirborneUpRetentionSeconds));
+
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.RegisterInstance<IRunRewardConfig>(_runEndConfig);
@@ -161,7 +174,11 @@ namespace Game.Gameplay
             builder.Register<IRunLaunchLandingStabilizer, RunLaunchLandingStabilizer>(Lifetime.Singleton);
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 
-            builder.Register<IRunSteeringFrameSource, IRunSteeringFrameResetter, IFixedTickable, RunSurfaceSteeringFrameSource>(Lifetime.Singleton);
+            builder.Register<IRunSurfaceSlopeCalculator, RunSurfaceSlopeCalculator>(Lifetime.Singleton);
+            builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
+            builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
+
+            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
             builder.Register<ICharacterPresentationSupportTracker, CharacterPresentationSupportTracker>(Lifetime.Singleton);
             builder.Register<ICharacterVisualPoseSmoother, CharacterVisualPoseSmoother>(Lifetime.Transient);

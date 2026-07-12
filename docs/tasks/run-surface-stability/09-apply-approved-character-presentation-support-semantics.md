@@ -10,15 +10,15 @@ Apply the character-presentation support semantics approved in issue 01 through 
 
 ## Acceptance criteria
 
-- [ ] Character presentation consumes exactly the support context approved in issue 01.
-- [ ] The presentation tracker receives the selected context from the atomic snapshot.
-- [ ] A brief observed miss produces the approved visual response without changing locomotion support.
-- [ ] A confirmed seam or trough transition produces the approved orientation response.
-- [ ] Landing and support reacquisition update presentation exactly once.
-- [ ] Presentation code does not mutate stable support, steering state, or Rigidbody motion.
-- [ ] No new support grace, normal confirmation, or competing smoothing policy is introduced.
-- [ ] Existing presentation-specific interpolation remains unchanged unless issue 01 explicitly approves a semantic adjustment.
-- [ ] Presentation remains finite and stable when support is unavailable.
+- [x] Character presentation consumes exactly the support context approved in issue 01.
+- [x] The presentation tracker receives the selected context from the atomic snapshot.
+- [x] A brief observed miss produces the approved visual response without changing locomotion support.
+- [x] A confirmed seam or trough transition produces the approved orientation response.
+- [x] Landing and support reacquisition update presentation exactly once.
+- [x] Presentation code does not mutate stable support, steering state, or Rigidbody motion.
+- [x] No new support grace, normal confirmation, or competing smoothing policy is introduced.
+- [x] Existing presentation-specific interpolation remains unchanged unless issue 01 explicitly approves a semantic adjustment.
+- [x] Presentation remains finite and stable when support is unavailable.
 
 ## Verification
 

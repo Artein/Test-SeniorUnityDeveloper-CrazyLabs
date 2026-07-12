@@ -10,17 +10,17 @@ Expose a read-only runtime diagnostic view of the atomic run-surface snapshot so
 
 ## Acceptance criteria
 
-- [ ] Diagnostics display observed support state and normal when present.
-- [ ] Diagnostics display stable support state and normal when present.
-- [ ] Diagnostics display the current transition.
-- [ ] Diagnostics indicate when support is held through a missing observation.
-- [ ] Diagnostics indicate when a normal discontinuity is awaiting confirmation.
-- [ ] Diagnostics display steering validity and steering up.
-- [ ] Missing, unavailable, and supported states are visually distinguishable.
-- [ ] Diagnostic labels use observed, stable, transition, held, confirming, and steering consistently.
-- [ ] The view reads one atomic snapshot and cannot sample partially updated providers.
-- [ ] Diagnostics do not allocate per physics tick while hidden and do not alter policy state.
-- [ ] Existing diagnostic enable/disable conventions are preserved.
+- [x] Diagnostics display observed support state and normal when present.
+- [x] Diagnostics display stable support state and normal when present.
+- [x] Diagnostics display the current transition.
+- [x] Diagnostics indicate when support is held through a missing observation.
+- [x] Diagnostics indicate when a normal discontinuity is awaiting confirmation.
+- [x] Diagnostics display steering validity and steering up.
+- [x] Missing, unavailable, and supported states are visually distinguishable.
+- [x] Diagnostic labels use observed, stable, transition, held, confirming, and steering consistently.
+- [x] The view reads one atomic snapshot and cannot sample partially updated providers.
+- [x] Diagnostics do not allocate per physics tick while hidden and do not alter policy state.
+- [x] Existing diagnostic enable/disable conventions are preserved.
 
 ## Verification
 

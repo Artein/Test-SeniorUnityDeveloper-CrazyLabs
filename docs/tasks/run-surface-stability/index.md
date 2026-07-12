@@ -33,3 +33,9 @@ Related architecture decisions:
 - Implementation issues must pass the Unity compile gate before targeted tests.
 - A dedicated `RunSurfaceTuning` asset migration is deferred. Issue 01 records the approved authoring boundary.
 - These are local planning issues only; nothing is published remotely.
+
+## Implementation records
+
+- [Approved support semantics and authoring decisions](implementation-decisions.md)
+- [Legacy baseline and deterministic verification](baseline-and-verification.md)
+- [Human feel-review matrix and active tuning](feel-review.md)

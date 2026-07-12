@@ -232,6 +232,22 @@ _Avoid_: Pickup Sensor Source, Run Body Contact Collider, Run Contact Classifier
 A **Run Contact Category** that allows traversal without ending the **Run**.
 _Avoid_: Ground, floor, ramp
 
+**Observed Support**:
+The selected current-fixed-tick **Run Surface** result after physics validation, footprint sampling, normal clustering, and ranking, before temporal retention or confirmation.
+_Avoid_: Raw hit, grounded state, Stable Support, every RaycastHit
+
+**Stable Support**:
+The cross-tick locomotion context derived from **Observed Support** by the shared surface stability policy. It is the gameplay grounding truth for movement, speed, steering mode, landing, and airtime.
+_Avoid_: Raw support, presentation support, steering-frame smoothing, consumer-local grace
+
+**Run Surface Transition**:
+The single published change between Stable Support states or normals, including acquisition, continuous update, confirmed discontinuity, loss, and hard reset.
+_Avoid_: Consumer-inferred landing, steering-local seam event, raw contact callback
+
+**Run Surface Frame Snapshot**:
+The immutable fixed-tick publication containing **Observed Support**, **Stable Support**, **Run Surface Transition**, stability flags, and **Run Steering Frame** state.
+_Avoid_: Mutable context service, separately sampled providers, physics callback cache
+
 **Run Surface Contact Slowdown**:
 The ordinary loss of **Run Body** speed caused by contact with a **Run Surface**.
 _Avoid_: steering speed cap, hidden drag, PlayerMaxSpeed
@@ -300,6 +316,11 @@ _Avoid_: GameplayLifetimeScope pickup fields, Pickup Collection Controller, Char
 - The first **Run Body Speed Model** scope changes surface-tangent speed while preserving corrected surface-normal or vertical velocity.
 - Gravity, Unity collision response, **Run Body Speed Sanity Guard**, and **Launch Landing Stabilization** remain responsible for vertical or surface-normal velocity changes.
 - **Run Body Speed Model** effects apply only while the **Run Body** is supported by a valid **Run Surface**.
+- One fixed-tick pipeline flows from physics observation to the shared stability policy, then steering-frame derivation, then one atomic **Run Surface Frame Snapshot** publication.
+- **Observed Support** owns only same-tick spatial selection. **Stable Support** owns cross-tick support retention and coherent discontinuity confirmation.
+- Core locomotion and **Run Air Time** consume **Stable Support** or the shared **Run Surface Transition**; **Character Presentation** consumes **Observed Support** through its presentation tracker.
+- Consumers and diagnostics read one **Run Surface Frame Snapshot** and do not add private miss grace, normal confirmation, or competing transition inference.
+- An unavailable observation causes an immediate hard reset; it does not consume support grace or create airtime reward.
 - Support is not valid for speed effects when the **Run Body** is meaningfully moving away from the reported surface, even if contact still reports grounded; ordinary contact jitter remains tolerated.
 - When support is invalid or absent, **Run Body Speed Model** adds no slope acceleration, **Run Surface Contact Slowdown**, **Run Body Low-Speed Assist**, or **Run Body Speed Envelope** resistance.
 - Airborne speed changes come from Unity physics, collision response, and **Run Air Steering Control**, not hidden **Run Body Speed Model** acceleration or slowdown.

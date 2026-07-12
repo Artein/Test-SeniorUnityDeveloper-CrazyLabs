@@ -16,17 +16,16 @@ Detailed decisions supporting the [high-level actor and runtime diagram](./run-b
 - **Run Body Movement Controller** should normalize current movement facts before speed and steering evaluation.
 - **Run Body Movement Controller** owns low-speed-assist attempt state across fixed passes; the pure speed evaluator supplies the candidate target and rate but does not maintain or replenish recovery budget.
 - **Run Body Movement Controller** publishes one immutable `RunBodySpeedDiagnosticsSnapshot` after the final movement-target write of an active fixed pass.
-- The snapshot copies the exact normalized `RunBodySpeedContext`, `RunBodySpeedDecision`, sampled tangent state, raw **Run Surface** support, and controller-owned low-speed-assist attempt snapshot used by that pass. Diagnostics must not query scene objects to reconstruct policy.
+- The snapshot copies the exact normalized `RunBodySpeedContext`, `RunBodySpeedDecision`, sampled tangent state, **Stable Support**, and controller-owned low-speed-assist attempt snapshot used by that pass. Diagnostics must not query scene objects to reconstruct policy.
 - `RunBodySpeedDiagnostics` is one always-registered singleton exposed as `IRunBodySpeedDiagnosticsSink` to movement and `IRunBodySpeedDiagnosticsSource` to observers. The optional overlay changes presentation only, not service availability or movement composition.
 - Leaving the active movement lifecycle clears the snapshot to an explicit inactive state. Active unsupported or directionless passes publish explicit invalid/unavailable facts instead of retaining grounded values from an earlier pass.
 - `RunBodySpeedDecisionContributors` remains descriptive metadata. Neither the movement controller nor any gameplay service may branch on contributor flags or diagnostics visibility.
-- **Run Body Movement Controller** should compute `HasValidGroundedRunSurface` from **Run Surface Context** plus corrected movement velocity before creating `RunBodySpeedContext`.
+- **Run Body Movement Controller** computes `HasValidGroundedRunSurface` from **Stable Support** plus corrected movement velocity before creating `RunBodySpeedContext`.
 - **Run Body Movement Controller** owns movement-side launch-applied facts needed for movement composition, including fallback `LaunchUpDirection`.
 - **Run Body Movement Controller** should call `IRunSteeringFrameResetter.Reset(launchUpDirection)` when run movement becomes active for the current launch.
 - **Run Body Movement Controller** should use `IRunSteeringFrameSource.GetUpDirection(fallbackLaunchUpDirection)` when building `RunSteeringContext`.
 - `RunSteeringInputController` must not store fallback launch-up direction or reset the steering frame; that is movement context, not input intent.
-- `RunSurfaceSteeringFrameSource` remains the first-slice steering frame filter/source/reset target.
-- Do not add a separate steering-frame coordinator in the first slice.
+- `RunSurfaceFramePipeline` publishes the shared steering frame derived by `RunSteeringFramePolicy`; movement must not add another surface or steering temporal filter.
 - The first correction order should be raw Rigidbody velocity, then **Run Body Speed Sanity Guard**, then **Launch Landing Stabilization**, then speed and steering evaluation.
 - **Run Body Speed Sanity Guard** remains defensive only; it must not become `SoftMaximumSpeed` or a player-facing speed limit.
 - **Launch Landing Stabilization** remains a stateful post-launch lift correction; it is not speed gameplay and not steering.

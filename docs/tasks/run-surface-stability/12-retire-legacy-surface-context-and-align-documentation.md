@@ -10,18 +10,18 @@ Complete the migration by moving remaining consumers to explicit observed or sta
 
 ## Acceptance criteria
 
-- [ ] Every runtime consumer declares whether it uses observed support, stable support, transition, or steering frame.
-- [ ] No runtime consumer reads the legacy compatibility surface context.
-- [ ] The compatibility adapter and obsolete interface are removed.
-- [ ] Legacy missed-sample and suspect-normal state is removed from physics and steering sources.
-- [ ] Duplicate serialized stability fields are removed or migrated according to issue 01 without losing authored values.
-- [ ] The final authoring location and units for every probe and stability field are documented.
-- [ ] Architecture documentation describes the one-way flow from physics observation to stability policy to steering and consumers.
-- [ ] Earlier overlapping PRDs or tasks carry the approved supersession or precedence status.
-- [ ] Diagnostics and code use the same observed/stable/transition terminology.
-- [ ] No package dependency, project setting, Rigidbody authority, or movement-writer invariant changes.
-- [ ] The full relevant EditMode and PlayMode suites pass after legacy removal.
-- [ ] Repository search finds no unexplained legacy type names or raw-label drift.
+- [x] Every runtime consumer declares whether it uses observed support, stable support, transition, or steering frame.
+- [x] No runtime consumer reads the legacy compatibility surface context.
+- [x] The compatibility adapter and obsolete interface are removed.
+- [x] Legacy missed-sample and suspect-normal state is removed from physics and steering sources.
+- [x] Duplicate serialized stability fields are removed or migrated according to issue 01 without losing authored values.
+- [x] The final authoring location and units for every probe and stability field are documented.
+- [x] Architecture documentation describes the one-way flow from physics observation to stability policy to steering and consumers.
+- [x] Earlier overlapping PRDs or tasks carry the approved supersession or precedence status.
+- [x] Diagnostics and code use the same observed/stable/transition terminology.
+- [x] No package dependency, project setting, Rigidbody authority, or movement-writer invariant changes.
+- [x] The full relevant EditMode and PlayMode suites pass after legacy removal.
+- [x] Repository search finds no unexplained legacy type names or raw-label drift.
 
 ## Verification
 

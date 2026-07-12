@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Game.Gameplay
 {
@@ -37,12 +38,18 @@ namespace Game.Gameplay
         float MinimumSteerSpeed { get; }
     }
 
-    public interface IRunSteeringFrameConfig
+    public interface IRunSurfaceStabilityAuthoringConfig
     {
-        float RunSteeringFrameNormalSlewDegreesPerSecond { get; }
-        float RunSteeringFrameSnapDegrees { get; }
-        float RunSteeringFrameUngroundedGraceSeconds { get; }
-        float RunSteeringFrameSuspectNormalConfirmationSeconds { get; }
+        float SupportLossConfirmationSeconds { get; }
+        float DiscontinuousNormalThresholdDegrees { get; }
+        float DiscontinuousNormalConfirmationSeconds { get; }
+        float CandidateCoherenceDegrees { get; }
+    }
+
+    public interface IRunSteeringFrameAuthoringConfig
+    {
+        float NormalSlewDegreesPerSecond { get; }
+        float AirborneUpRetentionSeconds { get; }
     }
 
     [CreateAssetMenu(
@@ -53,7 +60,8 @@ namespace Game.Gameplay
         IRunBodyMovementValidityConfig,
         IRunLaunchLandingStabilizationConfig,
         IRunSteeringConfig,
-        IRunSteeringFrameConfig
+        IRunSurfaceStabilityAuthoringConfig,
+        IRunSteeringFrameAuthoringConfig
     {
         [Header("Run Body Speed - Slope")]
         [SerializeField, Min(0f), Tooltip(
@@ -177,20 +185,33 @@ namespace Game.Gameplay
              + "\n\nUnits: Degrees per second.")]
         private float _runSteeringFrameNormalSlewDegreesPerSecond = 180f;
 
+        [FormerlySerializedAs("_runSteeringFrameSnapDegrees")]
         [SerializeField, Range(0f, 180f), Tooltip(
-             "Controls: Ground-normal angle that marks a continuously grounded Run Steering Frame change as suspect."
+             "Controls: Ground-normal angle that marks Observed Support as discontinuous from Stable Support."
              + "\n\nUnits: Degrees from flat to opposite normals.")]
-        private float _runSteeringFrameSnapDegrees = 60f;
+        private float _runSurfaceDiscontinuousNormalThresholdDegrees = 60f;
+
+        [FormerlySerializedAs("_runSteeringFrameUngroundedGraceSeconds")]
+        [SerializeField, Min(0f), Tooltip(
+             "Controls: Duration Stable Support is retained through consecutive Missing observations."
+             + "\n\nUnits: Seconds.")]
+        private float _runSurfaceSupportLossConfirmationSeconds = 0.08f;
+
+        [FormerlySerializedAs("_runSteeringFrameSuspectNormalConfirmationSeconds")]
+        [SerializeField, Min(0f), Tooltip(
+             "Controls: Duration a coherent discontinuous normal must persist before Stable Support accepts it."
+             + "\n\nUnits: Seconds.")]
+        private float _runSurfaceDiscontinuousNormalConfirmationSeconds = 0.04f;
+
+        [SerializeField, Range(0f, 180f), Tooltip(
+             "Controls: Maximum angular difference between discontinuous candidate normals that may confirm together."
+             + "\n\nUnits: Degrees.")]
+        private float _runSurfaceCandidateCoherenceDegrees = 1f;
 
         [SerializeField, Min(0f), Tooltip(
-             "Controls: Steering-only grace duration that keeps the last stable Run Steering Frame through short support misses."
+             "Controls: Duration the last valid steering up frame remains available after Stable Support is lost."
              + "\n\nUnits: Seconds.")]
-        private float _runSteeringFrameUngroundedGraceSeconds = 0.08f;
-
-        [SerializeField, Min(0f), Tooltip(
-             "Controls: Duration a large suspect Run Steering Frame normal must persist before it is accepted."
-             + "\n\nUnits: Seconds.")]
-        private float _runSteeringFrameSuspectNormalConfirmationSeconds = 0.04f;
+        private float _runSteeringFrameAirborneUpRetentionSeconds = 0.12f;
 
         float IRunBodySpeedConfig.DownhillAcceleration => _downhillAcceleration;
         float IRunBodySpeedConfig.SurfaceSlowdown => _surfaceSlowdown;
@@ -211,12 +232,15 @@ namespace Game.Gameplay
         float IRunSteeringConfig.MaximumTurnDegreesPerSecond => _maximumTurnDegreesPerSecond;
         float IRunSteeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond => _runAirSteeringMaximumTurnDegreesPerSecond;
         float IRunSteeringConfig.MinimumSteerSpeed => _minimumSteerSpeed;
-        float IRunSteeringFrameConfig.RunSteeringFrameNormalSlewDegreesPerSecond => _runSteeringFrameNormalSlewDegreesPerSecond;
-        float IRunSteeringFrameConfig.RunSteeringFrameSnapDegrees => _runSteeringFrameSnapDegrees;
-        float IRunSteeringFrameConfig.RunSteeringFrameUngroundedGraceSeconds => _runSteeringFrameUngroundedGraceSeconds;
+        float IRunSurfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds => _runSurfaceSupportLossConfirmationSeconds;
+        float IRunSurfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees => _runSurfaceDiscontinuousNormalThresholdDegrees;
 
-        float IRunSteeringFrameConfig.RunSteeringFrameSuspectNormalConfirmationSeconds =>
-            _runSteeringFrameSuspectNormalConfirmationSeconds;
+        float IRunSurfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds =>
+            _runSurfaceDiscontinuousNormalConfirmationSeconds;
+
+        float IRunSurfaceStabilityAuthoringConfig.CandidateCoherenceDegrees => _runSurfaceCandidateCoherenceDegrees;
+        float IRunSteeringFrameAuthoringConfig.NormalSlewDegreesPerSecond => _runSteeringFrameNormalSlewDegreesPerSecond;
+        float IRunSteeringFrameAuthoringConfig.AirborneUpRetentionSeconds => _runSteeringFrameAirborneUpRetentionSeconds;
 
         private void OnValidate()
         {

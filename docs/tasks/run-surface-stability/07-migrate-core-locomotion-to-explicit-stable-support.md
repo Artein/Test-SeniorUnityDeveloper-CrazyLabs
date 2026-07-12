@@ -10,17 +10,17 @@ Migrate core locomotion from the compatibility surface contract to explicit stab
 
 ## Acceptance criteria
 
-- [ ] Movement-plane projection reads explicit stable support.
-- [ ] Grounded speed behavior reads explicit stable support.
-- [ ] Steering-mode selection uses stable support and the shared steering frame consistently.
-- [ ] Landing stabilization uses the shared transition rather than a separately inferred surface change.
-- [ ] A brief observed miss does not switch core locomotion to airborne behavior while stable support is held.
-- [ ] Sustained support loss switches locomotion at the shared `SupportLost` transition.
-- [ ] An unavailable probe source causes the approved hard-reset locomotion response.
-- [ ] No core-locomotion consumer applies its own support grace or normal confirmation.
-- [ ] Rigidbody contact physics remains the collision authority.
-- [ ] Exactly one movement writer remains active.
-- [ ] Existing speed-model and contact-physics invariants from ADR-0010 remain intact.
+- [x] Movement-plane projection reads explicit stable support.
+- [x] Grounded speed behavior reads explicit stable support.
+- [x] Steering-mode selection uses stable support and the shared steering frame consistently.
+- [x] Landing stabilization uses the shared transition rather than a separately inferred surface change.
+- [x] A brief observed miss does not switch core locomotion to airborne behavior while stable support is held.
+- [x] Sustained support loss switches locomotion at the shared `SupportLost` transition.
+- [x] An unavailable probe source causes the approved hard-reset locomotion response.
+- [x] No core-locomotion consumer applies its own support grace or normal confirmation.
+- [x] Rigidbody contact physics remains the collision authority.
+- [x] Exactly one movement writer remains active.
+- [x] Existing speed-model and contact-physics invariants from ADR-0010 remain intact.
 
 ## Verification
 

@@ -11,17 +11,28 @@ namespace Game.Gameplay
     {
         [SerializeField] private Collider _supportCollider;
         [SerializeField] private float _supportProbeDistance = 0.08f;
+        [SerializeField] private float _supportProbeSkinWidth = 0.02f;
         [SerializeField] private LayerMask _surfaceMask = Physics.DefaultRaycastLayers;
+        [SerializeField, Range(-1f, 1f)] private float _minimumSupportNormalDot = 0.17f;
+        [SerializeField, Range(0f, 1f)] private float _footprintSampleOffsetScale = 0.6f;
+        [SerializeField, Range(0f, 180f)] private float _footprintNormalClusterAngleDegrees = 8f;
 
         public override void Install([NotNull] IContainerBuilder builder)
         {
             ThrowIfInvalidReferences();
 
-            builder.Register<PhysicsRunSurfaceContextSource>(Lifetime.Singleton)
-                .WithParameter(_supportCollider)
-                .WithParameter(_supportProbeDistance)
-                .WithParameter(_surfaceMask)
-                .AsImplementedInterfaces();
+            var probeConfig = new RunSurfaceProbeConfig(
+                _supportProbeDistance,
+                _supportProbeSkinWidth,
+                _surfaceMask,
+                _minimumSupportNormalDot,
+                _footprintSampleOffsetScale,
+                _footprintNormalClusterAngleDegrees);
+
+            builder.RegisterInstance(probeConfig);
+
+            builder.Register<IRunSupportProbe, PhysicsRunSupportProbe>(Lifetime.Singleton)
+                .WithParameter(_supportCollider);
         }
 
         internal override IEnumerable<string> GetReferenceValidationErrors()
@@ -46,6 +57,10 @@ namespace Game.Gameplay
         private void OnValidate()
         {
             _supportProbeDistance = Mathf.Max(0f, _supportProbeDistance);
+            _supportProbeSkinWidth = Mathf.Max(0f, _supportProbeSkinWidth);
+            _minimumSupportNormalDot = Mathf.Clamp(_minimumSupportNormalDot, -1f, 1f);
+            _footprintSampleOffsetScale = Mathf.Clamp01(_footprintSampleOffsetScale);
+            _footprintNormalClusterAngleDegrees = Mathf.Clamp(_footprintNormalClusterAngleDegrees, 0f, 180f);
         }
     }
 }

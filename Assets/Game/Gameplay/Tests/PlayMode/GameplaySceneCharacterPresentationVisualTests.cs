@@ -29,7 +29,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             yield return ReloadGameplaySceneWithIsolatedSavesAndContinueToPreLaunch();
             var activeScene = SceneManager.GetActiveScene();
             var context = CreateSceneContext(activeScene);
-            var surfaceContextSource = ResolveSurfaceContextSource(activeScene);
+            var surfaceFrameSource = ResolveSurfaceFrameSource(activeScene);
             var slingshotPresentationContextSource = ResolveSlingshotPresentationContextSource(activeScene);
             var characterAnimator = FindCharacterAnimator(activeScene);
             var visualAnchor = FindGameObjectByName(activeScene, "CharacterVisualAnchor");
@@ -54,7 +54,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             yield return AssertPostLaunchPresentation(
                 characterAnimator,
                 context.PlayerRigidbody,
-                surfaceContextSource,
+                surfaceFrameSource,
                 slingshotPresentationContextSource);
         }
         finally
@@ -121,7 +121,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
     private static IEnumerator AssertPostLaunchPresentation(
         Animator characterAnimator,
         Rigidbody playerRigidbody,
-        IRunSurfaceContextSource surfaceContextSource,
+        IRunSurfaceFrameSource surfaceFrameSource,
         ISlingshotPresentationContextSource slingshotPresentationContextSource)
     {
         var sawLaunchFlight = false;
@@ -136,7 +136,7 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
             yield return null;
 
             var mode = GetPresentationMode(characterAnimator);
-            var surfaceContext = surfaceContextSource.Current;
+            var surfaceContext = surfaceFrameSource.Current.ObservedSupport.SurfaceContext;
             var slingshotContext = slingshotPresentationContextSource.Current;
 
             if (!modeCounts.TryAdd(mode, 1))
@@ -248,10 +248,10 @@ public sealed class GameplaySceneCharacterPresentationVisualTests : BaseGameplay
         return GetScreenPosition(context.InputCamera, pullWorldPosition);
     }
 
-    private IRunSurfaceContextSource ResolveSurfaceContextSource(Scene scene)
+    private IRunSurfaceFrameSource ResolveSurfaceFrameSource(Scene scene)
     {
         var lifetimeScope = FindSingleInScene<GameplayLifetimeScope>(scene, "GameplayLifetimeScope");
-        return lifetimeScope.Container.Resolve<IRunSurfaceContextSource>();
+        return lifetimeScope.Container.Resolve<IRunSurfaceFrameSource>();
     }
 
     private ISlingshotPresentationContextSource ResolveSlingshotPresentationContextSource(Scene scene)

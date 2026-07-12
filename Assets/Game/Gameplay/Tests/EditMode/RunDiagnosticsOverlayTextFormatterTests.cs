@@ -1,11 +1,71 @@
 using Game.Gameplay;
 using Game.Gameplay.Diagnostics;
 using NUnit.Framework;
+using UnityEngine;
 
 // ReSharper disable once CheckNamespace
 public sealed class RunDiagnosticsOverlayTextFormatterTests
 {
     private readonly RunDiagnosticsOverlayTextFormatter _formatter = new();
+
+    [Test]
+    public void FormatMotionSummary_SurfaceSnapshot_UsesExplicitPolicyTerminology()
+    {
+        var sample = CreateSurfaceSample(
+            RunSupportObservationState.Supported,
+            isStableGrounded: true,
+            RunSurfaceTransition.ConfirmedDiscontinuity,
+            isMissingSupportHeld: true,
+            isConfirmingDiscontinuity: true,
+            isSteeringFrameValid: true);
+
+        var text = _formatter.FormatMotionSummary(sample);
+
+        Assert.That(text, Does.Contain("observed:Supported"));
+        Assert.That(text, Does.Contain("stable:grounded"));
+        Assert.That(text, Does.Contain("transition:ConfirmedDiscontinuity"));
+        Assert.That(text, Does.Contain("held:yes"));
+        Assert.That(text, Does.Contain("confirming:yes"));
+        Assert.That(text, Does.Contain("steering:valid"));
+        Assert.That(text, Does.Contain("observed:Supported normal:(0.000,1.000,0.000)"));
+        Assert.That(text, Does.Contain("stable:grounded normal:(0.000,1.000,0.000)"));
+        Assert.That(text, Does.Contain("steering:valid up:(0.000,0.000,1.000)"));
+    }
+
+    [TestCase(RunSupportObservationState.Unavailable)]
+    [TestCase(RunSupportObservationState.Missing)]
+    [TestCase(RunSupportObservationState.Supported)]
+    public void FormatMotionSummary_ObservedState_ReportsEveryState(RunSupportObservationState observedState)
+    {
+        var text = _formatter.FormatMotionSummary(CreateSurfaceSample(observedState));
+
+        Assert.That(text, Does.Contain($"observed:{observedState}"));
+    }
+
+    [TestCase(RunSurfaceTransition.None)]
+    [TestCase(RunSurfaceTransition.ContinuousUpdate)]
+    [TestCase(RunSurfaceTransition.SupportAcquired)]
+    [TestCase(RunSurfaceTransition.SupportLost)]
+    [TestCase(RunSurfaceTransition.ConfirmedDiscontinuity)]
+    [TestCase(RunSurfaceTransition.HardReset)]
+    public void FormatMotionSummary_Transition_ReportsEveryTransition(RunSurfaceTransition transition)
+    {
+        var text = _formatter.FormatMotionSummary(CreateSurfaceSample(surfaceTransition: transition));
+
+        Assert.That(text, Does.Contain($"transition:{transition}"));
+    }
+
+    [Test]
+    public void FormatMotionSummary_UnavailableSnapshot_ReportsAbsentDirectionsAndFalseFlags()
+    {
+        var text = _formatter.FormatMotionSummary(CreateSurfaceSample());
+
+        Assert.That(text, Does.Contain("observed:Unavailable normal:n/a"));
+        Assert.That(text, Does.Contain("stable:unsupported normal:n/a"));
+        Assert.That(text, Does.Contain("held:no"));
+        Assert.That(text, Does.Contain("confirming:no"));
+        Assert.That(text, Does.Contain("steering:unavailable up:n/a"));
+    }
 
     [Test]
     public void FormatRunBodySpeed_InactiveSnapshot_ReportsInactiveState()
@@ -106,5 +166,72 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
             lowSpeedAssistAttemptState: RunBodyLowSpeedAssistAttemptState.Active,
             meetsLowSpeedAssistPolicyConditions: true,
             remainingRequestedLowSpeedAssistVelocityBudget: 2.5f);
+    }
+
+    private RunDiagnosticsOverlaySample CreateSurfaceSample(
+        RunSupportObservationState observedSupportState = RunSupportObservationState.Unavailable,
+        bool isStableGrounded = false,
+        RunSurfaceTransition surfaceTransition = RunSurfaceTransition.None,
+        bool isMissingSupportHeld = false,
+        bool isConfirmingDiscontinuity = false,
+        bool isSteeringFrameValid = false)
+    {
+        return new RunDiagnosticsOverlaySample(
+            speedMetersPerSecond: 0f,
+            motionStepMetersPerSecond: 0f,
+            visualTargetStepMetersPerSecond: 0f,
+            visualTargetStepMeters: 0f,
+            observedGroundNormalDeltaDegrees: 0f,
+            steeringUpDeltaDegrees: 0f,
+            visualLagCentimeters: 0f,
+            cameraStepMetersPerSecond: 0f,
+            targetToMotionCentimeters: 0f,
+            visualTargetRotationDeltaDegrees: 0f,
+            visualRotationDeltaDegrees: 0f,
+            cameraRotationDeltaDegrees: 0f,
+            estimatedVisualSnapReason: RunDiagnosticsOverlaySnapReason.None,
+            fixedStepsThisFrame: 1,
+            CreateSurfaceFrame(
+                observedSupportState,
+                isStableGrounded,
+                surfaceTransition,
+                isMissingSupportHeld,
+                isConfirmingDiscontinuity,
+                isSteeringFrameValid),
+            speedDiagnostics: default);
+    }
+
+    private RunSurfaceFrameSnapshot CreateSurfaceFrame(
+        RunSupportObservationState observedSupportState,
+        bool isStableGrounded,
+        RunSurfaceTransition surfaceTransition,
+        bool isMissingSupportHeld,
+        bool isConfirmingDiscontinuity,
+        bool isSteeringFrameValid)
+    {
+        RunProgressFrameSnapshot.TryCreate(
+            Vector3.zero,
+            Vector3.forward,
+            Vector3.up,
+            out var progressFrame,
+            out _);
+
+        var observedContext = observedSupportState == RunSupportObservationState.Supported
+            ? new RunSurfaceContext(true, Vector3.up, 0f)
+            : new RunSurfaceContext(false, Vector3.up, 0f);
+
+        var observation = new RunSupportObservation(
+            observedSupportState,
+            observedSupportState == RunSupportObservationState.Unavailable ? default : progressFrame,
+            observedContext,
+            0f);
+
+        return new RunSurfaceFrameSnapshot(
+            observation,
+            new RunSurfaceContext(isStableGrounded, Vector3.up, 0f),
+            surfaceTransition,
+            isMissingSupportHeld,
+            isConfirmingDiscontinuity,
+            new RunSteeringFrameSnapshot(isSteeringFrameValid, Vector3.forward));
     }
 }

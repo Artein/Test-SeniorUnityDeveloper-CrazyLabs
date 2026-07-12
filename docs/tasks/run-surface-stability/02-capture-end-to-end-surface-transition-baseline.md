@@ -10,16 +10,16 @@ Create deterministic characterization coverage for the current end-to-end path f
 
 ## Acceptance criteria
 
-- [ ] A canonical physics fixture represents continuous ground, a fast seam, a trough, and a brief support gap.
-- [ ] Characterization records raw hit selection, published support, surface normal, steering up, and relevant consumer output per fixed tick.
-- [ ] Current support-loss timing is captured at the project fixed timestep.
-- [ ] Current normal-discontinuity confirmation timing is captured at the project fixed timestep.
-- [ ] Equivalent scenarios run at 0.01-second and 0.02-second fixed timesteps and document existing tick-coupled differences.
-- [ ] Alternating discontinuous normals are covered separately from coherent discontinuous normals.
-- [ ] A brief airborne frame and a true sustained support loss are distinguishable in the trace.
-- [ ] Tests exercise the integrated physics-source-to-steering path rather than isolated helper behavior only.
-- [ ] Characterization introduces no production behavior change.
-- [ ] Failure output identifies the tick and observed transition that diverged.
+- [x] A canonical physics fixture represents continuous ground, a fast seam, a trough, and a brief support gap.
+- [x] Characterization records raw hit selection, published support, surface normal, steering up, and relevant consumer output per fixed tick.
+- [x] Current support-loss timing is captured at the project fixed timestep.
+- [x] Current normal-discontinuity confirmation timing is captured at the project fixed timestep.
+- [x] Equivalent scenarios run at 0.01-second and 0.02-second fixed timesteps and document existing tick-coupled differences.
+- [x] Alternating discontinuous normals are covered separately from coherent discontinuous normals.
+- [x] A brief airborne frame and a true sustained support loss are distinguishable in the trace.
+- [x] Tests exercise the integrated physics-source-to-steering path rather than isolated helper behavior only.
+- [x] Characterization introduces no production behavior change.
+- [x] Failure output identifies the tick and observed transition that diverged.
 
 ## Verification
 

@@ -9,8 +9,7 @@ namespace Game.Gameplay.Tests.PlayMode
         IRunBodySpeedConfig,
         IRunBodyMovementValidityConfig,
         IRunLaunchLandingStabilizationConfig,
-        IRunSteeringConfig,
-        IRunSteeringFrameConfig
+        IRunSteeringConfig
     {
         public float DownhillAcceleration { get; set; }
         public float SurfaceSlowdown { get; set; }
@@ -32,9 +31,11 @@ namespace Game.Gameplay.Tests.PlayMode
         public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 30f;
         public float MinimumSteerSpeed { get; set; } = 0.25f;
         public float RunSteeringFrameNormalSlewDegreesPerSecond { get; set; } = 360f;
-        public float RunSteeringFrameSnapDegrees { get; set; } = 60f;
-        public float RunSteeringFrameUngroundedGraceSeconds { get; set; } = 0.08f;
-        public float RunSteeringFrameSuspectNormalConfirmationSeconds { get; set; } = 0.04f;
+        public float RunSurfaceDiscontinuousNormalThresholdDegrees { get; set; } = 60f;
+        public float RunSurfaceSupportLossConfirmationSeconds { get; set; } = 0.08f;
+        public float RunSurfaceDiscontinuousNormalConfirmationSeconds { get; set; } = 0.04f;
+        public float RunSurfaceCandidateCoherenceDegrees { get; set; } = 1f;
+        public float RunSteeringFrameAirborneUpRetentionSeconds { get; set; } = 0.12f;
         public float SupportProbeDistance { get; set; } = 0.3f;
         public float BodyBounciness { get; set; }
     }

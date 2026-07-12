@@ -412,7 +412,8 @@ public sealed class GameplayLifetimeScopeTests
         var movementValidityConfig = container.Resolve<IRunBodyMovementValidityConfig>();
         var landingStabilizationConfig = container.Resolve<IRunLaunchLandingStabilizationConfig>();
         var steeringConfig = container.Resolve<IRunSteeringConfig>();
-        var steeringFrameConfig = container.Resolve<IRunSteeringFrameConfig>();
+        var surfaceStabilityConfig = container.Resolve<RunSurfaceStabilityConfig>();
+        var steeringFrameConfig = container.Resolve<RunSteeringFrameConfig>();
         var steeringInputMetricsResolver = container.Resolve<IRunSteeringInputMetricsResolver>();
         var steeringInputSource = container.Resolve<IRunSteeringInputSource>();
         var speedEvaluator = container.Resolve<IRunBodySpeedEvaluator>();
@@ -436,7 +437,7 @@ public sealed class GameplayLifetimeScopeTests
         var runProgressService = container.Resolve<IRunProgressService>();
         var runProgressFrameSource = container.Resolve<IRunProgressFrameSource>();
         var runSupportColliderProbeFactory = container.Resolve<IRunSupportColliderProbeFactory>();
-        var runSurfaceContextSource = container.Resolve<IRunSurfaceContextSource>();
+        var runSurfaceFrameSource = container.Resolve<IRunSurfaceFrameSource>();
         var contactNotifier = container.Resolve<IRigidbodyContactNotifier>();
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
@@ -503,8 +504,8 @@ public sealed class GameplayLifetimeScopeTests
         var runSteeringFrameFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSteeringFrameSource));
 
-        var runSurfaceContextSourceFixedTickableIndex =
-            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSurfaceContextSource));
+        var runSurfaceFrameFixedTickableIndex =
+            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSurfaceFrameSource));
 
         var runBodyMovementControllerFixedTickableIndex =
             GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is RunBodyMovementController);
@@ -530,7 +531,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(continueCommand, Is.Not.Null);
         Assert.That(initializables.Count, Is.EqualTo(22));
         Assert.That(tickables.Count, Is.EqualTo(5));
-        Assert.That(fixedTickables.Count, Is.EqualTo(7));
+        Assert.That(fixedTickables.Count, Is.EqualTo(6));
         Assert.That(lateTickables.Count, Is.EqualTo(3));
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
@@ -544,7 +545,12 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(movementValidityConfig, Is.SameAs(fixture.RunBodyMovementConfig));
         Assert.That(landingStabilizationConfig, Is.SameAs(fixture.RunBodyMovementConfig));
         Assert.That(steeringConfig, Is.SameAs(fixture.RunBodyMovementConfig));
-        Assert.That(steeringFrameConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(surfaceStabilityConfig.SupportLossConfirmationSeconds, Is.EqualTo(0.08f));
+        Assert.That(surfaceStabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(60f));
+        Assert.That(surfaceStabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(0.04f));
+        Assert.That(surfaceStabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(1f));
+        Assert.That(steeringFrameConfig.NormalSlewDegreesPerSecond, Is.EqualTo(180f));
+        Assert.That(steeringFrameConfig.AirborneUpRetentionSeconds, Is.EqualTo(0.12f));
         Assert.That(steeringInputMetricsResolver, Is.TypeOf<DefaultRunSteeringInputMetricsResolver>());
         Assert.That(steeringInputSource, Is.TypeOf<RunSteeringInputController>());
         Assert.That(speedEvaluator, Is.TypeOf<DefaultRunBodySpeedEvaluator>());
@@ -561,11 +567,12 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(runSteeringFrameSource, Is.Not.Null);
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
-        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
+        Assert.That(runSurfaceFrameSource, Is.SameAs(runSteeringFrameSource));
+        Assert.That(runSurfaceFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(runSteeringFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(runBodyMovementControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(fixedTickables.Count(fixedTickable => fixedTickable is RunBodyMovementController), Is.EqualTo(1));
-        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.LessThan(runSteeringFrameFixedTickableIndex));
+        Assert.That(runSurfaceFrameFixedTickableIndex, Is.EqualTo(runSteeringFrameFixedTickableIndex));
         Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(runBodyMovementControllerFixedTickableIndex));
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
@@ -575,8 +582,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runProgressService, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.SameAs(fixture.RunProgressFrameSource));
         Assert.That(runSupportColliderProbeFactory, Is.TypeOf<RunSupportColliderProbeFactory>());
-        Assert.That(runSurfaceContextSource, Is.TypeOf<PhysicsRunSurfaceContextSource>());
-        Assert.That(runSurfaceContextSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
+        Assert.That(runSurfaceFrameSource, Is.TypeOf<RunSurfaceFramePipeline>());
+        Assert.That(runSurfaceFrameSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);

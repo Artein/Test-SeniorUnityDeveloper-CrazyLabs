@@ -1,5 +1,7 @@
 # PRD: Run Steering Frame Stability
 
+> **Superseded in part.** The [Run Surface Probing and Stability PRD](prd-run-surface-probing-and-stability.md) replaces this document's raw-source and steering-local temporal-filter architecture. This document remains historical rationale for steering-frame feel, slew, airborne memory, and human review.
+
 ## Problem Statement
 
 The Ladybug Rooftop Half-Tube uses a **U-shaped Run Surface** with banked **Side Banks** for **Soft Containment**. When the **Launch Target** rides high on those sides near the **Course Lip**, the visible slope can look smooth while raw support contact normals still change abruptly from frame to frame.

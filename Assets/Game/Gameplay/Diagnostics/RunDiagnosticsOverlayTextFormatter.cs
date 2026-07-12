@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Gameplay.Diagnostics
 {
@@ -6,7 +7,16 @@ namespace Game.Gameplay.Diagnostics
     {
         public string FormatMotionSummary(RunDiagnosticsOverlaySample sample)
         {
-            return $"G:{(sample.IsGrounded ? 1 : 0)} fx:{sample.FixedStepsThisFrame} "
+            return $"observed:{sample.ObservedSupportState} "
+                   + $"normal:{FormatDirection(sample.HasObservedGroundNormal, sample.ObservedGroundNormal)} "
+                   + $"stable:{(sample.IsStableGrounded ? "grounded" : "unsupported")} "
+                   + $"normal:{FormatDirection(sample.HasStableGroundNormal, sample.StableGroundNormal)} "
+                   + $"transition:{sample.SurfaceTransition} "
+                   + $"held:{FormatBoolean(sample.IsMissingSupportHeld)} "
+                   + $"confirming:{FormatBoolean(sample.IsConfirmingDiscontinuity)} "
+                   + $"steering:{(sample.IsSteeringFrameValid ? "valid" : "unavailable")} "
+                   + $"up:{FormatDirection(sample.IsSteeringFrameValid, sample.SteeringUpDirection)} "
+                   + $"fx:{sample.FixedStepsThisFrame} "
                    + $"snap:{FormatSnapReason(sample.EstimatedVisualSnapReason)} "
                    + $"rb-tgt:{sample.TargetToMotionCentimeters:0.0}cm "
                    + $"camrot:{sample.CameraRotationDeltaDegrees:0.0}";
@@ -86,6 +96,11 @@ namespace Game.Gameplay.Diagnostics
         private string FormatBoolean(bool value)
         {
             return value ? "yes" : "no";
+        }
+
+        private string FormatDirection(bool isValid, Vector3 direction)
+        {
+            return isValid ? $"({direction.x:0.000},{direction.y:0.000},{direction.z:0.000})" : "n/a";
         }
 
         private string FormatSnapReason(RunDiagnosticsOverlaySnapReason reason)

@@ -1,3 +1,4 @@
+using Game.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -303,10 +304,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
 
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -323,10 +324,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(new Vector3(0f, 0f, 35f));
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
         FixedTick();
 
         _clock.FixedDeltaTime = 2f;
@@ -454,10 +455,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(new Vector3(0f, 0f, 70f));
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -472,10 +473,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(new Vector3(3f, 4f, 12f));
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -505,10 +506,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(lowTangentLiftVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -530,10 +531,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(groundNormal);
+        SetGroundedSurface(groundNormal, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -551,10 +552,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(expectedVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(groundNormal);
+        SetGroundedSurface(groundNormal, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 
@@ -596,10 +597,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
         FixedTick();
 
         _clock.FixedDeltaTime = _config.LaunchLandingStabilizationSeconds + 0.01f;
@@ -618,7 +619,7 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
         var applyCallCountBeforeLeaving = _steeringTarget.ApplyCallCount;
@@ -642,10 +643,10 @@ public sealed class RunBodyMovementControllerBehaviorTests : RunBodyMovementCont
         ActivateSteeringWithLaunchVelocity(_steeringTarget.LinearVelocity);
         FixedTick();
 
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
 
-        SetGroundedSurface(Vector3.up);
+        SetGroundedSurface(Vector3.up, RunSurfaceTransition.SupportAcquired);
 
         FixedTick();
 

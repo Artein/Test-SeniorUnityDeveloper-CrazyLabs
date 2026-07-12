@@ -20,7 +20,7 @@ public sealed class CharacterPresenterTests
     private FakeGameplayStateService _stateService;
     private FakeRunMotionSource _motionSource;
     private FakeRunProgressService _progressService;
-    private FakeRunSurfaceContextSource _surfaceContextSource;
+    private FakeRunSurfaceFrameSource _surfaceContextSource;
     private FakeSlingshotPresentationContextSource _slingshotPresentationContextSource;
     private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     private FakeRunResultNotifier _runResultNotifier;
@@ -51,7 +51,7 @@ public sealed class CharacterPresenterTests
             Snapshot = CreateSnapshot()
         };
 
-        _surfaceContextSource = new FakeRunSurfaceContextSource
+        _surfaceContextSource = new FakeRunSurfaceFrameSource
         {
             Current = new RunSurfaceContext(true, Vector3.up, 12f)
         };
@@ -944,9 +944,40 @@ public sealed class CharacterPresenterTests
         }
     }
 
-    private sealed class FakeRunSurfaceContextSource : IRunSurfaceContextSource
+    private sealed class FakeRunSurfaceFrameSource : IRunSurfaceFrameSource
     {
         public RunSurfaceContext Current { get; set; }
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current
+        {
+            get
+            {
+                RunProgressFrameSnapshot.TryCreate(
+                    Vector3.zero,
+                    Vector3.forward,
+                    Vector3.up,
+                    out var progressFrame,
+                    out _);
+
+                var observationState = Current.IsGrounded
+                    ? RunSupportObservationState.Supported
+                    : RunSupportObservationState.Missing;
+
+                var observedSupport = new RunSupportObservation(
+                    observationState,
+                    progressFrame,
+                    Current,
+                    0f);
+
+                return new RunSurfaceFrameSnapshot(
+                    observedSupport,
+                    Current,
+                    RunSurfaceTransition.None,
+                    false,
+                    false,
+                    default);
+            }
+        }
     }
 
     private sealed class FakeSlingshotPresentationContextSource : ISlingshotPresentationContextSource

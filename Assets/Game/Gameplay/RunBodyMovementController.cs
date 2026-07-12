@@ -20,7 +20,7 @@ namespace Game.Gameplay
         private readonly IRunLaunchLandingStabilizer _launchLandingStabilizer;
         private readonly IRunSteeringFrameSource _steeringFrameSource;
         private readonly IRunSteeringFrameResetter _steeringFrameResetter;
-        private readonly IRunSurfaceContextSource _surfaceContextSource;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly IRunProgressService _runProgressService;
         private readonly IRunGameplayStatResolver _runGameplayStatResolver;
         private readonly IRunBodySpeedDiagnosticsSink _speedDiagnosticsSink;
@@ -54,7 +54,7 @@ namespace Game.Gameplay
             IRunLaunchLandingStabilizer launchLandingStabilizer,
             IRunSteeringFrameSource steeringFrameSource,
             IRunSteeringFrameResetter steeringFrameResetter,
-            IRunSurfaceContextSource surfaceContextSource,
+            IRunSurfaceFrameSource surfaceFrameSource,
             IRunProgressService runProgressService,
             IRunGameplayStatResolver runGameplayStatResolver,
             IRunBodySpeedDiagnosticsSink speedDiagnosticsSink,
@@ -77,7 +77,7 @@ namespace Game.Gameplay
             _launchLandingStabilizer = launchLandingStabilizer ?? throw new ArgumentNullException(nameof(launchLandingStabilizer));
             _steeringFrameSource = steeringFrameSource ?? throw new ArgumentNullException(nameof(steeringFrameSource));
             _steeringFrameResetter = steeringFrameResetter ?? throw new ArgumentNullException(nameof(steeringFrameResetter));
-            _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
+            _surfaceFrameSource = surfaceFrameSource ?? throw new ArgumentNullException(nameof(surfaceFrameSource));
             _runProgressService = runProgressService ?? throw new ArgumentNullException(nameof(runProgressService));
             _runGameplayStatResolver = runGameplayStatResolver ?? throw new ArgumentNullException(nameof(runGameplayStatResolver));
             _speedDiagnosticsSink = speedDiagnosticsSink ?? throw new ArgumentNullException(nameof(speedDiagnosticsSink));
@@ -124,12 +124,14 @@ namespace Game.Gameplay
             var sanityResult = _velocitySanityGuard.Sanitize(
                 rawVelocity,
                 _movementValidityConfig.RunBodySpeedSanityGuardMetersPerSecond);
-            var surfaceContext = _surfaceContextSource.Current;
+            var surfaceFrame = _surfaceFrameSource.Current;
+            var surfaceContext = surfaceFrame.StableSupport;
 
             var correctedVelocity = _launchLandingStabilizer.Stabilize(
                 new RunLaunchLandingStabilizationContext(
                     sanityResult.Velocity,
                     surfaceContext,
+                    surfaceFrame.Transition,
                     fixedDeltaTime));
 
             var speedContext = CreateSpeedContext(

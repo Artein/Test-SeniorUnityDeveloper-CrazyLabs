@@ -46,7 +46,7 @@ public sealed class GameplaySceneRunBodySpeedOwnershipTests : BaseGameplaySceneP
         obstacle.transform.SetPositionAndRotation(launchPosition + Vector3.forward * 16f, Quaternion.identity);
 
         BeginManualLaunch(lifetimeScope, stateService, launchTarget, launchPosition, launchVelocity);
-        yield return WaitUntilUnsupportedSpeedDiagnosticsIsActive(diagnostics, 4);
+        yield return WaitUntilUnsupportedSpeedDiagnosticsIsActive(diagnostics, 8);
 
         var firstPass = diagnostics.Current;
         var initialForwardSpeed = Vector3.Dot(playerRigidbody.linearVelocity, Vector3.forward);
@@ -125,8 +125,7 @@ public sealed class GameplaySceneRunBodySpeedOwnershipTests : BaseGameplaySceneP
                 launchTarget,
                 new Vector3(30f, 100f, 0f),
                 Vector3.forward * 10f);
-            yield return new WaitForFixedUpdate();
-            yield return new WaitForFixedUpdate();
+            yield return WaitUntilUnsupportedSpeedDiagnosticsIsActive(diagnostics, 10);
 
             var upgradedRunSnapshot = diagnostics.Current;
             Assert.That(upgradedRunSnapshot.State, Is.EqualTo(RunBodySpeedDiagnosticsState.Active));

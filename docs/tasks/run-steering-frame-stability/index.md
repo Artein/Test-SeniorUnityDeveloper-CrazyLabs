@@ -1,5 +1,7 @@
 # Run Steering Frame Stability Implementation Issues
 
+> **Superseded in part.** The [Run Surface Stability implementation plan](../run-surface-stability/index.md) replaces these issues wherever they keep temporal support filtering inside steering or depend on `PhysicsRunSurfaceContextSource`. Retained as historical rationale only.
+
 Parent PRD: [Run Steering Frame Stability PRD](../../prd/prd-run-steering-frame-stability.md)
 
 Related ADRs:

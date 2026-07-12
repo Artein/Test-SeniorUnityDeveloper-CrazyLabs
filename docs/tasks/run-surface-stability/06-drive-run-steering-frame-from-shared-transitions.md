@@ -10,17 +10,17 @@ Derive the run steering frame from the shared stable-support state and transitio
 
 ## Acceptance criteria
 
-- [ ] `ContinuousUpdate` steers toward stable up using the configured angular slew rate.
-- [ ] `ConfirmedDiscontinuity` applies the configured confirmed-transition snap behavior exactly once.
-- [ ] `SupportAcquired` initializes a valid steering frame deterministically.
-- [ ] `SupportLost` preserves the approved airborne steering memory without representing the body as grounded.
-- [ ] `HardReset` clears steering validity and transient state immediately.
-- [ ] Steering consumes the atomic snapshot transition and does not infer the same transition from raw normals.
-- [ ] Duplicate suspect-normal, confirmation-duration, and rounded-normal validation state is removed.
-- [ ] Existing authored slew, snap, grace, and confirmation values remain unchanged until the feel-review issue approves tuning.
-- [ ] The steering frame remains finite and normalized for every supported transition.
-- [ ] Only one pipeline owner updates and publishes steering state per fixed tick.
-- [ ] Characterized ordinary-slope, seam, gap, and airborne behavior remains compatible except for approved stability-policy changes.
+- [x] `ContinuousUpdate` steers toward stable up using the configured angular slew rate.
+- [x] `ConfirmedDiscontinuity` applies the configured confirmed-transition snap behavior exactly once.
+- [x] `SupportAcquired` initializes a valid steering frame deterministically.
+- [x] `SupportLost` preserves the approved airborne steering memory without representing the body as grounded.
+- [x] `HardReset` clears steering validity and transient state immediately.
+- [x] Steering consumes the atomic snapshot transition and does not infer the same transition from raw normals.
+- [x] Duplicate suspect-normal, confirmation-duration, and rounded-normal validation state is removed.
+- [x] Existing authored slew, snap, grace, and confirmation values remain unchanged until the feel-review issue approves tuning.
+- [x] The steering frame remains finite and normalized for every supported transition.
+- [x] Only one pipeline owner updates and publishes steering state per fixed tick.
+- [x] Characterized ordinary-slope, seam, gap, and airborne behavior remains compatible except for approved stability-policy changes.
 
 ## Verification
 

@@ -8,7 +8,7 @@ namespace Game.Gameplay.Diagnostics
         public float MotionStepMetersPerSecond { get; }
         public float VisualTargetStepMetersPerSecond { get; }
         public float VisualTargetStepMeters { get; }
-        public float RawGroundNormalDeltaDegrees { get; }
+        public float ObservedGroundNormalDeltaDegrees { get; }
         public float SteeringUpDeltaDegrees { get; }
         public float VisualLagCentimeters { get; }
         public float CameraStepMetersPerSecond { get; }
@@ -19,7 +19,17 @@ namespace Game.Gameplay.Diagnostics
         public RunDiagnosticsOverlaySnapReason EstimatedVisualSnapReason { get; }
         public bool HasEstimatedVisualSnap => EstimatedVisualSnapReason != RunDiagnosticsOverlaySnapReason.None;
         public int FixedStepsThisFrame { get; }
-        public bool IsGrounded { get; }
+        public RunSupportObservationState ObservedSupportState { get; }
+        public bool HasObservedGroundNormal { get; }
+        public Vector3 ObservedGroundNormal { get; }
+        public bool IsStableGrounded { get; }
+        public bool HasStableGroundNormal { get; }
+        public Vector3 StableGroundNormal { get; }
+        public RunSurfaceTransition SurfaceTransition { get; }
+        public bool IsMissingSupportHeld { get; }
+        public bool IsConfirmingDiscontinuity { get; }
+        public bool IsSteeringFrameValid { get; }
+        public Vector3 SteeringUpDirection { get; }
         public RunBodySpeedDiagnosticsSnapshot SpeedDiagnostics { get; }
 
         public RunDiagnosticsOverlaySample(
@@ -27,7 +37,7 @@ namespace Game.Gameplay.Diagnostics
             float motionStepMetersPerSecond,
             float visualTargetStepMetersPerSecond,
             float visualTargetStepMeters,
-            float rawGroundNormalDeltaDegrees,
+            float observedGroundNormalDeltaDegrees,
             float steeringUpDeltaDegrees,
             float visualLagCentimeters,
             float cameraStepMetersPerSecond,
@@ -37,14 +47,17 @@ namespace Game.Gameplay.Diagnostics
             float cameraRotationDeltaDegrees,
             RunDiagnosticsOverlaySnapReason estimatedVisualSnapReason,
             int fixedStepsThisFrame,
-            bool isGrounded,
+            RunSurfaceFrameSnapshot surfaceFrame,
             RunBodySpeedDiagnosticsSnapshot speedDiagnostics)
         {
             SpeedMetersPerSecond = float.IsFinite(speedMetersPerSecond) ? Mathf.Max(0f, speedMetersPerSecond) : 0f;
             MotionStepMetersPerSecond = float.IsFinite(motionStepMetersPerSecond) ? Mathf.Max(0f, motionStepMetersPerSecond) : 0f;
             VisualTargetStepMetersPerSecond = float.IsFinite(visualTargetStepMetersPerSecond) ? Mathf.Max(0f, visualTargetStepMetersPerSecond) : 0f;
             VisualTargetStepMeters = float.IsFinite(visualTargetStepMeters) ? Mathf.Max(0f, visualTargetStepMeters) : 0f;
-            RawGroundNormalDeltaDegrees = float.IsFinite(rawGroundNormalDeltaDegrees) ? Mathf.Clamp(rawGroundNormalDeltaDegrees, 0f, 180f) : 0f;
+
+            ObservedGroundNormalDeltaDegrees = float.IsFinite(observedGroundNormalDeltaDegrees)
+                ? Mathf.Clamp(observedGroundNormalDeltaDegrees, 0f, 180f)
+                : 0f;
             SteeringUpDeltaDegrees = float.IsFinite(steeringUpDeltaDegrees) ? Mathf.Clamp(steeringUpDeltaDegrees, 0f, 180f) : 0f;
             VisualLagCentimeters = float.IsFinite(visualLagCentimeters) ? Mathf.Max(0f, visualLagCentimeters) : 0f;
             CameraStepMetersPerSecond = float.IsFinite(cameraStepMetersPerSecond) ? Mathf.Max(0f, cameraStepMetersPerSecond) : 0f;
@@ -56,7 +69,22 @@ namespace Game.Gameplay.Diagnostics
             CameraRotationDeltaDegrees = float.IsFinite(cameraRotationDeltaDegrees) ? Mathf.Clamp(cameraRotationDeltaDegrees, 0f, 180f) : 0f;
             EstimatedVisualSnapReason = estimatedVisualSnapReason;
             FixedStepsThisFrame = Mathf.Max(0, fixedStepsThisFrame);
-            IsGrounded = isGrounded;
+            ObservedSupportState = surfaceFrame.ObservedSupport.State;
+
+            HasObservedGroundNormal = ObservedSupportState == RunSupportObservationState.Supported
+                                      && surfaceFrame.ObservedSupport.SurfaceContext.HasValidGroundNormal;
+
+            ObservedGroundNormal = HasObservedGroundNormal
+                ? surfaceFrame.ObservedSupport.SurfaceContext.GroundNormal
+                : Vector3.up;
+            IsStableGrounded = surfaceFrame.StableSupport.IsGrounded;
+            HasStableGroundNormal = IsStableGrounded && surfaceFrame.StableSupport.HasValidGroundNormal;
+            StableGroundNormal = HasStableGroundNormal ? surfaceFrame.StableSupport.GroundNormal : Vector3.up;
+            SurfaceTransition = surfaceFrame.Transition;
+            IsMissingSupportHeld = surfaceFrame.IsMissingSupportHeld;
+            IsConfirmingDiscontinuity = surfaceFrame.IsConfirmingDiscontinuity;
+            IsSteeringFrameValid = surfaceFrame.SteeringFrame.IsValid;
+            SteeringUpDirection = IsSteeringFrameValid ? surfaceFrame.SteeringFrame.UpDirection : Vector3.up;
             SpeedDiagnostics = speedDiagnostics;
         }
 
@@ -71,7 +99,7 @@ namespace Game.Gameplay.Diagnostics
                 case 2:
                     return VisualTargetStepMetersPerSecond;
                 case 3:
-                    return RawGroundNormalDeltaDegrees;
+                    return ObservedGroundNormalDeltaDegrees;
                 case 4:
                     return SteeringUpDeltaDegrees;
                 case 5:

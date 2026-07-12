@@ -14,7 +14,7 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly IGameplayStateService _gameplayStateService;
         private readonly IRunMotionSource _motionSource;
         private readonly IRunProgressService _progressService;
-        private readonly IRunSurfaceContextSource _surfaceContextSource;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly ISlingshotPresentationContextSource _slingshotPresentationContextSource;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
         private readonly IRunResultNotifier _runResultNotifier;
@@ -47,7 +47,7 @@ namespace Game.Gameplay.CharacterPresentation
             IGameplayStateService gameplayStateService,
             IRunMotionSource motionSource,
             IRunProgressService progressService,
-            IRunSurfaceContextSource surfaceContextSource,
+            IRunSurfaceFrameSource surfaceFrameSource,
             ISlingshotPresentationContextSource slingshotPresentationContextSource,
             ISlingshotLaunchAppliedNotifier launchAppliedNotifier,
             IRunResultNotifier runResultNotifier,
@@ -66,7 +66,7 @@ namespace Game.Gameplay.CharacterPresentation
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
             _progressService = progressService ?? throw new ArgumentNullException(nameof(progressService));
-            _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
+            _surfaceFrameSource = surfaceFrameSource ?? throw new ArgumentNullException(nameof(surfaceFrameSource));
 
             _slingshotPresentationContextSource = slingshotPresentationContextSource
                                                   ?? throw new ArgumentNullException(nameof(slingshotPresentationContextSource));
@@ -115,7 +115,7 @@ namespace Game.Gameplay.CharacterPresentation
 
             var surfaceContext = isNeutralPresentationState
                 ? new RunSurfaceContext(isGrounded: true, groundNormal: Vector3.up, forwardDownhillDegrees: 0f)
-                : _surfaceContextSource.Current;
+                : ResolveObservedSurfaceContext(_surfaceFrameSource.Current.ObservedSupport);
             var currentPosition = _motionSource.Position;
             var linearVelocity = _motionSource.LinearVelocity;
             var coursePlanarSpeed = 0f;
@@ -399,6 +399,13 @@ namespace Game.Gameplay.CharacterPresentation
                 coursePlanarSpeed / referenceSpeed,
                 _tuning.MinimumPlaybackSpeedMultiplier,
                 _tuning.MaximumPlaybackSpeedMultiplier);
+        }
+
+        private RunSurfaceContext ResolveObservedSurfaceContext(RunSupportObservation observation)
+        {
+            return observation.State == RunSupportObservationState.Supported
+                ? observation.SurfaceContext
+                : new RunSurfaceContext(false, Vector3.up, 0f);
         }
 
         private CharacterPresentationFrame CreateFrame(

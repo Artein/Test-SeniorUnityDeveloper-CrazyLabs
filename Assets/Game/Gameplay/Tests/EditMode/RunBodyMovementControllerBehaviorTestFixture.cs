@@ -23,7 +23,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     protected FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
     protected FakeRunBodyMovementTarget _steeringTarget;
     protected FakeRunBodyMovementConfig _config;
-    protected FakeRunSurfaceContextSource _surfaceContextSource;
+    protected FakeRunSurfaceFrameSource _surfaceContextSource;
     protected FakeRunProgressService _runProgressService;
     protected FakeRunGameplayStatResolver _statResolver;
     protected FakeTime _clock;
@@ -77,7 +77,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
             BaseSoftMaximumSpeed = 20f
         };
 
-        _surfaceContextSource = new FakeRunSurfaceContextSource
+        _surfaceContextSource = new FakeRunSurfaceFrameSource
         {
             Current = new RunSurfaceContext(false, Vector3.up, 0f)
         };
@@ -145,6 +145,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     protected void FixedTick()
     {
         ((IFixedTickable)_movementController).FixedTick();
+        _surfaceContextSource.Transition = RunSurfaceTransition.None;
     }
 
     private void SettleLaunchStateForSteadySteering(Vector3 launchUpDirection)
@@ -156,9 +157,9 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
         SetGroundedSurface(launchUpDirection);
         FixedTick();
-        SetUngroundedSurface();
+        SetUngroundedSurface(RunSurfaceTransition.SupportLost);
         FixedTick();
-        SetGroundedSurface(launchUpDirection);
+        SetGroundedSurface(launchUpDirection, RunSurfaceTransition.SupportAcquired);
         FixedTick();
 
         _clock.FixedDeltaTime = _config.LaunchLandingStabilizationSeconds + 0.01f;
@@ -232,14 +233,18 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         return velocity - Vector3.Project(velocity, upDirection.normalized);
     }
 
-    protected void SetGroundedSurface(Vector3 groundNormal)
+    protected void SetGroundedSurface(
+        Vector3 groundNormal,
+        RunSurfaceTransition transition = RunSurfaceTransition.None)
     {
         _surfaceContextSource.Current = new RunSurfaceContext(true, groundNormal, 0f);
+        _surfaceContextSource.Transition = transition;
     }
 
-    protected void SetUngroundedSurface()
+    protected void SetUngroundedSurface(RunSurfaceTransition transition = RunSurfaceTransition.None)
     {
         _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        _surfaceContextSource.Transition = transition;
     }
 
     protected void AssertVectorEqual(Vector3 actual, Vector3 expected)
@@ -482,9 +487,13 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
         }
     }
 
-    protected sealed class FakeRunSurfaceContextSource : IRunSurfaceContextSource
+    protected sealed class FakeRunSurfaceFrameSource : IRunSurfaceFrameSource
     {
         public RunSurfaceContext Current { get; set; }
+        public RunSurfaceTransition Transition { get; set; }
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current =>
+            new(default, Current, Transition, false, false, default);
     }
 
     protected sealed class FakeRunProgressService : IRunProgressService

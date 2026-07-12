@@ -29,7 +29,8 @@ public sealed class RunBodyMovementConfigTests
         var speedConfig = (IRunBodySpeedConfig)_configObject;
         var validityConfig = (IRunBodyMovementValidityConfig)_configObject;
         var landingConfig = (IRunLaunchLandingStabilizationConfig)_configObject;
-        var frameConfig = (IRunSteeringFrameConfig)_configObject;
+        var stabilityConfig = (IRunSurfaceStabilityAuthoringConfig)_configObject;
+        var frameConfig = (IRunSteeringFrameAuthoringConfig)_configObject;
 
         Assert.That(speedConfig.DownhillAcceleration, Is.EqualTo(8f));
         Assert.That(speedConfig.SurfaceSlowdown, Is.EqualTo(0.5f));
@@ -50,10 +51,12 @@ public sealed class RunBodyMovementConfigTests
         Assert.That(_steeringConfig.MaximumTurnDegreesPerSecond, Is.EqualTo(120f));
         Assert.That(_steeringConfig.RunAirSteeringMaximumTurnDegreesPerSecond, Is.EqualTo(45f));
         Assert.That(_steeringConfig.MinimumSteerSpeed, Is.EqualTo(0.25f));
-        Assert.That(frameConfig.RunSteeringFrameNormalSlewDegreesPerSecond, Is.EqualTo(180f));
-        Assert.That(frameConfig.RunSteeringFrameSnapDegrees, Is.EqualTo(60f));
-        Assert.That(frameConfig.RunSteeringFrameUngroundedGraceSeconds, Is.EqualTo(0.08f));
-        Assert.That(frameConfig.RunSteeringFrameSuspectNormalConfirmationSeconds, Is.EqualTo(0.04f));
+        Assert.That(stabilityConfig.SupportLossConfirmationSeconds, Is.EqualTo(0.08f));
+        Assert.That(stabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(60f));
+        Assert.That(stabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(0.04f));
+        Assert.That(stabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(1f));
+        Assert.That(frameConfig.NormalSlewDegreesPerSecond, Is.EqualTo(180f));
+        Assert.That(frameConfig.AirborneUpRetentionSeconds, Is.EqualTo(0.12f));
     }
 
     [TestCase(1f)]

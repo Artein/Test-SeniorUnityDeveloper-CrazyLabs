@@ -1,4 +1,5 @@
 using System;
+using Game.Gameplay;
 using Game.Gameplay.Diagnostics;
 using NUnit.Framework;
 
@@ -61,7 +62,7 @@ public sealed class RunDiagnosticsOverlayBufferTests
             motionStepMetersPerSecond: speed + 1f,
             visualTargetStepMetersPerSecond: speed + 2f,
             visualTargetStepMeters: speed + 3f,
-            rawGroundNormalDeltaDegrees: speed + 3f,
+            observedGroundNormalDeltaDegrees: speed + 3f,
             steeringUpDeltaDegrees: speed + 4f,
             visualLagCentimeters: speed + 5f,
             cameraStepMetersPerSecond: speed + 6f,
@@ -71,7 +72,7 @@ public sealed class RunDiagnosticsOverlayBufferTests
             cameraRotationDeltaDegrees: speed + 9f,
             estimatedVisualSnapReason: RunDiagnosticsOverlaySnapReason.None,
             fixedStepsThisFrame: 1,
-            isGrounded: true,
+            surfaceFrame: default,
             speedDiagnostics: default);
     }
 }

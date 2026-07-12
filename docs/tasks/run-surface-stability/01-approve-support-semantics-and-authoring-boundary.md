@@ -10,16 +10,16 @@ Record the product and architecture decisions needed before implementation: whic
 
 ## Acceptance criteria
 
-- [ ] Airtime is explicitly assigned observed support, stable support, or a documented combination, including the expected result during a one-tick observed miss.
-- [ ] Character presentation is explicitly assigned observed support, stable support, or a documented combination, including the expected visual response at seams and landing.
-- [ ] The compatibility surface-context contract is defined as stable support for the migration window.
-- [ ] Probe geometry/filtering ownership and temporal stability ownership are separately named.
-- [ ] The initial authoring boundary is approved: retain existing serialized owners or approve a migration with an explicit serialization plan.
-- [ ] The dedicated `RunSurfaceTuning` asset is either approved now or explicitly deferred; the default is deferred.
-- [ ] Runtime state is prohibited from shared authoring assets.
-- [ ] Earlier overlapping run-surface planning is marked superseded, retained as historical context, or reconciled by an explicit precedence statement.
-- [ ] The decision records observed support and stable support using the terminology from the parent PRD.
-- [ ] A human owner records approval before dependent implementation begins.
+- [x] Airtime is explicitly assigned observed support, stable support, or a documented combination, including the expected result during a one-tick observed miss.
+- [x] Character presentation is explicitly assigned observed support, stable support, or a documented combination, including the expected visual response at seams and landing.
+- [x] The compatibility surface-context contract is defined as stable support for the migration window.
+- [x] Probe geometry/filtering ownership and temporal stability ownership are separately named.
+- [x] The initial authoring boundary is approved: retain existing serialized owners or approve a migration with an explicit serialization plan.
+- [x] The dedicated `RunSurfaceTuning` asset is either approved now or explicitly deferred; the default is deferred.
+- [x] Runtime state is prohibited from shared authoring assets.
+- [x] Earlier overlapping run-surface planning is marked superseded, retained as historical context, or reconciled by an explicit precedence statement.
+- [x] The decision records observed support and stable support using the terminology from the parent PRD.
+- [x] A human owner records approval before dependent implementation begins.
 
 ## Verification
 

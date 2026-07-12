@@ -7,15 +7,18 @@ namespace Game.Gameplay
     {
         public Vector3 CurrentVelocity { get; }
         public RunSurfaceContext SurfaceContext { get; }
+        public RunSurfaceTransition SurfaceTransition { get; }
         public float FixedDeltaTime { get; }
 
         public RunLaunchLandingStabilizationContext(
             Vector3 currentVelocity,
             RunSurfaceContext surfaceContext,
+            RunSurfaceTransition surfaceTransition,
             float fixedDeltaTime)
         {
             CurrentVelocity = currentVelocity;
             SurfaceContext = surfaceContext;
+            SurfaceTransition = surfaceTransition;
             FixedDeltaTime = fixedDeltaTime;
         }
     }
@@ -33,7 +36,6 @@ namespace Game.Gameplay
 
         private bool _isArmed;
         private bool _isActive;
-        private bool _hasObservedPostLaunchUngroundedSurface;
         private float _elapsedSeconds;
 
         public RunLaunchLandingStabilizer(IRunLaunchLandingStabilizationConfig config)
@@ -45,7 +47,6 @@ namespace Game.Gameplay
         {
             _isArmed = true;
             _isActive = false;
-            _hasObservedPostLaunchUngroundedSurface = false;
             _elapsedSeconds = 0f;
         }
 
@@ -53,7 +54,6 @@ namespace Game.Gameplay
         {
             _isArmed = false;
             _isActive = false;
-            _hasObservedPostLaunchUngroundedSurface = false;
             _elapsedSeconds = 0f;
         }
 
@@ -62,17 +62,17 @@ namespace Game.Gameplay
             if (!_isArmed && !_isActive)
                 return context.CurrentVelocity;
 
+            if (context.SurfaceTransition == RunSurfaceTransition.HardReset)
+            {
+                Reset();
+                return context.CurrentVelocity;
+            }
+
             var startedThisTick = false;
 
             if (_isArmed)
             {
-                if (!HasValidGroundedSurface(context.SurfaceContext))
-                {
-                    _hasObservedPostLaunchUngroundedSurface = true;
-                    return context.CurrentVelocity;
-                }
-
-                if (!_hasObservedPostLaunchUngroundedSurface)
+                if (context.SurfaceTransition != RunSurfaceTransition.SupportAcquired)
                     return context.CurrentVelocity;
 
                 _isArmed = false;

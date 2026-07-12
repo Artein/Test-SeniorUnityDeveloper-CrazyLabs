@@ -15,7 +15,7 @@ namespace Game.Gameplay
     public sealed class RunAirTimeTracker : IInitializable, IFixedTickable, IDisposable, IRunAirTimeSource
     {
         private readonly IGameplayStateService _gameplayStateService;
-        private readonly IRunSurfaceContextSource _surfaceContextSource;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly ITime _clock;
         private readonly GameplayStateId _runPreparationStateId;
         private readonly GameplayStateId _runningStateId;
@@ -27,7 +27,7 @@ namespace Game.Gameplay
 
         public RunAirTimeTracker(
             IGameplayStateService gameplayStateService,
-            IRunSurfaceContextSource surfaceContextSource,
+            IRunSurfaceFrameSource surfaceFrameSource,
             ITime clock,
             [Key(InjectKey.GameplayStateId.RunPreparation)]
             GameplayStateId runPreparationStateId,
@@ -35,7 +35,7 @@ namespace Game.Gameplay
             GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
-            _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
+            _surfaceFrameSource = surfaceFrameSource ?? throw new ArgumentNullException(nameof(surfaceFrameSource));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
 
             _runPreparationStateId = runPreparationStateId != null
@@ -61,7 +61,13 @@ namespace Game.Gameplay
 
         void IFixedTickable.FixedTick()
         {
-            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId) || _surfaceContextSource.Current.IsGrounded)
+            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
+                return;
+
+            var surfaceFrame = _surfaceFrameSource.Current;
+
+            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
+                || surfaceFrame.StableSupport.IsGrounded)
                 return;
 
             CurrentRunAirTimeSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);

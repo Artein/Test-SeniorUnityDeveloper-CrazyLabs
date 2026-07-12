@@ -3,10 +3,9 @@ using Game.Gameplay;
 using Game.Gameplay.Tests.Common;
 using NUnit.Framework;
 using UnityEngine;
-using VContainer.Unity;
 
 // ReSharper disable once CheckNamespace
-public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
+public sealed class PhysicsRunSupportProbeTests : BaseGameplayTestAssetsFixture
 {
     private static readonly Vector3 TestOrigin = new(1000f, 0f, 1000f);
 
@@ -43,7 +42,7 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         CreateSurface(0.05f, Quaternion.identity);
         Physics.SyncTransforms();
 
-        ((IFixedTickable)source).FixedTick();
+        source.SampleForTests();
 
         Assert.That(source.Current.IsGrounded, Is.True);
         Assert.That(source.Current.GroundNormal, Is.EqualTo(Vector3.up));
@@ -74,39 +73,6 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
 
         Assert.That(source.Current.IsGrounded, Is.True);
         Assert.That(source.Current.GroundNormal, Is.EqualTo(Vector3.up));
-    }
-
-    [Test]
-    public void given_GroundedSampleMissesOnce_when_Sampled_then_ContextStaysGrounded()
-    {
-        var source = CreateSource(1.1f, 0.08f);
-        var surface = CreateSurface(0.05f, Quaternion.identity);
-        Physics.SyncTransforms();
-        source.SampleForTests();
-        Assert.That(source.Current.IsGrounded, Is.True);
-
-        surface.transform.position += Vector3.down * 10f;
-        Physics.SyncTransforms();
-        source.SampleForTests();
-
-        Assert.That(source.Current.IsGrounded, Is.True);
-    }
-
-    [Test]
-    public void given_GroundedSampleMissesTwice_when_Sampled_then_ContextBecomesUngrounded()
-    {
-        var source = CreateSource(1.1f, 0.08f);
-        var surface = CreateSurface(0.05f, Quaternion.identity);
-        Physics.SyncTransforms();
-        source.SampleForTests();
-        Assert.That(source.Current.IsGrounded, Is.True);
-
-        surface.transform.position += Vector3.down * 10f;
-        Physics.SyncTransforms();
-        source.SampleForTests();
-        source.SampleForTests();
-
-        Assert.That(source.Current.IsGrounded, Is.False);
     }
 
     [Test]
@@ -161,50 +127,6 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         Assert.That(source.Current.IsGrounded, Is.True);
         Assert.That(Vector3.Dot(source.Current.GroundNormal, Vector3.up), Is.GreaterThan(0.98f));
         Assert.That(source.Current.ForwardDownhillDegrees, Is.EqualTo(0f).Within(0.75f));
-    }
-
-    [Test]
-    public void given_StableSupportAndTransientLargeFrameUpChange_when_Sampled_then_ContextKeepsStableSupportNormal()
-    {
-        var bankRotation = Quaternion.AngleAxis(55f, Vector3.forward);
-        var bankNormal = bankRotation * Vector3.up;
-        var source = CreateSphereSource(new Vector3(0f, 0.35f, 0f), 0.4f, 0.2f, out var frameSource);
-        CreateSurface(0.05f, Quaternion.identity);
-        CreateSurface(0.05f, bankRotation);
-        Physics.SyncTransforms();
-
-        frameSource.UpDirection = Vector3.up;
-        source.SampleForTests();
-        Assert.That(source.Current.IsGrounded, Is.True);
-        Assert.That(Vector3.Angle(source.Current.GroundNormal, Vector3.up), Is.LessThanOrEqualTo(0.1f));
-
-        frameSource.UpDirection = bankNormal;
-        source.SampleForTests();
-
-        Assert.That(source.Current.IsGrounded, Is.True);
-        Assert.That(Vector3.Angle(source.Current.GroundNormal, Vector3.up), Is.LessThanOrEqualTo(0.1f));
-    }
-
-    [Test]
-    public void given_StableSupportAndPersistentLargeFrameUpChange_when_Sampled_then_ContextAcceptsNewSupportNormal()
-    {
-        var bankRotation = Quaternion.AngleAxis(55f, Vector3.forward);
-        var bankNormal = bankRotation * Vector3.up;
-        var source = CreateSphereSource(new Vector3(0f, 0.35f, 0f), 0.4f, 0.2f, out var frameSource);
-        CreateSurface(0.05f, Quaternion.identity);
-        CreateSurface(0.05f, bankRotation);
-        Physics.SyncTransforms();
-
-        frameSource.UpDirection = Vector3.up;
-        source.SampleForTests();
-        Assert.That(source.Current.IsGrounded, Is.True);
-
-        frameSource.UpDirection = bankNormal;
-        source.SampleForTests();
-        source.SampleForTests();
-
-        Assert.That(source.Current.IsGrounded, Is.True);
-        Assert.That(Vector3.Angle(source.Current.GroundNormal, bankNormal), Is.LessThanOrEqualTo(0.1f));
     }
 
     [Test]
@@ -313,51 +235,57 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
     [Test]
     public void given_MissingSupportCollider_when_Constructed_then_ThrowsArgumentNullException()
     {
-        var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
-
         Assert.That(
-            () => new PhysicsRunSurfaceContextSource(
+            () => new PhysicsRunSupportProbe(
                 null,
-                runProgressFrameSource,
                 new RunSupportColliderProbeFactory(),
-                0.08f,
-                TestAssets.RunSurfaceLayerMask),
+                CreateProbeConfig(0.08f),
+                new RunSurfaceSlopeCalculator()),
             Throws.ArgumentNullException.With.Property("ParamName").EqualTo("supportCollider"));
-    }
-
-    [Test]
-    public void given_MissingRunProgressFrameSource_when_Constructed_then_ThrowsArgumentNullException()
-    {
-        var supportCollider = CreateSupportCollider(CreateGameObject("Run Surface Context Source").transform, 1.1f);
-
-        Assert.That(
-            () => new PhysicsRunSurfaceContextSource(
-                supportCollider,
-                null,
-                new RunSupportColliderProbeFactory(),
-                0.08f,
-                TestAssets.RunSurfaceLayerMask),
-            Throws.ArgumentNullException.With.Property("ParamName").EqualTo("runProgressFrameSource"));
     }
 
     [Test]
     public void given_MissingRunSupportColliderProbeFactory_when_Constructed_then_ThrowsArgumentNullException()
     {
         var sourceObject = CreateGameObject("Run Surface Context Source");
-        var runProgressFrameSource = sourceObject.AddComponent<RunProgressFrameSource>();
         var supportCollider = CreateSupportCollider(sourceObject.transform, 1.1f);
 
         Assert.That(
-            () => new PhysicsRunSurfaceContextSource(
+            () => new PhysicsRunSupportProbe(
                 supportCollider,
-                runProgressFrameSource,
                 null,
-                0.08f,
-                TestAssets.RunSurfaceLayerMask),
+                CreateProbeConfig(0.08f),
+                new RunSurfaceSlopeCalculator()),
             Throws.ArgumentNullException.With.Property("ParamName").EqualTo("runSupportColliderProbeFactory"));
     }
 
-    private PhysicsRunSurfaceContextSource CreateSource(float supportCenterY, float supportProbeDistance)
+    [Test]
+    public void given_ValidFrameAndSurface_when_Observed_then_ProbeReturnsSameTickSupportedObservation()
+    {
+        var sourceObject = CreateGameObject("Run Support Probe");
+        sourceObject.transform.position = TestOrigin;
+        var supportCollider = CreateSupportCollider(sourceObject.transform, 1.1f);
+        CreateSurface(0.05f, Quaternion.identity);
+        Physics.SyncTransforms();
+
+        var probe = new PhysicsRunSupportProbe(
+            supportCollider,
+            new RunSupportColliderProbeFactory(),
+            new RunSurfaceProbeConfig(0.08f, 0.02f, TestAssets.RunSurfaceLayerMask, 0.17f, 0.6f, 8f),
+            new RunSurfaceSlopeCalculator());
+
+        Assert.That(
+            RunProgressFrameSnapshot.TryCreate(TestOrigin, Vector3.forward, Vector3.up, out var frame, out _),
+            Is.True);
+
+        var observation = probe.Observe(frame, false, Vector3.up);
+
+        Assert.That(observation.State, Is.EqualTo(RunSupportObservationState.Supported));
+        Assert.That(observation.SurfaceContext.IsGrounded, Is.True);
+        Assert.That(observation.SurfaceContext.GroundNormal, Is.EqualTo(Vector3.up));
+    }
+
+    private ProbeHarness CreateSource(float supportCenterY, float supportProbeDistance)
     {
         var sourceObject = CreateGameObject("Run Surface Context Source");
         sourceObject.transform.position = TestOrigin;
@@ -365,15 +293,16 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
 
         var supportCollider = CreateSupportCollider(sourceObject.transform, supportCenterY);
 
-        return new PhysicsRunSurfaceContextSource(
-            supportCollider,
-            runProgressFrameSource,
-            new RunSupportColliderProbeFactory(),
-            supportProbeDistance,
-            TestAssets.RunSurfaceLayerMask);
+        return new ProbeHarness(
+            new PhysicsRunSupportProbe(
+                supportCollider,
+                new RunSupportColliderProbeFactory(),
+                CreateProbeConfig(supportProbeDistance),
+                new RunSurfaceSlopeCalculator()),
+            runProgressFrameSource);
     }
 
-    private PhysicsRunSurfaceContextSource CreateSphereSource(
+    private ProbeHarness CreateSphereSource(
         Vector3 supportCenterOffset,
         float supportRadius,
         float supportProbeDistance,
@@ -390,12 +319,24 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         var supportCollider = supportObject.AddComponent<SphereCollider>();
         supportCollider.radius = supportRadius;
 
-        return new PhysicsRunSurfaceContextSource(
-            supportCollider,
-            frameSource,
-            new RunSupportColliderProbeFactory(),
+        return new ProbeHarness(
+            new PhysicsRunSupportProbe(
+                supportCollider,
+                new RunSupportColliderProbeFactory(),
+                CreateProbeConfig(supportProbeDistance),
+                new RunSurfaceSlopeCalculator()),
+            frameSource);
+    }
+
+    private RunSurfaceProbeConfig CreateProbeConfig(float supportProbeDistance)
+    {
+        return new RunSurfaceProbeConfig(
             supportProbeDistance,
-            TestAssets.RunSurfaceLayerMask);
+            0.02f,
+            TestAssets.RunSurfaceLayerMask,
+            0.17f,
+            0.6f,
+            8f);
     }
 
     private Collider CreateSupportCollider(Transform parent, float supportCenterY)
@@ -469,6 +410,38 @@ public sealed class RunSurfaceContextSourceTests : BaseGameplayTestAssetsFixture
         var gameObject = new GameObject(name);
         _createdObjects.Add(gameObject);
         return gameObject;
+    }
+
+    private sealed class ProbeHarness
+    {
+        private readonly PhysicsRunSupportProbe _probe;
+        private readonly IRunProgressFrameSource _progressFrameSource;
+
+        public RunSurfaceContext Current { get; private set; } = new(false, Vector3.up, 0f);
+
+        public ProbeHarness(
+            PhysicsRunSupportProbe probe,
+            IRunProgressFrameSource progressFrameSource)
+        {
+            _probe = probe;
+            _progressFrameSource = progressFrameSource;
+        }
+
+        public void SampleForTests()
+        {
+            if (!_progressFrameSource.TryCreateSnapshot(_probe.SampleOrigin, out var frame, out _))
+            {
+                Current = new RunSurfaceContext(false, Vector3.up, 0f);
+                return;
+            }
+
+            var observation = _probe.Observe(
+                frame,
+                Current.IsGrounded,
+                Current.HasValidGroundNormal ? Current.GroundNormal : Vector3.up);
+
+            Current = observation.SurfaceContext;
+        }
     }
 
     private sealed class FakeRunProgressFrameSource : IRunProgressFrameSource

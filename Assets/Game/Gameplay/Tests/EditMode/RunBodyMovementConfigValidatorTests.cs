@@ -35,7 +35,8 @@ public sealed class RunBodyMovementConfigValidatorTests
         Assert.That(_config, Is.InstanceOf<IRunBodyMovementValidityConfig>());
         Assert.That(_config, Is.InstanceOf<IRunLaunchLandingStabilizationConfig>());
         Assert.That(_config, Is.InstanceOf<IRunSteeringConfig>());
-        Assert.That(_config, Is.InstanceOf<IRunSteeringFrameConfig>());
+        Assert.That(_config, Is.InstanceOf<IRunSurfaceStabilityAuthoringConfig>());
+        Assert.That(_config, Is.InstanceOf<IRunSteeringFrameAuthoringConfig>());
     }
 
     [Test]

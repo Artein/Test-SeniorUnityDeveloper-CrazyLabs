@@ -21,8 +21,7 @@ namespace Game.Gameplay.Diagnostics
         private readonly RunDiagnosticsOverlayTextFormatter _textFormatter = new();
 
         private IRunMotionSource _motionSource;
-        private IRunSurfaceContextSource _surfaceContextSource;
-        private IRunSteeringFrameSource _steeringFrameSource;
+        private IRunSurfaceFrameSource _surfaceFrameSource;
         private ICharacterVisualTargetPoseSource _visualTargetPoseSource;
         private ICharacterVisualFollowView _visualFollowView;
         private ICharacterVisualFollowTuning _visualFollowTuning;
@@ -39,7 +38,7 @@ namespace Game.Gameplay.Diagnostics
         private Vector3 _previousMotionPosition;
         private Vector3 _previousVisualTargetPosition;
         private Vector3 _previousCameraPosition;
-        private Vector3 _previousRawGroundNormal;
+        private Vector3 _previousObservedGroundNormal;
         private Vector3 _previousSteeringUp;
         private Quaternion _previousVisualTargetRotation = Quaternion.identity;
         private Quaternion _previousVisualRotation = Quaternion.identity;
@@ -47,7 +46,7 @@ namespace Game.Gameplay.Diagnostics
         private bool _hasPreviousMotionPosition;
         private bool _hasPreviousVisualTargetPosition;
         private bool _hasPreviousCameraPosition;
-        private bool _hasPreviousRawGroundNormal;
+        private bool _hasPreviousObservedGroundNormal;
         private bool _hasPreviousSteeringUp;
         private bool _hasPreviousVisualTargetRotation;
         private bool _hasPreviousVisualRotation;
@@ -57,8 +56,7 @@ namespace Game.Gameplay.Diagnostics
         [Inject]
         private void Construct(
             IRunMotionSource motionSource,
-            IRunSurfaceContextSource surfaceContextSource,
-            IRunSteeringFrameSource steeringFrameSource,
+            IRunSurfaceFrameSource surfaceFrameSource,
             ICharacterVisualTargetPoseSource visualTargetPoseSource,
             ICharacterVisualFollowView visualFollowView,
             ICharacterVisualFollowTuning visualFollowTuning,
@@ -66,8 +64,7 @@ namespace Game.Gameplay.Diagnostics
             IRunBodySpeedDiagnosticsSource speedDiagnosticsSource)
         {
             _motionSource = motionSource;
-            _surfaceContextSource = surfaceContextSource;
-            _steeringFrameSource = steeringFrameSource;
+            _surfaceFrameSource = surfaceFrameSource;
             _visualTargetPoseSource = visualTargetPoseSource;
             _visualFollowView = visualFollowView;
             _visualFollowTuning = visualFollowTuning;
@@ -138,8 +135,7 @@ namespace Game.Gameplay.Diagnostics
 
         private bool HasDependencies =>
             _motionSource != null
-            && _surfaceContextSource != null
-            && _steeringFrameSource != null
+            && _surfaceFrameSource != null
             && _visualTargetPoseSource != null
             && _visualFollowView != null
             && _visualFollowTuning != null
@@ -156,12 +152,18 @@ namespace Game.Gameplay.Diagnostics
             var visualPose = _visualFollowView.CurrentVisualPose;
             var cameraPosition = _cameraAnchor.Position;
             var cameraRotation = _cameraAnchor.Rotation;
-            var surfaceContext = _surfaceContextSource.Current;
+            var surfaceFrame = _surfaceFrameSource.Current;
+            var observedSupport = surfaceFrame.ObservedSupport;
+            var observedSurfaceContext = observedSupport.SurfaceContext;
 
-            var rawGroundNormal = surfaceContext.IsGrounded && surfaceContext.HasValidGroundNormal
-                ? surfaceContext.GroundNormal
+            var observedGroundNormal = observedSupport.State == RunSupportObservationState.Supported
+                                       && observedSurfaceContext.HasValidGroundNormal
+                ? observedSurfaceContext.GroundNormal
                 : Vector3.up;
-            var steeringUp = _steeringFrameSource.GetUpDirection(rawGroundNormal);
+
+            var steeringUp = surfaceFrame.SteeringFrame.IsValid
+                ? surfaceFrame.SteeringFrame.UpDirection
+                : observedGroundNormal;
 
             var speed = motionVelocity.IsFinite() ? motionVelocity.magnitude : 0f;
 
@@ -185,7 +187,11 @@ namespace Game.Gameplay.Diagnostics
                 ref _hasPreviousCameraPosition,
                 deltaTime,
                 out _);
-            var rawNormalDelta = _math.CalculateDirectionDelta(rawGroundNormal, ref _previousRawGroundNormal, ref _hasPreviousRawGroundNormal);
+
+            var observedNormalDelta = _math.CalculateDirectionDelta(
+                observedGroundNormal,
+                ref _previousObservedGroundNormal,
+                ref _hasPreviousObservedGroundNormal);
             var steeringUpDelta = _math.CalculateDirectionDelta(steeringUp, ref _previousSteeringUp, ref _hasPreviousSteeringUp);
             var visualLag = _math.CalculateDistanceCentimeters(targetPose.Position, visualPose.Position);
             var targetToMotion = _math.CalculateDistanceCentimeters(targetPose.Position, motionPosition);
@@ -212,7 +218,7 @@ namespace Game.Gameplay.Diagnostics
                 motionStep,
                 visualTargetStep,
                 visualTargetStepMeters,
-                rawNormalDelta,
+                observedNormalDelta,
                 steeringUpDelta,
                 visualLag,
                 cameraStep,
@@ -222,7 +228,7 @@ namespace Game.Gameplay.Diagnostics
                 cameraRotationDelta,
                 estimatedSnapReason,
                 fixedStepsThisFrame,
-                surfaceContext.IsGrounded,
+                surfaceFrame,
                 _speedDiagnosticsSource.Current);
         }
 
@@ -292,11 +298,11 @@ namespace Game.Gameplay.Diagnostics
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 3f), contentWidth, rowHeight - 2f),
                 3,
-                "rawN d",
+                "obsN d",
                 "deg",
                 ResolveScale(_normalDeltaScaleDegrees, 25f),
                 new Color(1f, 0.88f, 0.16f, 0.95f),
-                latest.RawGroundNormalDeltaDegrees);
+                latest.ObservedGroundNormalDeltaDegrees);
 
             DrawMetricRow(
                 new Rect(contentX, chartTop + (rowHeight * 4f), contentWidth, rowHeight - 2f),

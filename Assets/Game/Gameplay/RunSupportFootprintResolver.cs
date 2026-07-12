@@ -6,13 +6,12 @@ namespace Game.Gameplay
     {
         private const int SampleCount = 5;
         private const int HitCapacity = 16;
-        private const float SampleOffsetScale = 0.6f;
-        private const float NormalClusterAngleDegrees = 8f;
         private const float ComparisonEpsilon = 0.0001f;
 
         private readonly IRunSupportColliderProbe _supportProbe;
         private readonly LayerMask _surfaceMask;
         private readonly RunSupportHitValidator _supportHitValidator;
+        private readonly float _sampleOffsetScale;
         private readonly float _normalClusterMinimumDot;
         private readonly RaycastHit[] _raycastHits = new RaycastHit[HitCapacity];
         private readonly Candidate[] _candidates = new Candidate[SampleCount];
@@ -21,12 +20,15 @@ namespace Game.Gameplay
         public RunSupportFootprintResolver(
             IRunSupportColliderProbe supportProbe,
             LayerMask surfaceMask,
-            RunSupportHitValidator supportHitValidator)
+            RunSupportHitValidator supportHitValidator,
+            float sampleOffsetScale = 0.6f,
+            float normalClusterAngleDegrees = 8f)
         {
             _supportProbe = supportProbe;
             _surfaceMask = surfaceMask;
             _supportHitValidator = supportHitValidator;
-            _normalClusterMinimumDot = Mathf.Cos(NormalClusterAngleDegrees * Mathf.Deg2Rad);
+            _sampleOffsetScale = sampleOffsetScale;
+            _normalClusterMinimumDot = Mathf.Cos(normalClusterAngleDegrees * Mathf.Deg2Rad);
         }
 
         public bool TryResolve(
@@ -43,10 +45,10 @@ namespace Game.Gameplay
                 return false;
 
             var rightOffset =
-                frame.RightDirection * (_supportProbe.GetProjectedFootprintExtent(frame.RightDirection) * SampleOffsetScale);
+                frame.RightDirection * (_supportProbe.GetProjectedFootprintExtent(frame.RightDirection) * _sampleOffsetScale);
 
             var forwardOffset =
-                frame.ForwardDirection * (_supportProbe.GetProjectedFootprintExtent(frame.ForwardDirection) * SampleOffsetScale);
+                frame.ForwardDirection * (_supportProbe.GetProjectedFootprintExtent(frame.ForwardDirection) * _sampleOffsetScale);
             var candidateCount = 0;
 
             TryAddCandidate(Vector3.zero, frame.UpDirection, distance, skinWidth, ref candidateCount);
@@ -215,7 +217,7 @@ namespace Game.Gameplay
             return false;
         }
 
-        private static bool HasMeaningfulDelta(float firstValue, float secondValue)
+        private bool HasMeaningfulDelta(float firstValue, float secondValue)
         {
             return Mathf.Abs(firstValue - secondValue) > ComparisonEpsilon;
         }

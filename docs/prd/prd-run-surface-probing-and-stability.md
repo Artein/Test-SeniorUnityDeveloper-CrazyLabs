@@ -322,12 +322,14 @@ Assumptions:
 - The pipeline remains allocation-free and runs once per fixed tick.
 - The finding remains architectural P2 until evidence supports P1.
 
-Unresolved questions:
+Resolved implementation decisions:
 
-- Should gameplay airtime use Stable Locomotion Support or literal Observed Support absence?
-- Should Character Presentation migrate to Observed Support immediately or stay on compatibility context initially?
-- Should authoring stay split or move to a dedicated RunSurfaceTuning asset later?
-- What final loss duration, discontinuity duration, coherence angle, and airborne-retention duration feel correct after duplicate filtering is removed?
-- Should every confirmed discontinuity snap steering, or may future transition types use a capped slew?
-- Which accepted fast-seam, trough, or airborne reproduction should become the canonical PlayMode fixture?
-- Should the older Run Steering Frame Stability PRD be amended, marked superseded, or retained as historical rationale?
+- Gameplay airtime uses Stable Locomotion Support transitions. A brief Observed Support miss awards no airtime; `HardReset` clears tracking without reward.
+- Character Presentation consumes Observed Support through its existing presentation tracker without changing locomotion support.
+- Initial authoring stays with the existing scene installer and `RunBodyMovementConfig`; a dedicated `RunSurfaceTuning` asset is deferred.
+- Existing serialized thresholds are preserved for the first migration. Candidate coherence and airborne retention use explicit defaults until human feel approval.
+- A confirmed discontinuity snaps steering exactly once; ordinary Stable Support changes use the configured slew.
+- The canonical PlayMode fixtures cover continuous ground, fast seams, troughs, brief gaps, sustained loss, jump, landing, and unavailable hard reset at 0.01-second and 0.02-second fixed steps.
+- The older Run Steering Frame Stability PRD is retained as historical rationale and marked superseded where it assumes a raw source and steering-local temporal policy.
+
+See [implementation decisions](../tasks/run-surface-stability/implementation-decisions.md), [baseline and verification](../tasks/run-surface-stability/baseline-and-verification.md), and the pending [feel review](../tasks/run-surface-stability/feel-review.md).
