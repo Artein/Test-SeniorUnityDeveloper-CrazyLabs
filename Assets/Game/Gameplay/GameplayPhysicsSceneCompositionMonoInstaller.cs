@@ -17,10 +17,10 @@ namespace Game.Gameplay
         [SerializeField, Range(min: -1f, max: 1f)]
         private float _minimumSupportNormalDot = 0.17f;
 
-        [SerializeField, Range(min: 0f, max: 1f)] 
+        [SerializeField, Range(min: 0f, max: 1f)]
         private float _footprintSampleOffsetScale = 0.6f;
 
-        [SerializeField, Range(min: 0f, max: 180f)] 
+        [SerializeField, Range(min: 0f, max: 180f)]
         private float _footprintNormalClusterAngleDegrees = 8f;
 
         private void Reset()
@@ -50,6 +50,7 @@ namespace Game.Gameplay
                 _footprintNormalClusterAngleDegrees);
 
             builder.RegisterInstance(probeConfig);
+            builder.Register<IRunSupportColliderProbeFactory, RunSupportColliderProbeFactory>(Lifetime.Singleton);
 
             builder.Register<IRunSupportProbe, PhysicsRunSupportProbe>(Lifetime.Singleton)
                 .WithParameter(_supportCollider);

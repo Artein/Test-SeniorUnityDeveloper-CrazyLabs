@@ -57,7 +57,7 @@ namespace Game.Gameplay
         [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
 
-        [Header(header: "Diagnostics")] [SerializeField]
+        [Header(header: "Diagnostics"), SerializeField] 
         private bool _runDiagnosticsOverlayEnabled;
 
         protected override void Configure(IContainerBuilder builder)
@@ -99,24 +99,11 @@ namespace Game.Gameplay
             builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
                 .As<ILaunchTargetPreLaunchReset, IRunEndPoseLockTarget>();
 
-            builder.RegisterInstance<IRunBodyMovementTarget>(_runBodyMovementTarget);
-            builder.RegisterInstance<IRunCameraSource, IRunMotionSource>(_runCameraSource);
-            builder.RegisterInstance<IRunProgressFrameSource>(_runProgressFrameSource);
-            builder.Register<IRunSupportColliderProbeFactory, RunSupportColliderProbeFactory>(Lifetime.Singleton);
+            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
             InstallSceneComposition(builder);
-            builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraLens>(new TransformRunCameraLens(_inputCamera.transform));
             builder.RegisterInstance<IRunCameraRig>(_runCameraRig);
-            builder.RegisterInstance<ICharacterPresentationView>(_characterPresentationView);
-            builder.RegisterInstance<ICharacterPresentationTuning>(_characterPresentationView);
-            builder.RegisterInstance<ICharacterVisualFollowView>(_characterPresentationView);
-            builder.RegisterInstance<ICharacterVisualFollowTuning>(_characterPresentationView);
-
-            builder.RegisterInstance<ICharacterVisualTargetPoseSource>(
-                new TransformCharacterVisualTargetPoseSource(_launchTarget.transform));
-
-            builder.RegisterInstance<IAnimatedContactSensorPoseSyncView>(_animatedContactSensorPoseSyncView);
             builder.RegisterInstance<IFinishPresentationView>(_finishPresentationView);
             builder.RegisterInstance<IPullHintView, IPullHintTuning>(_pullHintView);
             builder.RegisterInstance<IRunSteeringAffordanceView, IRunSteeringAffordanceTuning>(_runSteeringAffordanceView);
@@ -139,34 +126,6 @@ namespace Game.Gameplay
                 _runningStateId,
                 _runEndedStateId).Install(builder);
 
-            builder.RegisterInstance<IRunBodySpeedConfig>(_runBodyMovementConfig);
-            builder.RegisterInstance<IRunBodyMovementValidityConfig>(_runBodyMovementConfig);
-            builder.RegisterInstance<IRunLaunchLandingStabilizationConfig>(_runBodyMovementConfig);
-            builder.RegisterInstance<IRunSteeringConfig>(_runBodyMovementConfig);
-
-            var surfaceStabilityAuthoringConfig = (IRunSurfaceStabilityAuthoringConfig)_runBodyMovementConfig;
-            var supportAttachmentAuthoringConfig = (IRunSupportAttachmentAuthoringConfig)_runBodyMovementConfig;
-            var steeringFrameAuthoringConfig = (IRunSteeringFrameAuthoringConfig)_runBodyMovementConfig;
-
-            builder.RegisterInstance(
-                new RunSupportAttachmentConfig(
-                    supportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed,
-                    supportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters,
-                    supportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees,
-                    supportAttachmentAuthoringConfig.TransitionConfirmationSeconds));
-
-            builder.RegisterInstance(
-                new RunSurfaceStabilityConfig(
-                    surfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds,
-                    surfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees,
-                    surfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds,
-                    surfaceStabilityAuthoringConfig.CandidateCoherenceDegrees));
-
-            builder.RegisterInstance(
-                new RunSteeringFrameConfig(
-                    steeringFrameAuthoringConfig.NormalSlewDegreesPerSecond,
-                    steeringFrameAuthoringConfig.AirborneUpRetentionSeconds));
-
             builder.RegisterInstance<IRunCameraConfig>(_runCameraConfig);
             builder.RegisterInstance<IRunEndConfig>(_runEndConfig);
             builder.RegisterInstance<IRunRewardConfig>(_runEndConfig);
@@ -184,21 +143,6 @@ namespace Game.Gameplay
             builder.Register<IRunSteeringAffordanceLayout, RunSteeringAffordanceLayout>(Lifetime.Singleton);
             builder.Register<IRunSteeringPointerPressGuard, UnityEventSystemRunSteeringPointerPressGuard>(Lifetime.Singleton);
             builder.RegisterEntryPoint<RunSteeringInputController>().As<IRunSteeringInputSource>();
-            builder.Register<IRunBodySpeedEvaluator, DefaultRunBodySpeedEvaluator>(Lifetime.Singleton);
-            builder.Register<IRunBodySpeedDiagnosticsSource, IRunBodySpeedDiagnosticsSink, RunBodySpeedDiagnostics>(Lifetime.Singleton);
-            builder.Register<IRunSteeringEvaluator, DefaultRunSteeringEvaluator>(Lifetime.Singleton);
-            builder.Register<IRunLaunchLandingStabilizer, RunLaunchLandingStabilizer>(Lifetime.Singleton);
-            builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
-
-            builder.Register<IRunSurfaceSlopeCalculator, RunSurfaceSlopeCalculator>(Lifetime.Singleton);
-            builder.Register<RunSupportAttachmentPolicy>(Lifetime.Singleton);
-            builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
-            builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
-
-            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton).AsImplementedInterfaces();
-            builder.Register<ICharacterPresentationModeClassifier, CharacterPresentationModeClassifier>(Lifetime.Singleton);
-            builder.Register<ICharacterPresentationSupportTracker, CharacterPresentationSupportTracker>(Lifetime.Singleton);
-            builder.Register<ICharacterVisualPoseSmoother, CharacterVisualPoseSmoother>(Lifetime.Transient);
             builder.Register<RunSessionBestDistanceTracker>(Lifetime.Singleton);
             builder.Register<RunEndedResultStatsBuilder>(Lifetime.Singleton);
             builder.Register<RunRewardSourceCatalog>(Lifetime.Singleton);
@@ -231,7 +175,6 @@ namespace Game.Gameplay
             builder.Register<UpgradePurchaseService>(Lifetime.Singleton);
             builder.Register<IRunModifierSnapshotFactory, RunModifierSnapshotFactory>(Lifetime.Singleton);
             builder.Register<IRunGameplayStatResolver, RunGameplayStatResolver>(Lifetime.Singleton);
-            builder.Register<RunBodySpeedEnvelopeValidator>(Lifetime.Singleton);
             builder.Register<IPickupCurrencyGrantResolver, CoinPickupCurrencyGrantResolver>(Lifetime.Singleton);
             builder.Register<SlingshotLaunchImpulseCalculator>(Lifetime.Singleton);
             builder.Register<ILaunchImpulseApplier, SlingshotLaunchImpulseApplier>(Lifetime.Singleton);
@@ -241,16 +184,26 @@ namespace Game.Gameplay
 
             builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
             builder.RegisterEntryPoint<RunProgressService>();
-            builder.RegisterEntryPoint<RunBodyMovementController>();
+
+            new RunMovementInstaller(
+                _runBodyMovementConfig,
+                _runBodyMovementTarget,
+                _runCameraSource,
+                _runProgressFrameSource,
+                _contactNotifier).Install(builder);
+
             builder.RegisterEntryPoint<RunCameraController>();
-            builder.RegisterEntryPoint<CharacterVisualFollower>();
-            builder.RegisterEntryPoint<AnimatedContactSensorPoseSync>();
             builder.RegisterEntryPoint<RunAirTimeTracker>();
             builder.RegisterEntryPoint<RunEndFlow>();
             builder.RegisterEntryPoint<RunEndPoseLockController>();
             builder.RegisterEntryPoint<RunRewardCommitter>();
             builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
-            builder.RegisterEntryPoint<CharacterPresenter>();
+
+            new CharacterPresentationInstaller(
+                _characterPresentationView,
+                _launchTarget.transform,
+                _animatedContactSensorPoseSyncView).Install(builder);
+
             builder.RegisterEntryPoint<PickupCollectionController>();
             builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
