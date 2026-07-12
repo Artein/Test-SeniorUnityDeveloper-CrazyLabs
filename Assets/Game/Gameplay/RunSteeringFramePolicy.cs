@@ -82,6 +82,7 @@ namespace Game.Gameplay
             if (!_hasGroundedSupport
                 || !_current.IsValid
                 || stability.Transition == RunSurfaceTransition.SupportAcquired
+                || stability.Transition == RunSurfaceTransition.SupportReattached
                 || stability.Transition == RunSurfaceTransition.ConfirmedDiscontinuity)
             {
                 _current = new RunSteeringFrameSnapshot(true, stableUp);

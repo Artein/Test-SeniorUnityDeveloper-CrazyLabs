@@ -26,6 +26,7 @@ namespace Game.Gameplay.Diagnostics
         public bool HasStableGroundNormal { get; }
         public Vector3 StableGroundNormal { get; }
         public RunSurfaceTransition SurfaceTransition { get; }
+        public RunSupportAttachmentTransition AttachmentTransition { get; }
         public bool IsMissingSupportHeld { get; }
         public bool IsConfirmingDiscontinuity { get; }
         public bool IsSteeringFrameValid { get; }
@@ -81,6 +82,7 @@ namespace Game.Gameplay.Diagnostics
             HasStableGroundNormal = IsStableGrounded && surfaceFrame.StableSupport.HasValidGroundNormal;
             StableGroundNormal = HasStableGroundNormal ? surfaceFrame.StableSupport.GroundNormal : Vector3.up;
             SurfaceTransition = surfaceFrame.Transition;
+            AttachmentTransition = surfaceFrame.AttachmentTransition;
             IsMissingSupportHeld = surfaceFrame.IsMissingSupportHeld;
             IsConfirmingDiscontinuity = surfaceFrame.IsConfirmingDiscontinuity;
             IsSteeringFrameValid = surfaceFrame.SteeringFrame.IsValid;

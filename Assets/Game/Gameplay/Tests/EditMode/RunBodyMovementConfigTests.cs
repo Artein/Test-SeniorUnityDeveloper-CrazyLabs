@@ -30,6 +30,7 @@ public sealed class RunBodyMovementConfigTests
         var validityConfig = (IRunBodyMovementValidityConfig)_configObject;
         var landingConfig = (IRunLaunchLandingStabilizationConfig)_configObject;
         var stabilityConfig = (IRunSurfaceStabilityAuthoringConfig)_configObject;
+        var attachmentConfig = (IRunSupportAttachmentAuthoringConfig)_configObject;
         var frameConfig = (IRunSteeringFrameAuthoringConfig)_configObject;
 
         Assert.That(speedConfig.DownhillAcceleration, Is.EqualTo(8f));
@@ -55,6 +56,10 @@ public sealed class RunBodyMovementConfigTests
         Assert.That(stabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(60f));
         Assert.That(stabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(0.04f));
         Assert.That(stabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(1f));
+        Assert.That(attachmentConfig.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(0.35f));
+        Assert.That(attachmentConfig.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(0.08f));
+        Assert.That(attachmentConfig.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(30f));
+        Assert.That(attachmentConfig.TransitionConfirmationSeconds, Is.EqualTo(0.04f));
         Assert.That(frameConfig.NormalSlewDegreesPerSecond, Is.EqualTo(180f));
         Assert.That(frameConfig.AirborneUpRetentionSeconds, Is.EqualTo(0.12f));
     }

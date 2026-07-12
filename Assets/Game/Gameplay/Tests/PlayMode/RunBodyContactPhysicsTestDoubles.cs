@@ -192,4 +192,19 @@ namespace Game.Gameplay.Tests.PlayMode
             _inner.ApplyTargetState(targetState);
         }
     }
+
+    internal sealed class TestRunMotionSource : IRunMotionSource
+    {
+        private readonly Transform _transform;
+        private readonly Rigidbody _rigidbody;
+
+        public Vector3 Position => _transform.position;
+        public Vector3 LinearVelocity => _rigidbody != null ? _rigidbody.linearVelocity : Vector3.zero;
+
+        public TestRunMotionSource(Transform transform, Rigidbody rigidbody = null)
+        {
+            _transform = transform ?? throw new ArgumentNullException(nameof(transform));
+            _rigidbody = rigidbody;
+        }
+    }
 }

@@ -65,6 +65,36 @@ namespace Game.Gameplay.Tests.EditMode
             Assert.That(() => CreateProbeConfig(footprintNormalClusterAngleDegrees: value), Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
+        [Test]
+        public void AttachmentConfig_ValidValues_PreservesEveryAuthoredValue()
+        {
+            var config = new RunSupportAttachmentConfig(0.35f, 0.08f, 30f, 0.04f);
+
+            Assert.That(config.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(0.35f));
+            Assert.That(config.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(0.08f));
+            Assert.That(config.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(30f));
+            Assert.That(config.TransitionConfirmationSeconds, Is.EqualTo(0.04f));
+        }
+
+        [TestCase(float.NaN, 0.08f, 30f, 0.04f)]
+        [TestCase(0.35f, -0.01f, 30f, 0.04f)]
+        [TestCase(0.35f, 0.08f, 180.01f, 0.04f)]
+        [TestCase(0.35f, 0.08f, 30f, -0.01f)]
+        public void AttachmentConfig_InvalidValue_Throws(
+            float maximumLiftSpeed,
+            float separationMeters,
+            float minimumNormalChangeDegrees,
+            float confirmationSeconds)
+        {
+            Assert.That(
+                () => new RunSupportAttachmentConfig(
+                    maximumLiftSpeed,
+                    separationMeters,
+                    minimumNormalChangeDegrees,
+                    confirmationSeconds),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
         private static RunSurfaceProbeConfig CreateProbeConfig(
             float distance = 0.08f,
             float skinWidth = 0.02f,

@@ -12,6 +12,7 @@ namespace Game.Gameplay.Diagnostics
                    + $"stable:{(sample.IsStableGrounded ? "grounded" : "unsupported")} "
                    + $"normal:{FormatDirection(sample.HasStableGroundNormal, sample.StableGroundNormal)} "
                    + $"transition:{sample.SurfaceTransition} "
+                   + $"attachment:{sample.AttachmentTransition} "
                    + $"held:{FormatBoolean(sample.IsMissingSupportHeld)} "
                    + $"confirming:{FormatBoolean(sample.IsConfirmingDiscontinuity)} "
                    + $"steering:{(sample.IsSteeringFrameValid ? "valid" : "unavailable")} "

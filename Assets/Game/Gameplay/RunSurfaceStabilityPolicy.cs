@@ -26,7 +26,23 @@ namespace Game.Gameplay
             RunSupportObservation observation,
             float fixedDeltaTime)
         {
+            return Evaluate(observation, RunSupportAttachmentTransition.None, fixedDeltaTime);
+        }
+
+        public RunSurfaceStabilityResult Evaluate(
+            RunSupportObservation observation,
+            RunSupportAttachmentTransition attachmentTransition,
+            float fixedDeltaTime)
+        {
             var safeFixedDeltaTime = float.IsFinite(fixedDeltaTime) ? Mathf.Max(0f, fixedDeltaTime) : 0f;
+
+            if (attachmentTransition == RunSupportAttachmentTransition.Reattached
+                && observation.State == RunSupportObservationState.Supported)
+            {
+                _missingElapsedSeconds = 0f;
+                AcceptObservedSupport(observation);
+                return CreateResult(RunSurfaceTransition.SupportReattached, false, false);
+            }
 
             switch (observation.State)
             {

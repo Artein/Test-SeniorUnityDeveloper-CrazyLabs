@@ -413,6 +413,7 @@ public sealed class GameplayLifetimeScopeTests
         var landingStabilizationConfig = container.Resolve<IRunLaunchLandingStabilizationConfig>();
         var steeringConfig = container.Resolve<IRunSteeringConfig>();
         var surfaceStabilityConfig = container.Resolve<RunSurfaceStabilityConfig>();
+        var supportAttachmentConfig = container.Resolve<RunSupportAttachmentConfig>();
         var steeringFrameConfig = container.Resolve<RunSteeringFrameConfig>();
         var steeringInputMetricsResolver = container.Resolve<IRunSteeringInputMetricsResolver>();
         var steeringInputSource = container.Resolve<IRunSteeringInputSource>();
@@ -549,6 +550,10 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(surfaceStabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(60f));
         Assert.That(surfaceStabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(0.04f));
         Assert.That(surfaceStabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(1f));
+        Assert.That(supportAttachmentConfig.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(0.35f));
+        Assert.That(supportAttachmentConfig.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(0.08f));
+        Assert.That(supportAttachmentConfig.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(30f));
+        Assert.That(supportAttachmentConfig.TransitionConfirmationSeconds, Is.EqualTo(0.04f));
         Assert.That(steeringFrameConfig.NormalSlewDegreesPerSecond, Is.EqualTo(180f));
         Assert.That(steeringFrameConfig.AirborneUpRetentionSeconds, Is.EqualTo(0.12f));
         Assert.That(steeringInputMetricsResolver, Is.TypeOf<DefaultRunSteeringInputMetricsResolver>());

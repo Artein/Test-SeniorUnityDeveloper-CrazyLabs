@@ -39,6 +39,8 @@ namespace Game.Gameplay
     {
         private readonly IRunProgressFrameSource _progressFrameSource;
         private readonly IRunSupportProbe _supportProbe;
+        private readonly IRunMotionSource _motionSource;
+        private readonly RunSupportAttachmentPolicy _attachmentPolicy;
         private readonly RunSurfaceStabilityPolicy _stabilityPolicy;
         private readonly RunSteeringFramePolicy _steeringPolicy;
         private readonly ITime _time;
@@ -48,12 +50,16 @@ namespace Game.Gameplay
         public RunSurfaceFramePipeline(
             IRunProgressFrameSource progressFrameSource,
             IRunSupportProbe supportProbe,
+            IRunMotionSource motionSource,
+            RunSupportAttachmentPolicy attachmentPolicy,
             RunSurfaceStabilityPolicy stabilityPolicy,
             RunSteeringFramePolicy steeringPolicy,
             ITime time)
         {
             _progressFrameSource = progressFrameSource ?? throw new ArgumentNullException(nameof(progressFrameSource));
             _supportProbe = supportProbe ?? throw new ArgumentNullException(nameof(supportProbe));
+            _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
+            _attachmentPolicy = attachmentPolicy ?? throw new ArgumentNullException(nameof(attachmentPolicy));
             _stabilityPolicy = stabilityPolicy ?? throw new ArgumentNullException(nameof(stabilityPolicy));
             _steeringPolicy = steeringPolicy ?? throw new ArgumentNullException(nameof(steeringPolicy));
             _time = time ?? throw new ArgumentNullException(nameof(time));
@@ -66,11 +72,13 @@ namespace Game.Gameplay
 
         void IRunSteeringFrameResetter.Reset(Vector3 launchUpDirection)
         {
+            _attachmentPolicy.Reset();
             _steeringPolicy.Reset(launchUpDirection);
         }
 
         void IRunSteeringFrameResetter.Clear()
         {
+            _attachmentPolicy.Reset();
             _steeringPolicy.Clear();
         }
 
@@ -104,7 +112,13 @@ namespace Game.Gameplay
             }
 
             var fixedDeltaTime = _time.FixedDeltaTime;
-            var stability = _stabilityPolicy.Evaluate(observation, fixedDeltaTime);
+
+            var attachment = _attachmentPolicy.Evaluate(
+                observation,
+                _motionSource.Position,
+                _motionSource.LinearVelocity,
+                fixedDeltaTime);
+            var stability = _stabilityPolicy.Evaluate(observation, attachment.Transition, fixedDeltaTime);
             var steeringFrame = _steeringPolicy.Evaluate(stability, fixedDeltaTime);
 
             var next = new RunSurfaceFrameSnapshot(
@@ -113,7 +127,8 @@ namespace Game.Gameplay
                 stability.Transition,
                 stability.IsMissingSupportHeld,
                 stability.IsConfirmingDiscontinuity,
-                steeringFrame);
+                steeringFrame,
+                attachment.Transition);
 
             Current = next;
         }

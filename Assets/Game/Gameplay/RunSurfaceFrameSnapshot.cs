@@ -18,7 +18,15 @@ namespace Game.Gameplay
         SupportAcquired = 2,
         SupportLost = 3,
         ConfirmedDiscontinuity = 4,
-        HardReset = 5
+        HardReset = 5,
+        SupportReattached = 6
+    }
+
+    public enum RunSupportAttachmentTransition
+    {
+        None = 0,
+        Detached = 1,
+        Reattached = 2
     }
 
     public readonly struct RunSupportObservation
@@ -79,6 +87,7 @@ namespace Game.Gameplay
         public bool IsMissingSupportHeld { get; }
         public bool IsConfirmingDiscontinuity { get; }
         public RunSteeringFrameSnapshot SteeringFrame { get; }
+        public RunSupportAttachmentTransition AttachmentTransition { get; }
 
         public RunSurfaceFrameSnapshot(
             RunSupportObservation observedSupport,
@@ -86,7 +95,8 @@ namespace Game.Gameplay
             RunSurfaceTransition transition,
             bool isMissingSupportHeld,
             bool isConfirmingDiscontinuity,
-            RunSteeringFrameSnapshot steeringFrame)
+            RunSteeringFrameSnapshot steeringFrame,
+            RunSupportAttachmentTransition attachmentTransition = RunSupportAttachmentTransition.None)
         {
             ObservedSupport = observedSupport;
             StableSupport = stableSupport;
@@ -94,6 +104,7 @@ namespace Game.Gameplay
             IsMissingSupportHeld = isMissingSupportHeld;
             IsConfirmingDiscontinuity = isConfirmingDiscontinuity;
             SteeringFrame = steeringFrame;
+            AttachmentTransition = attachmentTransition;
         }
     }
 

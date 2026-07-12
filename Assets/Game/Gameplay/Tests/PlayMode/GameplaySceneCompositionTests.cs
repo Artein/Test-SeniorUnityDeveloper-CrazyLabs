@@ -136,6 +136,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         var runLaunchLandingStabilizationConfig = lifetimeScope.Container.Resolve<IRunLaunchLandingStabilizationConfig>();
         var runSteeringConfig = lifetimeScope.Container.Resolve<IRunSteeringConfig>();
         var runSurfaceStabilityConfig = lifetimeScope.Container.Resolve<RunSurfaceStabilityConfig>();
+        var runSupportAttachmentConfig = lifetimeScope.Container.Resolve<RunSupportAttachmentConfig>();
         var runSteeringFrameConfig = lifetimeScope.Container.Resolve<RunSteeringFrameConfig>();
         var resolvedRunCameraSource = lifetimeScope.Container.Resolve<IRunCameraSource>();
         var resolvedRunMotionSource = lifetimeScope.Container.Resolve<IRunMotionSource>();
@@ -392,6 +393,10 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(runSurfaceStabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(60f).Within(0.0001f));
         Assert.That(runSurfaceStabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(0.6f).Within(0.0001f));
         Assert.That(runSurfaceStabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(runSupportAttachmentConfig.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(0.35f).Within(0.0001f));
+        Assert.That(runSupportAttachmentConfig.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(0.08f).Within(0.0001f));
+        Assert.That(runSupportAttachmentConfig.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(30f).Within(0.0001f));
+        Assert.That(runSupportAttachmentConfig.TransitionConfirmationSeconds, Is.EqualTo(0.04f).Within(0.0001f));
         Assert.That(runCameraConfig, Is.SameAs(assignedRunCameraConfigs[0]));
         Assert.That(runBodySpeedConfig.DownhillAcceleration, Is.EqualTo(8f).Within(0.0001f));
         Assert.That(runBodySpeedConfig.SurfaceSlowdown, Is.EqualTo(0.5f).Within(0.0001f));

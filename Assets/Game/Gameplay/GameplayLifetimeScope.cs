@@ -139,7 +139,14 @@ namespace Game.Gameplay
             builder.RegisterInstance<IRunSteeringConfig>(_runBodyMovementConfig);
 
             var surfaceStabilityAuthoringConfig = (IRunSurfaceStabilityAuthoringConfig)_runBodyMovementConfig;
+            var supportAttachmentAuthoringConfig = (IRunSupportAttachmentAuthoringConfig)_runBodyMovementConfig;
             var steeringFrameAuthoringConfig = (IRunSteeringFrameAuthoringConfig)_runBodyMovementConfig;
+
+            builder.RegisterInstance(new RunSupportAttachmentConfig(
+                supportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed,
+                supportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters,
+                supportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees,
+                supportAttachmentAuthoringConfig.TransitionConfirmationSeconds));
 
             builder.RegisterInstance(new RunSurfaceStabilityConfig(
                 surfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds,
@@ -175,6 +182,7 @@ namespace Game.Gameplay
             builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
 
             builder.Register<IRunSurfaceSlopeCalculator, RunSurfaceSlopeCalculator>(Lifetime.Singleton);
+            builder.Register<RunSupportAttachmentPolicy>(Lifetime.Singleton);
             builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
             builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
 

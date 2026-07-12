@@ -12,6 +12,7 @@ namespace Game.Gameplay.Tests.EditMode
 
         private FakeRunProgressFrameSource _progressFrameSource;
         private FakeRunSupportProbe _supportProbe;
+        private FakeRunMotionSource _motionSource;
         private FakeTime _time;
         private RunSurfaceFramePipeline _pipeline;
 
@@ -20,8 +21,9 @@ namespace Game.Gameplay.Tests.EditMode
         {
             _progressFrameSource = new FakeRunProgressFrameSource();
             _supportProbe = new FakeRunSupportProbe();
+            _motionSource = new FakeRunMotionSource();
             _time = new FakeTime { FixedDeltaTime = FixedDeltaTime };
-            _pipeline = CreatePipeline(_progressFrameSource, _supportProbe, _time);
+            _pipeline = CreatePipeline(_progressFrameSource, _supportProbe, _motionSource, _time);
         }
 
         [Test]
@@ -119,6 +121,39 @@ namespace Game.Gameplay.Tests.EditMode
             Assert.That(snapshot.Transition, Is.EqualTo(RunSurfaceTransition.None));
         }
 
+        [TestCase(-75f)]
+        [TestCase(75f)]
+        public void FixedTick_DetachedFromUSideThenFlatSupport_ReattachesAndSnapsSteering(float bankDegrees)
+        {
+            ((IRunSteeringFrameResetter)_pipeline).Reset(Vector3.forward);
+            var uSideNormal = Quaternion.AngleAxis(bankDegrees, Vector3.forward) * Vector3.up;
+            _supportProbe.State = RunSupportObservationState.Supported;
+            _supportProbe.Normal = uSideNormal;
+            Tick(_pipeline);
+
+            _motionSource.LinearVelocity = uSideNormal;
+            Tick(_pipeline);
+            _supportProbe.State = RunSupportObservationState.Missing;
+            Tick(_pipeline);
+
+            var detached = ((IRunSurfaceFrameSource)_pipeline).Current;
+            Assert.That(detached.AttachmentTransition, Is.EqualTo(RunSupportAttachmentTransition.Detached));
+            Assert.That(detached.StableSupport.GroundNormal, Is.EqualTo(uSideNormal));
+
+            _motionSource.LinearVelocity = Vector3.down;
+            _supportProbe.State = RunSupportObservationState.Supported;
+            _supportProbe.Normal = Vector3.up;
+            Tick(_pipeline);
+            Tick(_pipeline);
+
+            var reattached = ((IRunSurfaceFrameSource)_pipeline).Current;
+            Assert.That(reattached.AttachmentTransition, Is.EqualTo(RunSupportAttachmentTransition.Reattached));
+            Assert.That(reattached.Transition, Is.EqualTo(RunSurfaceTransition.SupportReattached));
+            Assert.That(reattached.StableSupport.GroundNormal, Is.EqualTo(Vector3.up));
+            Assert.That(reattached.SteeringFrame.UpDirection, Is.EqualTo(Vector3.up));
+            Assert.That(reattached.IsConfirmingDiscontinuity, Is.False);
+        }
+
         [Test]
         public void FixedTick_TwoPipelines_HaveIndependentPolicyState()
         {
@@ -127,7 +162,7 @@ namespace Game.Gameplay.Tests.EditMode
 
             var secondProgressSource = new FakeRunProgressFrameSource();
             var secondProbe = new FakeRunSupportProbe { State = RunSupportObservationState.Missing };
-            var secondPipeline = CreatePipeline(secondProgressSource, secondProbe, _time);
+            var secondPipeline = CreatePipeline(secondProgressSource, secondProbe, new FakeRunMotionSource(), _time);
             Tick(secondPipeline);
 
             Assert.That(((IRunSurfaceFrameSource)_pipeline).Current.StableSupport.IsGrounded, Is.True);
@@ -155,13 +190,25 @@ namespace Game.Gameplay.Tests.EditMode
         private static RunSurfaceFramePipeline CreatePipeline(
             IRunProgressFrameSource progressFrameSource,
             IRunSupportProbe supportProbe,
+            IRunMotionSource motionSource,
             ITime time)
         {
+            var attachmentPolicy = new RunSupportAttachmentPolicy(
+                new RunSupportAttachmentConfig(0.35f, 0.08f, 30f, 0.04f));
+
             var stabilityPolicy = new RunSurfaceStabilityPolicy(
                 new RunSurfaceStabilityConfig(0.06f, 45f, 0.04f, 8f),
                 new RunSurfaceSlopeCalculator());
             var steeringPolicy = new RunSteeringFramePolicy(new RunSteeringFrameConfig(180f, 0.08f));
-            return new RunSurfaceFramePipeline(progressFrameSource, supportProbe, stabilityPolicy, steeringPolicy, time);
+
+            return new RunSurfaceFramePipeline(
+                progressFrameSource,
+                supportProbe,
+                motionSource,
+                attachmentPolicy,
+                stabilityPolicy,
+                steeringPolicy,
+                time);
         }
 
         private static void Tick(RunSurfaceFramePipeline pipeline)
@@ -229,6 +276,12 @@ namespace Game.Gameplay.Tests.EditMode
         {
             public float DeltaTime { get; set; }
             public float FixedDeltaTime { get; set; }
+        }
+
+        private sealed class FakeRunMotionSource : IRunMotionSource
+        {
+            public Vector3 Position { get; set; }
+            public Vector3 LinearVelocity { get; set; }
         }
     }
 }

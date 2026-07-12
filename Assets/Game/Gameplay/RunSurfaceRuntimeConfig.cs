@@ -99,6 +99,42 @@ namespace Game.Gameplay
         }
     }
 
+    internal readonly struct RunSupportAttachmentConfig
+    {
+        public float MaximumAttachedSurfaceNormalLiftSpeed { get; }
+        public float SameSurfaceReattachmentSeparationMeters { get; }
+        public float MinimumReattachmentNormalChangeDegrees { get; }
+        public float TransitionConfirmationSeconds { get; }
+
+        public RunSupportAttachmentConfig(
+            float maximumAttachedSurfaceNormalLiftSpeed,
+            float sameSurfaceReattachmentSeparationMeters,
+            float minimumReattachmentNormalChangeDegrees,
+            float transitionConfirmationSeconds)
+        {
+            if (!float.IsFinite(maximumAttachedSurfaceNormalLiftSpeed) || maximumAttachedSurfaceNormalLiftSpeed < 0f)
+                throw new ArgumentOutOfRangeException(nameof(maximumAttachedSurfaceNormalLiftSpeed));
+
+            if (!float.IsFinite(sameSurfaceReattachmentSeparationMeters) || sameSurfaceReattachmentSeparationMeters < 0f)
+                throw new ArgumentOutOfRangeException(nameof(sameSurfaceReattachmentSeparationMeters));
+
+            if (!float.IsFinite(minimumReattachmentNormalChangeDegrees)
+                || minimumReattachmentNormalChangeDegrees < 0f
+                || minimumReattachmentNormalChangeDegrees > 180f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minimumReattachmentNormalChangeDegrees));
+            }
+
+            if (!float.IsFinite(transitionConfirmationSeconds) || transitionConfirmationSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(transitionConfirmationSeconds));
+
+            MaximumAttachedSurfaceNormalLiftSpeed = maximumAttachedSurfaceNormalLiftSpeed;
+            SameSurfaceReattachmentSeparationMeters = sameSurfaceReattachmentSeparationMeters;
+            MinimumReattachmentNormalChangeDegrees = minimumReattachmentNormalChangeDegrees;
+            TransitionConfirmationSeconds = transitionConfirmationSeconds;
+        }
+    }
+
     internal readonly struct RunSteeringFrameConfig
     {
         public float NormalSlewDegreesPerSecond { get; }

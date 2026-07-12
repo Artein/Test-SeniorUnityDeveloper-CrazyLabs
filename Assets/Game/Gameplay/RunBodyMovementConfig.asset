@@ -35,3 +35,7 @@ MonoBehaviour:
   _runSteeringFrameSnapDegrees: 60
   _runSteeringFrameUngroundedGraceSeconds: 0.12
   _runSteeringFrameSuspectNormalConfirmationSeconds: 0.6
+  _runSupportMaximumAttachedSurfaceNormalLiftSpeed: 0.35
+  _runSupportSameSurfaceReattachmentSeparationMeters: 0.08
+  _runSupportMinimumReattachmentNormalChangeDegrees: 30
+  _runSupportAttachmentTransitionConfirmationSeconds: 0.04

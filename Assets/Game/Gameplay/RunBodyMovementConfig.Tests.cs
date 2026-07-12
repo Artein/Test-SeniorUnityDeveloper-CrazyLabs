@@ -60,6 +60,18 @@ namespace Game.Gameplay
             _runSteeringFrameAirborneUpRetentionSeconds = airborneUpRetentionSeconds;
         }
 
+        internal void SetRunSupportAttachmentForTests(
+            float maximumAttachedSurfaceNormalLiftSpeed,
+            float sameSurfaceReattachmentSeparationMeters,
+            float minimumReattachmentNormalChangeDegrees,
+            float transitionConfirmationSeconds)
+        {
+            _runSupportMaximumAttachedSurfaceNormalLiftSpeed = maximumAttachedSurfaceNormalLiftSpeed;
+            _runSupportSameSurfaceReattachmentSeparationMeters = sameSurfaceReattachmentSeparationMeters;
+            _runSupportMinimumReattachmentNormalChangeDegrees = minimumReattachmentNormalChangeDegrees;
+            _runSupportAttachmentTransitionConfirmationSeconds = transitionConfirmationSeconds;
+        }
+
         internal void SetLaunchLandingStabilizationForTests(
             float stabilizationSeconds,
             float maximumLiftSpeed)

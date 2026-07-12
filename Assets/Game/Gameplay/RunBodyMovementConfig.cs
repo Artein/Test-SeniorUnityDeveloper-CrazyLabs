@@ -52,6 +52,14 @@ namespace Game.Gameplay
         float AirborneUpRetentionSeconds { get; }
     }
 
+    public interface IRunSupportAttachmentAuthoringConfig
+    {
+        float MaximumAttachedSurfaceNormalLiftSpeed { get; }
+        float SameSurfaceReattachmentSeparationMeters { get; }
+        float MinimumReattachmentNormalChangeDegrees { get; }
+        float TransitionConfirmationSeconds { get; }
+    }
+
     [CreateAssetMenu(
         fileName = nameof(RunBodyMovementConfig),
         menuName = "Game/Gameplay/Run Body Movement Tuning")]
@@ -61,6 +69,7 @@ namespace Game.Gameplay
         IRunLaunchLandingStabilizationConfig,
         IRunSteeringConfig,
         IRunSurfaceStabilityAuthoringConfig,
+        IRunSupportAttachmentAuthoringConfig,
         IRunSteeringFrameAuthoringConfig
     {
         [Header("Run Body Speed - Slope")]
@@ -208,6 +217,27 @@ namespace Game.Gameplay
              + "\n\nUnits: Degrees.")]
         private float _runSurfaceCandidateCoherenceDegrees = 1f;
 
+        [Header("Run Support Attachment")]
+        [SerializeField, Min(0f), Tooltip(
+             "Controls: Outward speed along Observed Support normal that starts a physical detachment episode."
+             + "\n\nUnits: Meters per second.")]
+        private float _runSupportMaximumAttachedSurfaceNormalLiftSpeed = 0.35f;
+
+        [SerializeField, Min(0f), Tooltip(
+             "Controls: Distance from the detachment plane that must be crossed before the same surface can be reattached."
+             + "\n\nUnits: Meters.")]
+        private float _runSupportSameSurfaceReattachmentSeparationMeters = 0.08f;
+
+        [SerializeField, Range(0f, 180f), Tooltip(
+             "Controls: Normal change that identifies a distinct landing surface without requiring return to the detachment plane."
+             + "\n\nUnits: Degrees.")]
+        private float _runSupportMinimumReattachmentNormalChangeDegrees = 30f;
+
+        [SerializeField, Min(0f), Tooltip(
+             "Controls: Duration a detachment or reattachment condition must remain coherent before transition."
+             + "\n\nUnits: Seconds.")]
+        private float _runSupportAttachmentTransitionConfirmationSeconds = 0.04f;
+
         [SerializeField, Min(0f), Tooltip(
              "Controls: Duration the last valid steering up frame remains available after Stable Support is lost."
              + "\n\nUnits: Seconds.")]
@@ -239,6 +269,19 @@ namespace Game.Gameplay
             _runSurfaceDiscontinuousNormalConfirmationSeconds;
 
         float IRunSurfaceStabilityAuthoringConfig.CandidateCoherenceDegrees => _runSurfaceCandidateCoherenceDegrees;
+
+        float IRunSupportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed =>
+            _runSupportMaximumAttachedSurfaceNormalLiftSpeed;
+
+        float IRunSupportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters =>
+            _runSupportSameSurfaceReattachmentSeparationMeters;
+
+        float IRunSupportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees =>
+            _runSupportMinimumReattachmentNormalChangeDegrees;
+
+        float IRunSupportAttachmentAuthoringConfig.TransitionConfirmationSeconds =>
+            _runSupportAttachmentTransitionConfirmationSeconds;
+
         float IRunSteeringFrameAuthoringConfig.NormalSlewDegreesPerSecond => _runSteeringFrameNormalSlewDegreesPerSecond;
         float IRunSteeringFrameAuthoringConfig.AirborneUpRetentionSeconds => _runSteeringFrameAirborneUpRetentionSeconds;
 

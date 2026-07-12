@@ -6,7 +6,6 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using UnityEngine;
-using UnityEngine.TestTools;
 using VContainer.Unity;
 
 namespace Game.Gameplay.Tests.PlayMode
@@ -76,10 +75,7 @@ namespace Game.Gameplay.Tests.PlayMode
 
             BodyCollider = bodyObject.AddComponent<SphereCollider>();
             BodyCollider.radius = 0.5f;
-
-            BodyCollider.sharedMaterial = CreatePhysicsMaterial(
-                "Run Body Contact Physics Body Material",
-                _config.BodyBounciness);
+            BodyCollider.sharedMaterial = CreatePhysicsMaterial("Run Body Contact Physics Body Material", _config.BodyBounciness);
 
             Body = bodyObject.AddComponent<Rigidbody>();
             Body.mass = 1f;
@@ -102,7 +98,6 @@ namespace Game.Gameplay.Tests.PlayMode
 
             var progressContext = new FixedRunProgressContext(origin, Vector3.forward, Vector3.up);
             var clock = new UnityTime();
-
             var slopeCalculator = new RunSurfaceSlopeCalculator();
 
             var supportProbe = new PhysicsRunSupportProbe(
@@ -110,16 +105,23 @@ namespace Game.Gameplay.Tests.PlayMode
                 new RunSupportColliderProbeFactory(),
                 new RunSurfaceProbeConfig(
                     _config.SupportProbeDistance,
-                    0.02f,
+                    skinWidth: 0.02f,
                     runSurfaceLayerMask,
-                    0.17f,
-                    0.6f,
-                    8f),
+                    minimumSupportNormalDot: 0.17f,
+                    footprintSampleOffsetScale: 0.6f,
+                    footprintNormalClusterAngleDegrees: 8f),
                 slopeCalculator);
 
             _surfaceFramePipeline = new RunSurfaceFramePipeline(
                 progressContext,
                 supportProbe,
+                new TestRunMotionSource(Body.transform, Body),
+                new RunSupportAttachmentPolicy(
+                    new RunSupportAttachmentConfig(
+                        maximumAttachedSurfaceNormalLiftSpeed: 0.35f, 
+                        sameSurfaceReattachmentSeparationMeters: 0.08f, 
+                        minimumReattachmentNormalChangeDegrees: 30f, 
+                        transitionConfirmationSeconds: 0.04f)),
                 new RunSurfaceStabilityPolicy(
                     new RunSurfaceStabilityConfig(
                         _config.RunSurfaceSupportLossConfirmationSeconds,
@@ -174,6 +176,7 @@ namespace Game.Gameplay.Tests.PlayMode
             surfaceObject.transform.SetPositionAndRotation(
                 topPoint - rotation * Vector3.up * (size.y * 0.5f),
                 rotation);
+            
             surfaceObject.transform.localScale = size;
 
             var collider = surfaceObject.AddComponent<BoxCollider>();
@@ -273,6 +276,7 @@ namespace Game.Gameplay.Tests.PlayMode
             var writtenVelocity = _recordingMovementTarget.HasLastTargetState
                 ? _recordingMovementTarget.LastTargetState.LinearVelocity
                 : sampledVelocity;
+            
             var diagnostics = _diagnostics.Current;
             var movementWriteCount = _recordingMovementTarget.StepWriteCount;
 
@@ -289,7 +293,7 @@ namespace Game.Gameplay.Tests.PlayMode
                 movementWriteCount);
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             if (_isDisposed)
                 return;
@@ -298,10 +302,12 @@ namespace Game.Gameplay.Tests.PlayMode
             _contactNotifier.CollisionEntered -= OnCollisionEntered;
             ((IDisposable)_controller).Dispose();
 
-            for (var index = _createdObjects.Count - 1; index >= 0; index -= 1)
+            for (var i = _createdObjects.Count - 1; i >= 0; i -= 1)
             {
-                if (_createdObjects[index] != null)
-                    UnityEngine.Object.DestroyImmediate(_createdObjects[index]);
+                var createdObject = _createdObjects[i];
+                
+                if (createdObject != null)
+                    UnityEngine.Object.DestroyImmediate(createdObject);
             }
 
             _createdObjects.Clear();
@@ -328,19 +334,19 @@ namespace Game.Gameplay.Tests.PlayMode
         private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
         {
             var request = new SlingshotLaunchRequest(
-                1f,
-                1f,
-                0f,
-                0f,
-                Body.position,
-                Vector3.forward,
-                Vector3.up);
+                pullStrength: 1f,
+                pullDistance: 1f,
+                pullOffset: 0f,
+                normalizedLateralPull: 0f,
+                finalPullPoint: Body.position,
+                launchFrameForward: Vector3.forward,
+                launchFrameUp: Vector3.up);
 
             return new SlingshotLaunchAppliedEvent(
                 request,
                 Body.linearVelocity,
-                Vector3.forward,
-                Vector3.up);
+                launchDirection: Vector3.forward,
+                launchUpDirection: Vector3.up);
         }
 
         private int ResolveSingleLayer(LayerMask layerMask)
@@ -353,7 +359,9 @@ namespace Game.Gameplay.Tests.PlayMode
             var layer = 0;
 
             while ((value >>= 1) > 0)
+            {
                 layer += 1;
+            }
 
             return layer;
         }

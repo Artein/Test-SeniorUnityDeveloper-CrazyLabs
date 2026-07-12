@@ -36,6 +36,7 @@ public sealed class RunBodyMovementConfigValidatorTests
         Assert.That(_config, Is.InstanceOf<IRunLaunchLandingStabilizationConfig>());
         Assert.That(_config, Is.InstanceOf<IRunSteeringConfig>());
         Assert.That(_config, Is.InstanceOf<IRunSurfaceStabilityAuthoringConfig>());
+        Assert.That(_config, Is.InstanceOf<IRunSupportAttachmentAuthoringConfig>());
         Assert.That(_config, Is.InstanceOf<IRunSteeringFrameAuthoringConfig>());
     }
 
@@ -83,6 +84,12 @@ public sealed class RunBodyMovementConfigValidatorTests
             minimumAcceptedDpi: 100f,
             maximumAcceptedDpi: 50f);
 
+        _config.SetRunSupportAttachmentForTests(
+            maximumAttachedSurfaceNormalLiftSpeed: -1f,
+            sameSurfaceReattachmentSeparationMeters: float.NaN,
+            minimumReattachmentNormalChangeDegrees: 181f,
+            transitionConfirmationSeconds: -1f);
+
         var errors = _validator.Validate(_config).ToArray();
 
         Assert.That(errors, Has.Some.Contains(nameof(IRunBodySpeedConfig.DownhillAcceleration)));
@@ -96,6 +103,10 @@ public sealed class RunBodyMovementConfigValidatorTests
         Assert.That(errors, Has.Some.Contains(nameof(IRunSteeringConfig.RunSteeringRangeCentimeters)));
         Assert.That(errors, Has.Some.Contains(nameof(IRunSteeringConfig.RunSteeringDeadzoneFraction)));
         Assert.That(errors, Has.Some.Contains(nameof(IRunSteeringConfig.RunSteeringResponsiveness)));
+        Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed)));
+        Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters)));
+        Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees)));
+        Assert.That(errors, Has.Some.Contains(nameof(IRunSupportAttachmentAuthoringConfig.TransitionConfirmationSeconds)));
         Assert.That(errors, Has.Some.Contains("minimum accepted DPI"));
         Assert.That(errors, Has.Some.Contains("fallback DPI"));
     }

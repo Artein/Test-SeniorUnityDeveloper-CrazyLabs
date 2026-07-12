@@ -24,6 +24,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
         Assert.That(text, Does.Contain("observed:Supported"));
         Assert.That(text, Does.Contain("stable:grounded"));
         Assert.That(text, Does.Contain("transition:ConfirmedDiscontinuity"));
+        Assert.That(text, Does.Contain("attachment:None"));
         Assert.That(text, Does.Contain("held:yes"));
         Assert.That(text, Does.Contain("confirming:yes"));
         Assert.That(text, Does.Contain("steering:valid"));
@@ -48,6 +49,7 @@ public sealed class RunDiagnosticsOverlayTextFormatterTests
     [TestCase(RunSurfaceTransition.SupportLost)]
     [TestCase(RunSurfaceTransition.ConfirmedDiscontinuity)]
     [TestCase(RunSurfaceTransition.HardReset)]
+    [TestCase(RunSurfaceTransition.SupportReattached)]
     public void FormatMotionSummary_Transition_ReportsEveryTransition(RunSurfaceTransition transition)
     {
         var text = _formatter.FormatMotionSummary(CreateSurfaceSample(surfaceTransition: transition));

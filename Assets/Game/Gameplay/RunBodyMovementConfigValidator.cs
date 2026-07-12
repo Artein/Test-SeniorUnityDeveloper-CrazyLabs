@@ -17,6 +17,7 @@ namespace Game.Gameplay
             var landingConfig = (IRunLaunchLandingStabilizationConfig)config;
             var steeringConfig = (IRunSteeringConfig)config;
             var stabilityConfig = (IRunSurfaceStabilityAuthoringConfig)config;
+            var attachmentConfig = (IRunSupportAttachmentAuthoringConfig)config;
             var frameConfig = (IRunSteeringFrameAuthoringConfig)config;
 
             foreach (var error in ValidateSpeed(speedConfig))
@@ -32,6 +33,9 @@ namespace Game.Gameplay
                 yield return error;
 
             foreach (var error in ValidateSurfaceStability(stabilityConfig))
+                yield return error;
+
+            foreach (var error in ValidateSupportAttachment(attachmentConfig))
                 yield return error;
 
             foreach (var error in ValidateSteeringFrame(frameConfig))
@@ -189,6 +193,33 @@ namespace Game.Gameplay
             {
                 yield return
                     $"{nameof(IRunSteeringFrameAuthoringConfig.AirborneUpRetentionSeconds)} must be a finite non-negative value.";
+            }
+        }
+
+        private IEnumerable<string> ValidateSupportAttachment(IRunSupportAttachmentAuthoringConfig config)
+        {
+            if (!IsFiniteNonNegative(config.MaximumAttachedSurfaceNormalLiftSpeed))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed)} must be a finite non-negative value.";
+            }
+
+            if (!IsFiniteNonNegative(config.SameSurfaceReattachmentSeparationMeters))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters)} must be a finite non-negative value.";
+            }
+
+            if (!IsFiniteInRange(config.MinimumReattachmentNormalChangeDegrees, 0f, 180f))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees)} must be finite and between 0 and 180.";
+            }
+
+            if (!IsFiniteNonNegative(config.TransitionConfirmationSeconds))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.TransitionConfirmationSeconds)} must be a finite non-negative value.";
             }
         }
 

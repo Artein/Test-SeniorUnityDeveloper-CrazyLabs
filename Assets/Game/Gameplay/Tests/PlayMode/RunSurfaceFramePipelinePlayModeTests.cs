@@ -210,6 +210,9 @@ public sealed class RunSurfaceFramePipelinePlayModeTests : BaseGameplayTestAsset
         var pipeline = new RunSurfaceFramePipeline(
             frameSource,
             probe,
+            new SurfaceRunMotionSource(supportCollider.transform),
+            new RunSupportAttachmentPolicy(
+                new RunSupportAttachmentConfig(0.35f, 0.08f, 30f, 0.04f)),
             new RunSurfaceStabilityPolicy(
                 new RunSurfaceStabilityConfig(0.06f, 45f, 0.04f, 8f),
                 slopeCalculator),
@@ -404,5 +407,18 @@ public sealed class RunSurfaceFramePipelinePlayModeTests : BaseGameplayTestAsset
     {
         public float DeltaTime { get; set; }
         public float FixedDeltaTime { get; set; }
+    }
+
+    private sealed class SurfaceRunMotionSource : IRunMotionSource
+    {
+        private readonly Transform _transform;
+
+        public Vector3 Position => _transform.position;
+        public Vector3 LinearVelocity => Vector3.zero;
+
+        public SurfaceRunMotionSource(Transform transform)
+        {
+            _transform = transform;
+        }
     }
 }
