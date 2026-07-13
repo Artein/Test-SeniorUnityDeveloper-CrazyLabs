@@ -47,14 +47,16 @@ namespace Game.Gameplay.Tests.PlayMode
     {
         private readonly HashSet<Collider> _collidedWith = new();
         private readonly RunBodyContactPhysicsConfig _config;
-        private readonly RigidbodyContactNotifier _contactNotifier;
-        private readonly RunBodyMovementController _controller;
+        private readonly IRigidbodyContactNotifier _contactNotifier;
         private readonly List<Object> _createdObjects = new();
-        private readonly RunBodySpeedDiagnostics _diagnostics;
-        private readonly SlingshotLaunchController _launchEvents;
-        private readonly RecordingRunBodyMovementTarget _recordingMovementTarget;
+        private readonly ISlingshotLaunchAppliedPublisher _launchAppliedPublisher;
+        private readonly IDisposable _movementLifecycle;
+        private readonly IRunBodyMovementFixedStep _movementStep;
+        private readonly RecordingRunBodyMovementTarget _movementTargetRecorder;
         private readonly int _runSurfaceLayer;
-        private readonly RunSurfaceFramePipeline _surfaceFramePipeline;
+        private readonly IRunBodySpeedDiagnosticsSource _speedDiagnosticsSource;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
+        private readonly IRunSurfaceFrameFixedStep _surfaceFrameStep;
         private bool _isDisposed;
         private bool _isRunActive;
 
@@ -85,12 +87,13 @@ namespace Game.Gameplay.Tests.PlayMode
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             Body.interpolation = RigidbodyInterpolation.None;
 
-            _contactNotifier = bodyObject.AddComponent<RigidbodyContactNotifier>();
+            var contactNotifier = bodyObject.AddComponent<RigidbodyContactNotifier>();
+            _contactNotifier = contactNotifier;
             _contactNotifier.CollisionEntered += OnCollisionEntered;
 
             var rigidbodyMovementTarget = bodyObject.AddComponent<RigidbodyRunBodyMovementTarget>();
             rigidbodyMovementTarget.SetRigidbodyForTests(Body);
-            _recordingMovementTarget = new RecordingRunBodyMovementTarget(rigidbodyMovementTarget);
+            _movementTargetRecorder = new RecordingRunBodyMovementTarget(rigidbodyMovementTarget);
 
             var runningStateId = Track(ScriptableObject.CreateInstance<GameplayStateId>());
             runningStateId.name = "Running";
@@ -113,7 +116,7 @@ namespace Game.Gameplay.Tests.PlayMode
                     footprintNormalClusterAngleDegrees: 8f),
                 slopeCalculator);
 
-            _surfaceFramePipeline = new RunSurfaceFramePipeline(
+            var surfaceFramePipeline = new RunSurfaceFramePipeline(
                 progressContext,
                 supportProbe,
                 new TestRunMotionSource(Body.transform, Body),
@@ -136,23 +139,29 @@ namespace Game.Gameplay.Tests.PlayMode
                         _config.RunSteeringFrameAirborneUpRetentionSeconds)),
                 clock);
 
-            _diagnostics = new RunBodySpeedDiagnostics();
-            _launchEvents = new SlingshotLaunchController();
+            _surfaceFrameSource = surfaceFramePipeline;
+            _surfaceFrameStep = surfaceFramePipeline;
 
-            _controller = new RunBodyMovementController(
+            var speedDiagnostics = new RunBodySpeedDiagnostics();
+            _speedDiagnosticsSource = speedDiagnostics;
+
+            var launchController = new SlingshotLaunchController();
+            _launchAppliedPublisher = launchController;
+
+            var movementController = new RunBodyMovementController(
                 new RunBodyContactPhysicsStateService(runningStateId),
-                _launchEvents,
-                _recordingMovementTarget,
+                launchController,
+                _movementTargetRecorder,
                 new NeutralRunSteeringInputSource(),
                 new DefaultRunBodySpeedEvaluator(_config),
                 new DefaultRunSteeringEvaluator(),
                 new RunLaunchLandingStabilizer(_config),
-                _surfaceFramePipeline,
-                _surfaceFramePipeline,
-                _surfaceFramePipeline,
+                surfaceFramePipeline,
+                surfaceFramePipeline,
+                surfaceFramePipeline,
                 progressContext,
                 new FixedRunGameplayStatResolver(_config.BaseSoftMaximumSpeed),
-                _diagnostics,
+                speedDiagnostics,
                 _config,
                 _config,
                 _config,
@@ -161,7 +170,9 @@ namespace Game.Gameplay.Tests.PlayMode
                 playerMaxSpeedStatId,
                 runningStateId);
 
-            ((IInitializable)_controller).Initialize();
+            _movementStep = movementController;
+            _movementLifecycle = movementController;
+            ((IInitializable)movementController).Initialize();
         }
 
         void IDisposable.Dispose()
@@ -171,7 +182,7 @@ namespace Game.Gameplay.Tests.PlayMode
 
             _isDisposed = true;
             _contactNotifier.CollisionEntered -= OnCollisionEntered;
-            ((IDisposable)_controller).Dispose();
+            _movementLifecycle.Dispose();
 
             for (var i = _createdObjects.Count - 1; i >= 0; i -= 1)
             {
@@ -276,7 +287,7 @@ namespace Game.Gameplay.Tests.PlayMode
                 return;
 
             _isRunActive = true;
-            _launchEvents.Publish(CreateLaunchAppliedEvent());
+            _launchAppliedPublisher.Publish(CreateLaunchAppliedEvent());
         }
 
         public bool HasCollisionWith(Collider collider)
@@ -286,21 +297,21 @@ namespace Game.Gameplay.Tests.PlayMode
 
         public IEnumerator Step()
         {
-            ((IRunSurfaceFrameFixedStep)_surfaceFramePipeline).UpdateSurfaceFrame();
+            _surfaceFrameStep.UpdateSurfaceFrame();
 
-            _recordingMovementTarget.BeginStep();
+            _movementTargetRecorder.BeginStep();
             var sampledVelocity = Body.linearVelocity;
             var sampledPosition = Body.position;
-            var surfaceContext = _surfaceFramePipeline.Current.StableSupport;
+            var surfaceContext = _surfaceFrameSource.Current.StableSupport;
 
-            ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
+            _movementStep.UpdateMovement();
 
-            var writtenVelocity = _recordingMovementTarget.HasLastTargetState
-                ? _recordingMovementTarget.LastTargetState.LinearVelocity
+            var writtenVelocity = _movementTargetRecorder.HasLastTargetState
+                ? _movementTargetRecorder.LastTargetState.LinearVelocity
                 : sampledVelocity;
 
-            var diagnostics = _diagnostics.Current;
-            var movementWriteCount = _recordingMovementTarget.StepWriteCount;
+            var diagnostics = _speedDiagnosticsSource.Current;
+            var movementWriteCount = _movementTargetRecorder.StepWriteCount;
 
             yield return new WaitForFixedUpdate();
 
