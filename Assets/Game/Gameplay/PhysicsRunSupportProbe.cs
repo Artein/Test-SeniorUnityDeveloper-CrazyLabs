@@ -100,7 +100,9 @@ namespace Game.Gameplay
                     hasContinuityNormal,
                     continuityNormal,
                     out bestHit))
+            {
                 return true;
+            }
 
             var hitCount = _supportProbe.Cast(castOffset, direction, distance, _supportHits, _config.SurfaceMask);
             var hasHit = false;
@@ -113,13 +115,17 @@ namespace Game.Gameplay
 
                 if (!_supportHitValidator.IsValidSupportHit(hit)
                     || !TryGetCastSupportNormal(hit, upDirection, direction, distance, out var normal))
+                {
                     continue;
+                }
 
                 var normalDot = Vector3.Dot(normal, upDirection);
 
                 if (normalDot < bestNormalDot
-                    || (Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance))
+                    || Mathf.Approximately(normalDot, bestNormalDot) && hit.distance >= bestDistance)
+                {
                     continue;
+                }
 
                 bestNormalDot = normalDot;
                 bestDistance = hit.distance;
@@ -165,7 +171,9 @@ namespace Game.Gameplay
                     Vector3.zero,
                     _config.SkinWidth,
                     out var probeOrigin))
+            {
                 return false;
+            }
 
             var hitCount = Physics.RaycastNonAlloc(
                 probeOrigin,
@@ -186,7 +194,9 @@ namespace Game.Gameplay
                     || !_supportHitValidator.IsValidSupportHit(hit)
                     || !_supportHitValidator.IsValidSupportNormal(hit.normal, upDirection)
                     || hit.distance >= bestDistance)
+                {
                     continue;
+                }
 
                 bestDistance = hit.distance;
                 normal = hit.normal.normalized;
@@ -222,7 +232,9 @@ namespace Game.Gameplay
                         hitCollider.transform.rotation,
                         out var separationDirection,
                         out var separationDistance))
+                {
                     continue;
+                }
 
                 if (!_supportHitValidator.IsValidSupportNormal(separationDirection, upDirection))
                     continue;
@@ -231,8 +243,10 @@ namespace Game.Gameplay
                 var normalDot = Vector3.Dot(normal, upDirection);
 
                 if (normalDot < bestNormalDot
-                    || (Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance))
+                    || Mathf.Approximately(normalDot, bestNormalDot) && separationDistance <= bestDistance)
+                {
                     continue;
+                }
 
                 bestNormalDot = normalDot;
                 bestDistance = separationDistance;

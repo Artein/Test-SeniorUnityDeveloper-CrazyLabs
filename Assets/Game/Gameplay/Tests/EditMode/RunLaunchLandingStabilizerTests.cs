@@ -6,7 +6,7 @@ using UnityEngine;
 public sealed class RunLaunchLandingStabilizerTests
 {
     private FakeConfig _config;
-    private RunLaunchLandingStabilizer _stabilizer;
+    private IRunLaunchLandingStabilizer _stabilizer;
 
     [SetUp]
     public void OnSetUp()

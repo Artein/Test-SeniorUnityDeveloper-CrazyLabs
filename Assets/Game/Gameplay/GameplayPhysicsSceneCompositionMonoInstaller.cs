@@ -23,11 +23,6 @@ namespace Game.Gameplay
         [SerializeField, Range(min: 0f, max: 180f)]
         private float _footprintNormalClusterAngleDegrees = 8f;
 
-        private void Reset()
-        {
-            _supportCollider = GetComponentInChildren<Collider>();
-        }
-
         private void OnValidate()
         {
             _supportProbeDistance = Mathf.Max(a: 0f, _supportProbeDistance);
@@ -41,15 +36,14 @@ namespace Game.Gameplay
         {
             ThrowIfInvalidReferences();
 
-            var probeConfig = new RunSurfaceProbeConfig(
+            builder.RegisterInstance(new RunSurfaceProbeConfig(
                 _supportProbeDistance,
                 _supportProbeSkinWidth,
                 _surfaceMask,
                 _minimumSupportNormalDot,
                 _footprintSampleOffsetScale,
-                _footprintNormalClusterAngleDegrees);
-
-            builder.RegisterInstance(probeConfig);
+                _footprintNormalClusterAngleDegrees));
+            
             builder.Register<IRunSupportColliderProbeFactory, RunSupportColliderProbeFactory>(Lifetime.Singleton);
 
             builder.Register<IRunSupportProbe, PhysicsRunSupportProbe>(Lifetime.Singleton)

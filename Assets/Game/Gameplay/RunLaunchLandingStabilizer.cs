@@ -42,28 +42,28 @@ namespace Game.Gameplay
             _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public void ArmForLaunch()
+        void IRunLaunchLandingStabilizer.ArmForLaunch()
         {
             _isArmed = true;
             _isActive = false;
             _elapsedSeconds = 0f;
         }
 
-        public void Reset()
+        void IRunLaunchLandingStabilizer.Reset()
         {
             _isArmed = false;
             _isActive = false;
             _elapsedSeconds = 0f;
         }
 
-        public Vector3 Stabilize(RunLaunchLandingStabilizationContext context)
+        Vector3 IRunLaunchLandingStabilizer.Stabilize(RunLaunchLandingStabilizationContext context)
         {
             if (!_isArmed && !_isActive)
                 return context.CurrentVelocity;
 
             if (context.SurfaceTransition == RunSurfaceTransition.HardReset)
             {
-                Reset();
+                ((IRunLaunchLandingStabilizer)this).Reset();
                 return context.CurrentVelocity;
             }
 
@@ -90,7 +90,7 @@ namespace Game.Gameplay
 
             if (duration <= 0f)
             {
-                Reset();
+                ((IRunLaunchLandingStabilizer)this).Reset();
                 return context.CurrentVelocity;
             }
 
@@ -100,7 +100,7 @@ namespace Game.Gameplay
 
                 if (_elapsedSeconds > duration)
                 {
-                    Reset();
+                    ((IRunLaunchLandingStabilizer)this).Reset();
                     return context.CurrentVelocity;
                 }
             }
@@ -116,7 +116,7 @@ namespace Game.Gameplay
                 _elapsedSeconds += Mathf.Max(a: 0f, context.FixedDeltaTime);
 
             if (_elapsedSeconds >= duration)
-                Reset();
+                ((IRunLaunchLandingStabilizer)this).Reset();
 
             return stabilizedVelocity;
         }
