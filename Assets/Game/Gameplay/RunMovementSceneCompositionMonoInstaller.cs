@@ -4,7 +4,6 @@ using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 using VContainer;
-using VContainer.Unity;
 
 namespace Game.Gameplay
 {
@@ -30,14 +29,72 @@ namespace Game.Gameplay
             RegisterConfigs(builder);
             RegisterPolicies(builder);
 
-            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton)
-                .As<IRunSurfaceFrameSource, IRunSteeringFrameSource, IRunSteeringFrameResetter, IRunSurfaceFrameFixedStep>();
-
+            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<RunBodySpeedEnvelopeValidator>(Lifetime.Singleton);
+            builder.Register<RunBodyMovementController>(Lifetime.Singleton).AsImplementedInterfaces();
+        }
 
-            builder.Register<RunBodyMovementController>(Lifetime.Singleton)
-                .AsSelf()
-                .As<IRunBodyMovementFixedStep, IInitializable>();
+        private void RegisterPorts(IContainerBuilder builder)
+        {
+            builder.RegisterInstance<IRunBodyMovementTarget>(_movementTarget);
+            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
+            builder.RegisterInstance<IRunMotionSource>(_runCameraSource);
+            builder.RegisterInstance<IRunProgressFrameSource>(_progressFrameSource);
+            builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
+        }
+
+        private void RegisterConfigs(IContainerBuilder builder)
+        {
+            builder.RegisterInstance<IRunBodySpeedConfig>(_config);
+            builder.RegisterInstance<IRunBodyMovementValidityConfig>(_config);
+            builder.RegisterInstance<IRunLaunchLandingStabilizationConfig>(_config);
+            builder.RegisterInstance<IRunSteeringConfig>(_config);
+
+            var supportAttachmentAuthoringConfig = (IRunSupportAttachmentAuthoringConfig)_config;
+
+            builder.RegisterInstance(
+                new RunSupportAttachmentConfig(
+                    supportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed,
+                    supportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters,
+                    supportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees,
+                    supportAttachmentAuthoringConfig.TransitionConfirmationSeconds));
+
+            var surfaceStabilityAuthoringConfig = (IRunSurfaceStabilityAuthoringConfig)_config;
+
+            builder.RegisterInstance(
+                new RunSurfaceStabilityConfig(
+                    surfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds,
+                    surfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees,
+                    surfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds,
+                    surfaceStabilityAuthoringConfig.CandidateCoherenceDegrees));
+
+            var steeringFrameAuthoringConfig = (IRunSteeringFrameAuthoringConfig)_config;
+
+            builder.RegisterInstance(
+                new RunSteeringFrameConfig(
+                    steeringFrameAuthoringConfig.NormalSlewDegreesPerSecond,
+                    steeringFrameAuthoringConfig.AirborneUpRetentionSeconds));
+        }
+
+        private void RegisterPolicies(IContainerBuilder builder)
+        {
+            builder.Register<IRunBodySpeedEvaluator, DefaultRunBodySpeedEvaluator>(Lifetime.Singleton);
+            builder.Register<IRunBodySpeedDiagnosticsSource, IRunBodySpeedDiagnosticsSink, RunBodySpeedDiagnostics>(Lifetime.Singleton);
+            builder.Register<IRunSteeringEvaluator, DefaultRunSteeringEvaluator>(Lifetime.Singleton);
+            builder.Register<IRunLaunchLandingStabilizer, RunLaunchLandingStabilizer>(Lifetime.Singleton);
+            builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
+            builder.Register<IRunSurfaceSlopeCalculator, RunSurfaceSlopeCalculator>(Lifetime.Singleton);
+            builder.Register<RunSupportAttachmentPolicy>(Lifetime.Singleton);
+            builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
+            builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
+        }
+
+        private void ThrowIfInvalidReferences()
+        {
+            var errors = GetReferenceValidationErrors().ToArray();
+
+            if (errors.Length > 0)
+                throw new InvalidOperationException(string.Join(separator: "\n", errors));
         }
 
         internal override IEnumerable<string> GetReferenceValidationErrors()
@@ -67,67 +124,6 @@ namespace Game.Gameplay
 
             if (_contactNotifier == null)
                 yield return "RunMovementSceneCompositionMonoInstaller requires a Rigidbody Contact Notifier reference.";
-        }
-
-        private void RegisterPorts(IContainerBuilder builder)
-        {
-            builder.RegisterInstance<IRunBodyMovementTarget>(_movementTarget);
-            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
-            builder.RegisterInstance<IRunMotionSource>(_runCameraSource);
-            builder.RegisterInstance<IRunProgressFrameSource>(_progressFrameSource);
-            builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
-        }
-
-        private void RegisterConfigs(IContainerBuilder builder)
-        {
-            builder.RegisterInstance<IRunBodySpeedConfig>(_config);
-            builder.RegisterInstance<IRunBodyMovementValidityConfig>(_config);
-            builder.RegisterInstance<IRunLaunchLandingStabilizationConfig>(_config);
-            builder.RegisterInstance<IRunSteeringConfig>(_config);
-
-            var surfaceStabilityAuthoringConfig = (IRunSurfaceStabilityAuthoringConfig)_config;
-            var supportAttachmentAuthoringConfig = (IRunSupportAttachmentAuthoringConfig)_config;
-            var steeringFrameAuthoringConfig = (IRunSteeringFrameAuthoringConfig)_config;
-
-            builder.RegisterInstance(
-                new RunSupportAttachmentConfig(
-                    supportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed,
-                    supportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters,
-                    supportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees,
-                    supportAttachmentAuthoringConfig.TransitionConfirmationSeconds));
-
-            builder.RegisterInstance(
-                new RunSurfaceStabilityConfig(
-                    surfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds,
-                    surfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees,
-                    surfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds,
-                    surfaceStabilityAuthoringConfig.CandidateCoherenceDegrees));
-
-            builder.RegisterInstance(
-                new RunSteeringFrameConfig(
-                    steeringFrameAuthoringConfig.NormalSlewDegreesPerSecond,
-                    steeringFrameAuthoringConfig.AirborneUpRetentionSeconds));
-        }
-
-        private void RegisterPolicies(IContainerBuilder builder)
-        {
-            builder.Register<IRunBodySpeedEvaluator, DefaultRunBodySpeedEvaluator>(Lifetime.Singleton);
-            builder.Register<IRunBodySpeedDiagnosticsSource, IRunBodySpeedDiagnosticsSink, RunBodySpeedDiagnostics>(Lifetime.Singleton);
-            builder.Register<IRunSteeringEvaluator, DefaultRunSteeringEvaluator>(Lifetime.Singleton);
-            builder.Register<IRunLaunchLandingStabilizer, RunLaunchLandingStabilizer>(Lifetime.Singleton);
-            builder.Register<IRunContactClassifier, RunContactClassifier>(Lifetime.Singleton);
-            builder.Register<IRunSurfaceSlopeCalculator, RunSurfaceSlopeCalculator>(Lifetime.Singleton);
-            builder.Register<RunSupportAttachmentPolicy>(Lifetime.Singleton);
-            builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
-            builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
-        }
-
-        private void ThrowIfInvalidReferences()
-        {
-            var errors = GetReferenceValidationErrors().ToArray();
-
-            if (errors.Length > 0)
-                throw new InvalidOperationException(string.Join(separator: "\n", errors));
         }
     }
 }
