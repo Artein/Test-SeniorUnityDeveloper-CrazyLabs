@@ -37,8 +37,7 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
         _createdObjects.Clear();
     }
 
-    [TestCase(arg1: 0.01f, arg2: 6)]
-    [TestCase(arg1: 0.02f, arg2: 3)]
+    [TestCase(arg1: 0.01f, arg2: 6), TestCase(arg1: 0.02f, arg2: 3)]
     public void given_BriefSupportGap_when_PipelineAndAirTimeTick_then_NoAirTimeIsAwarded(
         float fixedDeltaTime,
         int supportLossTick)
@@ -87,10 +86,8 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
         Assert.That(fixture.AirTimeSeconds, Is.Zero);
     }
 
-    [TestCase(arg1: 0.01f, arg2: 6, arg3: false)]
-    [TestCase(arg1: 0.02f, arg2: 3, arg3: false)]
-    [TestCase(arg1: 0.01f, arg2: 6, arg3: true)]
-    [TestCase(arg1: 0.02f, arg2: 3, arg3: true)]
+    [TestCase(arg1: 0.01f, arg2: 6, arg3: false), TestCase(arg1: 0.02f, arg2: 3, arg3: false), TestCase(arg1: 0.01f, arg2: 6, arg3: true),
+     TestCase(arg1: 0.02f, arg2: 3, arg3: true)]
     public void given_SustainedWalkOffOrJump_when_PipelineAndAirTimeTick_then_RewardStartsAtLossAndStopsOnLanding(
         float fixedDeltaTime,
         int supportLossTick,
@@ -285,7 +282,7 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
     private int GetSingleLayer(LayerMask layerMask, string description)
     {
         Assert.That(layerMask.value, Is.Not.EqualTo(expected: 0), description);
-        Assert.That(layerMask.value & (layerMask.value - 1), Is.Zero, description);
+        Assert.That(layerMask.value & layerMask.value - 1, Is.Zero, description);
         return Mathf.RoundToInt(Mathf.Log(layerMask.value, p: 2f));
     }
 
@@ -298,6 +295,7 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
 
     private sealed class SurfaceAirTimeFixture
     {
+        private readonly IRunAirTimeFixedStep _airTimeStep;
         private readonly GameObject _body;
         private readonly Vector3 _landedBodyPosition;
         private readonly RunSurfaceFramePipeline _pipeline;
@@ -326,6 +324,7 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
             _progressFrameSource = progressFrameSource;
             _pipeline = pipeline;
             _tracker = tracker;
+            _airTimeStep = tracker;
         }
 
         public void ShowSurface()
@@ -353,7 +352,7 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
             _tick += 1;
             Physics.SyncTransforms();
             ((IRunSurfaceFrameFixedStep)_pipeline).UpdateSurfaceFrame();
-            _tracker.UpdateAirTime();
+            _airTimeStep.UpdateAirTime();
             return _pipeline.Current;
         }
 

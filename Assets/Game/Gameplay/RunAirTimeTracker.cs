@@ -17,22 +17,7 @@ namespace Game.Gameplay
         void UpdateAirTime();
     }
 
-    internal sealed class RunAirTimeFixedStep : IRunAirTimeFixedStep
-    {
-        private readonly RunAirTimeTracker _tracker;
-
-        public RunAirTimeFixedStep(RunAirTimeTracker tracker)
-        {
-            _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        }
-
-        public void UpdateAirTime()
-        {
-            _tracker.UpdateAirTime();
-        }
-    }
-
-    public sealed class RunAirTimeTracker : IRunAirTimeSource, IInitializable, IDisposable
+    public sealed class RunAirTimeTracker : IRunAirTimeSource, IRunAirTimeFixedStep, IInitializable, IDisposable
     {
         private readonly ITime _clock;
         private readonly IGameplayStateService _gameplayStateService;
@@ -64,32 +49,6 @@ namespace Game.Gameplay
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
-        void IDisposable.Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
-            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
-        }
-
-        internal void UpdateAirTime()
-        {
-            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
-                return;
-
-            var surfaceFrame = _surfaceFrameSource.Current;
-
-            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
-                || surfaceFrame.StableSupport.IsGrounded)
-            {
-                return;
-            }
-
-            CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
-        }
-
         void IInitializable.Initialize()
         {
             if (_isDisposed)
@@ -103,6 +62,32 @@ namespace Game.Gameplay
 
             if (_gameplayStateService.IsCurrent(_runPreparationStateId))
                 CurrentRunAirTimeSeconds = 0f;
+        }
+
+        void IDisposable.Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+        }
+
+        void IRunAirTimeFixedStep.UpdateAirTime()
+        {
+            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
+                return;
+
+            var surfaceFrame = _surfaceFrameSource.Current;
+
+            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
+                || surfaceFrame.StableSupport.IsGrounded)
+            {
+                return;
+            }
+
+            CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
         }
 
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)

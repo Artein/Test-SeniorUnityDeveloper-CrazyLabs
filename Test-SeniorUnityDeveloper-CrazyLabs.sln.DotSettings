@@ -133,6 +133,26 @@
       &lt;/Entry.SortBy&gt;
     &lt;/Entry&gt;
 
+      &lt;Entry DisplayName="IInitializable.Initialize" Priority="300"&gt;
+          &lt;Entry.Match&gt;
+              &lt;And&gt;
+                  &lt;Kind Is="Method" /&gt;
+                  &lt;Name Is="Initialize" /&gt;
+                  &lt;ImplementsInterface Name="VContainer.Unity.IInitializable" /&gt;
+              &lt;/And&gt;
+          &lt;/Entry.Match&gt;
+      &lt;/Entry&gt;
+
+      &lt;Entry DisplayName="IDisposable.Dispose" Priority="300"&gt;
+          &lt;Entry.Match&gt;
+              &lt;And&gt;
+                  &lt;Kind Is="Method" /&gt;
+                  &lt;Name Is="Dispose" /&gt;
+                  &lt;ImplementsInterface Name="System.IDisposable" /&gt;
+              &lt;/And&gt;
+          &lt;/Entry.Match&gt;
+      &lt;/Entry&gt;
+
     &lt;Entry DisplayName="Interface Implementations" Priority="100"&gt;
       &lt;Entry.Match&gt;
         &lt;And&gt;
@@ -415,6 +435,26 @@
         &lt;Static/&gt;
       &lt;/Entry.SortBy&gt;
     &lt;/Entry&gt;
+
+      &lt;Entry DisplayName="IInitializable.Initialize" Priority="300"&gt;
+          &lt;Entry.Match&gt;
+              &lt;And&gt;
+                  &lt;Kind Is="Method" /&gt;
+                  &lt;Name Is="Initialize" /&gt;
+                  &lt;ImplementsInterface Name="VContainer.Unity.IInitializable" /&gt;
+              &lt;/And&gt;
+          &lt;/Entry.Match&gt;
+      &lt;/Entry&gt;
+
+      &lt;Entry DisplayName="IDisposable.Dispose" Priority="300"&gt;
+          &lt;Entry.Match&gt;
+              &lt;And&gt;
+                  &lt;Kind Is="Method" /&gt;
+                  &lt;Name Is="Dispose" /&gt;
+                  &lt;ImplementsInterface Name="System.IDisposable" /&gt;
+              &lt;/And&gt;
+          &lt;/Entry.Match&gt;
+      &lt;/Entry&gt;
 
     &lt;Entry DisplayName="Interface Implementations" Priority="100"&gt;
       &lt;Entry.Match&gt;

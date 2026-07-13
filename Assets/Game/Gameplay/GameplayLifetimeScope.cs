@@ -5,7 +5,6 @@ using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Persistence;
 using Game.Foundation.Screen;
-using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Diagnostics;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
@@ -176,8 +175,7 @@ namespace Game.Gameplay
             builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
             builder.Register<RunProgressService>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<RunCameraController>(Lifetime.Singleton).AsImplementedInterfaces();
-            builder.Register<RunAirTimeTracker>(Lifetime.Singleton).AsSelf().AsImplementedInterfaces();
-            builder.Register<RunAirTimeFixedStep>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<RunAirTimeTracker>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<RunEndFlow>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<LostMomentumDetector>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.RegisterEntryPoint<RunEndPoseLockController>();

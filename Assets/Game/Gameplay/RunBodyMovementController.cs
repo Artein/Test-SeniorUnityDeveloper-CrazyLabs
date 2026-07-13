@@ -100,6 +100,19 @@ namespace Game.Gameplay
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
+        void IInitializable.Initialize()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(nameof(RunBodyMovementController));
+
+            if (_isInitialized)
+                return;
+
+            _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
+            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
+            _isInitialized = true;
+        }
+
         void IDisposable.Dispose()
         {
             if (_isDisposed)
@@ -176,19 +189,6 @@ namespace Game.Gameplay
                 speedResolution,
                 sampledTangentSpeed,
                 hasUsableTangentDirection);
-        }
-
-        void IInitializable.Initialize()
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(nameof(RunBodyMovementController));
-
-            if (_isInitialized)
-                return;
-
-            _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
-            _gameplayStateService.GameplayStateChanged += OnGameplayStateChanged;
-            _isInitialized = true;
         }
 
         private void OnLaunchApplied(SlingshotLaunchAppliedEvent launchApplied)

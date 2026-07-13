@@ -12,6 +12,7 @@ using Object = UnityEngine.Object;
 public sealed class RunAirTimeTrackerTests
 {
     private readonly List<Object> _objects = new();
+    private IRunAirTimeFixedStep _airTimeStep;
     private FakeTime _clock;
     private GameplayStateId _runningStateId;
     private GameplayStateId _runPreparationStateId;
@@ -41,6 +42,7 @@ public sealed class RunAirTimeTrackerTests
             _runPreparationStateId,
             _runningStateId);
 
+        _airTimeStep = _tracker;
         ((IInitializable)_tracker).Initialize();
     }
 
@@ -67,8 +69,8 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        _tracker.UpdateAirTime();
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
@@ -81,7 +83,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         _stateService.ChangeTo(_runningStateId);
 
@@ -90,7 +92,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportAcquired);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
@@ -105,7 +107,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         _stateService.ChangeTo(_runPreparationStateId);
 
@@ -123,7 +125,7 @@ public sealed class RunAirTimeTrackerTests
             RunSurfaceTransition.None,
             isMissingSupportHeld: true);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
@@ -138,21 +140,21 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         _surfaceFrameSource.Publish(
             RunSupportObservationState.Missing,
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.None);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         _surfaceFrameSource.Publish(
             RunSupportObservationState.Supported,
             new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportAcquired);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
@@ -167,7 +169,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.HardReset);
 
-        _tracker.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }

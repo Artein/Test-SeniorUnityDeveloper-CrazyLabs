@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Physics;
@@ -468,6 +467,7 @@ public sealed class GameplayLifetimeScopeTests
         var runRewardSourceCatalog = container.Resolve<RunRewardSourceCatalog>();
         var runRewardBreakdownBuilder = container.Resolve<RunRewardBreakdownBuilder>();
         var runAirTimeSource = container.Resolve<IRunAirTimeSource>();
+        var runAirTimeFixedStep = container.Resolve<IRunAirTimeFixedStep>();
         var upgradeCatalog = container.Resolve<IUpgradeCatalog>();
         var upgradeProgressStorage = container.Resolve<IUpgradeProgressStorage>();
         var runModifierSnapshotFactory = container.Resolve<IRunModifierSnapshotFactory>();
@@ -531,9 +531,9 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(initializables.Count, Is.EqualTo(expected: 22));
         Assert.That(tickables.Count, Is.EqualTo(expected: 5));
         Assert.That(fixedTickables.Count, Is.EqualTo(expected: 1));
-        Assert.That(fixedTickables[0], Is.TypeOf<RunFixedStepPipeline>());
+        Assert.That(fixedTickables[index: 0], Is.TypeOf<RunFixedStepPipeline>());
         Assert.That(lateTickables.Count, Is.EqualTo(expected: 1));
-        Assert.That(lateTickables[0], Is.TypeOf<RunPresentationLateStepPipeline>());
+        Assert.That(lateTickables[index: 0], Is.TypeOf<RunPresentationLateStepPipeline>());
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
@@ -601,7 +601,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runRewardSourceLedger, Is.SameAs(runCurrencyAccumulator));
         Assert.That(runRewardSourceCatalog, Is.Not.Null);
         Assert.That(runRewardBreakdownBuilder, Is.Not.Null);
-        Assert.That(runAirTimeSource, Is.Not.Null);
+        Assert.That(runAirTimeFixedStep, Is.SameAs(runAirTimeSource));
         Assert.That(upgradeCatalog, Is.SameAs(fixture.UpgradeCatalog));
         Assert.That(upgradeProgressStorage, Is.Not.Null);
         Assert.That(runModifierSnapshotFactory, Is.Not.Null);
@@ -651,11 +651,11 @@ public sealed class GameplayLifetimeScopeTests
 
         Assert.That(
             fixture.Scope.SceneCompositionInstallersForTests,
-            Has.Exactly(1).SameAs(fixture.RunMovementSceneCompositionInstaller));
+            Has.Exactly(expectedCount: 1).SameAs(fixture.RunMovementSceneCompositionInstaller));
 
         Assert.That(
             fixture.Scope.SceneCompositionInstallersForTests,
-            Has.Exactly(1).SameAs(fixture.CharacterPresentationSceneCompositionInstaller));
+            Has.Exactly(expectedCount: 1).SameAs(fixture.CharacterPresentationSceneCompositionInstaller));
 
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
@@ -1198,7 +1198,6 @@ public sealed class GameplayLifetimeScopeTests
         public PullHintView PullHintView { get; set; }
         public RunBodyMovementConfig RunBodyMovementConfig { get; set; }
         public RigidbodyRunBodyMovementTarget RunBodyMovementTarget { get; set; }
-        public RunMovementSceneCompositionMonoInstaller RunMovementSceneCompositionInstaller { get; set; }
         public TransformRunCameraAnchor RunCameraAnchor { get; set; }
         public RunCameraConfig RunCameraConfig { get; set; }
         public CinemachineRunCameraRig RunCameraRig { get; set; }
@@ -1206,6 +1205,7 @@ public sealed class GameplayLifetimeScopeTests
         public RunEndConfig RunEndConfig { get; set; }
         public GameplayStateId RunEndedStateId { get; set; }
         public RunEndedUIView RunEndedView { get; set; }
+        public RunMovementSceneCompositionMonoInstaller RunMovementSceneCompositionInstaller { get; set; }
         public GameplayStateId RunningStateId { get; set; }
         public GameplayStateId RunPreparationStateId { get; set; }
         public RunProgressFrameSource RunProgressFrameSource { get; set; }
