@@ -71,8 +71,11 @@ namespace Game.Gameplay
 
             if (_isArmed)
             {
-                if (context.SurfaceTransition != RunSurfaceTransition.SupportAcquired)
+                if (context.SurfaceTransition
+                    is not (RunSurfaceTransition.SupportAcquired or RunSurfaceTransition.SupportReattached))
+                {
                     return context.CurrentVelocity;
+                }
 
                 _isArmed = false;
                 _isActive = true;

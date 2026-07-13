@@ -83,6 +83,57 @@ public sealed class RunLaunchLandingStabilizerTests
     }
 
     [Test]
+    public void Stabilize_ArmedSupportReattached_ClampsLiftAndPreservesTangentMotion()
+    {
+        _stabilizer.ArmForLaunch();
+        var velocity = Vector3.forward * 10f + Vector3.up * 0.1f;
+
+        var result = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportReattached,
+                fixedDeltaTime: 0.02f));
+
+        Assert.That(result.y, Is.Zero.Within(amount: 0.0001f));
+
+        Assert.That(
+            Vector3.ProjectOnPlane(result, Vector3.up).magnitude,
+            Is.EqualTo(expected: 10f).Within(amount: 0.0001f));
+    }
+
+    [Test]
+    public void Stabilize_AfterSupportReattachmentWindowExpires_LaterSupportAcquiredDoesNotReactivate()
+    {
+        _stabilizer.ArmForLaunch();
+        var velocity = Vector3.forward * 10f + Vector3.up * 0.1f;
+
+        _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportReattached,
+                fixedDeltaTime: 0.02f));
+
+        var expiredResult = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.ContinuousUpdate,
+                fixedDeltaTime: 0.31f));
+
+        var laterAcquisitionResult = _stabilizer.Stabilize(
+            CreateContext(
+                velocity,
+                new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+                RunSurfaceTransition.SupportAcquired,
+                fixedDeltaTime: 0.02f));
+
+        Assert.That(expiredResult, Is.EqualTo(velocity));
+        Assert.That(laterAcquisitionResult, Is.EqualTo(velocity));
+    }
+
+    [Test]
     public void Stabilize_DownwardSurfaceNormalVelocity_RemainsUntouched()
     {
         _stabilizer.ArmForLaunch();
