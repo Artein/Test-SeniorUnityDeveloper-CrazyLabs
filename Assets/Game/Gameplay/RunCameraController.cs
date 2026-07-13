@@ -9,7 +9,12 @@ using VContainer.Unity;
 
 namespace Game.Gameplay
 {
-    internal sealed class RunCameraController : IInitializable, ILateTickable, IDisposable
+    internal interface IRunCameraLateStep
+    {
+        void UpdateCamera();
+    }
+
+    internal sealed class RunCameraController : IRunCameraLateStep, IInitializable, IDisposable
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -59,6 +64,7 @@ namespace Game.Gameplay
             _runPreparationStateId = runPreparationStateId != null
                 ? runPreparationStateId
                 : throw new ArgumentNullException(nameof(runPreparationStateId));
+
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
             _runEndedStateId = runEndedStateId != null ? runEndedStateId : throw new ArgumentNullException(nameof(runEndedStateId));
@@ -79,7 +85,7 @@ namespace Game.Gameplay
             UpdateAnchorPose(0f, true);
         }
 
-        void ILateTickable.LateTick()
+        void IRunCameraLateStep.UpdateCamera()
         {
             if (_isDisposed || !_isRunCameraActive)
                 return;

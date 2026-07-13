@@ -1,9 +1,13 @@
 using System;
-using VContainer.Unity;
 
 namespace Game.Gameplay.CharacterPresentation
 {
-    public sealed class AnimatedContactSensorPoseSync : ILateTickable
+    internal interface IAnimatedContactSensorLateStep
+    {
+        void SynchronizeSensors();
+    }
+
+    internal sealed class AnimatedContactSensorPoseSync : IAnimatedContactSensorLateStep
     {
         private readonly IAnimatedContactSensorPoseSyncView _view;
 
@@ -12,7 +16,7 @@ namespace Game.Gameplay.CharacterPresentation
             _view = view ?? throw new ArgumentNullException(nameof(view));
         }
 
-        void ILateTickable.LateTick()
+        void IAnimatedContactSensorLateStep.SynchronizeSensors()
         {
             CopySourcePosesToTargets();
         }

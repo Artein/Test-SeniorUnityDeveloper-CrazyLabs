@@ -62,8 +62,18 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
                 activeScene,
                 objectDescription: "GameplayPhysicsSceneCompositionMonoInstaller");
 
+        var runMovementInstaller =
+            FindSingleInScene<RunMovementSceneCompositionMonoInstaller>(
+                activeScene,
+                objectDescription: "RunMovementSceneCompositionMonoInstaller");
+
         var characterPresentationView =
             FindSingleInScene<CharacterPresentationView>(activeScene, objectDescription: "CharacterPresentationView");
+
+        var characterPresentationInstaller =
+            FindSingleInScene<CharacterPresentationSceneCompositionMonoInstaller>(
+                activeScene,
+                objectDescription: "CharacterPresentationSceneCompositionMonoInstaller");
 
         var runCameraAnchor = FindSingleInScene<TransformRunCameraAnchor>(activeScene, objectDescription: "Run Camera Anchor");
         var runCameraRig = FindSingleInScene<CinemachineRunCameraRig>(activeScene, objectDescription: "Run Camera Rig");
@@ -206,9 +216,15 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         Assert.That(contactNotifier, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.Not.Null);
         Assert.That(runSurfaceInstaller, Is.Not.Null);
+        Assert.That(lifetimeScope.SceneCompositionInstallersForTests, Has.Exactly(1).SameAs(runSurfaceInstaller));
+        Assert.That(runMovementInstaller, Is.Not.Null);
+        Assert.That(lifetimeScope.SceneCompositionInstallersForTests, Has.Exactly(1).SameAs(runMovementInstaller));
         Assert.That(typeof(Component).IsAssignableFrom(typeof(PhysicsRunSupportProbe)), Is.False);
         Assert.That(typeof(Component).IsAssignableFrom(typeof(RunSurfaceFramePipeline)), Is.False);
         Assert.That(characterPresentationView, Is.Not.Null);
+        Assert.That(characterPresentationInstaller, Is.Not.Null);
+        Assert.That(lifetimeScope.SceneCompositionInstallersForTests, Has.Exactly(1).SameAs(characterPresentationInstaller));
+        Assert.That(characterPresentationInstaller.VisualTarget, Is.SameAs(launchTarget.transform));
         Assert.That(finishPresentationView, Is.Not.Null);
         Assert.That(runCameraAnchor, Is.Not.Null);
         Assert.That(runCameraRig, Is.Not.Null);
@@ -793,8 +809,7 @@ public sealed class GameplaySceneCompositionTests : BaseGameplayScenePlayModeFix
         if (!TryFindGameObjectByName(scene, objectName: "Pull Hint", out var pullHint) || pullHint.activeSelf)
             return false;
 
-        if (!TryFindGameObjectByName(scene, objectName: "Run Steering Affordance", out var runSteeringAffordance) ||
-            runSteeringAffordance.activeSelf)
+        if (!TryFindGameObjectByName(scene, objectName: "Run Steering Affordance", out var runSteeringAffordance) || runSteeringAffordance.activeSelf)
             return false;
 
         if (!TryFindGameObjectByName(scene, objectName: "Touch Indicator", out var touchIndicator) || touchIndicator.activeSelf)

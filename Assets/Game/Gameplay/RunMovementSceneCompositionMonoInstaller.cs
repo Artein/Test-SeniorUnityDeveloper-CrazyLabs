@@ -1,49 +1,79 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
 namespace Game.Gameplay
 {
-    public sealed class RunMovementInstaller : IInstaller
+    public sealed partial class RunMovementSceneCompositionMonoInstaller : BaseSceneCompositionMonoInstaller
     {
-        private readonly RunBodyMovementConfig _config;
-        private readonly IRigidbodyContactNotifier _contactNotifier;
-        private readonly IRunBodyMovementTarget _movementTarget;
-        private readonly IRunMotionSource _motionSource;
-        private readonly IRunProgressFrameSource _progressFrameSource;
+        [SerializeField] private RunBodyMovementConfig _config;
+        [SerializeField] private RigidbodyRunBodyMovementTarget _movementTarget;
+        [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
+        [SerializeField] private RunProgressFrameSource _progressFrameSource;
+        [SerializeField] private RigidbodyContactNotifier _contactNotifier;
 
-        public RunMovementInstaller(
-            RunBodyMovementConfig config,
-            IRunBodyMovementTarget movementTarget,
-            IRunMotionSource motionSource,
-            IRunProgressFrameSource progressFrameSource,
-            IRigidbodyContactNotifier contactNotifier)
-        {
-            _config = config != null ? config : throw new ArgumentNullException(nameof(config));
-            _movementTarget = movementTarget ?? throw new ArgumentNullException(nameof(movementTarget));
-            _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
-            _progressFrameSource = progressFrameSource ?? throw new ArgumentNullException(nameof(progressFrameSource));
-            _contactNotifier = contactNotifier ?? throw new ArgumentNullException(nameof(contactNotifier));
-        }
+        internal RunBodyMovementConfig Config => _config;
+        internal RunProgressFrameSource ProgressFrameSource => _progressFrameSource;
 
-        public void Install(IContainerBuilder builder)
+        public override void Install([NotNull] IContainerBuilder builder)
         {
             if (builder is null)
                 throw new ArgumentNullException(nameof(builder));
+
+            ThrowIfInvalidReferences();
 
             RegisterPorts(builder);
             RegisterConfigs(builder);
             RegisterPolicies(builder);
 
-            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<RunSurfaceFramePipeline>(Lifetime.Singleton)
+                .As<IRunSurfaceFrameSource, IRunSteeringFrameSource, IRunSteeringFrameResetter, IRunSurfaceFrameFixedStep>();
+
             builder.Register<RunBodySpeedEnvelopeValidator>(Lifetime.Singleton);
-            builder.RegisterEntryPoint<RunBodyMovementController>();
+
+            builder.Register<RunBodyMovementController>(Lifetime.Singleton)
+                .AsSelf()
+                .As<IRunBodyMovementFixedStep, IInitializable>();
+        }
+
+        internal override IEnumerable<string> GetReferenceValidationErrors()
+        {
+            if (_config == null)
+            {
+                yield return "RunMovementSceneCompositionMonoInstaller requires a Run Body Movement Config reference.";
+            }
+            else
+            {
+                var validator = new RunBodyMovementConfigValidator();
+
+                foreach (var error in validator.Validate(_config))
+                {
+                    yield return $"RunMovementSceneCompositionMonoInstaller Run Body Movement Config is invalid: {error}";
+                }
+            }
+
+            if (_movementTarget == null)
+                yield return "RunMovementSceneCompositionMonoInstaller requires a Run Body Movement Target reference.";
+
+            if (_runCameraSource == null)
+                yield return "RunMovementSceneCompositionMonoInstaller requires a Run Camera Source reference.";
+
+            if (_progressFrameSource == null)
+                yield return "RunMovementSceneCompositionMonoInstaller requires a Run Progress Frame Source reference.";
+
+            if (_contactNotifier == null)
+                yield return "RunMovementSceneCompositionMonoInstaller requires a Rigidbody Contact Notifier reference.";
         }
 
         private void RegisterPorts(IContainerBuilder builder)
         {
             builder.RegisterInstance<IRunBodyMovementTarget>(_movementTarget);
-            builder.RegisterInstance<IRunMotionSource>(_motionSource);
+            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
+            builder.RegisterInstance<IRunMotionSource>(_runCameraSource);
             builder.RegisterInstance<IRunProgressFrameSource>(_progressFrameSource);
             builder.RegisterInstance<IRigidbodyContactNotifier>(_contactNotifier);
         }
@@ -90,6 +120,14 @@ namespace Game.Gameplay
             builder.Register<RunSupportAttachmentPolicy>(Lifetime.Singleton);
             builder.Register<RunSurfaceStabilityPolicy>(Lifetime.Singleton);
             builder.Register<RunSteeringFramePolicy>(Lifetime.Singleton);
+        }
+
+        private void ThrowIfInvalidReferences()
+        {
+            var errors = GetReferenceValidationErrors().ToArray();
+
+            if (errors.Length > 0)
+                throw new InvalidOperationException(string.Join(separator: "\n", errors));
         }
     }
 }

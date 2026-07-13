@@ -286,14 +286,14 @@ namespace Game.Gameplay.Tests.PlayMode
 
         public IEnumerator Step()
         {
-            ((IFixedTickable)_surfaceFramePipeline).FixedTick();
+            ((IRunSurfaceFrameFixedStep)_surfaceFramePipeline).UpdateSurfaceFrame();
 
             _recordingMovementTarget.BeginStep();
             var sampledVelocity = Body.linearVelocity;
             var sampledPosition = Body.position;
             var surfaceContext = _surfaceFramePipeline.Current.StableSupport;
 
-            ((IFixedTickable)_controller).FixedTick();
+            ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
 
             var writtenVelocity = _recordingMovementTarget.HasLastTargetState
                 ? _recordingMovementTarget.LastTargetState.LinearVelocity

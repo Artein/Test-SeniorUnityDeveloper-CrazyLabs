@@ -47,6 +47,7 @@ public sealed class LostMomentumDetectorTests
             LostMomentumPlanarSpeedThreshold = LostMomentumPlanarSpeedThreshold,
             LostMomentumProgressThreshold = LostMomentumProgressThreshold
         };
+
         _clock = new FakeTime { FixedDeltaTime = TestFixedDeltaTime };
         _detector = CreateDetector();
         ((IInitializable)_detector).Initialize();
@@ -80,7 +81,7 @@ public sealed class LostMomentumDetectorTests
     {
         ActivateDetector();
 
-        ((IFixedTickable)_detector).FixedTick();
+        ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
 
         Assert.That(_candidateReceiver.Candidates, Is.Empty);
     }
@@ -90,7 +91,7 @@ public sealed class LostMomentumDetectorTests
     {
         ActivateDetector();
 
-        ((IFixedTickable)_detector).FixedTick();
+        ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
 
         Assert.That(_progressService.SamplePositionCallCount, Is.Zero);
     }
@@ -115,7 +116,7 @@ public sealed class LostMomentumDetectorTests
         {
             _motionSource.Position += Vector3.forward * 0.25f;
             SampleProgressService();
-            ((IFixedTickable)_detector).FixedTick();
+            ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
         }
 
         Assert.That(_candidateReceiver.Candidates, Is.Empty);
@@ -142,7 +143,7 @@ public sealed class LostMomentumDetectorTests
         {
             _motionSource.Position += Vector3.forward * 0.04f;
             SampleProgressService();
-            ((IFixedTickable)_detector).FixedTick();
+            ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
         }
 
         Assert.That(_candidateReceiver.Candidates, Has.Count.EqualTo(1));
@@ -159,7 +160,7 @@ public sealed class LostMomentumDetectorTests
         {
             _motionSource.Position += Vector3.forward * 0.25f;
             SampleProgressService();
-            ((IFixedTickable)_detector).FixedTick();
+            ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
         }
 
         Assert.That(_candidateReceiver.Candidates, Is.Empty);
@@ -190,7 +191,7 @@ public sealed class LostMomentumDetectorTests
         for (var tick = 0; tick < count; tick += 1)
         {
             SampleProgressService();
-            ((IFixedTickable)_detector).FixedTick();
+            ((ILostMomentumFixedStep)_detector).DetectLostMomentum();
         }
     }
 

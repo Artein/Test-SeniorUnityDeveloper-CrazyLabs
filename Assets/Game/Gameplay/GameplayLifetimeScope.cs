@@ -33,14 +33,9 @@ namespace Game.Gameplay
         [SerializeField] private GameplayStatId _coinPickupMultiplierStatId;
         [SerializeField] private SlingshotConfig _slingshotConfig;
         [SerializeField] private GameplaySlingshotLaunchConfig _gameplaySlingshotLaunchConfig;
-        [SerializeField] private RunBodyMovementConfig _runBodyMovementConfig;
         [SerializeField] private RunCameraConfig _runCameraConfig;
         [SerializeField] private RunEndConfig _runEndConfig;
-        [SerializeField] private RigidbodyRunBodyMovementTarget _runBodyMovementTarget;
-        [SerializeField] private RigidbodyRunCameraSource _runCameraSource;
-        [SerializeField] private RunProgressFrameSource _runProgressFrameSource;
         [SerializeField] private BaseSceneCompositionMonoInstaller[] _sceneCompositionInstallers;
-        [SerializeField] private RigidbodyContactNotifier _contactNotifier;
         [SerializeField] private TransformRunCameraAnchor _runCameraAnchor;
         [SerializeField] private CinemachineRunCameraRig _runCameraRig;
         [SerializeField] private Camera _inputCamera;
@@ -53,11 +48,9 @@ namespace Game.Gameplay
         [SerializeField] private RunPreparationUIView _runPreparationView;
         [SerializeField] private RunEndedUIView _runEndedView;
         [SerializeField] private RigidbodyLaunchTarget _launchTarget;
-        [SerializeField] private CharacterPresentationView _characterPresentationView;
-        [SerializeField] private AnimatedContactSensorPoseSyncView _animatedContactSensorPoseSyncView;
         [SerializeField] private FinishPresentationView _finishPresentationView;
 
-        [Header(header: "Diagnostics"), SerializeField] 
+        [Header(header: "Diagnostics"), SerializeField]
         private bool _runDiagnosticsOverlayEnabled;
 
         protected override void Configure(IContainerBuilder builder)
@@ -99,7 +92,6 @@ namespace Game.Gameplay
             builder.RegisterInstance<ILaunchTarget, IHeldLaunchTarget, ILaunchTargetSilhouetteSource>(_launchTarget)
                 .As<ILaunchTargetPreLaunchReset, IRunEndPoseLockTarget>();
 
-            builder.RegisterInstance<IRunCameraSource>(_runCameraSource);
             InstallSceneComposition(builder);
             builder.RegisterInstance<IRunCameraAnchor>(_runCameraAnchor);
             builder.RegisterInstance<IRunCameraLens>(new TransformRunCameraLens(_inputCamera.transform));
@@ -181,34 +173,22 @@ namespace Game.Gameplay
             builder.Register<IGameplaySlingshotLauncher, GameplaySlingshotLauncher>(Lifetime.Singleton);
             builder.Register<IRunModifierSnapshotProvider, IRunModifierSnapshotStore, RunModifierSnapshotHolder>(Lifetime.Singleton);
             builder.Register<ILevelPickupState, LevelPickupState>(Lifetime.Singleton);
-
             builder.RegisterEntryPoint<PlayerEconomyStateLoader>();
-            builder.RegisterEntryPoint<RunProgressService>();
-
-            new RunMovementInstaller(
-                _runBodyMovementConfig,
-                _runBodyMovementTarget,
-                _runCameraSource,
-                _runProgressFrameSource,
-                _contactNotifier).Install(builder);
-
-            builder.RegisterEntryPoint<RunCameraController>();
-            builder.RegisterEntryPoint<RunAirTimeTracker>();
-            builder.RegisterEntryPoint<RunEndFlow>();
+            builder.Register<RunProgressService>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<RunCameraController>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<RunAirTimeTracker>(Lifetime.Singleton).AsSelf().AsImplementedInterfaces();
+            builder.Register<RunAirTimeFixedStep>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<RunEndFlow>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<LostMomentumDetector>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.RegisterEntryPoint<RunEndPoseLockController>();
             builder.RegisterEntryPoint<RunRewardCommitter>();
             builder.RegisterEntryPoint<EconomyLifecycleFlushController>();
-
-            new CharacterPresentationInstaller(
-                _characterPresentationView,
-                _launchTarget.transform,
-                _animatedContactSensorPoseSyncView).Install(builder);
-
             builder.RegisterEntryPoint<PickupCollectionController>();
-            builder.RegisterEntryPoint<LostMomentumDetector>();
             builder.RegisterEntryPoint<RunPreparationPresenter>();
             builder.RegisterEntryPoint<RunEndedPresenter>();
             builder.RegisterEntryPoint<FinishCelebrationPresenter>();
+            builder.RegisterEntryPoint<RunFixedStepPipeline>();
+            builder.RegisterEntryPoint<RunPresentationLateStepPipeline>();
 
             if (_runDiagnosticsOverlayEnabled)
             {
@@ -235,10 +215,11 @@ namespace Game.Gameplay
             }
         }
 
-        private IReadOnlyList<GameplayPickupsSceneCompositionMonoInstaller> GetPickupSceneCompositionInstallers()
+        private IReadOnlyList<TInstaller> GetSceneCompositionInstallers<TInstaller>()
+            where TInstaller : BaseSceneCompositionMonoInstaller
         {
             return (_sceneCompositionInstallers ?? Array.Empty<BaseSceneCompositionMonoInstaller>())
-                .OfType<GameplayPickupsSceneCompositionMonoInstaller>()
+                .OfType<TInstaller>()
                 .ToArray();
         }
     }

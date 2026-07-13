@@ -11054,16 +11054,13 @@ MonoBehaviour:
   _coinPickupMultiplierStatId: {fileID: 11400000, guid: 6d2b3c99a75a4cedabb1878c9513dab1, type: 2}
   _slingshotConfig: {fileID: 11400000, guid: 6454db76b261c41cca31feece26b9777, type: 2}
   _gameplaySlingshotLaunchConfig: {fileID: 11400000, guid: b688a42718cd461fb04a7438f5c8a6a6, type: 2}
-  _runBodyMovementConfig: {fileID: 11400000, guid: bd2c80f3680341359fc50b94915fdba7, type: 2}
   _runCameraConfig: {fileID: 11400000, guid: f25920d4d9e6d4ff6b97661ba824019e, type: 2}
   _runEndConfig: {fileID: 11400000, guid: 712b8e8669464ccf9da84c8be5c7e1dc, type: 2}
-  _runBodyMovementTarget: {fileID: 1918570527}
-  _runCameraSource: {fileID: 1918570528}
-  _runProgressFrameSource: {fileID: 2200000002}
   _sceneCompositionInstallers:
   - {fileID: 1918570530}
+  - {fileID: 1918570531}
+  - {fileID: 3200000002}
   - {fileID: 2800000030}
-  _contactNotifier: {fileID: 1918570529}
   _runCameraAnchor: {fileID: 1577665901}
   _runCameraRig: {fileID: 1422486652}
   _inputCamera: {fileID: 330585545}
@@ -11076,8 +11073,6 @@ MonoBehaviour:
   _runPreparationView: {fileID: 1312182047}
   _runEndedView: {fileID: 2501000004}
   _launchTarget: {fileID: 1918570526}
-  _characterPresentationView: {fileID: 613386046}
-  _animatedContactSensorPoseSyncView: {fileID: 2800000014}
   _finishPresentationView: {fileID: 2900000004}
   _runDiagnosticsOverlayEnabled: 0
 --- !u!4 &1422486651
@@ -14305,6 +14300,7 @@ GameObject:
   - component: {fileID: 1918570528}
   - component: {fileID: 1918570529}
   - component: {fileID: 1918570530}
+  - component: {fileID: 1918570531}
   m_Layer: 10
   m_Name: MovementPhysicsRoot
   m_TagString: Player
@@ -14427,6 +14423,23 @@ MonoBehaviour:
   _surfaceMask:
     serializedVersion: 2
     m_Bits: 256
+--- !u!114 &1918570531
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918570521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79671cdf44e1c412386fdc371cba6ea1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.RunMovementSceneCompositionMonoInstaller
+  _config: {fileID: 11400000, guid: bd2c80f3680341359fc50b94915fdba7, type: 2}
+  _movementTarget: {fileID: 1918570527}
+  _runCameraSource: {fileID: 1918570528}
+  _progressFrameSource: {fileID: 2200000002}
+  _contactNotifier: {fileID: 1918570529}
 --- !u!1001 &1931583834
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17970,6 +17983,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3200000001}
+  - component: {fileID: 3200000002}
   m_Layer: 10
   m_Name: Player
   m_TagString: Player
@@ -17995,6 +18009,21 @@ Transform:
   - {fileID: 2800000011}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3200000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3200000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8fb39cb818a30439298c3d2d625c435c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Gameplay::Game.Gameplay.CharacterPresentation.CharacterPresentationSceneCompositionMonoInstaller
+  _view: {fileID: 613386046}
+  _visualTarget: {fileID: 1918570524}
+  _animatedContactSensorPoseSyncView: {fileID: 2800000014}
 --- !u!1001 &4649219297443621812
 PrefabInstance:
   m_ObjectHideFlags: 0

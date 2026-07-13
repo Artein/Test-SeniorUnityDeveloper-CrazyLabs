@@ -57,13 +57,16 @@ public sealed class RunEndFlowTests
             Position = new Vector3(1f, 2f, 3f),
             LinearVelocity = new Vector3(0f, 0f, 4f)
         };
+
         _runCurrencyAccumulator = new RunCurrencyAccumulator();
         _runRewardSourceCatalog = new RunRewardSourceCatalog();
 
-        _runRewardBreakdownBuilder = new RunRewardBreakdownBuilder(new IRunRewardContributor[]
-        {
-            new AccumulatedRunRewardContributor(_runCurrencyAccumulator)
-        });
+        _runRewardBreakdownBuilder = new RunRewardBreakdownBuilder(
+            new IRunRewardContributor[]
+            {
+                new AccumulatedRunRewardContributor(_runCurrencyAccumulator)
+            });
+
         _runAirTimeSource = new FakeRunAirTimeSource();
         _config = new FakeRunEndConfig { RunEndedAcknowledgeGuardDuration = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
@@ -92,7 +95,7 @@ public sealed class RunEndFlowTests
         _stateService.ChangeTo(_runningStateId);
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.RequestedStateIds, Is.Empty);
     }
@@ -102,7 +105,7 @@ public sealed class RunEndFlowTests
     {
         ActivateRun();
 
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_progressService.SamplePositionCallCount, Is.Zero);
     }
@@ -114,7 +117,7 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True, ElapsedTime=0.1, DistanceTravelled=12.5"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
@@ -129,9 +132,9 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(acceptedResults, Has.Count.EqualTo(1));
         Assert.That(acceptedResults[0].Reason, Is.EqualTo(RunEndReason.Finished));
@@ -154,7 +157,7 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished, IsSuccess=True, ElapsedTime=0.1, DistanceTravelled=0"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
@@ -167,9 +170,9 @@ public sealed class RunEndFlowTests
         Assert.That(acceptedResults[0].FinalSpeed, Is.EqualTo(3f).Within(0.001f));
         Assert.That(acceptedResults[0].CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
 
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
@@ -188,7 +191,7 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(notificationCount, Is.EqualTo(0));
     }
@@ -203,7 +206,7 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(acceptedResult.HasValue, Is.True);
         Assert.That(acceptedResult.Value.CurrencySnapshot.GetAmount(_coins), Is.EqualTo(7));
@@ -219,9 +222,9 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
         Assert.That(((IRunResultAcknowledgeCommand)_flow).TryAcknowledge(), Is.True);
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runPreparationStateId));
@@ -237,10 +240,10 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
@@ -253,7 +256,7 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
 
@@ -269,9 +272,9 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         var acknowledged = ((IRunResultAcknowledgeCommand)_flow).TryAcknowledge();
 
@@ -299,7 +302,7 @@ public sealed class RunEndFlowTests
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
     }
@@ -311,9 +314,9 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
     }
@@ -324,14 +327,14 @@ public sealed class RunEndFlowTests
         ActivateRun();
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=Finished"));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
         _stateService.ChangeTo(_runPreparationStateId);
 
         _stateService.ChangeTo(_runningStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=ObstacleHit"));
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.ObstacleHit));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId, _runEndedStateId }));
     }
@@ -345,7 +348,7 @@ public sealed class RunEndFlowTests
         ((IRunResultNotifier)_flow).RunResultAccepted += acceptedResults.Add;
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.Finished));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runningStateId));
         Assert.That(_stateService.RequestedStateIds, Is.EqualTo(new[] { _runEndedStateId }));
@@ -361,15 +364,27 @@ public sealed class RunEndFlowTests
         LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
 
         _contactNotifier.RaiseTrigger(new RigidbodyTriggerNotification(null));
-        ((IFixedTickable)_flow).FixedTick();
+        ((IRunEndFixedStep)_flow).ResolveRunEnd();
 
         Assert.That(_stateService.CurrentStateId, Is.SameAs(_runEndedStateId));
     }
 
     private RunEndFlow CreateFlow()
     {
-        return new RunEndFlow(_stateService, _launchAppliedNotifier, _contactNotifier, _contactClassifier, _progressService, _motionSource,
-            _runCurrencyAccumulator, _runRewardBreakdownBuilder, _runAirTimeSource, _config, _clock, _runPreparationStateId, _runningStateId,
+        return new RunEndFlow(
+            _stateService,
+            _launchAppliedNotifier,
+            _contactNotifier,
+            _contactClassifier,
+            _progressService,
+            _motionSource,
+            _runCurrencyAccumulator,
+            _runRewardBreakdownBuilder,
+            _runAirTimeSource,
+            _config,
+            _clock,
+            _runPreparationStateId,
+            _runningStateId,
             _runEndedStateId);
     }
 

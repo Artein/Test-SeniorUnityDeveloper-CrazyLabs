@@ -352,8 +352,8 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
         {
             _tick += 1;
             Physics.SyncTransforms();
-            ((IFixedTickable)_pipeline).FixedTick();
-            ((IFixedTickable)_tracker).FixedTick();
+            ((IRunSurfaceFrameFixedStep)_pipeline).UpdateSurfaceFrame();
+            _tracker.UpdateAirTime();
             return _pipeline.Current;
         }
 

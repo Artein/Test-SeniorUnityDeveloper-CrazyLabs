@@ -9,7 +9,12 @@ using VContainer.Unity;
 
 namespace Game.Gameplay
 {
-    internal sealed class RunBodyMovementController : IInitializable, IFixedTickable, IDisposable
+    internal interface IRunBodyMovementFixedStep
+    {
+        void UpdateMovement();
+    }
+
+    internal sealed class RunBodyMovementController : IRunBodyMovementFixedStep, IInitializable, IDisposable
     {
         private readonly ITime _clock;
         private readonly IGameplayStateService _gameplayStateService;
@@ -106,7 +111,7 @@ namespace Game.Gameplay
             ClearMovementLifecycle();
         }
 
-        void IFixedTickable.FixedTick()
+        void IRunBodyMovementFixedStep.UpdateMovement()
         {
             if (_isDisposed || !_isMovementActive)
                 return;

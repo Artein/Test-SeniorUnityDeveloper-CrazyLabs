@@ -12,7 +12,27 @@ namespace Game.Gameplay
         float CurrentRunAirTimeSeconds { get; }
     }
 
-    public sealed class RunAirTimeTracker : IInitializable, IFixedTickable, IDisposable, IRunAirTimeSource
+    internal interface IRunAirTimeFixedStep
+    {
+        void UpdateAirTime();
+    }
+
+    internal sealed class RunAirTimeFixedStep : IRunAirTimeFixedStep
+    {
+        private readonly RunAirTimeTracker _tracker;
+
+        public RunAirTimeFixedStep(RunAirTimeTracker tracker)
+        {
+            _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+        }
+
+        public void UpdateAirTime()
+        {
+            _tracker.UpdateAirTime();
+        }
+    }
+
+    public sealed class RunAirTimeTracker : IRunAirTimeSource, IInitializable, IDisposable
     {
         private readonly ITime _clock;
         private readonly IGameplayStateService _gameplayStateService;
@@ -54,7 +74,7 @@ namespace Game.Gameplay
             _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
         }
 
-        void IFixedTickable.FixedTick()
+        internal void UpdateAirTime()
         {
             if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
                 return;
@@ -63,7 +83,9 @@ namespace Game.Gameplay
 
             if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
                 || surfaceFrame.StableSupport.IsGrounded)
+            {
                 return;
+            }
 
             CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
         }

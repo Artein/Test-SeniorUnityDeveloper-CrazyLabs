@@ -766,7 +766,7 @@ public sealed class RunBodyMovementControllerTests
 
     private void FixedTick()
     {
-        ((IFixedTickable)_controller).FixedTick();
+        ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
     }
 
     private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 launchUp)

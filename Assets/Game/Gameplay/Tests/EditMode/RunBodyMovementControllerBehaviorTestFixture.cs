@@ -146,7 +146,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
 
     protected void FixedTick()
     {
-        ((IFixedTickable)_movementController).FixedTick();
+        ((IRunBodyMovementFixedStep)_movementController).UpdateMovement();
         _surfaceContextSource.Transition = RunSurfaceTransition.None;
     }
 
@@ -205,8 +205,7 @@ public abstract class RunBodyMovementControllerBehaviorTestFixture
     {
         Assert.That(
             _statResolver.ResolveRequests.Exists(request =>
-                request.StatId == statId &&
-                Mathf.Abs(request.BaseValue - baseValue) <= 0.0001f),
+                request.StatId == statId && Mathf.Abs(request.BaseValue - baseValue) <= 0.0001f),
             Is.True);
     }
 

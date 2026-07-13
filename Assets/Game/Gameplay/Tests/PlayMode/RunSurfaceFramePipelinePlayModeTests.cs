@@ -415,7 +415,7 @@ public sealed class RunSurfaceFramePipelinePlayModeTests : BaseGameplayTestAsset
         {
             _tick += 1;
             Physics.SyncTransforms();
-            ((IFixedTickable)_pipeline).FixedTick();
+            ((IRunSurfaceFrameFixedStep)_pipeline).UpdateSurfaceFrame();
             return new RunSurfaceTraceSample(_tick, label, _pipeline.Current);
         }
 

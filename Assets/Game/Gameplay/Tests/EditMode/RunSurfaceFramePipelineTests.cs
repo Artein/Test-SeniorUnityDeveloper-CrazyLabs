@@ -2,7 +2,6 @@ using System;
 using Game.Foundation.Time;
 using NUnit.Framework;
 using UnityEngine;
-using VContainer.Unity;
 
 namespace Game.Gameplay.Tests.EditMode
 {
@@ -11,13 +10,12 @@ namespace Game.Gameplay.Tests.EditMode
         private const float FixedDeltaTime = 0.02f;
         private FakeRunMotionSource _motionSource;
         private RunSurfaceFramePipeline _pipeline;
-
         private FakeRunProgressFrameSource _progressFrameSource;
         private FakeRunSupportProbe _supportProbe;
         private FakeTime _time;
 
         [SetUp]
-        public void SetUp()
+        public void OnSetUp()
         {
             _progressFrameSource = new FakeRunProgressFrameSource();
             _supportProbe = new FakeRunSupportProbe();
@@ -187,14 +185,14 @@ namespace Game.Gameplay.Tests.EditMode
             _supportProbe.State = RunSupportObservationState.Supported;
             _supportProbe.Normal = Vector3.up;
 
-            for (var index = 0; index < 10; index += 1)
+            for (var i = 0; i < 10; i += 1)
             {
                 Tick(_pipeline);
             }
 
             var allocatedBytesBefore = GC.GetAllocatedBytesForCurrentThread();
 
-            for (var index = 0; index < 100; index += 1)
+            for (var i = 0; i < 100; i += 1)
             {
                 Tick(_pipeline);
             }
@@ -239,7 +237,7 @@ namespace Game.Gameplay.Tests.EditMode
 
         private static void Tick(RunSurfaceFramePipeline pipeline)
         {
-            ((IFixedTickable)pipeline).FixedTick();
+            ((IRunSurfaceFrameFixedStep)pipeline).UpdateSurfaceFrame();
         }
 
         private sealed class FakeRunProgressFrameSource : IRunProgressFrameSource

@@ -363,7 +363,7 @@ public sealed class RunBodySpeedModelPlayModeTests
 
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
             {
-                ((IFixedTickable)_controller).FixedTick();
+                ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
             }
 
             return _body.linearVelocity;
@@ -380,7 +380,7 @@ public sealed class RunBodySpeedModelPlayModeTests
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
             {
                 _body.linearVelocity = cancelledVelocity;
-                ((IFixedTickable)_controller).FixedTick();
+                ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
                 writtenSpeeds[tickIndex] = _body.linearVelocity.magnitude;
             }
 

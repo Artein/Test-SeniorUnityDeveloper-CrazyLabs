@@ -67,8 +67,8 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        ((IFixedTickable)_tracker).FixedTick();
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
+        _tracker.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
@@ -81,7 +81,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         _stateService.ChangeTo(_runningStateId);
 
@@ -90,7 +90,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportAcquired);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
@@ -105,7 +105,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         _stateService.ChangeTo(_runPreparationStateId);
 
@@ -123,7 +123,7 @@ public sealed class RunAirTimeTrackerTests
             RunSurfaceTransition.None,
             isMissingSupportHeld: true);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
@@ -138,21 +138,21 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportLost);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         _surfaceFrameSource.Publish(
             RunSupportObservationState.Missing,
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.None);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         _surfaceFrameSource.Publish(
             RunSupportObservationState.Supported,
             new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.SupportAcquired);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
@@ -167,7 +167,7 @@ public sealed class RunAirTimeTrackerTests
             new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             RunSurfaceTransition.HardReset);
 
-        ((IFixedTickable)_tracker).FixedTick();
+        _tracker.UpdateAirTime();
 
         Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }

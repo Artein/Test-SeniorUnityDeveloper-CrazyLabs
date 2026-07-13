@@ -19,7 +19,12 @@ namespace Game.Gameplay
         void Reset();
     }
 
-    internal sealed class RunProgressService : IRunProgressService, IInitializable, IFixedTickable, IDisposable
+    internal interface IRunProgressFixedStep
+    {
+        void SampleProgress();
+    }
+
+    internal sealed class RunProgressService : IRunProgressService, IRunProgressFixedStep, IInitializable, IDisposable
     {
         private readonly IRunProgressFrameSource _frameSource;
         private readonly IRunMotionSource _motionSource;
@@ -63,7 +68,7 @@ namespace Game.Gameplay
             _isInitialized = true;
         }
 
-        void IFixedTickable.FixedTick()
+        void IRunProgressFixedStep.SampleProgress()
         {
             if (_isDisposed || !HasValidSnapshot)
                 return;

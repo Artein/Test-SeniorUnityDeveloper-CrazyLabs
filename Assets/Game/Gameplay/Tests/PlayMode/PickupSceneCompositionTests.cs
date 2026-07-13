@@ -45,6 +45,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
 
         var animatedContactSensorPoseSyncView =
             FindSingleInScene<AnimatedContactSensorPoseSyncView>(scene, "AnimatedContactSensorPoseSyncView");
+
         var player = FindGameObjectByName(scene, "Player");
         var movementPhysicsRoot = FindGameObjectByName(scene, "MovementPhysicsRoot");
         var characterVisualAnchor = FindGameObjectByName(scene, "CharacterVisualAnchor");
@@ -69,7 +70,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
             : new TriggerNotifier[] { };
 
         Assert.That(scene.path, Is.EqualTo(TestAssets.GameplaySceneRef.Path));
-        Assert.That(lifetimeScope.PickupSetupValidationErrorsForTests, Is.Empty);
+        Assert.That(lifetimeScope.SceneCompositionInstallersForTests, Has.Exactly(1).SameAs(pickupsInstaller));
         Assert.That(Physics.GetIgnoreLayerCollision(playerBodyPartLayer, pickupLayer), Is.False);
         Assert.That(allScenePickups, Has.Length.GreaterThan(2));
         Assert.That(configuredPickups, Has.Length.EqualTo(allScenePickups.Length));
@@ -99,6 +100,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
         var bigCoinPickup = FindConfiguredPickup(configuredPickups, 25, "big coin pickup");
 
         Assert.That(regularCoinPickup.Definition.CurrencyDefinition, Is.SameAs(bigCoinPickup.Definition.CurrencyDefinition));
+
         AssertPlayerTransformAuthority(
             player,
             movementPhysicsRoot,
@@ -108,6 +110,7 @@ public sealed class PickupSceneCompositionTests : BaseGameplayScenePlayModeFixtu
             launchTargetColliderRoot,
             runBodyContactColliderRoot,
             bandCenter);
+
         AssertPickupSensorAuthoring(pickupSensorSource, pickupSensorNotifiers, playerBodyPartLayer);
         AssertPickupSensorPoseBindings(animatedContactSensorPoseSyncView, pickupSensorNotifiers);
     }

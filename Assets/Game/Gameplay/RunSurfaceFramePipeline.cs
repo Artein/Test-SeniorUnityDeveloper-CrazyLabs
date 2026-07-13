@@ -1,7 +1,6 @@
 using System;
 using Game.Foundation.Time;
 using UnityEngine;
-using VContainer.Unity;
 
 namespace Game.Gameplay
 {
@@ -31,11 +30,16 @@ namespace Game.Gameplay
             Vector3 continuityNormal);
     }
 
+    internal interface IRunSurfaceFrameFixedStep
+    {
+        void UpdateSurfaceFrame();
+    }
+
     internal sealed class RunSurfaceFramePipeline :
         IRunSurfaceFrameSource,
         IRunSteeringFrameSource,
         IRunSteeringFrameResetter,
-        IFixedTickable
+        IRunSurfaceFrameFixedStep
     {
         private readonly RunSupportAttachmentPolicy _attachmentPolicy;
         private readonly IRunMotionSource _motionSource;
@@ -65,7 +69,7 @@ namespace Game.Gameplay
             _time = time ?? throw new ArgumentNullException(nameof(time));
         }
 
-        void IFixedTickable.FixedTick()
+        void IRunSurfaceFrameFixedStep.UpdateSurfaceFrame()
         {
             var previousStableSupport = Current.StableSupport;
 
