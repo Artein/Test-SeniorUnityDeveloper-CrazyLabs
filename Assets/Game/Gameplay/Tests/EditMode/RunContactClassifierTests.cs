@@ -12,10 +12,11 @@ public sealed class RunContactClassifierTests
     [SetUp]
     public void OnSetUp()
     {
-        _classifier = new RunContactClassifier(new FakeRunEndConfig
-        {
-            ObstacleImpactSpeedThreshold = 5f
-        });
+        _classifier = new RunContactClassifier(
+            new FakeRunEndConfig
+            {
+                ObstacleImpactSpeedThreshold = 5f
+            });
     }
 
     [TearDown]
@@ -32,7 +33,7 @@ public sealed class RunContactClassifierTests
     [Test]
     public void TryClassify_Surface_EmitsNoCandidate()
     {
-        var collider = CreateCollider("Surface", RunContactCategory.Surface);
+        var collider = CreateCollider(objectName: "Surface", RunContactCategory.Surface);
 
         var classified = _classifier.TryClassify(CreateTrigger(collider), out _);
 
@@ -42,7 +43,7 @@ public sealed class RunContactClassifierTests
     [Test]
     public void TryClassify_FinishTrigger_EmitsFinished()
     {
-        var collider = CreateCollider("Finish", RunContactCategory.Finish);
+        var collider = CreateCollider(objectName: "Finish", RunContactCategory.Finish);
 
         var classified = _classifier.TryClassify(CreateTrigger(collider), out var candidate);
 
@@ -53,7 +54,7 @@ public sealed class RunContactClassifierTests
     [Test]
     public void TryClassify_SafetyNetTrigger_EmitsOutOfBounds()
     {
-        var collider = CreateCollider("Safety Net", RunContactCategory.SafetyNet);
+        var collider = CreateCollider(objectName: "Safety Net", RunContactCategory.SafetyNet);
 
         var classified = _classifier.TryClassify(CreateTrigger(collider), out var candidate);
 
@@ -64,8 +65,8 @@ public sealed class RunContactClassifierTests
     [Test]
     public void TryClassify_ObstacleBelowNormalImpactThreshold_EmitsNoCandidate()
     {
-        var collider = CreateCollider("Obstacle", RunContactCategory.Obstacle);
-        var notification = CreateCollision(collider, new Vector3(0f, 0f, -4.9f), Vector3.forward);
+        var collider = CreateCollider(objectName: "Obstacle", RunContactCategory.Obstacle);
+        var notification = CreateCollision(collider, new Vector3(x: 0f, y: 0f, z: -4.9f), Vector3.forward);
 
         var classified = _classifier.TryClassify(notification, out _);
 
@@ -75,8 +76,8 @@ public sealed class RunContactClassifierTests
     [Test]
     public void TryClassify_ObstacleAtNormalImpactThreshold_EmitsObstacleHit()
     {
-        var collider = CreateCollider("Obstacle", RunContactCategory.Obstacle);
-        var notification = CreateCollision(collider, new Vector3(0f, 0f, -5f), Vector3.forward);
+        var collider = CreateCollider(objectName: "Obstacle", RunContactCategory.Obstacle);
+        var notification = CreateCollision(collider, new Vector3(x: 0f, y: 0f, z: -5f), Vector3.forward);
 
         var classified = _classifier.TryClassify(notification, out var candidate);
 
@@ -85,11 +86,22 @@ public sealed class RunContactClassifierTests
     }
 
     [Test]
+    public void TryClassify_ObstacleHighTangentSpeedBelowNormalThreshold_EmitsNoCandidate()
+    {
+        var collider = CreateCollider(objectName: "Obstacle", RunContactCategory.Obstacle);
+        var notification = CreateCollision(collider, new Vector3(x: 100f, y: 0f, z: -4.9f), Vector3.forward);
+
+        var classified = _classifier.TryClassify(notification, out _);
+
+        Assert.That(classified, Is.False);
+    }
+
+    [Test]
     public void TryClassify_MetadataOnParentOnly_IsIgnored()
     {
-        var parent = Track(new GameObject("Parent Contact"));
+        var parent = Track(new GameObject(name: "Parent Contact"));
         parent.AddComponent<RunContact>().SetCategoryForTests(RunContactCategory.Finish);
-        var child = Track(new GameObject("Child Collider"));
+        var child = Track(new GameObject(name: "Child Collider"));
         child.transform.SetParent(parent.transform);
         var collider = child.AddComponent<BoxCollider>();
 
@@ -133,11 +145,11 @@ public sealed class RunContactClassifierTests
 
     private sealed class FakeRunEndConfig : IRunEndConfig
     {
-        public float ObstacleImpactSpeedThreshold { get; set; }
-        public float LostMomentumLaunchGraceDuration { get; set; }
         public float LostMomentumDuration { get; set; }
+        public float LostMomentumLaunchGraceDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
+        public float ObstacleImpactSpeedThreshold { get; set; }
         public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 }

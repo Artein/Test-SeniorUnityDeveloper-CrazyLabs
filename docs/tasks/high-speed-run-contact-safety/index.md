@@ -2,6 +2,8 @@
 
 Parent PRD: [High-Speed Run Contact Safety](../../prd/prd-high-speed-run-contact-safety.md)
 
+Decision record: [Contact-Safety Evidence and Remediation Decision](contact-safety-evidence-decision.md)
+
 Related architecture decisions:
 
 - [ADR-0002: Keep Gameplay Logic in Plain C# Controllers](../../adr/adr-0002-keep-gameplay-logic-in-plain-csharp-controllers.md)
@@ -16,6 +18,7 @@ Related architecture decisions:
 | 02 | [Prove Authored Run Finish Traversal](02-prove-authored-run-finish-traversal.md) | AFK | None | 4–6, 10–12, 14, 16–20, 27, 29–33, 35–37, 49, 56, 59–60 |
 | 03 | [Prove Authored Run Safety Net Traversal](03-prove-authored-run-safety-net-traversal.md) | AFK | 02 | 3, 5, 10–12, 15–20, 28–33, 35–37, 49, 56, 59–60 |
 | 04 | [Approve Contact-Safety Evidence and Remediation Boundary](04-approve-contact-safety-evidence-and-remediation-boundary.md) | HITL | 01–03 | 18, 36–38, 50, 55–56, 58, 60 |
+| 05 | [Preserve Static-Obstacle Approach Velocity Across CCD Contact](05-preserve-static-obstacle-approach-velocity.md) | AFK | 04 | 1–2, 5, 7–8, 19, 21–26, 31–33, 35, 37–39, 48–53, 55, 57, 59–60 |
 
 ## Delivery notes
 
@@ -24,6 +27,7 @@ Related architecture decisions:
 - Issues 01–03 are evidence-first and test-only. Passing evidence is a valid outcome and must not cause production, scene, prefab, ScriptableObject, package, or ProjectSettings churn.
 - Issue 03 follows Issue 02 so it can reuse the trigger traversal and projected-margin harness without duplicating test infrastructure.
 - Issue 04 is the only remediation gate. If evidence is safe, close with no production fix. If evidence reproduces a miss, approve the smallest remedy before drafting additional issues.
-- Conditional fallback stories 9, 34, 39–49, 51–54, and 57 are deliberately not claimed by these proof issues. They become input to a new breakdown only if Issue 04 authorizes remediation.
+- Issue 04 evidence reproduced a classification failure rather than a detection miss: Continuous Dynamic delivered and resolved the solid contact, but callback relative velocity was zero. The owner-approved Issue 05 preserves static-obstacle approach-speed evidence in the existing callback path; no sweep is authorized.
+- Swept-query stories 9, 34, 40–47, and 54 remain unclaimed because the authoritative collision callback did not miss.
 - Every implementation issue must pass the Unity compile gate before targeted tests. Flaky PlayMode physics is a stop condition.
 - These are local planning issues only; nothing is published remotely.

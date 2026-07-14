@@ -110,6 +110,16 @@
               &lt;Name /&gt;
           &lt;/Entry.SortBy&gt;
       &lt;/Entry&gt;
+      
+      &lt;Entry DisplayName="Events" Priority="200"&gt;
+          &lt;Entry.Match&gt;
+              &lt;Kind Is="Event" /&gt;
+          &lt;/Entry.Match&gt;
+
+          &lt;Entry.SortBy&gt;
+              &lt;Name /&gt;
+          &lt;/Entry.SortBy&gt;
+      &lt;/Entry&gt;
 
       &lt;Entry DisplayName="Event Functions"&gt;
           &lt;Entry.Match&gt;
