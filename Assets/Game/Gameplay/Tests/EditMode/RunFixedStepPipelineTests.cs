@@ -26,13 +26,43 @@ public sealed class RunFixedStepPipelineTests
             Is.EqualTo(
                 new[]
                 {
+                    "Run End",
                     "Progress",
                     "Surface",
                     "Movement",
                     "Air Time",
-                    "Run End",
                     "Lost Momentum"
                 }));
+    }
+
+    [Test]
+    public void FixedTick_RunEndBlocks_ExecutesNoRemainingRunSteps()
+    {
+        var steps = new RecordingRunFixedSteps
+        {
+            RunEndResult = RunEndFixedStepResult.BlockRemainingRunSteps
+        };
+
+        var pipeline = new RunFixedStepPipeline(steps, steps, steps, steps, steps, steps);
+
+        ((IFixedTickable)pipeline).FixedTick();
+
+        Assert.That(steps.Calls, Is.EqualTo(new[] { "Run End" }));
+        Assert.That(steps.MovementWriteCount, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_ConsecutiveCatchUpTicksBecomeBlocked_PerformsNoSecondMovementWrite()
+    {
+        var steps = new RecordingRunFixedSteps();
+        var pipeline = new RunFixedStepPipeline(steps, steps, steps, steps, steps, steps);
+
+        ((IFixedTickable)pipeline).FixedTick();
+        steps.RunEndResult = RunEndFixedStepResult.BlockRemainingRunSteps;
+        ((IFixedTickable)pipeline).FixedTick();
+
+        Assert.That(steps.MovementWriteCount, Is.EqualTo(1));
+        Assert.That(steps.Calls[^1], Is.EqualTo("Run End"));
     }
 
     private sealed class RecordingRunFixedSteps :
@@ -46,6 +76,8 @@ public sealed class RunFixedStepPipelineTests
         private readonly List<string> _calls = new();
 
         public IReadOnlyList<string> Calls => _calls;
+        public int MovementWriteCount { get; private set; }
+        public RunEndFixedStepResult RunEndResult { get; set; }
 
         public void SampleProgress()
         {
@@ -60,6 +92,7 @@ public sealed class RunFixedStepPipelineTests
         public void UpdateMovement()
         {
             _calls.Add("Movement");
+            MovementWriteCount += 1;
         }
 
         public void UpdateAirTime()
@@ -67,9 +100,10 @@ public sealed class RunFixedStepPipelineTests
             _calls.Add("Air Time");
         }
 
-        public void ResolveRunEnd()
+        public RunEndFixedStepResult ResolveRunEnd()
         {
             _calls.Add("Run End");
+            return RunEndResult;
         }
 
         public void DetectLostMomentum()

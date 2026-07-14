@@ -22,6 +22,38 @@ namespace Game.Gameplay
         }
     }
 
+    internal enum RunEndFixedStepResult
+    {
+        ContinueRunSteps = 0,
+        BlockRemainingRunSteps = 1
+    }
+
+    internal readonly struct RunEndObservation
+    {
+        public RunEndCandidate Candidate { get; }
+        public float ElapsedTime { get; }
+        public Vector3 Position { get; }
+        public Vector3 LinearVelocity { get; }
+        public RunProgressSample ProgressSample { get; }
+        public float AirTimeSeconds { get; }
+
+        public RunEndObservation(
+            RunEndCandidate candidate,
+            float elapsedTime,
+            Vector3 position,
+            Vector3 linearVelocity,
+            RunProgressSample progressSample,
+            float airTimeSeconds)
+        {
+            Candidate = candidate;
+            ElapsedTime = Mathf.Max(0f, elapsedTime);
+            Position = position;
+            LinearVelocity = linearVelocity;
+            ProgressSample = progressSample;
+            AirTimeSeconds = Mathf.Max(0f, airTimeSeconds);
+        }
+    }
+
     public readonly struct RunResult
     {
         public RunEndReason Reason { get; }

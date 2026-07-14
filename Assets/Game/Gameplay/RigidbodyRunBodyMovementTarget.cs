@@ -28,7 +28,11 @@ namespace Game.Gameplay
 
             if (targetState.HasRotation)
                 _rigidbody.MoveRotation(targetState.Rotation);
+
+            RecordSuccessfulTargetWriteForTests();
         }
+
+        partial void RecordSuccessfulTargetWriteForTests();
 
         private void OnValidate()
         {

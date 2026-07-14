@@ -23,6 +23,10 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
 
         var body = launchTarget.GetComponent<Rigidbody>();
 
+        var movementTarget = FindSingleInScene<RigidbodyRunBodyMovementTarget>(
+            scene,
+            objectDescription: "RigidbodyRunBodyMovementTarget");
+
         var sphere = FindGameObjectByName(scene, objectName: "RunBodyContactColliderRoot")
             .GetComponent<SphereCollider>();
 
@@ -37,6 +41,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
             lifetimeScope.Container.Resolve<IGameplayStateService>(),
             launchTarget,
             body,
+            movementTarget,
             sphere,
             lifetimeScope.Container.Resolve<IRigidbodyContactNotifier>(),
             lifetimeScope.Container.Resolve<IRunContactClassifier>(),
@@ -200,6 +205,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         public IRigidbodyContactNotifier ContactNotifier { get; }
         public RigidbodyLaunchTarget LaunchTarget { get; }
         public GameplayLifetimeScope LifetimeScope { get; }
+        public RigidbodyRunBodyMovementTarget MovementTarget { get; }
         public IRunResultNotifier ResultNotifier { get; }
         public IRunEndConfig RunEndConfig { get; }
         public Scene Scene { get; }
@@ -212,6 +218,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
             IGameplayStateService stateService,
             RigidbodyLaunchTarget launchTarget,
             Rigidbody body,
+            RigidbodyRunBodyMovementTarget movementTarget,
             SphereCollider sphere,
             IRigidbodyContactNotifier contactNotifier,
             IRunContactClassifier contactClassifier,
@@ -223,6 +230,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
             StateService = stateService;
             LaunchTarget = launchTarget;
             Body = body;
+            MovementTarget = movementTarget;
             Sphere = sphere;
             ContactNotifier = contactNotifier;
             ContactClassifier = contactClassifier;
@@ -237,7 +245,10 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         public int CollisionContactPointCount { get; set; }
         public int CollisionNotificationCount { get; set; }
         public Vector3 CollisionRelativeVelocity { get; set; }
+        public Vector3 CollisionBodyVelocity { get; set; }
+        public bool HasClassifiedCollisionSnapshot { get; set; }
         public float MaximumNormalImpactSpeed { get; set; }
+        public int MovementWriteCountAtClassifiedCollision { get; set; }
         public List<RunResult> Results { get; } = new();
         public int TriggerNotificationCount { get; set; }
     }

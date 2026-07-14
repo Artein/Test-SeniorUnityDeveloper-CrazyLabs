@@ -30,11 +30,13 @@ namespace Game.Gameplay
 
         void IFixedTickable.FixedTick()
         {
+            if (_runEndStep.ResolveRunEnd() == RunEndFixedStepResult.BlockRemainingRunSteps)
+                return;
+
             _progressStep.SampleProgress();
             _surfaceFrameStep.UpdateSurfaceFrame();
             _movementStep.UpdateMovement();
             _airTimeStep.UpdateAirTime();
-            _runEndStep.ResolveRunEnd();
             _lostMomentumStep.DetectLostMomentum();
         }
     }
