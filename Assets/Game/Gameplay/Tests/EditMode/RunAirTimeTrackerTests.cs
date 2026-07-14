@@ -160,9 +160,19 @@ public sealed class RunAirTimeTrackerTests
     }
 
     [Test]
-    public void FixedTick_UnavailableHardReset_DoesNotAccumulate()
+    public void FixedTick_AccumulatedAirTimeThenHardReset_ClearsCurrentRunAirTime()
     {
         _stateService.ChangeTo(_runningStateId);
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
+
+        _airTimeStep.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
 
         _surfaceFrameSource.Publish(
             RunSupportObservationState.Unavailable,

@@ -61,7 +61,7 @@ namespace Game.Gameplay
             _isInitialized = true;
 
             if (_gameplayStateService.IsCurrent(_runPreparationStateId))
-                CurrentRunAirTimeSeconds = 0f;
+                ResetCurrentRunAirTime();
         }
 
         void IDisposable.Dispose()
@@ -81,11 +81,14 @@ namespace Game.Gameplay
 
             var surfaceFrame = _surfaceFrameSource.Current;
 
-            if (surfaceFrame.ObservedSupport.State == RunSupportObservationState.Unavailable
-                || surfaceFrame.StableSupport.IsGrounded)
+            if (surfaceFrame.Transition == RunSurfaceTransition.HardReset)
             {
+                ResetCurrentRunAirTime();
                 return;
             }
+
+            if (surfaceFrame.StableSupport.IsGrounded)
+                return;
 
             CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
         }
@@ -96,7 +99,12 @@ namespace Game.Gameplay
                 return;
 
             if (ReferenceEquals(nextStateId, _runPreparationStateId) || ReferenceEquals(nextStateId, _runningStateId))
-                CurrentRunAirTimeSeconds = 0f;
+                ResetCurrentRunAirTime();
+        }
+
+        private void ResetCurrentRunAirTime()
+        {
+            CurrentRunAirTimeSeconds = 0f;
         }
     }
 }

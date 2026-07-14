@@ -149,11 +149,20 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
     }
 
     [Test]
-    public void given_UnavailableProgressFrame_when_PipelineAndAirTimeTick_then_HardResetCannotAwardAirTime()
+    public void given_AccumulatedAirTime_when_ProgressFrameBecomesUnavailable_then_HardResetClearsAirTimeAndReward()
     {
-        var fixture = CreateFixture(fixedDeltaTime: 0.02f);
+        const float fixedDeltaTime = 0.02f;
+        var fixture = CreateFixture(fixedDeltaTime);
         fixture.ShowSurface();
         fixture.Tick();
+
+        fixture.HideSurface();
+        fixture.Tick();
+        fixture.Tick();
+        var lost = fixture.Tick();
+
+        Assert.That(lost.Transition, Is.EqualTo(RunSurfaceTransition.SupportLost));
+        Assert.That(fixture.AirTimeSeconds, Is.EqualTo(fixedDeltaTime).Within(amount: 0.000001f));
 
         fixture.IsProgressFrameAvailable = false;
 
@@ -166,10 +175,12 @@ public sealed class RunSurfaceAirTimePlayModeTests : BaseGameplayTestAssetsFixtu
         Assert.That(fixture.AirTimeSeconds, Is.Zero);
 
         fixture.IsProgressFrameAvailable = true;
+        fixture.ShowSurface();
         var reacquired = fixture.Tick();
 
         Assert.That(reacquired.Transition, Is.EqualTo(RunSurfaceTransition.SupportAcquired));
         Assert.That(fixture.AirTimeSeconds, Is.Zero);
+        AssertAirTimeReward(fixture.AirTimeSeconds, expectedAirTime: 0f);
     }
 
     private SurfaceAirTimeFixture CreateFixture(float fixedDeltaTime)
