@@ -158,6 +158,46 @@ namespace Game.Gameplay.Tests.EditMode
             Assert.That(reattached.IsConfirmingDiscontinuity, Is.False);
         }
 
+        [TestCase(arg: -75f)]
+        [TestCase(arg: 75f)]
+        public void FixedTick_DetachedFromUSideThenIncoherentLandingNormal_DefersStableReattachment(float bankDegrees)
+        {
+            ((IRunSteeringFrameResetter)_pipeline).Reset(Vector3.forward);
+            var departureNormal = Quaternion.AngleAxis(bankDegrees, Vector3.forward) * Vector3.up;
+            var landingNormal = Quaternion.AngleAxis(-bankDegrees, Vector3.forward) * Vector3.up;
+            _supportProbe.State = RunSupportObservationState.Supported;
+            _supportProbe.Normal = departureNormal;
+            Tick(_pipeline);
+
+            _motionSource.LinearVelocity = departureNormal;
+            Tick(_pipeline);
+            _supportProbe.State = RunSupportObservationState.Missing;
+            Tick(_pipeline);
+
+            _motionSource.LinearVelocity = Vector3.down;
+            _supportProbe.State = RunSupportObservationState.Supported;
+            _supportProbe.Normal = Vector3.up;
+            Tick(_pipeline);
+            _supportProbe.Normal = landingNormal;
+            Tick(_pipeline);
+
+            var rawReattachment = _pipeline.Current;
+            Assert.That(rawReattachment.AttachmentTransition, Is.EqualTo(RunSupportAttachmentTransition.Reattached));
+            Assert.That(rawReattachment.Transition, Is.EqualTo(RunSurfaceTransition.None));
+            Assert.That(rawReattachment.IsConfirmingDiscontinuity, Is.True);
+            Assert.That(rawReattachment.StableSupport.GroundNormal, Is.EqualTo(departureNormal));
+            Assert.That(rawReattachment.SteeringFrame.UpDirection, Is.EqualTo(departureNormal));
+
+            Tick(_pipeline);
+
+            var stableReattachment = _pipeline.Current;
+            Assert.That(stableReattachment.AttachmentTransition, Is.EqualTo(RunSupportAttachmentTransition.None));
+            Assert.That(stableReattachment.Transition, Is.EqualTo(RunSurfaceTransition.SupportReattached));
+            Assert.That(stableReattachment.IsConfirmingDiscontinuity, Is.False);
+            Assert.That(stableReattachment.StableSupport.GroundNormal, Is.EqualTo(landingNormal));
+            Assert.That(stableReattachment.SteeringFrame.UpDirection, Is.EqualTo(landingNormal));
+        }
+
         [Test]
         public void FixedTick_TwoPipelines_HaveIndependentPolicyState()
         {

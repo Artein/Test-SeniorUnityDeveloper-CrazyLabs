@@ -188,6 +188,126 @@ public sealed class RunSurfaceStabilityPolicyTests
     }
 
     [Test]
+    public void Evaluate_ReattachedWithIncoherentLandingNormal_DefersTransitionUntilCandidateConfirms()
+    {
+        var departureNormal = TiltedUp(degrees: 75f, Vector3.forward);
+        var firstLandingNormal = Vector3.up;
+        var confirmedLandingNormal = TiltedUp(degrees: -75f, Vector3.forward);
+        _policy.Evaluate(Supported(departureNormal), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Supported(firstLandingNormal), fixedDeltaTime: 0.02f);
+
+        var reattached = _policy.Evaluate(
+            Supported(confirmedLandingNormal),
+            RunSupportAttachmentTransition.Reattached,
+            fixedDeltaTime: 0.02f);
+
+        Assert.That(reattached.Transition, Is.EqualTo(RunSurfaceTransition.None));
+        Assert.That(reattached.IsConfirmingDiscontinuity, Is.True);
+        AssertVectorNear(reattached.StableSupport.GroundNormal, departureNormal);
+
+        var confirmed = _policy.Evaluate(Supported(confirmedLandingNormal), fixedDeltaTime: 0.02f);
+        var continuous = _policy.Evaluate(Supported(confirmedLandingNormal), fixedDeltaTime: 0.02f);
+
+        Assert.That(confirmed.Transition, Is.EqualTo(RunSurfaceTransition.SupportReattached));
+        Assert.That(confirmed.IsConfirmingDiscontinuity, Is.False);
+        AssertVectorNear(confirmed.StableSupport.GroundNormal, confirmedLandingNormal);
+        Assert.That(continuous.Transition, Is.EqualTo(RunSurfaceTransition.None));
+    }
+
+    [Test]
+    public void Evaluate_MissingWithinGraceWithPendingReattachment_RestartsConfirmation()
+    {
+        var departureNormal = TiltedUp(degrees: 75f, Vector3.forward);
+        var landingNormal = TiltedUp(degrees: -75f, Vector3.forward);
+        _policy.Evaluate(Supported(departureNormal), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(
+            Supported(landingNormal),
+            RunSupportAttachmentTransition.Reattached,
+            fixedDeltaTime: 0.02f);
+
+        var missing = _policy.Evaluate(Missing(), fixedDeltaTime: 0.02f);
+        var restarted = _policy.Evaluate(Supported(landingNormal), fixedDeltaTime: 0.02f);
+        var confirmed = _policy.Evaluate(Supported(landingNormal), fixedDeltaTime: 0.02f);
+
+        Assert.That(missing.IsMissingSupportHeld, Is.True);
+        AssertVectorNear(missing.StableSupport.GroundNormal, departureNormal);
+        Assert.That(restarted.Transition, Is.EqualTo(RunSurfaceTransition.None));
+        Assert.That(restarted.IsConfirmingDiscontinuity, Is.True);
+        Assert.That(confirmed.Transition, Is.EqualTo(RunSurfaceTransition.SupportReattached));
+        AssertVectorNear(confirmed.StableSupport.GroundNormal, landingNormal);
+    }
+
+    [Test]
+    public void Evaluate_HardResetWithPendingReattachment_DoesNotLeakTransitionToLaterSupport()
+    {
+        var departureNormal = TiltedUp(degrees: 75f, Vector3.forward);
+        var landingNormal = TiltedUp(degrees: -75f, Vector3.forward);
+        _policy.Evaluate(Supported(departureNormal), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(
+            Supported(landingNormal),
+            RunSupportAttachmentTransition.Reattached,
+            fixedDeltaTime: 0.02f);
+
+        var reset = _policy.Evaluate(Unavailable(), fixedDeltaTime: 0.02f);
+        var acquired = _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
+
+        Assert.That(reset.Transition, Is.EqualTo(RunSurfaceTransition.HardReset));
+        Assert.That(acquired.Transition, Is.EqualTo(RunSurfaceTransition.SupportAcquired));
+    }
+
+    [Test]
+    public void Evaluate_SupportLossWithPendingReattachment_DoesNotLeakTransitionToLaterSupport()
+    {
+        var departureNormal = TiltedUp(degrees: 75f, Vector3.forward);
+        var landingNormal = TiltedUp(degrees: -75f, Vector3.forward);
+        _policy.Evaluate(Supported(departureNormal), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(
+            Supported(landingNormal),
+            RunSupportAttachmentTransition.Reattached,
+            fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(Missing(), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Missing(), fixedDeltaTime: 0.02f);
+
+        var lost = _policy.Evaluate(Missing(), fixedDeltaTime: 0.02f);
+        var acquired = _policy.Evaluate(Supported(landingNormal), fixedDeltaTime: 0.02f);
+
+        Assert.That(lost.Transition, Is.EqualTo(RunSurfaceTransition.SupportLost));
+        Assert.That(acquired.Transition, Is.EqualTo(RunSurfaceTransition.SupportAcquired));
+    }
+
+    [Test]
+    public void Evaluate_DetachedWithPendingReattachment_CancelsPendingTransition()
+    {
+        var departureNormal = TiltedUp(degrees: 75f, Vector3.forward);
+        var landingNormal = TiltedUp(degrees: -75f, Vector3.forward);
+        _policy.Evaluate(Supported(departureNormal), fixedDeltaTime: 0.02f);
+        _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(
+            Supported(landingNormal),
+            RunSupportAttachmentTransition.Reattached,
+            fixedDeltaTime: 0.02f);
+
+        var detached = _policy.Evaluate(
+            Supported(departureNormal),
+            RunSupportAttachmentTransition.Detached,
+            fixedDeltaTime: 0.02f);
+
+        _policy.Evaluate(Supported(landingNormal), fixedDeltaTime: 0.02f);
+        var confirmed = _policy.Evaluate(Supported(landingNormal), fixedDeltaTime: 0.02f);
+
+        Assert.That(detached.Transition, Is.EqualTo(RunSurfaceTransition.None));
+        Assert.That(confirmed.Transition, Is.EqualTo(RunSurfaceTransition.ConfirmedDiscontinuity));
+    }
+
+    [Test]
     public void Evaluate_ReturnToStableNeighborhood_CancelsPendingConfirmation()
     {
         _policy.Evaluate(Supported(Vector3.up), fixedDeltaTime: 0.02f);
