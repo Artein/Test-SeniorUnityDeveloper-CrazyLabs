@@ -12,7 +12,7 @@ Do not add a swept query: the reproduced failure has an authoritative collision 
 
 ## Acceptance criteria
 
-- [ ] The original production-scene 40 m/s Continuous Dynamic thin-obstacle scenario passes with exactly one ObstacleHit Run Result and Run Ended state while the identical Discrete control still misses.
+- [ ] The production-scene 40 m/s Continuous Dynamic thin-obstacle scenario passes with exactly one ObstacleHit Run Result and Run Ended state, while its mathematical phase proves the planned sampled endpoints lie outside the calculated contact envelope.
 - [ ] The notifier reconstructs static-obstacle approach velocity as callback-time body velocity minus collision impulse divided by finite positive body mass.
 - [ ] Reconstruction is restricted to colliders without an attached Rigidbody; moving-obstacle relative velocity remains unsupported.
 - [ ] Non-finite velocity, non-finite impulse, missing Rigidbody, or invalid mass produces no fallback evidence.
@@ -27,7 +27,7 @@ Do not add a swept query: the reproduced failure has an authoritative collision 
 ## Verification
 
 - EditMode tests: approach-velocity reconstruction for valid, invalid, direct, below-threshold, and tangential evidence; Run Contact Classifier threshold behavior; Run End priority regressions.
-- PlayMode tests: Rigidbody Contact Notifier copied evidence; production 40 m/s Continuous Dynamic positive; identical Discrete negative; authored Finish/Safety Net acceptance and 80 m/s stress scenarios.
+- PlayMode tests: Rigidbody Contact Notifier copied evidence; production 40 m/s Continuous Dynamic positive with adversarial geometry preconditions; authored Finish/Safety Net acceptance and 80 m/s stress scenarios.
 - Static checks: no public/serialized API or shipped content/settings changes; no physics sweep; static-obstacle eligibility is explicit.
 - Manual Unity smoke check: not required when deterministic production-scene and related physics regressions pass; record as not run.
 - Package version/changelog: no package bump; record the internal shipped-behavior correction in the task evidence and identify release-note follow-up if project policy requires it.

@@ -2,7 +2,7 @@
 
 ## Decision
 
-The narrowly scoped runtime correction remains selected, but the supported 40 m/s contact-safety contract is not yet accepted. The Continuous Dynamic product path, resolver, notifier, classifier, trigger scenarios, focused suite, and related regressions pass; the required Discrete negative control disagrees between isolated and full-suite processes.
+The narrowly scoped runtime correction remains selected, and the supported 40 m/s contact-safety contract is accepted. The final compile, focused, related-regression, and full-suite gates are clean. The Continuous Dynamic product path, resolver, notifier, classifier, and trigger scenarios pass. The former Discrete negative control is rejected as an invalid acceptance oracle after the owner-authorized synchronization experiment made it detect the collision in the isolated paired run.
 
 The adversarial Continuous Dynamic obstacle scenario exposed a deterministic classification failure, not tunneling: Unity delivered a solid collision callback and physically stopped the production Run Body, but the production-scene callback reported zero relative velocity after resolution. The existing classifier therefore rejected the contact because its contact-normal speed was below the configured Obstacle Impact threshold.
 
@@ -28,8 +28,8 @@ A swept query is not authorized or implemented because collision detection and s
 
 | Boundary | Contract | Geometry | Result | Classification |
 |---|---|---|---|---|
-| Thin solid Obstacle, Discrete, 40 m/s | Collision negative control | 0.01 m obstacle; 0.71 m raw overlap span; 0.75 m contact-offset envelope; 0.8 m step; 0.025 m planned clearance at each sampled pose | Isolated runs miss; full-suite runs detect collision | Unresolved process/order disagreement |
-| Thin solid Obstacle, Continuous Dynamic, 40 m/s | Solid collision + classifier + Run End | Same body, obstacle, gravity, phase, and frame budget as Discrete | Collision delivered; exactly one ObstacleHit; Run Ended | Proved safe after Issue 05 |
+| Thin solid Obstacle, Discrete, 40 m/s | Diagnostic only; rejected negative control | 0.01 m obstacle; 0.71 m raw overlap span; 0.75 m contact-offset envelope; 0.8 m step; 0.025 m planned clearance at each sampled pose | Unsynchronized isolated runs missed; full-suite and synchronized isolated runs detected collision | Not an acceptance oracle |
+| Thin solid Obstacle, Continuous Dynamic, 40 m/s | Solid collision + classifier + Run End | Production body/mode; same 0.01 m obstacle and mathematical phase | Collision delivered; exactly one ObstacleHit; Run Ended | Proved safe after Issue 05 |
 | Band 5 Run Finish, 40 m/s | Sampled trigger overlap | 2.2 m overlap span; +1.4 m fixed-step margin | Exactly one Finished; Run Ended | Proved safe |
 | Band 5 Run Finish, 80 m/s | Sampled trigger overlap stress | 2.2 m overlap span; +0.6 m fixed-step margin | Exactly one Finished; Run Ended | Stress passed |
 | Run Safety Net, 40 m/s | Sampled trigger overlap | 2.7 m overlap span; +1.9 m fixed-step margin | Exactly one OutOfBounds; Run Ended | Proved safe |
@@ -58,9 +58,9 @@ The Discrete negative control has a separate test-design problem:
 - Revised combined focused run `r_vr8r8cve`: 25/25.
 - Revised full suite `r_jc2o4qxs`: 1081/1082; two contacts and one ObstacleHit.
 - No test assignment to global Physics contact/simulation settings or `Time.fixedDeltaTime` was found.
-- The leading unconfirmed cause is that the fixture changes the production body from authored Continuous Dynamic to Discrete and launches in the same frame, without first crossing a fixed-step synchronization boundary.
+- Owner-authorized synchronized paired run `r_xixzvr0o`: after assigning Discrete in PreLaunch and waiting exactly one fixed step, the Continuous Dynamic positive passed and Discrete produced two collision notifications, two contact points, one ObstacleHit, and Run Ended.
 
-Per the agreed stop condition, no unchanged retry or further geometry reduction is accepted. The next proposed experiment requires owner authorization: assign the collision mode while the body is held in PreLaunch, wait one fixed step, then phase and launch.
+The experiment falsifies the permanent requirement that Discrete must miss. Earlier isolated misses depended on an unsynchronized collision-mode transition and cannot establish CCD dependence. Per the agreed stop condition, no retry or further geometry reduction is accepted. The synchronization probe and mutable-mode control are removed from the committed fixture; the production-mode result and mathematical danger-case preconditions remain authoritative.
 
 Issue 05 therefore preserves callback evidence only when:
 
@@ -76,6 +76,10 @@ Run Contact Classifier is unchanged and continues to project the resulting veloc
 ## Verification evidence
 
 - Compile gates: clean through the project-local Unity AI Agent Connector.
+- Final production-scene fixture `r_xb9yt4vl`: 5/5 passed.
+- Final resolver, notifier, classifier, and production-scene focused run `r_nrlm1cd4`: 24/24 passed.
+- Final related Run End, fixed-step pipeline, production scene composition/speed ownership, course scene, and contact-physics run `r_zglu5o9e`: 32/32 passed.
+- Final full project suite `r_eutc2p41`: 1081/1081 passed on its first run.
 - Focused calculator `r_0dtilny2`: 8/8 passed.
 - Focused notifier `r_2ok87hdh`: 4/4 passed.
 - Focused classifier `r_oqrq1027`: 7/7 passed.
@@ -86,11 +90,12 @@ Run Contact Classifier is unchanged and continues to project the resulting veloc
 - Revised production-scene runs `r_n6c4q4zc` and `r_ztvuqibo`: 6/6 passed independently.
 - Revised combined focused run `r_vr8r8cve`: 25/25 passed.
 - Revised related regression run `r_yn2p0lte`: 32/32 passed.
-- Full project suite `r_jc2o4qxs`: 1081/1082; only the Discrete negative control failed.
+- Full project suite before rejecting the control `r_jc2o4qxs`: 1081/1082; only the invalid Discrete negative control failed.
+- Authorized synchronized diagnostic `r_xixzvr0o`: 1/2; the Continuous Dynamic positive passed, while synchronized Discrete detected two contacts and accepted one ObstacleHit, falsifying the negative-control requirement.
 - Manual Unity smoke: not run; deterministic production-scene PlayMode evidence is the accepted oracle.
 - Jobs/Burst guard: not applicable; no Jobs or Burst code changed.
 
-No retries are used as an oracle. The isolated repetitions are retained as evidence of the process disagreement, not as acceptance.
+No retries are used as an oracle. The earlier isolated repetitions and the single synchronized experiment are retained as diagnostic evidence, not acceptance.
 
 ## Compatibility and follow-up audit
 

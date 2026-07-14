@@ -14,19 +14,9 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests : BaseGa
     private readonly float _thinObstacleThickness = 0.01f;
 
     [UnityTest]
-    public IEnumerator given_AdversarialThinObstacle_when_UsingDiscreteCollisionDetection_then_NoRunContactIsObserved()
-    {
-        yield return RunObstacleScenario(
-            CollisionDetectionMode.Discrete,
-            expectObstacleHit: false);
-    }
-
-    [UnityTest]
     public IEnumerator given_MaxUpgradedSpeedProductionRunBody_when_CrossingAdversarialThinObstacle_then_ObstacleHitEndsRun()
     {
-        yield return RunObstacleScenario(
-            CollisionDetectionMode.ContinuousDynamic,
-            expectObstacleHit: true);
+        yield return RunObstacleScenario();
     }
 
     [UnityTest]

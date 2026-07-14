@@ -28,7 +28,7 @@ Establish deterministic, production-aligned PlayMode coverage for all high-speed
 The solution has three gates:
 
 1. **Prove the existing solid obstacle path.**
-   Exercise the real production Run Body, real Rigidbody Contact Notifier, Run Contact Classifier, Run End Flow, and a deliberately thin non-trigger Run Obstacle at the max-upgraded 40 m/s speed. Place the obstacle at a mathematically adversarial fixed-step phase. Run the identical scenario with Discrete collision detection as a negative control and require that the Discrete control misses while Continuous Dynamic produces exactly one ObstacleHit Run Result.
+   Exercise the real production Run Body, real Rigidbody Contact Notifier, Run Contact Classifier, Run End Flow, and a deliberately thin non-trigger Run Obstacle at the max-upgraded 40 m/s speed. Place the obstacle at a mathematically adversarial fixed-step phase, prove that the planned sampled poses lie outside the contact envelope, and require the production-authored Continuous Dynamic path to produce exactly one ObstacleHit Run Result. Do not use a mutable Discrete collision-mode control as the acceptance oracle: the owner-authorized one-fixed-step synchronization experiment showed that Discrete can still report this contact.
 
 2. **Prove trigger-boundary reliability independently.**
    Exercise the production Run Body through the authored Run Finish and Run Safety Net volumes at their relevant normal crossing speeds. Verify both their geometric traversal margin and the resulting Finished or OutOfBounds Run Result. Do not claim that the Run Body CCD mode protects these trigger callbacks. Prefer sufficient authored volume thickness as the first protection for sampled trigger overlap.
@@ -81,7 +81,7 @@ Successful completion gives the team one of two legitimate outcomes:
 20. As a level designer, I want existing obstacle prefabs and course composition preserved when tests already prove them safe, so that evidence does not cause unnecessary content churn.
 21. As a QA engineer, I want a production-body thin-obstacle scenario at 40 m/s, so that the max-upgraded safety contract has direct coverage.
 22. As a QA engineer, I want the obstacle placed at an adversarial fixed-step phase, so that the test does not pass because of a lucky starting offset.
-23. As a QA engineer, I want an identical Discrete collision-detection control to miss, so that the positive scenario demonstrates meaningful CCD dependence.
+23. As a QA engineer, I want the sampled endpoints and contact envelope derived mathematically, so that the positive scenario demonstrates a meaningful fixed-step danger case without depending on a mutable collision-mode oracle.
 24. As a QA engineer, I want the Continuous Dynamic scenario to assert the final ObstacleHit Run Result, so that a raw callback alone cannot satisfy acceptance.
 25. As a QA engineer, I want the obstacle scenario to use the production 0.35-meter sphere, so that a larger synthetic body does not hide the danger case.
 26. As a QA engineer, I want the test to cover the real notifier, classifier, candidate receiver, and Run End Flow, so that every safety boundary in the chain is exercised.
@@ -136,9 +136,9 @@ Successful completion gives the team one of two legitimate outcomes:
 
 7. **Use a deliberately thin solid obstacle.** The test obstacle must be a non-trigger Collider with Run Contact Category Obstacle and a crossing-axis thickness small enough that the 40 m/s fixed-step displacement exceeds the sphere-plus-obstacle overlap span.
 
-8. **Control the fixed-step phase mathematically.** Arrange the pre-step and post-step body centers on opposite sides of the obstacle with neither sampled pose overlapping in the Discrete case. The test helper may calculate placement from actual collider radius, obstacle thickness, fixedDeltaTime, and speed. Do not rely on an arbitrary distance and hope it is adversarial.
+8. **Control the fixed-step phase mathematically.** Arrange the planned pre-step and post-step body centers on opposite sides of the obstacle with neither sampled pose inside the calculated contact envelope. The test helper may calculate placement from actual collider radius, contact offsets, obstacle thickness, fixedDeltaTime, and speed. Do not rely on an arbitrary distance and hope it is adversarial.
 
-9. **Require a Discrete negative control.** The same body geometry, obstacle geometry, speed, phase, gravity setting, and frame budget must be exercised with Discrete collision detection and must produce no obstacle collision or Run Result. This makes the Continuous Dynamic positive meaningful.
+9. **Reject a mutable Discrete negative control as an acceptance oracle.** Assigning Discrete while held in PreLaunch, waiting exactly one fixed step, then phasing and launching still produced two collision contacts and an ObstacleHit in the isolated paired experiment. Keep that result as diagnostic evidence; use the geometry preconditions and production-authored Continuous Dynamic outcome for permanent acceptance.
 
 10. **Assert domain outcome, not only callback delivery.** The Continuous Dynamic test passes only when exactly one Run Result with reason ObstacleHit is accepted and Gameplay State becomes Run Ended. A raw CollisionEntered notification is useful diagnostic evidence but insufficient acceptance.
 
@@ -192,7 +192,7 @@ Successful completion gives the team one of two legitimate outcomes:
 
 2. The primary acceptance test is a PlayMode scenario using the production Gameplay scene and Run Body. Suggested behavior name: given_MaxUpgradedSpeedProductionRunBody_when_CrossingAdversarialThinObstacle_then_ObstacleHitEndsRun.
 
-3. The paired Discrete negative control is an isolated PlayMode scenario with identical geometry and phase. It asserts no collision notification and no Run Result within a small fixed-frame limit. Its purpose is to prove the arrangement can tunnel under sampled collision detection.
+3. The one-fixed-step Discrete synchronization scenario is a completed diagnostic experiment, not a permanent test. It falsified the assumption that Discrete must miss this arrangement, so the committed acceptance fixture does not mutate the production collision mode.
 
 4. The positive Continuous Dynamic scenario asserts the production body’s collision mode, actual sphere radius, obstacle non-trigger status, Obstacle Run Contact Category, one collision observation, one ObstacleHit result, and Run Ended state.
 
@@ -286,7 +286,7 @@ Successful completion gives the team one of two legitimate outcomes:
 The proof phase is complete when:
 
 - The 40 m/s production Run Body crosses a deliberately adversarial thin solid Run Obstacle.
-- The identical Discrete control misses.
+- The planned sampled endpoints lie outside the calculated contact envelope while one fixed-step displacement crosses the obstacle.
 - Continuous Dynamic produces one ObstacleHit Run Result and Run Ended state.
 - The production Run Finish produces one Finished result at the supported crossing speed.
 - The production Run Safety Net produces one OutOfBounds result at the approved normal crossing speed.

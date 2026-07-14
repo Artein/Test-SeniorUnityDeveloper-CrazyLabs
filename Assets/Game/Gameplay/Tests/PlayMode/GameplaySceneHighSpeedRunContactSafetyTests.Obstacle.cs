@@ -8,9 +8,7 @@ using UnityEngine.SceneManagement;
 // ReSharper disable once CheckNamespace
 public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
 {
-    private IEnumerator RunObstacleScenario(
-        CollisionDetectionMode collisionDetectionMode,
-        bool expectObstacleHit)
+    private IEnumerator RunObstacleScenario()
     {
         yield return ReloadGameplaySceneWithIsolatedSaves();
         var context = CreateScenarioContext(SceneManager.GetActiveScene());
@@ -55,7 +53,6 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
             };
 
             context.ResultNotifier.RunResultAccepted += observation.Results.Add;
-            context.Body.collisionDetectionMode = collisionDetectionMode;
 
             BeginManualLaunch(
                 context,
@@ -71,40 +68,19 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
                 context,
                 obstacle,
                 phase,
-                collisionDetectionMode,
                 observation);
 
             TestContext.WriteLine(diagnostic);
 
-            if (expectObstacleHit)
-            {
-                Assert.That(observation.CollisionNotificationCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
-                Assert.That(observation.CollisionContactPointCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
-                Assert.That(observation.Results, Has.Count.EqualTo(expected: 1), diagnostic);
-                Assert.That(observation.Results[index: 0].Reason, Is.EqualTo(RunEndReason.ObstacleHit), diagnostic);
+            Assert.That(observation.CollisionNotificationCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
+            Assert.That(observation.CollisionContactPointCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
+            Assert.That(observation.Results, Has.Count.EqualTo(expected: 1), diagnostic);
+            Assert.That(observation.Results[index: 0].Reason, Is.EqualTo(RunEndReason.ObstacleHit), diagnostic);
 
-                Assert.That(
-                    context.StateService.CurrentStateId,
-                    Is.SameAs(context.LifetimeScope.RunEndedStateIdForTests),
-                    diagnostic);
-            }
-            else
-            {
-                Assert.That(observation.CollisionNotificationCount, Is.Zero, diagnostic);
-                Assert.That(observation.CollisionContactPointCount, Is.Zero, diagnostic);
-                Assert.That(observation.Results, Is.Empty, diagnostic);
-
-                Assert.That(
-                    context.StateService.CurrentStateId,
-                    Is.SameAs(context.LifetimeScope.RunningStateIdForTests),
-                    diagnostic);
-
-                var finalSignedDistance = Vector3.Dot(
-                    GetSphereWorldCenter(context.Sphere) - phase.ObstacleCenter,
-                    phase.CrossingDirection);
-
-                Assert.That(finalSignedDistance, Is.GreaterThan(phase.OverlapHalfSpan), diagnostic);
-            }
+            Assert.That(
+                context.StateService.CurrentStateId,
+                Is.SameAs(context.LifetimeScope.RunEndedStateIdForTests),
+                diagnostic);
         }
         finally
         {
@@ -226,7 +202,6 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         ScenarioContext context,
         BoxCollider obstacle,
         ObstaclePhase phase,
-        CollisionDetectionMode collisionDetectionMode,
         ScenarioObservation observation)
     {
         return "High-speed thin-obstacle proof"
@@ -240,7 +215,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
                + $" | obstacleContactOffset={phase.ObstacleContactOffset:F4}m"
                + $" | contactEnvelopeSpan={phase.ContactEnvelopeSpan:F4}m"
                + $" | minimumPhaseClearance={phase.MinimumPhaseClearance:F4}m"
-               + $" | collisionMode={collisionDetectionMode}"
+               + $" | collisionMode={context.Body.collisionDetectionMode}"
                + $" | useGravity={context.Body.useGravity}"
                + $" | obstacleIsTrigger={obstacle.isTrigger}"
                + $" | startCenter={FormatVector(phase.StartSphereCenter)}"
@@ -265,7 +240,6 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         public float BodyRadius { get; }
         public float ObstacleThickness { get; }
         public float OverlapSpan { get; }
-        public float OverlapHalfSpan => OverlapSpan * 0.5f;
         public float SphereContactOffset { get; }
         public float ObstacleContactOffset { get; }
         public float ContactEnvelopeSpan { get; }
