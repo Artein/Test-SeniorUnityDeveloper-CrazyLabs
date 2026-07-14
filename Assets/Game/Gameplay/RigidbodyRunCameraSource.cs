@@ -6,28 +6,27 @@ namespace Game.Gameplay
     {
         [SerializeField] private Rigidbody _rigidbody;
 
-        public Vector3 Position
-        {
-            get
-            {
-                UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyRunCameraSource requires a Rigidbody reference.");
-                return _rigidbody.transform.position;
-            }
-        }
+        Vector3 IRunCameraSource.LinearVelocity => RequiredRigidbody.linearVelocity;
+        Vector3 IRunCameraSource.Position => RequiredRigidbody.transform.position;
+        Vector3 IRunMotionSource.LinearVelocity => RequiredRigidbody.linearVelocity;
+        Vector3 IRunMotionSource.Position => RequiredRigidbody.position;
 
-        public Vector3 LinearVelocity
+        private Rigidbody RequiredRigidbody
         {
             get
             {
-                UnityEngine.Assertions.Assert.IsNotNull(_rigidbody, "RigidbodyRunCameraSource requires a Rigidbody reference.");
-                return _rigidbody.linearVelocity;
+                UnityEngine.Assertions.Assert.IsNotNull(
+                    _rigidbody,
+                    message: "RigidbodyRunCameraSource requires a Rigidbody reference.");
+
+                return _rigidbody;
             }
         }
 
         private void OnValidate()
         {
             if (_rigidbody == null)
-                Debug.LogWarning("RigidbodyRunCameraSource requires a Rigidbody reference.", this);
+                Debug.LogWarning(message: "RigidbodyRunCameraSource requires a Rigidbody reference.", this);
         }
     }
 }

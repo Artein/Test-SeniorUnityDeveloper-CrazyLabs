@@ -26,6 +26,7 @@ namespace Game.Gameplay.CharacterPresentation
         private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private readonly ICharacterPresentationTuning _tuning;
         private readonly ICharacterPresentationView _view;
+        private readonly ICharacterVisualTargetPoseSource _visualTargetPoseSource;
         private bool _acceptedRunResultSucceeded;
 
         private CharacterPresentationMode _currentMode = CharacterPresentationMode.Idle;
@@ -46,6 +47,7 @@ namespace Game.Gameplay.CharacterPresentation
         public CharacterPresenter(
             IGameplayStateService gameplayStateService,
             IRunMotionSource motionSource,
+            ICharacterVisualTargetPoseSource visualTargetPoseSource,
             IRunProgressService progressService,
             IRunSurfaceFrameSource surfaceFrameSource,
             ISlingshotPresentationContextSource slingshotPresentationContextSource,
@@ -65,6 +67,7 @@ namespace Game.Gameplay.CharacterPresentation
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
             _motionSource = motionSource ?? throw new ArgumentNullException(nameof(motionSource));
+            _visualTargetPoseSource = visualTargetPoseSource ?? throw new ArgumentNullException(nameof(visualTargetPoseSource));
             _progressService = progressService ?? throw new ArgumentNullException(nameof(progressService));
             _surfaceFrameSource = surfaceFrameSource ?? throw new ArgumentNullException(nameof(surfaceFrameSource));
 
@@ -87,17 +90,6 @@ namespace Game.Gameplay.CharacterPresentation
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
-        void IDisposable.Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-
-            _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
-            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
-        }
-
         void IInitializable.Initialize()
         {
             if (_isDisposed)
@@ -109,6 +101,17 @@ namespace Game.Gameplay.CharacterPresentation
             _runResultNotifier.RunResultAccepted += OnRunResultAccepted;
             _launchAppliedNotifier.LaunchApplied += OnLaunchApplied;
             _isInitialized = true;
+        }
+
+        void IDisposable.Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            _runResultNotifier.RunResultAccepted -= OnRunResultAccepted;
+            _launchAppliedNotifier.LaunchApplied -= OnLaunchApplied;
         }
 
         void ITickable.Tick()
@@ -123,14 +126,14 @@ namespace Game.Gameplay.CharacterPresentation
             var isRunActive = _gameplayStateService.IsCurrent(_runningStateId);
             var slingshotContext = _slingshotPresentationContextSource.Current;
 
-            if (isNeutralPresentationState || (isRunActive && !_hasAcceptedRunResult))
+            if (isNeutralPresentationState || isRunActive && !_hasAcceptedRunResult)
                 ResetTerminalStateIfNeeded(isNeutralPresentationState);
 
             var surfaceContext = isNeutralPresentationState
                 ? new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f)
                 : ResolveObservedSurfaceContext(_surfaceFrameSource.Current.ObservedSupport);
 
-            var currentPosition = _motionSource.Position;
+            var currentPosition = _visualTargetPoseSource.CurrentPose.Position;
             var linearVelocity = _motionSource.LinearVelocity;
             var coursePlanarSpeed = 0f;
             var courseForwardSpeed = 0f;
@@ -266,7 +269,7 @@ namespace Game.Gameplay.CharacterPresentation
             var shouldStartLaunchFlight =
                 _hasPendingLaunchFlight
                 || isNewLaunch
-                || (hasLaunchPush && !_hasActiveLaunchFlight && !_hasConsumedLaunchPushForFlight);
+                || hasLaunchPush && !_hasActiveLaunchFlight && !_hasConsumedLaunchPushForFlight;
 
             var startedLaunchFlight = false;
 

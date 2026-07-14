@@ -1,11 +1,16 @@
+using System;
 using UnityEngine;
 
 namespace Game.Gameplay
 {
     public interface IRunCameraSource
     {
-        Vector3 Position { get; }
         Vector3 LinearVelocity { get; }
+
+        /// <summary>
+        ///     Gets the presentation pose position, which may include Rigidbody interpolation.
+        /// </summary>
+        Vector3 Position { get; }
     }
 
     public interface IRunCameraAnchor
@@ -25,13 +30,13 @@ namespace Game.Gameplay
     {
         private readonly Transform _transform;
 
-        public TransformRunCameraLens(Transform transform)
-        {
-            _transform = transform != null ? transform : throw new System.ArgumentNullException(nameof(transform));
-        }
-
         public Vector3 Position => _transform.position;
         public Quaternion Rotation => _transform.rotation;
+
+        public TransformRunCameraLens(Transform transform)
+        {
+            _transform = transform != null ? transform : throw new ArgumentNullException(nameof(transform));
+        }
     }
 
     public interface IRunCameraRig
