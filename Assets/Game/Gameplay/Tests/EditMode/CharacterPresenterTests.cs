@@ -31,6 +31,7 @@ public sealed class CharacterPresenterTests
     private FakeRunSurfaceFrameSource _surfaceContextSource;
     private FakeCharacterPresentationTuning _tuning;
     private FakeCharacterPresentationView _view;
+    private FakeCharacterVisualTargetPoseSource _visualTargetPoseSource;
 
     [SetUp]
     public void OnSetUp()
@@ -44,6 +45,11 @@ public sealed class CharacterPresenterTests
         {
             Position = Vector3.zero,
             LinearVelocity = new Vector3(x: 0f, y: 0f, z: 8f)
+        };
+
+        _visualTargetPoseSource = new FakeCharacterVisualTargetPoseSource
+        {
+            Position = Vector3.zero
         };
 
         _progressService = new FakeRunProgressService
@@ -332,16 +338,39 @@ public sealed class CharacterPresenterTests
     }
 
     [Test]
+    public void Tick_DivergentPhysicsAndRenderPositions_PassesRenderPositionToPresentationSupportTracker()
+    {
+        var physicsPosition = new Vector3(x: 10f, y: 0f, z: 0f);
+        var renderPosition = new Vector3(x: 9.4f, y: 0f, z: 0f);
+        var physicsVelocity = new Vector3(x: 0f, y: -2f, z: 30f);
+        _motionSource.Position = physicsPosition;
+        _motionSource.LinearVelocity = physicsVelocity;
+        _visualTargetPoseSource.Position = renderPosition;
+
+        ((IDisposable)_presenter).Dispose();
+        var capturingSupportTracker = new CapturingCharacterPresentationSupportTracker();
+        _supportTracker = capturingSupportTracker;
+        _presenter = CreatePresenter();
+        ((IInitializable)_presenter).Initialize();
+
+        ((ITickable)_presenter).Tick();
+
+        Assert.That(capturingSupportTracker.LastPosition, Is.EqualTo(renderPosition));
+        Assert.That(capturingSupportTracker.LastLinearVelocity, Is.EqualTo(physicsVelocity));
+        Assert.That(capturingSupportTracker.LastPosition, Is.Not.EqualTo(physicsPosition));
+    }
+
+    [Test]
     public void Tick_Ungrounded_CapturesStartPositionOncePerUngroundedInterval()
     {
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
 
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: 0f).Within(amount: 0.0001f));
 
-        _motionSource.Position = new Vector3(x: 0f, y: 2.6f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 2.6f, z: 0f);
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: -0.4f).Within(amount: 0.0001f));
@@ -352,14 +381,14 @@ public sealed class CharacterPresenterTests
     {
         _progressService.Snapshot = CreateSnapshot(Vector3.right);
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 3f, y: 0f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 3f, y: 0f, z: 0f);
         _motionSource.LinearVelocity = new Vector3(x: -1.5f, y: 0f, z: 8f);
 
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.CourseVerticalSpeed, Is.EqualTo(expected: -1.5f).Within(amount: 0.0001f));
 
-        _motionSource.Position = new Vector3(x: 2.75f, y: 0f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 2.75f, y: 0f, z: 0f);
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: -0.25f).Within(amount: 0.0001f));
@@ -369,10 +398,10 @@ public sealed class CharacterPresenterTests
     public void Tick_GroundedAfterUngrounded_ResetsUngroundedSeparation()
     {
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
         ((ITickable)_presenter).Tick();
 
-        _motionSource.Position = new Vector3(x: 0f, y: 2f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 2f, z: 0f);
         ((ITickable)_presenter).Tick();
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: -1f).Within(amount: 0.0001f));
 
@@ -382,7 +411,7 @@ public sealed class CharacterPresenterTests
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: 0f).Within(amount: 0.0001f));
 
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 1f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 1f, z: 0f);
         ((ITickable)_presenter).Tick();
 
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: 0f).Within(amount: 0.0001f));
@@ -405,11 +434,11 @@ public sealed class CharacterPresenterTests
     {
         _clock.DeltaTime = 0.02f;
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
         ((ITickable)_presenter).Tick();
 
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 2.9f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 2.9f, z: 0f);
         _motionSource.LinearVelocity = new Vector3(x: 0f, y: -0.1f, z: 8f);
         ((ITickable)_presenter).Tick();
 
@@ -422,10 +451,10 @@ public sealed class CharacterPresenterTests
     public void Tick_NeutralPresentationState_ResetsUngroundedSeparation()
     {
         _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
-        _motionSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 3f, z: 0f);
         ((ITickable)_presenter).Tick();
 
-        _motionSource.Position = new Vector3(x: 0f, y: 2f, z: 0f);
+        _visualTargetPoseSource.Position = new Vector3(x: 0f, y: 2f, z: 0f);
         ((ITickable)_presenter).Tick();
         Assert.That(_classifier.LastInput.UngroundedVerticalSeparation, Is.EqualTo(expected: -1f).Within(amount: 0.0001f));
 
@@ -821,6 +850,7 @@ public sealed class CharacterPresenterTests
         return new CharacterPresenter(
             _stateService,
             _motionSource,
+            _visualTargetPoseSource,
             _progressService,
             _surfaceContextSource,
             _slingshotPresentationContextSource,
@@ -929,6 +959,36 @@ public sealed class CharacterPresenterTests
     {
         public Vector3 LinearVelocity { get; set; }
         public Vector3 Position { get; set; }
+    }
+
+    private sealed class FakeCharacterVisualTargetPoseSource : ICharacterVisualTargetPoseSource
+    {
+        public CharacterVisualPose CurrentPose => new(Position, Quaternion.identity);
+        public Vector3 Position { get; set; }
+    }
+
+    private sealed class CapturingCharacterPresentationSupportTracker : ICharacterPresentationSupportTracker
+    {
+        public Vector3 LastLinearVelocity { get; private set; }
+        public Vector3 LastPosition { get; private set; }
+
+        CharacterPresentationSupportSample ICharacterPresentationSupportTracker.Update(
+            RunSurfaceContext rawSurfaceContext,
+            Vector3 position,
+            Vector3 linearVelocity,
+            Vector3 courseUpDirection,
+            ICharacterPresentationTuning tuning,
+            float deltaTime,
+            bool reset)
+        {
+            LastPosition = position;
+            LastLinearVelocity = linearVelocity;
+            return new CharacterPresentationSupportSample(rawSurfaceContext, ungroundedElapsedSeconds: 0f, ungroundedVerticalSeparation: 0f);
+        }
+
+        void ICharacterPresentationSupportTracker.Reset()
+        {
+        }
     }
 
     private sealed class FakeRunProgressService : IRunProgressService
