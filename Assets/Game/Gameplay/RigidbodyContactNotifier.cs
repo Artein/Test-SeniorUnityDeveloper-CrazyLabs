@@ -25,10 +25,10 @@ namespace Game.Gameplay
     public sealed class RigidbodyCollisionNotification
     {
         private readonly RunContactPoint[] _contacts;
+        public int ContactCount => _contacts.Length;
 
         public Collider OtherCollider { get; }
         public Vector3 RelativeVelocity { get; }
-        public int ContactCount => _contacts.Length;
 
         public RigidbodyCollisionNotification(
             Collider otherCollider,
@@ -58,8 +58,16 @@ namespace Game.Gameplay
 
     public sealed class RigidbodyContactNotifier : MonoBehaviour, IRigidbodyContactNotifier
     {
+        private readonly RigidbodyCollisionApproachVelocityResolver _approachVelocityResolver = new();
+        private Rigidbody _rigidbody;
+
         public event Action<RigidbodyCollisionNotification> CollisionEntered;
         public event Action<RigidbodyTriggerNotification> TriggerEntered;
+
+        private void Awake()
+        {
+            _rigidbody = gameObject.GetComponent<Rigidbody>();
+        }
 
         private void OnCollisionEnter(Collision collision)
         {
@@ -74,10 +82,11 @@ namespace Game.Gameplay
                 contacts[contactIndex] = new RunContactPoint(contact.point, contact.normal);
             }
 
-            CollisionEntered?.Invoke(new RigidbodyCollisionNotification(
-                collision.collider,
-                collision.relativeVelocity,
-                contacts));
+            CollisionEntered?.Invoke(
+                new RigidbodyCollisionNotification(
+                    collision.collider,
+                    ResolveRelativeVelocity(collision),
+                    contacts));
         }
 
         private void OnTriggerEnter(Collider other)
@@ -86,6 +95,69 @@ namespace Game.Gameplay
                 return;
 
             TriggerEntered?.Invoke(new RigidbodyTriggerNotification(other));
+        }
+
+        private Vector3 ResolveRelativeVelocity(Collision collision)
+        {
+            var reportedRelativeVelocity = collision.relativeVelocity;
+            var otherCollider = collision.collider;
+
+            if (_rigidbody == null || otherCollider == null)
+                return reportedRelativeVelocity;
+
+            var otherBodyAttached = otherCollider.attachedRigidbody != null
+                                    || otherCollider.attachedArticulationBody != null;
+
+            return _approachVelocityResolver.TryResolve(
+                reportedRelativeVelocity,
+                _rigidbody.linearVelocity,
+                collision.impulse,
+                _rigidbody.mass,
+                otherBodyAttached,
+                out var resolvedRelativeVelocity)
+                ? resolvedRelativeVelocity
+                : reportedRelativeVelocity;
+        }
+    }
+
+    internal sealed class RigidbodyCollisionApproachVelocityResolver
+    {
+        public bool TryResolve(
+            Vector3 reportedRelativeVelocity,
+            Vector3 postSolveBodyVelocity,
+            Vector3 collisionImpulse,
+            float bodyMass,
+            bool otherBodyAttached,
+            out Vector3 resolvedRelativeVelocity)
+        {
+            resolvedRelativeVelocity = Vector3.zero;
+
+            if (!reportedRelativeVelocity.IsFinite())
+                return false;
+
+            if (reportedRelativeVelocity.sqrMagnitude > 0.000001f)
+            {
+                resolvedRelativeVelocity = reportedRelativeVelocity;
+                return true;
+            }
+
+            if (otherBodyAttached
+                || !postSolveBodyVelocity.IsFinite()
+                || !collisionImpulse.IsFinite()
+                || collisionImpulse.sqrMagnitude <= 0.000001f
+                || !float.IsFinite(bodyMass)
+                || bodyMass <= 0f)
+            {
+                return false;
+            }
+
+            var reconstructedVelocity = postSolveBodyVelocity - collisionImpulse / bodyMass;
+
+            if (!reconstructedVelocity.IsFinite() || reconstructedVelocity.sqrMagnitude <= 0.000001f)
+                return false;
+
+            resolvedRelativeVelocity = reconstructedVelocity;
+            return true;
         }
     }
 }
