@@ -49,7 +49,7 @@ public sealed class AnimatedContactSensorPoseSyncTests
     }
 
     [Test]
-    public void LateTick_SourcePoseChanged_CopiesPoseToTargetSensor()
+    public void SynchronizeSensors_SourcePoseChanged_CopiesPoseToTargetSensor()
     {
         var source = CreateGameObject("Character Left Hand").transform;
         var view = CreateValidView(out _, source, out var target);
@@ -58,7 +58,8 @@ public sealed class AnimatedContactSensorPoseSyncTests
         source.SetPositionAndRotation(new Vector3(1f, 2f, 3f), Quaternion.Euler(10f, 20f, 30f));
         source.localScale = new Vector3(1.2f, 0.8f, 1.1f);
 
-        ((ILateTickable)sync).LateTick();
+        IAnimatedContactSensorLateStep lateStep = sync;
+        lateStep.SynchronizeSensors();
 
         Assert.That(target.position, Is.EqualTo(source.position));
         Assert.That(Quaternion.Angle(target.rotation, source.rotation), Is.EqualTo(0f).Within(0.0001f));

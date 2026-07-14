@@ -45,6 +45,7 @@ public sealed class CharacterVisualFollowerTests
         {
             CurrentPose = new CharacterVisualPose(new Vector3(1f, 2f, 3f), Quaternion.Euler(0f, 15f, 0f))
         };
+
         _runCameraLens.Position = _targetPoseSource.CurrentPose.Position + Vector3.right * 4f;
         _runCameraLens.Rotation = Quaternion.identity;
 
@@ -70,6 +71,7 @@ public sealed class CharacterVisualFollowerTests
             DeltaTime = 0.02f,
             FixedDeltaTime = 0.02f
         };
+
         _follower = CreateFollower();
     }
 
@@ -102,10 +104,12 @@ public sealed class CharacterVisualFollowerTests
         var targetPose = new CharacterVisualPose(new Vector3(1.4f, 2f, 3f), Quaternion.Euler(0f, 25f, 0f));
         _targetPoseSource.CurrentPose = targetPose;
 
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
-        Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, targetPose.Position),
+        Assert.That(
+            Vector3.Distance(_view.CurrentVisualPose.Position, targetPose.Position),
             Is.LessThanOrEqualTo(_tuning.VisualMaxPositionLag + 0.0001f));
+
         Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, targetPose.Position), Is.GreaterThan(0.0001f));
         Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, targetPose.Rotation), Is.GreaterThan(0.0001f));
     }
@@ -115,7 +119,7 @@ public sealed class CharacterVisualFollowerTests
     {
         ((IInitializable)_follower).Initialize();
         _targetPoseSource.CurrentPose = new CharacterVisualPose(new Vector3(1.4f, 2f, 3f), Quaternion.Euler(0f, 25f, 0f));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
         _stateService.ChangeTo(_preLaunchStateId);
 
@@ -128,7 +132,7 @@ public sealed class CharacterVisualFollowerTests
         ((IInitializable)_follower).Initialize();
         _stateService.ChangeTo(_runningStateId);
         _targetPoseSource.CurrentPose = new CharacterVisualPose(new Vector3(1.4f, 2f, 3f), Quaternion.Euler(0f, 25f, 0f));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
         var poseBeforeRunEnded = _view.CurrentVisualPose;
         var appliedPoseCountBeforeRunEnded = _view.AppliedPoseCount;
         var terminalPose = new CharacterVisualPose(new Vector3(1.45f, 2f, 3f), Quaternion.Euler(0f, 30f, 0f));
@@ -139,10 +143,12 @@ public sealed class CharacterVisualFollowerTests
         AssertPose(_view.CurrentVisualPose, poseBeforeRunEnded);
         Assert.That(_view.AppliedPoseCount, Is.EqualTo(appliedPoseCountBeforeRunEnded));
 
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
-        Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, terminalPose.Position),
+        Assert.That(
+            Vector3.Distance(_view.CurrentVisualPose.Position, terminalPose.Position),
             Is.LessThanOrEqualTo(_tuning.VisualMaxPositionLag + 0.0001f));
+
         Assert.That(Vector3.Distance(_view.CurrentVisualPose.Position, terminalPose.Position), Is.GreaterThan(0.0001f));
         Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, terminalPose.Rotation), Is.GreaterThan(0.0001f));
     }
@@ -152,7 +158,7 @@ public sealed class CharacterVisualFollowerTests
     {
         ((IInitializable)_follower).Initialize();
         _targetPoseSource.CurrentPose = new CharacterVisualPose(new Vector3(1.4f, 2f, 3f), Quaternion.Euler(0f, 25f, 0f));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
 
@@ -170,13 +176,14 @@ public sealed class CharacterVisualFollowerTests
         var frontFacingCameraRotation = GetFrontFacingCameraRotation(_targetPoseSource.CurrentPose);
 
         _runResultNotifier.Raise(CreateRunResult(RunEndReason.Finished));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
         Assert.That(_view.CurrentVisualPose.Position, Is.EqualTo(_targetPoseSource.CurrentPose.Position));
 
         Assert.That(
             Quaternion.Angle(_view.CurrentVisualPose.Rotation, frontFacingCameraRotation),
             Is.LessThan(Quaternion.Angle(poseBeforeResult.Rotation, frontFacingCameraRotation)));
+
         Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, frontFacingCameraRotation), Is.GreaterThan(0.1f));
         Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, poseBeforeResult.Rotation), Is.GreaterThan(0.1f));
     }
@@ -189,7 +196,7 @@ public sealed class CharacterVisualFollowerTests
         var poseBeforeResult = _view.CurrentVisualPose;
 
         _runResultNotifier.Raise(CreateRunResult(RunEndReason.ObstacleHit));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
         AssertPose(_view.CurrentVisualPose, poseBeforeResult);
     }
@@ -202,7 +209,7 @@ public sealed class CharacterVisualFollowerTests
         _tuning.VisualSnapAngleDegrees = 180f;
         _tuning.VisualHeadingResponseRate = 1f;
         _runResultNotifier.Raise(CreateRunResult(RunEndReason.Finished));
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
         Assert.That(Quaternion.Angle(_view.CurrentVisualPose.Rotation, _targetPoseSource.CurrentPose.Rotation), Is.GreaterThan(0.1f));
 
         _stateService.ChangeTo(_runPreparationStateId);
@@ -233,7 +240,7 @@ public sealed class CharacterVisualFollowerTests
 
         _stateService.ChangeTo(_preLaunchStateId);
         _launchAppliedNotifier.Apply(CreateLaunchAppliedEvent());
-        ((ILateTickable)_follower).LateTick();
+        ((ICharacterVisualLateStep)_follower).UpdateVisual();
 
         AssertPose(_view.CurrentVisualPose, poseAfterDispose);
     }

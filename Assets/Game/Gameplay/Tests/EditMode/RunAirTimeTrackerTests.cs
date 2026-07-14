@@ -6,31 +6,43 @@ using Game.Gameplay.GameplayState;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed class RunAirTimeTrackerTests
 {
-    private readonly List<UnityEngine.Object> _objects = new();
-    private GameplayStateId _runPreparationStateId;
-    private GameplayStateId _runningStateId;
-    private FakeGameplayStateService _stateService;
-    private FakeRunSurfaceContextSource _surfaceContextSource;
+    private readonly List<Object> _objects = new();
+    private IRunAirTimeFixedStep _airTimeStep;
     private FakeTime _clock;
+    private GameplayStateId _runningStateId;
+    private GameplayStateId _runPreparationStateId;
+    private FakeGameplayStateService _stateService;
+    private FakeRunSurfaceFrameSource _surfaceFrameSource;
     private RunAirTimeTracker _tracker;
 
     [SetUp]
     public void OnSetUp()
     {
-        _runPreparationStateId = CreateStateId("Run Preparation");
-        _runningStateId = CreateStateId("Running");
+        _runPreparationStateId = CreateStateId(stateName: "Run Preparation");
+        _runningStateId = CreateStateId(stateName: "Running");
         _stateService = new FakeGameplayStateService(_runPreparationStateId);
+        _surfaceFrameSource = new FakeRunSurfaceFrameSource();
 
-        _surfaceContextSource = new FakeRunSurfaceContextSource
-        {
-            Current = new RunSurfaceContext(isGrounded: true, Vector3.up, 0f)
-        };
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportAcquired);
+
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
-        _tracker = new RunAirTimeTracker(_stateService, _surfaceContextSource, _clock, _runPreparationStateId, _runningStateId);
+
+        _tracker = new RunAirTimeTracker(
+            _stateService,
+            _surfaceFrameSource,
+            _clock,
+            _runPreparationStateId,
+            _runningStateId);
+
+        _airTimeStep = _tracker;
         ((IInitializable)_tracker).Initialize();
     }
 
@@ -41,7 +53,7 @@ public sealed class RunAirTimeTrackerTests
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(unityObject);
         }
 
         _objects.Clear();
@@ -51,37 +63,125 @@ public sealed class RunAirTimeTrackerTests
     public void FixedTick_RunningAndUngrounded_AccumulatesFixedDeltaTime()
     {
         _stateService.ChangeTo(_runningStateId);
-        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, 0f);
 
-        ((IFixedTickable)_tracker).FixedTick();
-        ((IFixedTickable)_tracker).FixedTick();
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.EqualTo(0.2f).Within(0.0001f));
+        _airTimeStep.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_GroundedOrNotRunning_DoesNotAccumulate()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, 0f);
-        ((IFixedTickable)_tracker).FixedTick();
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
+
+        _airTimeStep.UpdateAirTime();
 
         _stateService.ChangeTo(_runningStateId);
-        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, 0f);
-        ((IFixedTickable)_tracker).FixedTick();
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportAcquired);
+
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
 
     [Test]
     public void GameplayStateChanged_RunPreparation_ResetsCurrentRunAirTime()
     {
         _stateService.ChangeTo(_runningStateId);
-        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, 0f);
-        ((IFixedTickable)_tracker).FixedTick();
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
+
+        _airTimeStep.UpdateAirTime();
 
         _stateService.ChangeTo(_runPreparationStateId);
 
-        Assert.That(((IRunAirTimeSource)_tracker).CurrentRunAirTimeSeconds, Is.Zero);
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_ObservedMissHeldAsStableSupport_DoesNotAccumulate()
+    {
+        _stateService.ChangeTo(_runningStateId);
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.None,
+            isMissingSupportHeld: true);
+
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_ConfirmedSupportLossThenReacquisition_AccumulatesUntilStableSupportReturns()
+    {
+        _stateService.ChangeTo(_runningStateId);
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
+
+        _airTimeStep.UpdateAirTime();
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.None);
+
+        _airTimeStep.UpdateAirTime();
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Supported,
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportAcquired);
+
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
+    }
+
+    [Test]
+    public void FixedTick_AccumulatedAirTimeThenHardReset_ClearsCurrentRunAirTime()
+    {
+        _stateService.ChangeTo(_runningStateId);
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Missing,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.SupportLost);
+
+        _airTimeStep.UpdateAirTime();
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.EqualTo(expected: 0.2f).Within(amount: 0.0001f));
+
+        _surfaceFrameSource.Publish(
+            RunSupportObservationState.Unavailable,
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
+            RunSurfaceTransition.HardReset);
+
+        _airTimeStep.UpdateAirTime();
+
+        Assert.That(_tracker.CurrentRunAirTimeSeconds, Is.Zero);
     }
 
     private GameplayStateId CreateStateId(string stateName)
@@ -96,8 +196,8 @@ public sealed class RunAirTimeTrackerTests
     {
         public GameplayStateId CurrentStateId { get; private set; }
 
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
 
         public FakeGameplayStateService(GameplayStateId currentStateId)
         {
@@ -124,9 +224,43 @@ public sealed class RunAirTimeTrackerTests
         }
     }
 
-    private sealed class FakeRunSurfaceContextSource : IRunSurfaceContextSource
+    private sealed class FakeRunSurfaceFrameSource : IRunSurfaceFrameSource
     {
-        public RunSurfaceContext Current { get; set; }
+        private RunSurfaceFrameSnapshot _current;
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current => _current;
+
+        public void Publish(
+            RunSupportObservationState observationState,
+            RunSurfaceContext stableSupport,
+            RunSurfaceTransition transition,
+            bool isMissingSupportHeld = false)
+        {
+            RunProgressFrameSnapshot.TryCreate(
+                Vector3.zero,
+                Vector3.forward,
+                Vector3.up,
+                out var progressFrame,
+                out _);
+
+            var observedContext = observationState == RunSupportObservationState.Supported
+                ? new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f)
+                : new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
+
+            var observedSupport = new RunSupportObservation(
+                observationState,
+                observationState == RunSupportObservationState.Unavailable ? default : progressFrame,
+                observedContext,
+                supportDistance: 0f);
+
+            _current = new RunSurfaceFrameSnapshot(
+                observedSupport,
+                stableSupport,
+                transition,
+                isMissingSupportHeld,
+                isConfirmingDiscontinuity: false,
+                steeringFrame: default);
+        }
     }
 
     private sealed class FakeTime : ITime

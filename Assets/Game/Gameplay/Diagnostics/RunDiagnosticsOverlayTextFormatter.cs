@@ -1,18 +1,29 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Game.Gameplay.Diagnostics
 {
-    internal sealed class RunDiagnosticsOverlayTextFormatter
+    internal static class RunDiagnosticsOverlayTextFormatter
     {
-        public string FormatMotionSummary(RunDiagnosticsOverlaySample sample)
+        public static string FormatMotionSummary(RunDiagnosticsOverlaySample sample)
         {
-            return $"G:{(sample.IsGrounded ? 1 : 0)} fx:{sample.FixedStepsThisFrame} "
+            return $"observed:{sample.ObservedSupportState} "
+                   + $"normal:{FormatDirection(sample.HasObservedGroundNormal, sample.ObservedGroundNormal)} "
+                   + $"stable:{(sample.IsStableGrounded ? "grounded" : "unsupported")} "
+                   + $"normal:{FormatDirection(sample.HasStableGroundNormal, sample.StableGroundNormal)} "
+                   + $"transition:{sample.SurfaceTransition} "
+                   + $"attachment:{sample.AttachmentTransition} "
+                   + $"held:{FormatBoolean(sample.IsMissingSupportHeld)} "
+                   + $"confirming:{FormatBoolean(sample.IsConfirmingDiscontinuity)} "
+                   + $"steering:{(sample.IsSteeringFrameValid ? "valid" : "unavailable")} "
+                   + $"up:{FormatDirection(sample.IsSteeringFrameValid, sample.SteeringUpDirection)} "
+                   + $"fx:{sample.FixedStepsThisFrame} "
                    + $"snap:{FormatSnapReason(sample.EstimatedVisualSnapReason)} "
                    + $"rb-tgt:{sample.TargetToMotionCentimeters:0.0}cm "
                    + $"camrot:{sample.CameraRotationDeltaDegrees:0.0}";
         }
 
-        public string FormatRunBodySpeed(RunBodySpeedDiagnosticsSnapshot snapshot)
+        public static string FormatRunBodySpeed(RunBodySpeedDiagnosticsSnapshot snapshot)
         {
             if (snapshot.State != RunBodySpeedDiagnosticsState.Active)
                 return "Run Body Speed | state:inactive";
@@ -27,7 +38,7 @@ namespace Game.Gameplay.Diagnostics
                    + $"requested:{FormatContributors(snapshot.RequestedContributors)}";
         }
 
-        public string FormatLowSpeedAssist(RunBodySpeedDiagnosticsSnapshot snapshot)
+        public static string FormatLowSpeedAssist(RunBodySpeedDiagnosticsSnapshot snapshot)
         {
             if (snapshot.State != RunBodySpeedDiagnosticsState.Active)
                 return "Low-Speed Assist | state:unavailable";
@@ -39,41 +50,41 @@ namespace Game.Gameplay.Diagnostics
                    + $"budget:{snapshot.RemainingRequestedLowSpeedAssistVelocityBudget:0.0}m/s";
         }
 
-        private string FormatContributors(RunBodySpeedDecisionContributors contributors)
+        private static string FormatContributors(RunBodySpeedDecisionContributors contributors)
         {
             if (contributors == RunBodySpeedDecisionContributors.None)
                 return "none";
 
-            var labels = new List<string>(4);
+            var labels = new List<string>(capacity: 4);
 
             AddContributor(
                 labels,
                 contributors,
                 RunBodySpeedDecisionContributors.DownhillAcceleration,
-                "downhill");
+                label: "downhill");
 
             AddContributor(
                 labels,
                 contributors,
                 RunBodySpeedDecisionContributors.SurfaceSlowdown,
-                "slowdown");
+                label: "slowdown");
 
             AddContributor(
                 labels,
                 contributors,
                 RunBodySpeedDecisionContributors.AboveEnvelopeResistance,
-                "above-envelope");
+                label: "above-envelope");
 
             AddContributor(
                 labels,
                 contributors,
                 RunBodySpeedDecisionContributors.LowSpeedAssist,
-                "low-speed-assist");
+                label: "low-speed-assist");
 
-            return labels.Count > 0 ? string.Join("+", labels) : "unknown";
+            return labels.Count > 0 ? string.Join(separator: "+", labels) : "unknown";
         }
 
-        private void AddContributor(
+        private static void AddContributor(
             ICollection<string> labels,
             RunBodySpeedDecisionContributors contributors,
             RunBodySpeedDecisionContributors contributor,
@@ -83,24 +94,25 @@ namespace Game.Gameplay.Diagnostics
                 labels.Add(label);
         }
 
-        private string FormatBoolean(bool value)
+        private static string FormatBoolean(bool value)
         {
             return value ? "yes" : "no";
         }
 
-        private string FormatSnapReason(RunDiagnosticsOverlaySnapReason reason)
+        private static string FormatDirection(bool isValid, Vector3 direction)
         {
-            switch (reason)
+            return isValid ? $"({direction.x:0.000},{direction.y:0.000},{direction.z:0.000})" : "n/a";
+        }
+
+        private static string FormatSnapReason(RunDiagnosticsOverlaySnapReason reason)
+        {
+            return reason switch
             {
-                case RunDiagnosticsOverlaySnapReason.Position:
-                    return "pos";
-                case RunDiagnosticsOverlaySnapReason.Rotation:
-                    return "rot";
-                case RunDiagnosticsOverlaySnapReason.PositionAndRotation:
-                    return "pos+rot";
-                default:
-                    return "-";
-            }
+                RunDiagnosticsOverlaySnapReason.Position => "pos",
+                RunDiagnosticsOverlaySnapReason.Rotation => "rot",
+                RunDiagnosticsOverlaySnapReason.PositionAndRotation => "pos+rot",
+                _ => "-"
+            };
         }
     }
 }

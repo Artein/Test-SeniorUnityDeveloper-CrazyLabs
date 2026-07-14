@@ -23,7 +23,8 @@ public sealed class RunBodyMovementConfig : ScriptableObject,
 | --- | --- | --- | --- |
 | Steering input metrics | `IRunSteeringConfig` | `IRunSteeringInputMetricsResolver` and `RunSteeringInputController` | `RunSteeringRangeCentimeters`, `RunSteeringDeadzoneFraction`, `RunSteeringResponsiveness`, `FallbackDpi`, `MinimumAcceptedDpi`, `MaximumAcceptedDpi` |
 | Turn authority | `IRunSteeringConfig` | `IRunSteeringEvaluator` / `RunBodyMovementController` | `MaximumTurnDegreesPerSecond`, `RunAirSteeringMaximumTurnDegreesPerSecond`, `MinimumSteerSpeed` |
-| Steering-frame stability | `IRunSteeringFrameConfig` | `RunSurfaceSteeringFrameSource` or equivalent frame source | normal slew rate, snap angle, ungrounded grace, suspect-normal confirmation |
+| Surface stability | `IRunSurfaceStabilityAuthoringConfig` | `RunSurfaceStabilityPolicy` | support-loss duration, discontinuity threshold and confirmation, candidate coherence |
+| Steering-frame derivation | `IRunSteeringFrameAuthoringConfig` | `RunSteeringFramePolicy` | normal slew rate, airborne up retention |
 | Post-launch lift correction | `IRunLaunchLandingStabilizationConfig` | `RunLaunchLandingStabilizer` | `LaunchLandingStabilizationSeconds`, `LaunchLandingMaximumLiftSpeed` |
 | Movement validity and defensive sanity | `IRunBodyMovementValidityConfig` | `RunBodyMovementController` and sanity guard | `MaximumSupportedSurfaceNormalLiftSpeed`, `RunBodySpeedSanityGuardMetersPerSecond` |
 
@@ -239,4 +240,3 @@ LowSpeedAssistAcceleration =
 - At or above `SoftMaximumSpeed`, the model should stop adding normal positive gameplay acceleration and may add an envelope contribution to `TangentDrag`.
 - Temporary overspeed from launch, drops, collisions, or solver response may exist briefly and settle back into the envelope.
 - Impossible or broken velocities still belong to **Run Body Speed Sanity Guard**, not to the gameplay envelope.
-

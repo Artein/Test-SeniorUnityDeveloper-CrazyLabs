@@ -8,7 +8,12 @@ using VContainer.Unity;
 
 namespace Game.Gameplay.CharacterPresentation
 {
-    internal sealed class CharacterVisualFollower : IInitializable, ILateTickable, IDisposable
+    internal interface ICharacterVisualLateStep
+    {
+        void UpdateVisual();
+    }
+
+    internal sealed class CharacterVisualFollower : ICharacterVisualLateStep, IInitializable, IDisposable
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -54,6 +59,7 @@ namespace Game.Gameplay.CharacterPresentation
             _runPreparationStateId = runPreparationStateId != null
                 ? runPreparationStateId
                 : throw new ArgumentNullException(nameof(runPreparationStateId));
+
             _preLaunchStateId = preLaunchStateId != null ? preLaunchStateId : throw new ArgumentNullException(nameof(preLaunchStateId));
         }
 
@@ -72,7 +78,7 @@ namespace Game.Gameplay.CharacterPresentation
             SnapToTargetPose();
         }
 
-        void ILateTickable.LateTick()
+        void ICharacterVisualLateStep.UpdateVisual()
         {
             if (_isDisposed || !_isInitialized)
                 return;

@@ -6,8 +6,8 @@ using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using Game.Gameplay.Upgrades;
 using UnityEngine;
-using UnityEngine.TestTools;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 namespace Game.Gameplay.Tests.PlayMode
 {
@@ -45,17 +45,18 @@ namespace Game.Gameplay.Tests.PlayMode
 
     internal sealed class RunBodyContactPhysicsScenario : IDisposable
     {
-        private readonly List<UnityEngine.Object> _createdObjects = new();
         private readonly HashSet<Collider> _collidedWith = new();
         private readonly RunBodyContactPhysicsConfig _config;
-        private readonly SlingshotLaunchController _launchEvents;
-        private readonly PhysicsRunSurfaceContextSource _surfaceContextSource;
-        private readonly RunSurfaceSteeringFrameSource _steeringFrameSource;
-        private readonly RunBodySpeedDiagnostics _diagnostics;
-        private readonly RecordingRunBodyMovementTarget _recordingMovementTarget;
-        private readonly RigidbodyContactNotifier _contactNotifier;
-        private readonly RunBodyMovementController _controller;
+        private readonly IRigidbodyContactNotifier _contactNotifier;
+        private readonly List<Object> _createdObjects = new();
+        private readonly ISlingshotLaunchAppliedPublisher _launchAppliedPublisher;
+        private readonly IDisposable _movementLifecycle;
+        private readonly IRunBodyMovementFixedStep _movementStep;
+        private readonly RecordingRunBodyMovementTarget _movementTargetRecorder;
         private readonly int _runSurfaceLayer;
+        private readonly IRunBodySpeedDiagnosticsSource _speedDiagnosticsSource;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
+        private readonly IRunSurfaceFrameFixedStep _surfaceFrameStep;
         private bool _isDisposed;
         private bool _isRunActive;
 
@@ -72,15 +73,12 @@ namespace Game.Gameplay.Tests.PlayMode
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _runSurfaceLayer = ResolveSingleLayer(runSurfaceLayerMask);
 
-            var bodyObject = Track(new GameObject("Run Body Contact Physics Test Body"));
+            var bodyObject = Track(new GameObject(name: "Run Body Contact Physics Test Body"));
             bodyObject.transform.position = origin + Vector3.up * 2f;
 
             BodyCollider = bodyObject.AddComponent<SphereCollider>();
             BodyCollider.radius = 0.5f;
-
-            BodyCollider.sharedMaterial = CreatePhysicsMaterial(
-                "Run Body Contact Physics Body Material",
-                _config.BodyBounciness);
+            BodyCollider.sharedMaterial = CreatePhysicsMaterial(name: "Run Body Contact Physics Body Material", _config.BodyBounciness);
 
             Body = bodyObject.AddComponent<Rigidbody>();
             Body.mass = 1f;
@@ -89,12 +87,13 @@ namespace Game.Gameplay.Tests.PlayMode
             Body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             Body.interpolation = RigidbodyInterpolation.None;
 
-            _contactNotifier = bodyObject.AddComponent<RigidbodyContactNotifier>();
+            var contactNotifier = bodyObject.AddComponent<RigidbodyContactNotifier>();
+            _contactNotifier = contactNotifier;
             _contactNotifier.CollisionEntered += OnCollisionEntered;
 
             var rigidbodyMovementTarget = bodyObject.AddComponent<RigidbodyRunBodyMovementTarget>();
             rigidbodyMovementTarget.SetRigidbodyForTests(Body);
-            _recordingMovementTarget = new RecordingRunBodyMovementTarget(rigidbodyMovementTarget);
+            _movementTargetRecorder = new RecordingRunBodyMovementTarget(rigidbodyMovementTarget);
 
             var runningStateId = Track(ScriptableObject.CreateInstance<GameplayStateId>());
             runningStateId.name = "Running";
@@ -103,36 +102,66 @@ namespace Game.Gameplay.Tests.PlayMode
 
             var progressContext = new FixedRunProgressContext(origin, Vector3.forward, Vector3.up);
             var clock = new UnityTime();
+            var slopeCalculator = new RunSurfaceSlopeCalculator();
 
-            _surfaceContextSource = new PhysicsRunSurfaceContextSource(
+            var supportProbe = new PhysicsRunSupportProbe(
                 BodyCollider,
-                progressContext,
                 new RunSupportColliderProbeFactory(),
-                _config.SupportProbeDistance,
-                runSurfaceLayerMask);
+                new RunSurfaceProbeConfig(
+                    _config.SupportProbeDistance,
+                    skinWidth: 0.02f,
+                    runSurfaceLayerMask,
+                    minimumSupportNormalDot: 0.17f,
+                    footprintSampleOffsetScale: 0.6f,
+                    footprintNormalClusterAngleDegrees: 8f),
+                slopeCalculator);
 
-            _steeringFrameSource = new RunSurfaceSteeringFrameSource(
-                _surfaceContextSource,
-                _config,
+            var surfaceFramePipeline = new RunSurfaceFramePipeline(
+                progressContext,
+                supportProbe,
+                new TestRunMotionSource(Body.transform, Body),
+                new RunSupportAttachmentPolicy(
+                    new RunSupportAttachmentConfig(
+                        maximumAttachedSurfaceNormalLiftSpeed: 0.35f,
+                        sameSurfaceReattachmentSeparationMeters: 0.08f,
+                        minimumReattachmentNormalChangeDegrees: 30f,
+                        transitionConfirmationSeconds: 0.04f)),
+                new RunSurfaceStabilityPolicy(
+                    new RunSurfaceStabilityConfig(
+                        _config.RunSurfaceSupportLossConfirmationSeconds,
+                        _config.RunSurfaceDiscontinuousNormalThresholdDegrees,
+                        _config.RunSurfaceDiscontinuousNormalConfirmationSeconds,
+                        _config.RunSurfaceCandidateCoherenceDegrees),
+                    slopeCalculator),
+                new RunSteeringFramePolicy(
+                    new RunSteeringFrameConfig(
+                        _config.RunSteeringFrameNormalSlewDegreesPerSecond,
+                        _config.RunSteeringFrameAirborneUpRetentionSeconds)),
                 clock);
 
-            _diagnostics = new RunBodySpeedDiagnostics();
-            _launchEvents = new SlingshotLaunchController();
+            _surfaceFrameSource = surfaceFramePipeline;
+            _surfaceFrameStep = surfaceFramePipeline;
 
-            _controller = new RunBodyMovementController(
+            var speedDiagnostics = new RunBodySpeedDiagnostics();
+            _speedDiagnosticsSource = speedDiagnostics;
+
+            var launchController = new SlingshotLaunchController();
+            _launchAppliedPublisher = launchController;
+
+            var movementController = new RunBodyMovementController(
                 new RunBodyContactPhysicsStateService(runningStateId),
-                _launchEvents,
-                _recordingMovementTarget,
+                launchController,
+                _movementTargetRecorder,
                 new NeutralRunSteeringInputSource(),
                 new DefaultRunBodySpeedEvaluator(_config),
                 new DefaultRunSteeringEvaluator(),
                 new RunLaunchLandingStabilizer(_config),
-                _steeringFrameSource,
-                _steeringFrameSource,
-                _surfaceContextSource,
+                surfaceFramePipeline,
+                surfaceFramePipeline,
+                surfaceFramePipeline,
                 progressContext,
                 new FixedRunGameplayStatResolver(_config.BaseSoftMaximumSpeed),
-                _diagnostics,
+                speedDiagnostics,
                 _config,
                 _config,
                 _config,
@@ -141,7 +170,30 @@ namespace Game.Gameplay.Tests.PlayMode
                 playerMaxSpeedStatId,
                 runningStateId);
 
-            ((IInitializable)_controller).Initialize();
+            _movementStep = movementController;
+            _movementLifecycle = movementController;
+            ((IInitializable)movementController).Initialize();
+        }
+
+        void IDisposable.Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+            _contactNotifier.CollisionEntered -= OnCollisionEntered;
+            _movementLifecycle.Dispose();
+
+            for (var i = _createdObjects.Count - 1; i >= 0; i -= 1)
+            {
+                var createdObject = _createdObjects[i];
+
+                if (createdObject != null)
+                    Object.DestroyImmediate(createdObject);
+            }
+
+            _createdObjects.Clear();
+            _collidedWith.Clear();
         }
 
         public Collider CreateRunSurface(
@@ -157,6 +209,7 @@ namespace Game.Gameplay.Tests.PlayMode
             surfaceObject.transform.SetPositionAndRotation(
                 topPoint - rotation * Vector3.up * (size.y * 0.5f),
                 rotation);
+
             surfaceObject.transform.localScale = size;
 
             var collider = surfaceObject.AddComponent<BoxCollider>();
@@ -173,7 +226,7 @@ namespace Game.Gameplay.Tests.PlayMode
             wallObject.transform.localScale = size;
 
             var collider = wallObject.AddComponent<BoxCollider>();
-            collider.sharedMaterial = CreatePhysicsMaterial(name + " Material", 0f);
+            collider.sharedMaterial = CreatePhysicsMaterial(name + " Material", bounciness: 0f);
             wallObject.AddComponent<RunContact>().SetCategoryForTests(RunContactCategory.Obstacle);
             return collider;
         }
@@ -192,7 +245,7 @@ namespace Game.Gameplay.Tests.PlayMode
 
             var sphereCollider = projectileObject.AddComponent<SphereCollider>();
             sphereCollider.radius = radius;
-            sphereCollider.sharedMaterial = CreatePhysicsMaterial(name + " Material", 0f);
+            sphereCollider.sharedMaterial = CreatePhysicsMaterial(name + " Material", bounciness: 0f);
             projectileCollider = sphereCollider;
 
             var projectileBody = projectileObject.AddComponent<Rigidbody>();
@@ -234,7 +287,7 @@ namespace Game.Gameplay.Tests.PlayMode
                 return;
 
             _isRunActive = true;
-            _launchEvents.Publish(CreateLaunchAppliedEvent());
+            _launchAppliedPublisher.Publish(CreateLaunchAppliedEvent());
         }
 
         public bool HasCollisionWith(Collider collider)
@@ -244,21 +297,21 @@ namespace Game.Gameplay.Tests.PlayMode
 
         public IEnumerator Step()
         {
-            ((IFixedTickable)_surfaceContextSource).FixedTick();
-            ((IFixedTickable)_steeringFrameSource).FixedTick();
+            _surfaceFrameStep.UpdateSurfaceFrame();
 
-            _recordingMovementTarget.BeginStep();
+            _movementTargetRecorder.BeginStep();
             var sampledVelocity = Body.linearVelocity;
             var sampledPosition = Body.position;
-            var surfaceContext = _surfaceContextSource.Current;
+            var surfaceContext = _surfaceFrameSource.Current.StableSupport;
 
-            ((IFixedTickable)_controller).FixedTick();
+            _movementStep.UpdateMovement();
 
-            var writtenVelocity = _recordingMovementTarget.HasLastTargetState
-                ? _recordingMovementTarget.LastTargetState.LinearVelocity
+            var writtenVelocity = _movementTargetRecorder.HasLastTargetState
+                ? _movementTargetRecorder.LastTargetState.LinearVelocity
                 : sampledVelocity;
-            var diagnostics = _diagnostics.Current;
-            var movementWriteCount = _recordingMovementTarget.StepWriteCount;
+
+            var diagnostics = _speedDiagnosticsSource.Current;
+            var movementWriteCount = _movementTargetRecorder.StepWriteCount;
 
             yield return new WaitForFixedUpdate();
 
@@ -271,25 +324,6 @@ namespace Game.Gameplay.Tests.PlayMode
                 surfaceContext,
                 diagnostics,
                 movementWriteCount);
-        }
-
-        public void Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-            _contactNotifier.CollisionEntered -= OnCollisionEntered;
-            ((IDisposable)_controller).Dispose();
-
-            for (var index = _createdObjects.Count - 1; index >= 0; index -= 1)
-            {
-                if (_createdObjects[index] != null)
-                    UnityEngine.Object.DestroyImmediate(_createdObjects[index]);
-            }
-
-            _createdObjects.Clear();
-            _collidedWith.Clear();
         }
 
         private void OnCollisionEntered(RigidbodyCollisionNotification notification)
@@ -312,10 +346,10 @@ namespace Game.Gameplay.Tests.PlayMode
         private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
         {
             var request = new SlingshotLaunchRequest(
-                1f,
-                1f,
-                0f,
-                0f,
+                pullStrength: 1f,
+                pullDistance: 1f,
+                pullOffset: 0f,
+                normalizedLateralPull: 0f,
                 Body.position,
                 Vector3.forward,
                 Vector3.up);
@@ -332,12 +366,14 @@ namespace Game.Gameplay.Tests.PlayMode
             var value = layerMask.value;
 
             if (value <= 0 || (value & (value - 1)) != 0)
-                throw new ArgumentException("Expected exactly one Run Surface layer.", nameof(layerMask));
+                throw new ArgumentException(message: "Expected exactly one Run Surface layer.", nameof(layerMask));
 
             var layer = 0;
 
             while ((value >>= 1) > 0)
+            {
                 layer += 1;
+            }
 
             return layer;
         }
@@ -350,10 +386,10 @@ namespace Game.Gameplay.Tests.PlayMode
                     return layer;
             }
 
-            throw new InvalidOperationException("Could not resolve a non-surface physics layer.");
+            throw new InvalidOperationException(message: "Could not resolve a non-surface physics layer.");
         }
 
-        private T Track<T>(T createdObject) where T : UnityEngine.Object
+        private T Track<T>(T createdObject) where T : Object
         {
             _createdObjects.Add(createdObject);
             return createdObject;

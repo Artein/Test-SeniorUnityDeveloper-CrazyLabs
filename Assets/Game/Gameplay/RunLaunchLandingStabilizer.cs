@@ -7,15 +7,18 @@ namespace Game.Gameplay
     {
         public Vector3 CurrentVelocity { get; }
         public RunSurfaceContext SurfaceContext { get; }
+        public RunSurfaceTransition SurfaceTransition { get; }
         public float FixedDeltaTime { get; }
 
         public RunLaunchLandingStabilizationContext(
             Vector3 currentVelocity,
             RunSurfaceContext surfaceContext,
+            RunSurfaceTransition surfaceTransition,
             float fixedDeltaTime)
         {
             CurrentVelocity = currentVelocity;
             SurfaceContext = surfaceContext;
+            SurfaceTransition = surfaceTransition;
             FixedDeltaTime = fixedDeltaTime;
         }
     }
@@ -30,50 +33,49 @@ namespace Game.Gameplay
     internal sealed class RunLaunchLandingStabilizer : IRunLaunchLandingStabilizer
     {
         private readonly IRunLaunchLandingStabilizationConfig _config;
-
-        private bool _isArmed;
-        private bool _isActive;
-        private bool _hasObservedPostLaunchUngroundedSurface;
         private float _elapsedSeconds;
+        private bool _isActive;
+        private bool _isArmed;
 
         public RunLaunchLandingStabilizer(IRunLaunchLandingStabilizationConfig config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public void ArmForLaunch()
+        void IRunLaunchLandingStabilizer.ArmForLaunch()
         {
             _isArmed = true;
             _isActive = false;
-            _hasObservedPostLaunchUngroundedSurface = false;
             _elapsedSeconds = 0f;
         }
 
-        public void Reset()
+        void IRunLaunchLandingStabilizer.Reset()
         {
             _isArmed = false;
             _isActive = false;
-            _hasObservedPostLaunchUngroundedSurface = false;
             _elapsedSeconds = 0f;
         }
 
-        public Vector3 Stabilize(RunLaunchLandingStabilizationContext context)
+        Vector3 IRunLaunchLandingStabilizer.Stabilize(RunLaunchLandingStabilizationContext context)
         {
             if (!_isArmed && !_isActive)
                 return context.CurrentVelocity;
+
+            if (context.SurfaceTransition == RunSurfaceTransition.HardReset)
+            {
+                ((IRunLaunchLandingStabilizer)this).Reset();
+                return context.CurrentVelocity;
+            }
 
             var startedThisTick = false;
 
             if (_isArmed)
             {
-                if (!HasValidGroundedSurface(context.SurfaceContext))
+                if (context.SurfaceTransition
+                    is not (RunSurfaceTransition.SupportAcquired or RunSurfaceTransition.SupportReattached))
                 {
-                    _hasObservedPostLaunchUngroundedSurface = true;
                     return context.CurrentVelocity;
                 }
-
-                if (!_hasObservedPostLaunchUngroundedSurface)
-                    return context.CurrentVelocity;
 
                 _isArmed = false;
                 _isActive = true;
@@ -88,17 +90,17 @@ namespace Game.Gameplay
 
             if (duration <= 0f)
             {
-                Reset();
+                ((IRunLaunchLandingStabilizer)this).Reset();
                 return context.CurrentVelocity;
             }
 
             if (!startedThisTick)
             {
-                _elapsedSeconds += Mathf.Max(0f, context.FixedDeltaTime);
+                _elapsedSeconds += Mathf.Max(a: 0f, context.FixedDeltaTime);
 
                 if (_elapsedSeconds > duration)
                 {
-                    Reset();
+                    ((IRunLaunchLandingStabilizer)this).Reset();
                     return context.CurrentVelocity;
                 }
             }
@@ -111,10 +113,10 @@ namespace Game.Gameplay
                 context.SurfaceContext.GroundNormal);
 
             if (startedThisTick)
-                _elapsedSeconds += Mathf.Max(0f, context.FixedDeltaTime);
+                _elapsedSeconds += Mathf.Max(a: 0f, context.FixedDeltaTime);
 
             if (_elapsedSeconds >= duration)
-                Reset();
+                ((IRunLaunchLandingStabilizer)this).Reset();
 
             return stabilizedVelocity;
         }

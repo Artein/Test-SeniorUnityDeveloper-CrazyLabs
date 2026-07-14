@@ -8,38 +8,39 @@ using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed class RunBodyMovementControllerTests
 {
-    private readonly List<UnityEngine.Object> _objects = new();
-
-    private FakeGameplayStateService _stateService;
-    private FakeLaunchAppliedNotifier _launchNotifier;
-    private FakeMovementTarget _target;
-    private FakeSteeringInputSource _inputSource;
-    private FakeRunBodySpeedEvaluator _speedEvaluator;
-    private FakeSteeringEvaluator _steeringEvaluator;
-    private FakeLaunchLandingStabilizer _stabilizer;
-    private FakeSteeringFrame _steeringFrame;
-    private FakeSurfaceContextSource _surfaceContextSource;
-    private FakeRunProgressService _runProgressService;
-    private FakeRunGameplayStatResolver _runGameplayStatResolver;
-    private RunBodySpeedDiagnostics _speedDiagnostics;
-    private FakeMovementConfig _config;
-    private RunBodySpeedEnvelopeValidator _speedEnvelopeValidator;
+    private readonly List<Object> _objects = new();
+    private List<string> _callOrder;
     private FakeTime _clock;
+    private FakeMovementConfig _config;
+    private RunBodyMovementController _controller;
+    private FakeSteeringInputSource _inputSource;
+    private FakeLaunchAppliedNotifier _launchNotifier;
     private GameplayStatId _playerMaxSpeedStatId;
     private GameplayStateId _preLaunchStateId;
+    private FakeRunGameplayStatResolver _runGameplayStatResolver;
     private GameplayStateId _runningStateId;
-    private RunBodyMovementController _controller;
-    private List<string> _callOrder;
+    private FakeRunProgressService _runProgressService;
+    private RunBodySpeedDiagnostics _speedDiagnostics;
+    private RunBodySpeedEnvelopeValidator _speedEnvelopeValidator;
+    private FakeRunBodySpeedEvaluator _speedEvaluator;
+    private FakeLaunchLandingStabilizer _stabilizer;
+
+    private FakeGameplayStateService _stateService;
+    private FakeSteeringEvaluator _steeringEvaluator;
+    private FakeSteeringFrame _steeringFrame;
+    private FakeSurfaceContextSource _surfaceContextSource;
+    private FakeMovementTarget _target;
 
     [SetUp]
     public void OnSetUp()
     {
-        _preLaunchStateId = CreateStateId("PreLaunch");
-        _runningStateId = CreateStateId("Running");
+        _preLaunchStateId = CreateStateId(name: "PreLaunch");
+        _runningStateId = CreateStateId(name: "Running");
         _stateService = new FakeGameplayStateService(_runningStateId);
         _launchNotifier = new FakeLaunchAppliedNotifier();
         _callOrder = new List<string>();
@@ -56,7 +57,7 @@ public sealed class RunBodyMovementControllerTests
         _config = new FakeMovementConfig();
         _speedEnvelopeValidator = new RunBodySpeedEnvelopeValidator(_config);
         _clock = new FakeTime { FixedDeltaTime = 0.02f };
-        _playerMaxSpeedStatId = CreateStatId("PlayerMaxSpeed");
+        _playerMaxSpeedStatId = CreateStatId(name: "PlayerMaxSpeed");
 
         _controller = new RunBodyMovementController(
             _stateService,
@@ -79,6 +80,7 @@ public sealed class RunBodyMovementControllerTests
             _clock,
             _playerMaxSpeedStatId,
             _runningStateId);
+
         ((IInitializable)_controller).Initialize();
     }
 
@@ -89,7 +91,7 @@ public sealed class RunBodyMovementControllerTests
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(unityObject);
         }
 
         _objects.Clear();
@@ -103,7 +105,7 @@ public sealed class RunBodyMovementControllerTests
 
         _stabilizer.Transform = context =>
         {
-            Assert.That(context.CurrentVelocity.magnitude, Is.EqualTo(25f).Within(0.0001f));
+            Assert.That(context.CurrentVelocity.magnitude, Is.EqualTo(expected: 25f).Within(amount: 0.0001f));
             return context.CurrentVelocity + Vector3.up * 2f;
         };
 
@@ -111,10 +113,10 @@ public sealed class RunBodyMovementControllerTests
         FixedTick();
 
         Assert.That(_callOrder, Is.EqualTo(new[] { "input", "read", "stabilize", "speed", "steering", "write" }));
-        Assert.That(_inputSource.AdvanceCallCount, Is.EqualTo(1));
-        Assert.That(_target.ReadCallCount, Is.EqualTo(1));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
-        Assert.That(_steeringEvaluator.LastContext.TangentSpeed, Is.EqualTo(25f).Within(0.0001f));
+        Assert.That(_inputSource.AdvanceCallCount, Is.EqualTo(expected: 1));
+        Assert.That(_target.ReadCallCount, Is.EqualTo(expected: 1));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
+        Assert.That(_steeringEvaluator.LastContext.TangentSpeed, Is.EqualTo(expected: 25f).Within(amount: 0.0001f));
         Assert.That(_steeringEvaluator.LastContext.HasUsableTangentDirection, Is.True);
         AssertVector(_target.LastTargetState.LinearVelocity, Vector3.forward * 25f + Vector3.up * 2f);
     }
@@ -128,12 +130,12 @@ public sealed class RunBodyMovementControllerTests
         FixedTick();
         FixedTick();
 
-        Assert.That(_runGameplayStatResolver.ResolveCallCount, Is.EqualTo(2));
+        Assert.That(_runGameplayStatResolver.ResolveCallCount, Is.EqualTo(expected: 2));
         Assert.That(_runGameplayStatResolver.LastStatId, Is.SameAs(_playerMaxSpeedStatId));
         Assert.That(_runGameplayStatResolver.LastBaseValue, Is.EqualTo(_config.BaseSoftMaximumSpeed));
-        Assert.That(_speedEvaluator.LastContext.ResolvedSoftMaximumSpeed, Is.EqualTo(32f));
-        Assert.That(_speedEvaluator.EvaluateCallCount, Is.EqualTo(2));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(2));
+        Assert.That(_speedEvaluator.LastContext.ResolvedSoftMaximumSpeed, Is.EqualTo(expected: 32f));
+        Assert.That(_speedEvaluator.EvaluateCallCount, Is.EqualTo(expected: 2));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 2));
     }
 
     [Test]
@@ -144,7 +146,7 @@ public sealed class RunBodyMovementControllerTests
         ActivateMovement();
 
         Assert.That(FixedTick, Throws.TypeOf<InvalidOperationException>());
-        Assert.That(_runGameplayStatResolver.ResolveCallCount, Is.EqualTo(1));
+        Assert.That(_runGameplayStatResolver.ResolveCallCount, Is.EqualTo(expected: 1));
         Assert.That(_inputSource.AdvanceCallCount, Is.Zero);
         Assert.That(_target.ReadCallCount, Is.Zero);
         Assert.That(_speedEvaluator.EvaluateCallCount, Is.Zero);
@@ -154,10 +156,10 @@ public sealed class RunBodyMovementControllerTests
     [Test]
     public void FixedTick_ValidGroundedDownhill_IntegratesAccelerationOnceAndPreservesNormalVelocity()
     {
-        var surfaceNormal = new Vector3(0f, 1f, 1f).normalized;
+        var surfaceNormal = new Vector3(x: 0f, y: 1f, z: 1f).normalized;
         var tangentDirection = Vector3.ProjectOnPlane(Vector3.forward, surfaceNormal).normalized;
         _target.CurrentVelocity = tangentDirection * 10f + surfaceNormal * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 30f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, surfaceNormal, forwardDownhillDegrees: 30f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
@@ -166,27 +168,32 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 0f,
             lowSpeedAssistAcceleration: 0f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration);
+            RunBodySpeedDecisionContributors.DownhillAcceleration);
+
         _clock.FixedDeltaTime = 0.25f;
 
         ActivateMovement();
         FixedTick();
 
         var finalVelocity = _target.LastTargetState.LinearVelocity;
-        Assert.That(Vector3.ProjectOnPlane(finalVelocity, surfaceNormal).magnitude, Is.EqualTo(11f).Within(0.0001f));
-        Assert.That(Vector3.Dot(finalVelocity, surfaceNormal), Is.EqualTo(2f).Within(0.0001f));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
-        Assert.That(_speedEvaluator.EvaluateCallCount, Is.EqualTo(1));
+
+        Assert.That(
+            Vector3.ProjectOnPlane(finalVelocity, surfaceNormal).magnitude,
+            Is.EqualTo(expected: 11f).Within(amount: 0.0001f));
+
+        Assert.That(Vector3.Dot(finalVelocity, surfaceNormal), Is.EqualTo(expected: 2f).Within(amount: 0.0001f));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
+        Assert.That(_speedEvaluator.EvaluateCallCount, Is.EqualTo(expected: 1));
         Assert.That(_speedEvaluator.LastContext.HasValidGroundedRunSurface, Is.True);
-        Assert.That(_speedEvaluator.LastContext.ForwardDownhillDegrees, Is.EqualTo(30f));
-        Assert.That(_speedEvaluator.LastContext.CourseForwardAlignment, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(_speedEvaluator.LastContext.ForwardDownhillDegrees, Is.EqualTo(expected: 30f));
+        Assert.That(_speedEvaluator.LastContext.CourseForwardAlignment, Is.EqualTo(expected: 1f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_PositiveAccelerationNearSoftEnvelope_StopsAtEnvelope()
     {
         _target.CurrentVelocity = Vector3.forward * 19.5f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 45f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 45f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
@@ -195,20 +202,21 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 0f,
             lowSpeedAssistAcceleration: 0f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration);
+            RunBodySpeedDecisionContributors.DownhillAcceleration);
+
         _clock.FixedDeltaTime = 0.1f;
 
         ActivateMovement();
         FixedTick();
 
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(20f).Within(0.0001f));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 20f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_PreExistingOverspeed_DoesNotClampToSoftEnvelope()
     {
         _target.CurrentVelocity = Vector3.forward * 24f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 45f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 45f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
@@ -217,19 +225,19 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 0f,
             lowSpeedAssistAcceleration: 0f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration);
+            RunBodySpeedDecisionContributors.DownhillAcceleration);
 
         ActivateMovement();
         FixedTick();
 
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(24f).Within(0.0001f));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 24f).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_AccelerationAndDrag_AppliesAccelerationBeforeDragAndWritesOnce()
     {
         _target.CurrentVelocity = Vector3.forward * 9.8f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 30f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 30f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
@@ -238,22 +246,23 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 0f,
             lowSpeedAssistAcceleration: 0f,
             softMaximumSpeed: 10f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration
-                          | RunBodySpeedDecisionContributors.SurfaceSlowdown);
+            RunBodySpeedDecisionContributors.DownhillAcceleration
+            | RunBodySpeedDecisionContributors.SurfaceSlowdown);
+
         _clock.FixedDeltaTime = 0.1f;
 
         ActivateMovement();
         FixedTick();
 
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(9.8f).Within(0.0001f));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 9.8f).Within(amount: 0.0001f));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
     }
 
     [Test]
     public void FixedTick_DragExceedsTangentSpeed_StopsAtZeroAndPreservesNormalVelocity()
     {
         _target.CurrentVelocity = Vector3.forward * 0.1f + Vector3.down;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -261,7 +270,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 0f,
             lowSpeedAssistAcceleration: 0f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.SurfaceSlowdown);
+            RunBodySpeedDecisionContributors.SurfaceSlowdown);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -269,14 +279,14 @@ public sealed class RunBodyMovementControllerTests
 
         AssertVector(_target.LastTargetState.LinearVelocity, Vector3.down);
         Assert.That(_target.LastTargetState.HasRotation, Is.False);
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
     }
 
     [Test]
     public void FixedTick_EligibleLowSpeedAssist_AppliesAfterOrdinarySpeedIntegration()
     {
         _target.CurrentVelocity = Vector3.forward * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 1f,
@@ -284,9 +294,10 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 2f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.DownhillAcceleration
-                          | RunBodySpeedDecisionContributors.SurfaceSlowdown
-                          | RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.DownhillAcceleration
+            | RunBodySpeedDecisionContributors.SurfaceSlowdown
+            | RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -298,17 +309,17 @@ public sealed class RunBodyMovementControllerTests
                                             | RunBodySpeedDecisionContributors.SurfaceSlowdown
                                             | RunBodySpeedDecisionContributors.LowSpeedAssist;
 
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(4.5f).Within(0.0001f));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 4.5f).Within(amount: 0.0001f));
         Assert.That(diagnostics.PolicyContributors, Is.EqualTo(expectedRequestedContributors));
         Assert.That(diagnostics.RequestedContributors, Is.EqualTo(expectedRequestedContributors));
-        Assert.That(diagnostics.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(2f));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
+        Assert.That(diagnostics.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(expected: 2f));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
     }
 
     [Test]
     public void FixedTick_SolverCancelsAssist_ExhaustsInitialDeficitWithoutContinuousPropulsion()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -316,7 +327,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 1f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -335,7 +347,7 @@ public sealed class RunBodyMovementControllerTests
     [Test]
     public void FixedTick_SupportLoss_PausesAndResumesSameAssistAttempt()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -343,7 +355,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 1f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -351,22 +364,22 @@ public sealed class RunBodyMovementControllerTests
         FixedTick();
 
         _target.CurrentVelocity = Vector3.forward * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
         FixedTick();
         var unsupportedWrittenSpeed = _target.LastTargetState.LinearVelocity.magnitude;
 
         _target.CurrentVelocity = Vector3.forward * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
         FixedTick();
 
-        Assert.That(unsupportedWrittenSpeed, Is.EqualTo(2f));
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(3f));
+        Assert.That(unsupportedWrittenSpeed, Is.EqualTo(expected: 2f));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 3f));
     }
 
     [Test]
     public void FixedTick_ActiveAssistLosesSupport_DiagnosticsRetainPausedAttemptTarget()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -374,7 +387,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 1f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -382,14 +396,14 @@ public sealed class RunBodyMovementControllerTests
         FixedTick();
 
         _target.CurrentVelocity = Vector3.forward * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
         FixedTick();
 
         var snapshot = _speedDiagnostics.Current;
-        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(expected: 5f));
         Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Paused));
         Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.False);
-        Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.EqualTo(2f));
+        Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.EqualTo(expected: 2f));
         Assert.That(snapshot.PolicyContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
         Assert.That(snapshot.RequestedContributors, Is.EqualTo(RunBodySpeedDecisionContributors.None));
         Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
@@ -398,7 +412,7 @@ public sealed class RunBodyMovementControllerTests
     [Test]
     public void FixedTick_AssistBudgetFinalSpendAndFollowingExhaustedPass_DiagnosticsDistinguishRequests()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -406,7 +420,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 1f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -429,11 +444,13 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(
             finalSpendSnapshot.RequestedContributors,
             Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
-        Assert.That(finalSpendSnapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
+
+        Assert.That(finalSpendSnapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(expected: 1f));
 
         Assert.That(
             finalSpendSnapshot.LowSpeedAssistAttemptState,
             Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Exhausted));
+
         Assert.That(finalSpendSnapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
 
         Assert.That(
@@ -443,13 +460,15 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(
             exhaustedSnapshot.RequestedContributors,
             Is.EqualTo(RunBodySpeedDecisionContributors.None));
+
         Assert.That(exhaustedSnapshot.RequestedLowSpeedAssistVelocityDelta, Is.Zero);
 
         Assert.That(
             exhaustedSnapshot.LowSpeedAssistAttemptState,
             Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Exhausted));
+
         Assert.That(exhaustedSnapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
-        Assert.That(exhaustedSnapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+        Assert.That(exhaustedSnapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(expected: 5f));
         Assert.That(exhaustedSnapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
     }
 
@@ -460,8 +479,9 @@ public sealed class RunBodyMovementControllerTests
                            | RunBodySpeedDecisionContributors.SurfaceSlowdown
                            | RunBodySpeedDecisionContributors.AboveEnvelopeResistance
                            | RunBodySpeedDecisionContributors.LowSpeedAssist;
+
         _target.CurrentVelocity = (Vector3.forward + Vector3.right).normalized * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 28f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 28f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
         _runGameplayStatResolver.ResolvedValue = 24f;
 
@@ -472,6 +492,7 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistAcceleration: 1f,
             softMaximumSpeed: 24f,
             contributors);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -482,32 +503,34 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(snapshot.IsRunSurfaceGrounded, Is.True);
         Assert.That(snapshot.HasValidGroundedRunSurface, Is.True);
         Assert.That(snapshot.HasUsableTangentDirection, Is.True);
-        Assert.That(snapshot.SampledTangentSpeed, Is.EqualTo(2f).Within(0.0001f));
-        Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(24f));
-        Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(28f));
-        Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(Mathf.Sqrt(0.5f)).Within(0.0001f));
+        Assert.That(snapshot.SampledTangentSpeed, Is.EqualTo(expected: 2f).Within(amount: 0.0001f));
+        Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(expected: 24f));
+        Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(expected: 28f));
+        Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(Mathf.Sqrt(f: 0.5f)).Within(amount: 0.0001f));
         Assert.That(snapshot.PolicyContributors, Is.EqualTo(contributors));
 
         Assert.That(
             snapshot.RequestedContributors,
             Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
-        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
-        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(expected: 1f));
+        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(expected: 5f));
         Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Active));
         Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
 
         Assert.That(
             snapshot.RemainingRequestedLowSpeedAssistVelocityBudget,
-            Is.EqualTo(2f).Within(0.0001f));
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(3f).Within(0.0001f));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
+            Is.EqualTo(expected: 2f).Within(amount: 0.0001f));
+
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 3f).Within(amount: 0.0001f));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
     }
 
     [Test]
     public void FixedTick_UnsupportedDirectionlessPass_PublishesExplicitUnavailableFacts()
     {
         _target.CurrentVelocity = Vector3.up * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 45f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 45f);
 
         ActivateMovement();
         FixedTick();
@@ -528,6 +551,7 @@ public sealed class RunBodyMovementControllerTests
         Assert.That(
             snapshot.LowSpeedAssistAttemptState,
             Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Unavailable));
+
         Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.False);
         Assert.That(snapshot.RemainingRequestedLowSpeedAssistVelocityBudget, Is.Zero);
     }
@@ -535,7 +559,7 @@ public sealed class RunBodyMovementControllerTests
     [Test]
     public void NewRun_PreviousAttemptExhausted_RearmsLowSpeedAssist()
     {
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 0f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
 
         _speedEvaluator.Decision = new RunBodySpeedDecision(
             tangentAcceleration: 0f,
@@ -543,7 +567,8 @@ public sealed class RunBodyMovementControllerTests
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 3f,
             softMaximumSpeed: 20f,
-            contributors: RunBodySpeedDecisionContributors.LowSpeedAssist);
+            RunBodySpeedDecisionContributors.LowSpeedAssist);
+
         _clock.FixedDeltaTime = 1f;
 
         ActivateMovement();
@@ -560,15 +585,15 @@ public sealed class RunBodyMovementControllerTests
         _target.CurrentVelocity = Vector3.forward * 2f;
         FixedTick();
 
-        Assert.That(exhaustedAttemptWrittenSpeed, Is.EqualTo(2f));
-        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(5f));
+        Assert.That(exhaustedAttemptWrittenSpeed, Is.EqualTo(expected: 2f));
+        Assert.That(_target.LastTargetState.LinearVelocity.magnitude, Is.EqualTo(expected: 5f));
     }
 
     [Test]
     public void FixedTick_MeaningfulSurfaceNormalLift_RejectsGroundedSpeedPolicy()
     {
         _target.CurrentVelocity = Vector3.forward * 8f + Vector3.up * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 30f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 30f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
         _config.MaximumSupportedSurfaceNormalLiftSpeed = 1f;
 
@@ -582,10 +607,10 @@ public sealed class RunBodyMovementControllerTests
     [Test]
     public void FixedTick_SurfaceTangentFloatingPointNoise_DoesNotRejectGroundedSpeedPolicy()
     {
-        var surfaceNormal = Quaternion.AngleAxis(30f, Vector3.right) * Vector3.up;
+        var surfaceNormal = Quaternion.AngleAxis(angle: 30f, Vector3.right) * Vector3.up;
         var tangentDirection = Vector3.ProjectOnPlane(Vector3.forward, surfaceNormal).normalized;
         _target.CurrentVelocity = tangentDirection * 5f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 30f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, surfaceNormal, forwardDownhillDegrees: 30f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
         _config.MaximumSupportedSurfaceNormalLiftSpeed = 0f;
 
@@ -600,7 +625,7 @@ public sealed class RunBodyMovementControllerTests
     public void FixedTick_DiagonalTangentTravel_ComputesProportionalCourseForwardAlignment()
     {
         _target.CurrentVelocity = (Vector3.forward + Vector3.right).normalized * 8f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, Vector3.up, 30f);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 30f);
         _runProgressService.SetFrame(Vector3.forward, Vector3.up);
 
         ActivateMovement();
@@ -608,36 +633,37 @@ public sealed class RunBodyMovementControllerTests
 
         Assert.That(
             _speedEvaluator.LastContext.CourseForwardAlignment,
-            Is.EqualTo(Mathf.Sqrt(0.5f)).Within(0.0001f));
+            Is.EqualTo(Mathf.Sqrt(f: 0.5f)).Within(amount: 0.0001f));
     }
 
     [Test]
     public void FixedTick_GroundedSteering_ProjectsIntentAndPreservesSurfaceNormalVelocity()
     {
-        var surfaceNormal = new Vector3(0f, 1f, 1f).normalized;
+        var surfaceNormal = new Vector3(x: 0f, y: 1f, z: 1f).normalized;
         var originalTangent = Vector3.right * 10f;
         var originalNormal = surfaceNormal * 2f;
         _target.CurrentVelocity = originalTangent + originalNormal;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 20f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, 35f, true);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, surfaceNormal, forwardDownhillDegrees: 20f);
+        _steeringEvaluator.Decision = new RunSteeringDecision(shouldTurnVelocity: true, signedTurnDegrees: 35f, shouldUpdateFacing: true);
 
         ActivateMovement();
         FixedTick();
 
         var expectedDirection = Vector3.ProjectOnPlane(
-            Quaternion.AngleAxis(35f, Vector3.up) * originalTangent.normalized,
+            Quaternion.AngleAxis(angle: 35f, Vector3.up) * originalTangent.normalized,
             surfaceNormal).normalized;
+
         var finalVelocity = _target.LastTargetState.LinearVelocity;
         var finalTangent = Vector3.ProjectOnPlane(finalVelocity, surfaceNormal);
 
-        Assert.That(Vector3.Dot(finalVelocity, surfaceNormal), Is.EqualTo(2f).Within(0.0001f));
-        Assert.That(finalTangent.magnitude, Is.EqualTo(10f).Within(0.0001f));
-        Assert.That(Vector3.Dot(finalTangent.normalized, expectedDirection), Is.GreaterThan(0.9999f));
+        Assert.That(Vector3.Dot(finalVelocity, surfaceNormal), Is.EqualTo(expected: 2f).Within(amount: 0.0001f));
+        Assert.That(finalTangent.magnitude, Is.EqualTo(expected: 10f).Within(amount: 0.0001f));
+        Assert.That(Vector3.Dot(finalTangent.normalized, expectedDirection), Is.GreaterThan(expected: 0.9999f));
         Assert.That(_target.LastTargetState.HasRotation, Is.True);
 
         Assert.That(
             Vector3.Dot(_target.LastTargetState.Rotation * Vector3.forward, expectedDirection),
-            Is.GreaterThan(0.9999f));
+            Is.GreaterThan(expected: 0.9999f));
     }
 
     [Test]
@@ -645,8 +671,8 @@ public sealed class RunBodyMovementControllerTests
     {
         var surfaceNormal = Vector3.forward;
         _target.CurrentVelocity = Vector3.right * 6f + surfaceNormal * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, -90f, true);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, surfaceNormal, forwardDownhillDegrees: 0f);
+        _steeringEvaluator.Decision = new RunSteeringDecision(shouldTurnVelocity: true, signedTurnDegrees: -90f, shouldUpdateFacing: true);
 
         ActivateMovement();
         FixedTick();
@@ -656,7 +682,7 @@ public sealed class RunBodyMovementControllerTests
 
         Assert.That(
             Vector3.Dot(_target.LastTargetState.Rotation * Vector3.forward, Vector3.right),
-            Is.GreaterThan(0.9999f));
+            Is.GreaterThan(expected: 0.9999f));
     }
 
     [Test]
@@ -664,8 +690,8 @@ public sealed class RunBodyMovementControllerTests
     {
         var surfaceNormal = Vector3.forward;
         _target.CurrentVelocity = surfaceNormal * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(true, surfaceNormal, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, 90f, true);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: true, surfaceNormal, forwardDownhillDegrees: 0f);
+        _steeringEvaluator.Decision = new RunSteeringDecision(shouldTurnVelocity: true, signedTurnDegrees: 90f, shouldUpdateFacing: true);
 
         ActivateMovement();
         FixedTick();
@@ -678,15 +704,15 @@ public sealed class RunBodyMovementControllerTests
     public void FixedTick_UnsupportedMotion_KeepsSpeedNeutralAndAirSteeringDirectionOnly()
     {
         _target.CurrentVelocity = Vector3.forward * 7f + Vector3.up * 2f;
-        _surfaceContextSource.Current = new RunSurfaceContext(false, Vector3.up, 0f);
-        _steeringEvaluator.Decision = new RunSteeringDecision(true, 90f, true);
+        _surfaceContextSource.Current = new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
+        _steeringEvaluator.Decision = new RunSteeringDecision(shouldTurnVelocity: true, signedTurnDegrees: 90f, shouldUpdateFacing: true);
 
         ActivateMovement();
         FixedTick();
 
         AssertVector(_target.LastTargetState.LinearVelocity, Vector3.right * 7f + Vector3.up * 2f);
         Assert.That(_steeringEvaluator.LastContext.SteeringMode, Is.EqualTo(RunSteeringMode.Air));
-        Assert.That(_target.ApplyCallCount, Is.EqualTo(1));
+        Assert.That(_target.ApplyCallCount, Is.EqualTo(expected: 1));
     }
 
     [Test]
@@ -710,8 +736,8 @@ public sealed class RunBodyMovementControllerTests
 
         FixedTick();
 
-        Assert.That(_stabilizer.ResetCallCount, Is.EqualTo(1));
-        Assert.That(_steeringFrame.ClearCallCount, Is.EqualTo(1));
+        Assert.That(_stabilizer.ResetCallCount, Is.EqualTo(expected: 1));
+        Assert.That(_steeringFrame.ClearCallCount, Is.EqualTo(expected: 1));
         Assert.That(_inputSource.AdvanceCallCount, Is.Zero);
         Assert.That(_target.ApplyCallCount, Is.Zero);
         Assert.That(_speedDiagnostics.Current.State, Is.EqualTo(RunBodySpeedDiagnosticsState.Inactive));
@@ -723,8 +749,8 @@ public sealed class RunBodyMovementControllerTests
         ActivateMovement(Vector3.up);
         ActivateMovement(Vector3.right);
 
-        Assert.That(_stabilizer.ArmCallCount, Is.EqualTo(2));
-        Assert.That(_steeringFrame.ResetCallCount, Is.EqualTo(2));
+        Assert.That(_stabilizer.ArmCallCount, Is.EqualTo(expected: 2));
+        Assert.That(_steeringFrame.ResetCallCount, Is.EqualTo(expected: 2));
         AssertVector(_steeringFrame.LastResetUp, Vector3.right);
     }
 
@@ -740,16 +766,16 @@ public sealed class RunBodyMovementControllerTests
 
     private void FixedTick()
     {
-        ((IFixedTickable)_controller).FixedTick();
+        ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
     }
 
     private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent(Vector3 launchUp)
     {
         var request = new SlingshotLaunchRequest(
-            1f,
-            1f,
-            0f,
-            0f,
+            pullStrength: 1f,
+            pullDistance: 1f,
+            pullOffset: 0f,
+            normalizedLateralPull: 0f,
             Vector3.zero,
             Vector3.forward,
             Vector3.up);
@@ -779,17 +805,17 @@ public sealed class RunBodyMovementControllerTests
 
     private void AssertVector(Vector3 actual, Vector3 expected)
     {
-        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
-        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
-        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(amount: 0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(amount: 0.0001f));
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(amount: 0.0001f));
     }
 
     private sealed class FakeGameplayStateService : IGameplayStateService
     {
         public GameplayStateId CurrentStateId { get; private set; }
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public FakeGameplayStateService(GameplayStateId initialStateId)
         {
@@ -829,27 +855,23 @@ public sealed class RunBodyMovementControllerTests
     private sealed class FakeMovementTarget : IRunBodyMovementTarget
     {
         private readonly List<string> _callOrder;
-        private Vector3 _currentVelocity;
-
-        public Vector3 CurrentVelocity
-        {
-            get => _currentVelocity;
-            set => _currentVelocity = value;
-        }
-
-        public int ReadCallCount { get; private set; }
         public int ApplyCallCount { get; private set; }
+
+        public Vector3 CurrentVelocity { get; set; }
+
         public RunBodyMovementTargetState LastTargetState { get; private set; }
 
         Vector3 IRunBodyMovementTarget.LinearVelocity
         {
             get
             {
-                _callOrder.Add("read");
+                _callOrder.Add(item: "read");
                 ReadCallCount += 1;
-                return _currentVelocity;
+                return CurrentVelocity;
             }
         }
+
+        public int ReadCallCount { get; private set; }
 
         public FakeMovementTarget(List<string> callOrder)
         {
@@ -858,9 +880,9 @@ public sealed class RunBodyMovementControllerTests
 
         public void ApplyTargetState(RunBodyMovementTargetState targetState)
         {
-            _callOrder.Add("write");
+            _callOrder.Add(item: "write");
             LastTargetState = targetState;
-            _currentVelocity = targetState.LinearVelocity;
+            CurrentVelocity = targetState.LinearVelocity;
             ApplyCallCount += 1;
         }
 
@@ -885,7 +907,7 @@ public sealed class RunBodyMovementControllerTests
 
         public RunSteeringInputState AdvanceAndRead(float fixedDeltaTime)
         {
-            _callOrder.Add("input");
+            _callOrder.Add(item: "input");
             AdvanceCallCount += 1;
             return State;
         }
@@ -899,10 +921,10 @@ public sealed class RunBodyMovementControllerTests
     private sealed class FakeRunBodySpeedEvaluator : IRunBodySpeedEvaluator
     {
         private readonly List<string> _callOrder;
+        public RunBodySpeedDecision Decision { get; set; }
 
         public int EvaluateCallCount { get; private set; }
         public RunBodySpeedContext LastContext { get; private set; }
-        public RunBodySpeedDecision Decision { get; set; }
 
         public FakeRunBodySpeedEvaluator(List<string> callOrder)
         {
@@ -911,7 +933,7 @@ public sealed class RunBodyMovementControllerTests
 
         public RunBodySpeedDecision Evaluate(RunBodySpeedContext context)
         {
-            _callOrder.Add("speed");
+            _callOrder.Add(item: "speed");
             EvaluateCallCount += 1;
             LastContext = context;
             return context.HasValidGroundedRunSurface ? Decision : default;
@@ -932,7 +954,7 @@ public sealed class RunBodyMovementControllerTests
 
         public RunSteeringDecision Evaluate(RunSteeringContext context)
         {
-            _callOrder.Add("steering");
+            _callOrder.Add(item: "steering");
             LastContext = context;
             return Decision;
         }
@@ -964,21 +986,16 @@ public sealed class RunBodyMovementControllerTests
 
         public Vector3 Stabilize(RunLaunchLandingStabilizationContext context)
         {
-            _callOrder.Add("stabilize");
+            _callOrder.Add(item: "stabilize");
             return Transform(context);
         }
     }
 
     private sealed class FakeSteeringFrame : IRunSteeringFrameSource, IRunSteeringFrameResetter
     {
-        public int ResetCallCount { get; private set; }
         public int ClearCallCount { get; private set; }
         public Vector3 LastResetUp { get; private set; }
-
-        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
-        {
-            return fallbackUpDirection;
-        }
+        public int ResetCallCount { get; private set; }
 
         public void Reset(Vector3 launchUpDirection)
         {
@@ -990,21 +1007,35 @@ public sealed class RunBodyMovementControllerTests
         {
             ClearCallCount += 1;
         }
+
+        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
+        {
+            return fallbackUpDirection;
+        }
     }
 
-    private sealed class FakeSurfaceContextSource : IRunSurfaceContextSource
+    private sealed class FakeSurfaceContextSource : IRunSurfaceFrameSource
     {
-        public RunSurfaceContext Current { get; set; } = new(false, Vector3.up, 0f);
+        public RunSurfaceContext Current { get; set; } = new(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current =>
+            new(
+                observedSupport: default,
+                Current,
+                RunSurfaceTransition.None,
+                isMissingSupportHeld: false,
+                isConfirmingDiscontinuity: false,
+                steeringFrame: default);
     }
 
     private sealed class FakeRunProgressService : IRunProgressService
     {
-        public bool HasValidSnapshot { get; private set; }
-        public string SnapshotError => string.Empty;
-        public RunProgressFrameSnapshot Snapshot { get; private set; }
         public float CurrentForwardProgress => 0f;
-        public float MaximumForwardProgress => 0f;
         public RunProgressSample CurrentSample => default;
+        public bool HasValidSnapshot { get; private set; }
+        public float MaximumForwardProgress => 0f;
+        public RunProgressFrameSnapshot Snapshot { get; private set; }
+        public string SnapshotError => string.Empty;
 
         public bool TryBeginRun(Vector3 origin, out string error)
         {
@@ -1030,15 +1061,16 @@ public sealed class RunBodyMovementControllerTests
                 up,
                 out var snapshot,
                 out _);
+
             Snapshot = snapshot;
         }
     }
 
     private sealed class FakeRunGameplayStatResolver : IRunGameplayStatResolver
     {
-        public int ResolveCallCount { get; private set; }
-        public GameplayStatId LastStatId { get; private set; }
         public float LastBaseValue { get; private set; }
+        public GameplayStatId LastStatId { get; private set; }
+        public int ResolveCallCount { get; private set; }
         public float? ResolvedValue { get; set; }
 
         public float Resolve(GameplayStatId statId, float baseValue)
@@ -1052,23 +1084,23 @@ public sealed class RunBodyMovementControllerTests
 
     private sealed class FakeMovementConfig : IRunBodySpeedConfig, IRunBodyMovementValidityConfig, IRunSteeringConfig
     {
-        public float DownhillAcceleration { get; set; } = 8f;
-        public float SurfaceSlowdown { get; set; }
-        public float LowSpeedAssistTargetSpeed { get; set; }
-        public float LowSpeedAssistAcceleration { get; set; }
-        public float BaseSoftMaximumSpeed { get; set; } = 20f;
         public float AboveMaximumSpeedResistance { get; set; }
+        public float BaseSoftMaximumSpeed { get; } = 20f;
+        public float DownhillAcceleration { get; } = 8f;
+        public float FallbackDpi { get; } = 100f;
+        public float LowSpeedAssistAcceleration { get; set; }
+        public float LowSpeedAssistTargetSpeed { get; set; }
+        public float MaximumAcceptedDpi { get; } = 1000f;
         public float MaximumSupportedSurfaceNormalLiftSpeed { get; set; } = 5f;
+        public float MaximumTurnDegreesPerSecond { get; } = 90f;
+        public float MinimumAcceptedDpi { get; } = 1f;
+        public float MinimumSteerSpeed { get; } = 0.25f;
+        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; } = 30f;
         public float RunBodySpeedSanityGuardMetersPerSecond { get; set; } = 250f;
-        public float RunSteeringRangeCentimeters { get; set; } = 2.54f;
         public float RunSteeringDeadzoneFraction { get; set; }
-        public float RunSteeringResponsiveness { get; set; } = 100f;
-        public float FallbackDpi { get; set; } = 100f;
-        public float MinimumAcceptedDpi { get; set; } = 1f;
-        public float MaximumAcceptedDpi { get; set; } = 1000f;
-        public float MaximumTurnDegreesPerSecond { get; set; } = 90f;
-        public float RunAirSteeringMaximumTurnDegreesPerSecond { get; set; } = 30f;
-        public float MinimumSteerSpeed { get; set; } = 0.25f;
+        public float RunSteeringRangeCentimeters { get; } = 2.54f;
+        public float RunSteeringResponsiveness { get; } = 100f;
+        public float SurfaceSlowdown { get; set; }
     }
 
     private sealed class FakeTime : ITime

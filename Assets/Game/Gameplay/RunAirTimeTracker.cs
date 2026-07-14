@@ -12,22 +12,26 @@ namespace Game.Gameplay
         float CurrentRunAirTimeSeconds { get; }
     }
 
-    public sealed class RunAirTimeTracker : IInitializable, IFixedTickable, IDisposable, IRunAirTimeSource
+    internal interface IRunAirTimeFixedStep
     {
-        private readonly IGameplayStateService _gameplayStateService;
-        private readonly IRunSurfaceContextSource _surfaceContextSource;
-        private readonly ITime _clock;
-        private readonly GameplayStateId _runPreparationStateId;
-        private readonly GameplayStateId _runningStateId;
+        void UpdateAirTime();
+    }
 
-        private bool _isInitialized;
+    public sealed class RunAirTimeTracker : IRunAirTimeSource, IRunAirTimeFixedStep, IInitializable, IDisposable
+    {
+        private readonly ITime _clock;
+        private readonly IGameplayStateService _gameplayStateService;
+        private readonly GameplayStateId _runningStateId;
+        private readonly GameplayStateId _runPreparationStateId;
+        private readonly IRunSurfaceFrameSource _surfaceFrameSource;
         private bool _isDisposed;
+        private bool _isInitialized;
 
         public float CurrentRunAirTimeSeconds { get; private set; }
 
         public RunAirTimeTracker(
             IGameplayStateService gameplayStateService,
-            IRunSurfaceContextSource surfaceContextSource,
+            IRunSurfaceFrameSource surfaceFrameSource,
             ITime clock,
             [Key(InjectKey.GameplayStateId.RunPreparation)]
             GameplayStateId runPreparationStateId,
@@ -35,12 +39,13 @@ namespace Game.Gameplay
             GameplayStateId runningStateId)
         {
             _gameplayStateService = gameplayStateService ?? throw new ArgumentNullException(nameof(gameplayStateService));
-            _surfaceContextSource = surfaceContextSource ?? throw new ArgumentNullException(nameof(surfaceContextSource));
+            _surfaceFrameSource = surfaceFrameSource ?? throw new ArgumentNullException(nameof(surfaceFrameSource));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
 
             _runPreparationStateId = runPreparationStateId != null
                 ? runPreparationStateId
                 : throw new ArgumentNullException(nameof(runPreparationStateId));
+
             _runningStateId = runningStateId != null ? runningStateId : throw new ArgumentNullException(nameof(runningStateId));
         }
 
@@ -56,15 +61,7 @@ namespace Game.Gameplay
             _isInitialized = true;
 
             if (_gameplayStateService.IsCurrent(_runPreparationStateId))
-                CurrentRunAirTimeSeconds = 0f;
-        }
-
-        void IFixedTickable.FixedTick()
-        {
-            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId) || _surfaceContextSource.Current.IsGrounded)
-                return;
-
-            CurrentRunAirTimeSeconds += Mathf.Max(0f, _clock.FixedDeltaTime);
+                ResetCurrentRunAirTime();
         }
 
         void IDisposable.Dispose()
@@ -77,13 +74,37 @@ namespace Game.Gameplay
             _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
         }
 
+        void IRunAirTimeFixedStep.UpdateAirTime()
+        {
+            if (_isDisposed || !_gameplayStateService.IsCurrent(_runningStateId))
+                return;
+
+            var surfaceFrame = _surfaceFrameSource.Current;
+
+            if (surfaceFrame.Transition == RunSurfaceTransition.HardReset)
+            {
+                ResetCurrentRunAirTime();
+                return;
+            }
+
+            if (surfaceFrame.StableSupport.IsGrounded)
+                return;
+
+            CurrentRunAirTimeSeconds += Mathf.Max(a: 0f, _clock.FixedDeltaTime);
+        }
+
         private void OnGameplayStateChanged(GameplayStateId nextStateId, GameplayStateId previousStateId)
         {
             if (_isDisposed)
                 return;
 
             if (ReferenceEquals(nextStateId, _runPreparationStateId) || ReferenceEquals(nextStateId, _runningStateId))
-                CurrentRunAirTimeSeconds = 0f;
+                ResetCurrentRunAirTime();
+        }
+
+        private void ResetCurrentRunAirTime()
+        {
+            CurrentRunAirTimeSeconds = 0f;
         }
     }
 }

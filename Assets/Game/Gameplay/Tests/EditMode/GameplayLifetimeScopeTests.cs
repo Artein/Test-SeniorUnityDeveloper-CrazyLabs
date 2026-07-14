@@ -1,33 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using Game.Gameplay;
-using Game.Gameplay.GameplayState;
-using Game.Gameplay.Economy;
-using Game.Gameplay.Pickups;
-using Game.Gameplay.Slingshot;
-using Game.Gameplay.Upgrades;
 using Game.Foundation.ApplicationLifecycle;
 using Game.Foundation.Input;
 using Game.Foundation.Physics;
+using Game.Gameplay;
 using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Diagnostics;
+using Game.Gameplay.Economy;
+using Game.Gameplay.GameplayState;
+using Game.Gameplay.Pickups;
+using Game.Gameplay.Slingshot;
+using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using TMPro;
-using UnityEditor;
 using Unity.Cinemachine;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using VContainer;
 using VContainer.Internal;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed class GameplayLifetimeScopeTests
 {
-    private readonly List<UnityEngine.Object> _objects = new();
     private readonly List<string> _assetDirectories = new();
+    private readonly List<Object> _objects = new();
 
     [TearDown]
     public void OnTearDown()
@@ -45,7 +45,7 @@ public sealed class GameplayLifetimeScopeTests
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(unityObject);
         }
 
         _objects.Clear();
@@ -54,7 +54,7 @@ public sealed class GameplayLifetimeScopeTests
     [Test]
     public void AddComponent_GameplayLifetimeScope_ComponentIsCreated()
     {
-        var gameObject = CreateGameObject("Gameplay Lifetime Scope Test");
+        var gameObject = CreateGameObject(objectName: "Gameplay Lifetime Scope Test");
 
         var lifetimeScope = gameObject.AddComponent<GameplayLifetimeScope>();
 
@@ -64,48 +64,40 @@ public sealed class GameplayLifetimeScopeTests
     [Test]
     public void ValidateRequiredReferencesForTests_MissingReferences_ThrowsWithRequiredReferenceNames()
     {
-        var scope = CreateGameObject("Gameplay Lifetime Scope Test").AddComponent<GameplayLifetimeScope>();
+        var scope = CreateGameObject(objectName: "Gameplay Lifetime Scope Test").AddComponent<GameplayLifetimeScope>();
 
         Assert.That(
             scope.ValidateRequiredReferencesForTests,
             Throws.TypeOf<InvalidOperationException>()
-                .With.Message.Contains("Gameplay State Config")
-                .And.Message.Contains("Run Preparation State Id")
-                .And.Message.Contains("Pre-Launch State Id")
-                .And.Message.Contains("Running State Id")
-                .And.Message.Contains("Run Ended State Id")
-                .And.Message.Contains("Upgrade Catalog")
-                .And.Message.Contains("Slingshot Launch Power Stat Id")
-                .And.Message.Contains("Player Max Speed Stat Id")
-                .And.Message.Contains("Player Steering Responsiveness Stat Id")
-                .And.Message.Contains("Coin Currency Definition")
-                .And.Message.Contains("Coin Pickup Multiplier Stat Id")
-                .And.Message.Contains("Slingshot Config")
-                .And.Message.Contains("Gameplay Slingshot Launch Config")
-                .And.Message.Contains("Run Body Movement Tuning")
-                .And.Message.Contains("Run Camera Config")
-                .And.Message.Contains("Run End Config")
-                .And.Message.Contains("Run Body Movement Target")
-                .And.Message.Contains("Run Camera Source")
-                .And.Message.Contains("Run Progress Frame Source")
-                .And.Message.Contains("Scene Composition Installer")
-                .And.Message.Contains("Rigidbody Contact Notifier")
-                .And.Message.Contains("Run Camera Anchor")
-                .And.Message.Contains("Run Camera Rig")
-                .And.Message.Contains("Input Camera")
-                .And.Message.Contains("Slingshot Rig Transform")
-                .And.Message.Contains("Pre-Launch Slingshot Rig Pose")
-                .And.Message.Contains("Pre-Launch Launch Target Pose")
-                .And.Message.Contains("Slingshot View")
-                .And.Message.Contains("Pull Hint View")
-                .And.Message.Contains("Run Steering Affordance View")
-                .And.Message.Contains("Run Preparation View")
-                .And.Message.Contains("Run Ended View")
-                .And.Message.Contains("Launch Target")
-                .And.Message.Contains("Character Presentation View")
-                .And.Message.Contains("Animated Contact Sensor Pose Sync View")
-                .And.Message.Contains("Finish Presentation View")
-                .And.Message.Contains("Gameplay Pickups Scene Composition Installer"));
+                .With.Message.Contains(expected: "Gameplay State Config")
+                .And.Message.Contains(expected: "Run Preparation State Id")
+                .And.Message.Contains(expected: "Pre-Launch State Id")
+                .And.Message.Contains(expected: "Running State Id")
+                .And.Message.Contains(expected: "Run Ended State Id")
+                .And.Message.Contains(expected: "Upgrade Catalog")
+                .And.Message.Contains(expected: "Slingshot Launch Power Stat Id")
+                .And.Message.Contains(expected: "Player Max Speed Stat Id")
+                .And.Message.Contains(expected: "Player Steering Responsiveness Stat Id")
+                .And.Message.Contains(expected: "Coin Currency Definition")
+                .And.Message.Contains(expected: "Coin Pickup Multiplier Stat Id")
+                .And.Message.Contains(expected: "Slingshot Config")
+                .And.Message.Contains(expected: "Gameplay Slingshot Launch Config")
+                .And.Message.Contains(expected: "Run Camera Config")
+                .And.Message.Contains(expected: "Run End Config")
+                .And.Message.Contains(expected: "Scene Composition Installer")
+                .And.Message.Contains(expected: "Run Camera Anchor")
+                .And.Message.Contains(expected: "Run Camera Rig")
+                .And.Message.Contains(expected: "Input Camera")
+                .And.Message.Contains(expected: "Slingshot Rig Transform")
+                .And.Message.Contains(expected: "Pre-Launch Slingshot Rig Pose")
+                .And.Message.Contains(expected: "Pre-Launch Launch Target Pose")
+                .And.Message.Contains(expected: "Slingshot View")
+                .And.Message.Contains(expected: "Pull Hint View")
+                .And.Message.Contains(expected: "Run Steering Affordance View")
+                .And.Message.Contains(expected: "Run Preparation View")
+                .And.Message.Contains(expected: "Run Ended View")
+                .And.Message.Contains(expected: "Launch Target")
+                .And.Message.Contains(expected: "Finish Presentation View"));
     }
 
     [Test]
@@ -117,12 +109,23 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     [Test]
+    public void ValidateRequiredReferencesForTests_StructurallyValidInstallerCollectionWithoutFeatureSpecificTypes_DoesNotThrow()
+    {
+        var fixture = CreateValidScopeFixture();
+
+        fixture.Scope.SetSceneCompositionInstallersForTests(
+            new BaseSceneCompositionMonoInstaller[] { fixture.RunSurfaceInstaller });
+
+        Assert.That(fixture.Scope.ValidateRequiredReferencesForTests, Throws.Nothing);
+    }
+
+    [Test]
     public void ValidateRequiredReferencesForTests_InvalidMovementConfig_ThrowsWithEveryConfigError()
     {
         var fixture = CreateValidScopeFixture();
 
         fixture.RunBodyMovementConfig.SetSpeedValuesForTests(
-            downhillAcceleration: float.NaN,
+            float.NaN,
             surfaceSlowdown: -1f,
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 8f,
@@ -141,24 +144,24 @@ public sealed class GameplayLifetimeScopeTests
     {
         var fixture = CreateValidScopeFixture();
 
-        fixture.Scope.SetRunSteeringAffordanceViewForTests(null);
+        fixture.Scope.SetRunSteeringAffordanceViewForTests(runSteeringAffordanceView: null);
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Run Steering Affordance View"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "Run Steering Affordance View"));
     }
 
     [Test]
     public void ValidateRequiredReferencesForTests_InvalidRunSteeringAffordanceView_ThrowsWithSetupMessage()
     {
         var fixture = CreateValidScopeFixture();
-        var invalidView = CreateGameObject("Invalid Run Steering Affordance").AddComponent<RunSteeringAffordanceView>();
+        var invalidView = CreateGameObject(objectName: "Invalid Run Steering Affordance").AddComponent<RunSteeringAffordanceView>();
 
         fixture.Scope.SetRunSteeringAffordanceViewForTests(invalidView);
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("RunSteeringAffordanceView requires"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "RunSteeringAffordanceView requires"));
     }
 
     [Test]
@@ -170,7 +173,7 @@ public sealed class GameplayLifetimeScopeTests
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("at least one Scene Composition Installer"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "at least one Scene Composition Installer"));
     }
 
     [Test]
@@ -182,7 +185,7 @@ public sealed class GameplayLifetimeScopeTests
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Scene Composition Installer at index 0"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "Scene Composition Installer at index 0"));
     }
 
     [Test]
@@ -190,15 +193,16 @@ public sealed class GameplayLifetimeScopeTests
     {
         var fixture = CreateValidScopeFixture();
 
-        fixture.Scope.SetSceneCompositionInstallersForTests(new BaseSceneCompositionMonoInstaller[]
-        {
-            fixture.RunSurfaceInstaller,
-            fixture.RunSurfaceInstaller
-        });
+        fixture.Scope.SetSceneCompositionInstallersForTests(
+            new BaseSceneCompositionMonoInstaller[]
+            {
+                fixture.RunSurfaceInstaller,
+                fixture.RunSurfaceInstaller
+            });
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate Scene Composition Installer"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "duplicate Scene Composition Installer"));
     }
 
     [Test]
@@ -206,7 +210,7 @@ public sealed class GameplayLifetimeScopeTests
     {
         var fixture = CreateValidScopeFixture();
 
-        var invalidInstaller = CreateGameObject("Invalid Run Surface Installer")
+        var invalidInstaller = CreateGameObject(objectName: "Invalid Run Surface Installer")
             .AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
 
         fixture.Scope.SetSceneCompositionInstallersForTests(new BaseSceneCompositionMonoInstaller[] { invalidInstaller });
@@ -214,7 +218,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
             Throws.TypeOf<InvalidOperationException>()
-                .With.Message.Contains("Support Collider"));
+                .With.Message.Contains(expected: "Support Collider"));
     }
 
     [Test]
@@ -229,57 +233,57 @@ public sealed class GameplayLifetimeScopeTests
     public void ValidateRequiredReferencesForTests_DistinctReachableCurrencyWithDuplicateSaveId_ThrowsWithDuplicateSaveIdMessage()
     {
         var fixture = CreateValidScopeFixture();
-        var duplicateCurrencyDefinition = CreateCurrencyDefinition("Duplicate Coins", fixture.CoinCurrencyDefinition.SaveId);
-        var duplicatePickupDefinition = CreatePickupDefinition(duplicateCurrencyDefinition, 1);
-        var duplicatePickup = CreatePickup("Duplicate Currency Pickup", duplicatePickupDefinition);
+        var duplicateCurrencyDefinition = CreateCurrencyDefinition(definitionName: "Duplicate Coins", fixture.CoinCurrencyDefinition.SaveId);
+        var duplicatePickupDefinition = CreatePickupDefinition(duplicateCurrencyDefinition, amount: 1);
+        var duplicatePickup = CreatePickup(objectName: "Duplicate Currency Pickup", duplicatePickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { fixture.LevelPickup, duplicatePickup },
+            new[] { fixture.LevelPickup, duplicatePickup },
             fixture.PickupSensorSource,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate save id"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "duplicate save id"));
     }
 
     [Test]
     public void ValidateRequiredReferencesForTests_BlankReachablePickupCurrencySaveId_ThrowsWithStableSaveIdMessage()
     {
         var fixture = CreateValidScopeFixture();
-        var blankCurrencyDefinition = CreateCurrencyDefinition("Blank Pickup Currency", string.Empty);
-        var pickupDefinition = CreatePickupDefinition(blankCurrencyDefinition, 1);
-        var pickup = CreatePickup("Blank Currency Pickup", pickupDefinition);
+        var blankCurrencyDefinition = CreateCurrencyDefinition(definitionName: "Blank Pickup Currency", string.Empty);
+        var pickupDefinition = CreatePickupDefinition(blankCurrencyDefinition, amount: 1);
+        var pickup = CreatePickup(objectName: "Blank Currency Pickup", pickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { pickup },
+            new[] { pickup },
             fixture.PickupSensorSource,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("requires a stable save id"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "requires a stable save id"));
     }
 
     [Test]
     public void ValidateRequiredReferencesForTests_MismatchedReachablePickupCurrencySaveId_ThrowsWithAssetGuidMessage()
     {
         var fixture = CreateValidScopeFixture();
-        var mismatchedCurrencyDefinition = CreateCurrencyDefinitionAsset("Mismatched Pickup Currency", "currency-copied");
-        var pickupDefinition = CreatePickupDefinition(mismatchedCurrencyDefinition, 1);
-        var pickup = CreatePickup("Mismatched Currency Pickup", pickupDefinition);
+        var mismatchedCurrencyDefinition = CreateCurrencyDefinitionAsset(definitionName: "Mismatched Pickup Currency", saveId: "currency-copied");
+        var pickupDefinition = CreatePickupDefinition(mismatchedCurrencyDefinition, amount: 1);
+        var pickup = CreatePickup(objectName: "Mismatched Currency Pickup", pickupDefinition);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { pickup },
+            new[] { pickup },
             fixture.PickupSensorSource,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("does not match its asset GUID"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "does not match its asset GUID"));
     }
 
     [Test]
@@ -288,14 +292,14 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { fixture.LevelPickup, fixture.LevelPickup },
+            new[] { fixture.LevelPickup, fixture.LevelPickup },
             fixture.PickupSensorSource,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("duplicate Level Pickup"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "duplicate Level Pickup"));
     }
 
     [Test]
@@ -304,31 +308,31 @@ public sealed class GameplayLifetimeScopeTests
         var fixture = CreateValidScopeFixture();
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { fixture.LevelPickup },
+            new[] { fixture.LevelPickup },
             pickupSensorSource: null,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Pickup Sensor Source"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "Pickup Sensor Source"));
     }
 
     [Test]
     public void ValidateRequiredReferencesForTests_MissingPickupDefinition_ThrowsWithPickupDefinitionMessage()
     {
         var fixture = CreateValidScopeFixture();
-        var invalidPickup = CreatePickup("Invalid Pickup", null);
+        var invalidPickup = CreatePickup(objectName: "Invalid Pickup", definition: null);
 
         fixture.PickupsInstaller.SetReferencesForTests(
-            levelPickups: new[] { invalidPickup },
+            new[] { invalidPickup },
             fixture.PickupSensorSource,
             pickupLayerName: "Pickup",
             playerBodyPartLayerName: "PlayerBodyPart");
 
         Assert.That(
             fixture.Scope.ValidateRequiredReferencesForTests,
-            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("Pickup Definition"));
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains(expected: "Pickup Definition"));
     }
 
     [Test]
@@ -341,7 +345,10 @@ public sealed class GameplayLifetimeScopeTests
 
         using var container = builder.Build();
 
-        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var overlays = Object.FindObjectsByType<RunDiagnosticsOverlay>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
         var diagnosticsSource = container.Resolve<IRunBodySpeedDiagnosticsSource>();
         var diagnosticsSink = container.Resolve<IRunBodySpeedDiagnosticsSink>();
 
@@ -356,18 +363,21 @@ public sealed class GameplayLifetimeScopeTests
     {
         var fixture = CreateValidScopeFixture();
         var builder = new ContainerBuilder();
-        fixture.Scope.SetRunDiagnosticsOverlayEnabledForTests(true);
+        fixture.Scope.SetRunDiagnosticsOverlayEnabledForTests(enabled: true);
 
         fixture.Scope.ConfigureForTests(builder);
 
         using var container = builder.Build();
 
-        var overlays = UnityEngine.Object.FindObjectsByType<RunDiagnosticsOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var overlays = Object.FindObjectsByType<RunDiagnosticsOverlay>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
         var diagnosticsSource = container.Resolve<IRunBodySpeedDiagnosticsSource>();
         var diagnosticsSink = container.Resolve<IRunBodySpeedDiagnosticsSink>();
 
-        Assert.That(overlays, Has.Length.EqualTo(1));
-        Assert.That(overlays[0].gameObject.name, Is.EqualTo("RunDiagnosticsOverlay"));
+        Assert.That(overlays, Has.Length.EqualTo(expected: 1));
+        Assert.That(overlays[0].gameObject.name, Is.EqualTo(expected: "RunDiagnosticsOverlay"));
         Assert.That(container.Resolve<RunDiagnosticsOverlay>(), Is.SameAs(overlays[0]));
         Assert.That(diagnosticsSource, Is.SameAs(diagnosticsSink));
         Assert.That(diagnosticsSource.Current.State, Is.EqualTo(RunBodySpeedDiagnosticsState.Inactive));
@@ -412,7 +422,9 @@ public sealed class GameplayLifetimeScopeTests
         var movementValidityConfig = container.Resolve<IRunBodyMovementValidityConfig>();
         var landingStabilizationConfig = container.Resolve<IRunLaunchLandingStabilizationConfig>();
         var steeringConfig = container.Resolve<IRunSteeringConfig>();
-        var steeringFrameConfig = container.Resolve<IRunSteeringFrameConfig>();
+        var surfaceStabilityConfig = container.Resolve<RunSurfaceStabilityConfig>();
+        var supportAttachmentConfig = container.Resolve<RunSupportAttachmentConfig>();
+        var steeringFrameConfig = container.Resolve<RunSteeringFrameConfig>();
         var steeringInputMetricsResolver = container.Resolve<IRunSteeringInputMetricsResolver>();
         var steeringInputSource = container.Resolve<IRunSteeringInputSource>();
         var speedEvaluator = container.Resolve<IRunBodySpeedEvaluator>();
@@ -436,7 +448,7 @@ public sealed class GameplayLifetimeScopeTests
         var runProgressService = container.Resolve<IRunProgressService>();
         var runProgressFrameSource = container.Resolve<IRunProgressFrameSource>();
         var runSupportColliderProbeFactory = container.Resolve<IRunSupportColliderProbeFactory>();
-        var runSurfaceContextSource = container.Resolve<IRunSurfaceContextSource>();
+        var runSurfaceFrameSource = container.Resolve<IRunSurfaceFrameSource>();
         var contactNotifier = container.Resolve<IRigidbodyContactNotifier>();
         var contactClassifier = container.Resolve<IRunContactClassifier>();
         var runEndCandidateReceiver = container.Resolve<IRunEndCandidateReceiver>();
@@ -455,6 +467,7 @@ public sealed class GameplayLifetimeScopeTests
         var runRewardSourceCatalog = container.Resolve<RunRewardSourceCatalog>();
         var runRewardBreakdownBuilder = container.Resolve<RunRewardBreakdownBuilder>();
         var runAirTimeSource = container.Resolve<IRunAirTimeSource>();
+        var runAirTimeFixedStep = container.Resolve<IRunAirTimeFixedStep>();
         var upgradeCatalog = container.Resolve<IUpgradeCatalog>();
         var upgradeProgressStorage = container.Resolve<IUpgradeProgressStorage>();
         var runModifierSnapshotFactory = container.Resolve<IRunModifierSnapshotFactory>();
@@ -500,19 +513,6 @@ public sealed class GameplayLifetimeScopeTests
         var resolvedPlayerSteeringResponsivenessStat = container.Resolve<GameplayStatId>(InjectKey.GameplayStatId.PlayerSteeringResponsiveness);
         var resolvedLevelPickups = container.Resolve<IReadOnlyList<Pickup>>(InjectKey.Pickups.LevelPickups);
 
-        var runSteeringFrameFixedTickableIndex =
-            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSteeringFrameSource));
-
-        var runSurfaceContextSourceFixedTickableIndex =
-            GetFixedTickableIndex(fixedTickables, fixedTickable => ReferenceEquals(fixedTickable, runSurfaceContextSource));
-
-        var runBodyMovementControllerFixedTickableIndex =
-            GetFixedTickableIndex(fixedTickables, fixedTickable => fixedTickable is RunBodyMovementController);
-        var characterVisualFollowerLateTickableIndex = GetLateTickableIndex(lateTickables, lateTickable => lateTickable is CharacterVisualFollower);
-
-        var animatedContactSensorPoseSyncLateTickableIndex =
-            GetLateTickableIndex(lateTickables, lateTickable => lateTickable is AnimatedContactSensorPoseSync);
-
         Assert.That(unityInput, Is.Not.Null);
         Assert.That(gameplayStateService.CurrentStateId, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(slingshotNotifier, Is.Not.Null);
@@ -528,10 +528,12 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(launchAppliedNotifier, Is.Not.Null);
         Assert.That(launchAppliedPublisher, Is.Not.Null);
         Assert.That(continueCommand, Is.Not.Null);
-        Assert.That(initializables.Count, Is.EqualTo(22));
-        Assert.That(tickables.Count, Is.EqualTo(5));
-        Assert.That(fixedTickables.Count, Is.EqualTo(7));
-        Assert.That(lateTickables.Count, Is.EqualTo(3));
+        Assert.That(initializables.Count, Is.EqualTo(expected: 22));
+        Assert.That(tickables.Count, Is.EqualTo(expected: 5));
+        Assert.That(fixedTickables.Count, Is.EqualTo(expected: 1));
+        Assert.That(fixedTickables[index: 0], Is.TypeOf<RunFixedStepPipeline>());
+        Assert.That(lateTickables.Count, Is.EqualTo(expected: 1));
+        Assert.That(lateTickables[index: 0], Is.TypeOf<RunPresentationLateStepPipeline>());
         Assert.That(launchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(heldLaunchTarget, Is.SameAs(fixture.LaunchTarget));
         Assert.That(silhouetteSource, Is.SameAs(fixture.LaunchTarget));
@@ -544,7 +546,16 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(movementValidityConfig, Is.SameAs(fixture.RunBodyMovementConfig));
         Assert.That(landingStabilizationConfig, Is.SameAs(fixture.RunBodyMovementConfig));
         Assert.That(steeringConfig, Is.SameAs(fixture.RunBodyMovementConfig));
-        Assert.That(steeringFrameConfig, Is.SameAs(fixture.RunBodyMovementConfig));
+        Assert.That(surfaceStabilityConfig.SupportLossConfirmationSeconds, Is.EqualTo(expected: 0.08f));
+        Assert.That(surfaceStabilityConfig.DiscontinuousNormalThresholdDegrees, Is.EqualTo(expected: 60f));
+        Assert.That(surfaceStabilityConfig.DiscontinuousNormalConfirmationSeconds, Is.EqualTo(expected: 0.04f));
+        Assert.That(surfaceStabilityConfig.CandidateCoherenceDegrees, Is.EqualTo(expected: 1f));
+        Assert.That(supportAttachmentConfig.MaximumAttachedSurfaceNormalLiftSpeed, Is.EqualTo(expected: 0.35f));
+        Assert.That(supportAttachmentConfig.SameSurfaceReattachmentSeparationMeters, Is.EqualTo(expected: 0.08f));
+        Assert.That(supportAttachmentConfig.MinimumReattachmentNormalChangeDegrees, Is.EqualTo(expected: 30f));
+        Assert.That(supportAttachmentConfig.TransitionConfirmationSeconds, Is.EqualTo(expected: 0.04f));
+        Assert.That(steeringFrameConfig.NormalSlewDegreesPerSecond, Is.EqualTo(expected: 180f));
+        Assert.That(steeringFrameConfig.AirborneUpRetentionSeconds, Is.EqualTo(expected: 0.12f));
         Assert.That(steeringInputMetricsResolver, Is.TypeOf<DefaultRunSteeringInputMetricsResolver>());
         Assert.That(steeringInputSource, Is.TypeOf<RunSteeringInputController>());
         Assert.That(speedEvaluator, Is.TypeOf<DefaultRunBodySpeedEvaluator>());
@@ -561,12 +572,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runSteeringPointerPressGuard, Is.TypeOf<UnityEventSystemRunSteeringPointerPressGuard>());
         Assert.That(runSteeringFrameSource, Is.Not.Null);
         Assert.That(runSteeringFrameResetter, Is.SameAs(runSteeringFrameSource));
-        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(runSteeringFrameFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(runBodyMovementControllerFixedTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(fixedTickables.Count(fixedTickable => fixedTickable is RunBodyMovementController), Is.EqualTo(1));
-        Assert.That(runSurfaceContextSourceFixedTickableIndex, Is.LessThan(runSteeringFrameFixedTickableIndex));
-        Assert.That(runSteeringFrameFixedTickableIndex, Is.LessThan(runBodyMovementControllerFixedTickableIndex));
+        Assert.That(runSurfaceFrameSource, Is.SameAs(runSteeringFrameSource));
         Assert.That(runCameraConfig, Is.SameAs(fixture.RunCameraConfig));
         Assert.That(runEndConfig, Is.SameAs(fixture.RunEndConfig));
         Assert.That(runRewardConfig, Is.SameAs(fixture.RunEndConfig));
@@ -575,8 +581,8 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runProgressService, Is.Not.Null);
         Assert.That(runProgressFrameSource, Is.SameAs(fixture.RunProgressFrameSource));
         Assert.That(runSupportColliderProbeFactory, Is.TypeOf<RunSupportColliderProbeFactory>());
-        Assert.That(runSurfaceContextSource, Is.TypeOf<PhysicsRunSurfaceContextSource>());
-        Assert.That(runSurfaceContextSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
+        Assert.That(runSurfaceFrameSource, Is.TypeOf<RunSurfaceFramePipeline>());
+        Assert.That(runSurfaceFrameSource, Is.Not.SameAs(fixture.RunSurfaceInstaller));
         Assert.That(contactNotifier, Is.SameAs(fixture.ContactNotifier));
         Assert.That(contactClassifier, Is.Not.Null);
         Assert.That(runEndCandidateReceiver, Is.Not.Null);
@@ -595,7 +601,7 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(runRewardSourceLedger, Is.SameAs(runCurrencyAccumulator));
         Assert.That(runRewardSourceCatalog, Is.Not.Null);
         Assert.That(runRewardBreakdownBuilder, Is.Not.Null);
-        Assert.That(runAirTimeSource, Is.Not.Null);
+        Assert.That(runAirTimeFixedStep, Is.SameAs(runAirTimeSource));
         Assert.That(upgradeCatalog, Is.SameAs(fixture.UpgradeCatalog));
         Assert.That(upgradeProgressStorage, Is.Not.Null);
         Assert.That(runModifierSnapshotFactory, Is.Not.Null);
@@ -624,25 +630,33 @@ public sealed class GameplayLifetimeScopeTests
         Assert.That(characterVisualTargetPoseSource, Is.Not.Null);
         Assert.That(characterVisualTargetPoseSource.CurrentPose.Position, Is.EqualTo(fixture.LaunchTarget.transform.position));
 
-        Assert.That(Quaternion.Angle(characterVisualTargetPoseSource.CurrentPose.Rotation, fixture.LaunchTarget.transform.rotation),
-            Is.EqualTo(0f).Within(0.0001f));
+        Assert.That(
+            Quaternion.Angle(characterVisualTargetPoseSource.CurrentPose.Rotation, fixture.LaunchTarget.transform.rotation),
+            Is.EqualTo(expected: 0f).Within(amount: 0.0001f));
+
         Assert.That(characterVisualFollowView, Is.SameAs(fixture.CharacterPresentationView));
         Assert.That(characterVisualFollowTuning, Is.SameAs(fixture.CharacterPresentationView));
-        Assert.That(characterVisualFollowTuning.VisualPositionResponseRate, Is.EqualTo(60f).Within(0.0001f));
-        Assert.That(characterVisualFollowTuning.VisualHeadingResponseRate, Is.EqualTo(45f).Within(0.0001f));
-        Assert.That(characterVisualFollowTuning.VisualUpTiltResponseRate, Is.EqualTo(18f).Within(0.0001f));
-        Assert.That(characterVisualFollowTuning.VisualMaxPositionLag, Is.EqualTo(0.06f).Within(0.0001f));
-        Assert.That(characterVisualFollowTuning.VisualSnapDistance, Is.EqualTo(0.75f).Within(0.0001f));
-        Assert.That(characterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(45f).Within(0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualPositionResponseRate, Is.EqualTo(expected: 60f).Within(amount: 0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualHeadingResponseRate, Is.EqualTo(expected: 45f).Within(amount: 0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualUpTiltResponseRate, Is.EqualTo(expected: 18f).Within(amount: 0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualMaxPositionLag, Is.EqualTo(expected: 0.06f).Within(amount: 0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualSnapDistance, Is.EqualTo(expected: 0.75f).Within(amount: 0.0001f));
+        Assert.That(characterVisualFollowTuning.VisualSnapAngleDegrees, Is.EqualTo(expected: 45f).Within(amount: 0.0001f));
         Assert.That(characterVisualPoseSmoother, Is.Not.Null);
         Assert.That(presentationClassifier, Is.Not.Null);
         Assert.That(finishPresentationView, Is.SameAs(fixture.FinishPresentationView));
         Assert.That(presentationSupportTracker, Is.Not.Null);
         Assert.That(animatedContactSensorPoseSyncView, Is.SameAs(fixture.AnimatedContactSensorPoseSyncView));
         Assert.That(pickupContactSource, Is.SameAs(fixture.PickupSensorSource));
-        Assert.That(characterVisualFollowerLateTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(animatedContactSensorPoseSyncLateTickableIndex, Is.GreaterThanOrEqualTo(0));
-        Assert.That(characterVisualFollowerLateTickableIndex, Is.LessThan(animatedContactSensorPoseSyncLateTickableIndex));
+
+        Assert.That(
+            fixture.Scope.SceneCompositionInstallersForTests,
+            Has.Exactly(expectedCount: 1).SameAs(fixture.RunMovementSceneCompositionInstaller));
+
+        Assert.That(
+            fixture.Scope.SceneCompositionInstallersForTests,
+            Has.Exactly(expectedCount: 1).SameAs(fixture.CharacterPresentationSceneCompositionInstaller));
+
         Assert.That(resolvedRunPreparationState, Is.SameAs(fixture.RunPreparationStateId));
         Assert.That(resolvedPreLaunchState, Is.SameAs(fixture.PreLaunchStateId));
         Assert.That(resolvedRunningState, Is.SameAs(fixture.RunningStateId));
@@ -658,74 +672,132 @@ public sealed class GameplayLifetimeScopeTests
 
     private ValidScopeFixture CreateValidScopeFixture()
     {
-        var scope = CreateGameObject("Gameplay Lifetime Scope Test").AddComponent<GameplayLifetimeScope>();
-        var runPreparation = CreateStateId("Run Preparation");
-        var preLaunch = CreateStateId("Pre-Launch");
-        var running = CreateStateId("Running");
-        var runEnded = CreateStateId("Run Ended");
+        var scope = CreateGameObject(objectName: "Gameplay Lifetime Scope Test").AddComponent<GameplayLifetimeScope>();
+        var runPreparation = CreateStateId(stateName: "Run Preparation");
+        var preLaunch = CreateStateId(stateName: "Pre-Launch");
+        var running = CreateStateId(stateName: "Running");
+        var runEnded = CreateStateId(stateName: "Run Ended");
         var runPreparationToPreLaunch = CreateTransition(runPreparation, preLaunch);
         var preLaunchToRunning = CreateTransition(preLaunch, running);
         var runningToRunEnded = CreateTransition(running, runEnded);
         var runEndedToRunPreparation = CreateTransition(runEnded, runPreparation);
 
-        var gameplayStateConfig = CreateGameplayStateConfig(runPreparation, runPreparationToPreLaunch, preLaunchToRunning, runningToRunEnded,
+        var gameplayStateConfig = CreateGameplayStateConfig(
+            runPreparation,
+            runPreparationToPreLaunch,
+            preLaunchToRunning,
+            runningToRunEnded,
             runEndedToRunPreparation);
-        var slingshotLaunchPowerStatId = CreateStatId("slingshot_launch_power");
-        var playerMaxSpeedStatId = CreateStatId("player_max_speed");
-        var playerSteeringResponsivenessStatId = CreateStatId("player_steering_responsiveness");
-        var coinPickupMultiplierStatId = CreateStatId("coin_pickup_multiplier");
+
+        var slingshotLaunchPowerStatId = CreateStatId(id: "slingshot_launch_power");
+        var playerMaxSpeedStatId = CreateStatId(id: "player_max_speed");
+        var playerSteeringResponsivenessStatId = CreateStatId(id: "player_steering_responsiveness");
+        var coinPickupMultiplierStatId = CreateStatId(id: "coin_pickup_multiplier");
         var slingshotConfig = Track(ScriptableObject.CreateInstance<SlingshotConfig>());
         var gameplaySlingshotLaunchConfig = Track(ScriptableObject.CreateInstance<GameplaySlingshotLaunchConfig>());
         var runBodyMovementConfig = Track(ScriptableObject.CreateInstance<RunBodyMovementConfig>());
         var runCameraConfig = Track(ScriptableObject.CreateInstance<RunCameraConfig>());
         var runEndConfig = Track(ScriptableObject.CreateInstance<RunEndConfig>());
-        var camera = CreateGameObject("Gameplay Camera").AddComponent<Camera>();
+        var camera = CreateGameObject(objectName: "Gameplay Camera").AddComponent<Camera>();
         var slingshotView = CreateSlingshotView(slingshotConfig);
-        var pullHintView = CreateGameObject("Pull Hint View").AddComponent<PullHintView>();
+        var pullHintView = CreateGameObject(objectName: "Pull Hint View").AddComponent<PullHintView>();
         var runSteeringAffordanceView = CreateRunSteeringAffordanceView();
         var runPreparationView = CreateRunPreparationView();
         var runEndedView = CreateRunEndedView();
         var launchTarget = CreateLaunchTarget(out var runBodyMovementTarget, out var runCameraSource, out var contactNotifier);
-        var slingshotRig = CreateGameObject("Slingshot Rig").transform;
-        var preLaunchSlingshotRigPose = CreateGameObject("Pre-Launch Slingshot Rig Pose").transform;
-        var preLaunchLaunchTargetPose = CreateGameObject("Pre-Launch Launch Target Pose").transform;
-        var runProgressFrameSource = CreateGameObject("Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
-        var runCameraAnchor = CreateGameObject("Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
-        var runCameraRig = CreateGameObject("Run Camera Rig").AddComponent<CinemachineRunCameraRig>();
-        var runPreparationCamera = CreateGameObject("Run Preparation Camera").AddComponent<CinemachineCamera>();
-        var preLaunchCamera = CreateGameObject("Pre-Launch Camera").AddComponent<CinemachineCamera>();
-        var runCamera = CreateGameObject("Run Camera").AddComponent<CinemachineCamera>();
+        var runMovementInstaller = launchTarget.gameObject.AddComponent<RunMovementSceneCompositionMonoInstaller>();
+        var slingshotRig = CreateGameObject(objectName: "Slingshot Rig").transform;
+        var preLaunchSlingshotRigPose = CreateGameObject(objectName: "Pre-Launch Slingshot Rig Pose").transform;
+        var preLaunchLaunchTargetPose = CreateGameObject(objectName: "Pre-Launch Launch Target Pose").transform;
+        var runProgressFrameSource = CreateGameObject(objectName: "Run Progress Frame Source").AddComponent<RunProgressFrameSource>();
+        var runCameraAnchor = CreateGameObject(objectName: "Run Camera Anchor").AddComponent<TransformRunCameraAnchor>();
+        var runCameraRig = CreateGameObject(objectName: "Run Camera Rig").AddComponent<CinemachineRunCameraRig>();
+        var runPreparationCamera = CreateGameObject(objectName: "Run Preparation Camera").AddComponent<CinemachineCamera>();
+        var preLaunchCamera = CreateGameObject(objectName: "Pre-Launch Camera").AddComponent<CinemachineCamera>();
+        var runCamera = CreateGameObject(objectName: "Run Camera").AddComponent<CinemachineCamera>();
         runCameraRig.SetReferencesForTests(runPreparationCamera, preLaunchCamera, runCamera);
-        var characterPresentationView = CreateGameObject("Character Presentation View").AddComponent<CharacterPresentationView>();
+        var characterPresentationView = CreateGameObject(objectName: "Character Presentation View").AddComponent<CharacterPresentationView>();
         var animatedContactSensorPoseSyncView = CreateAnimatedContactSensorPoseSyncView(characterPresentationView.transform);
-        var finishPresentationView = CreateGameObject("Finish Presentation View").AddComponent<FinishPresentationView>();
+
+        var characterPresentationInstaller =
+            characterPresentationView.gameObject.AddComponent<CharacterPresentationSceneCompositionMonoInstaller>();
+
+        var finishPresentationView = CreateGameObject(objectName: "Finish Presentation View").AddComponent<FinishPresentationView>();
         var runBodyContactCollider = launchTarget.GetComponent<Collider>();
-        runBodyContactCollider.gameObject.layer = GetRequiredLayer("Player");
+        runBodyContactCollider.gameObject.layer = GetRequiredLayer(layerName: "Player");
         runBodyContactCollider.gameObject.tag = "Player";
-        var runSurfaceInstaller = CreateGameObject("Run Surface Installer").AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
+        var runSurfaceInstaller = CreateGameObject(objectName: "Run Surface Installer").AddComponent<GameplayPhysicsSceneCompositionMonoInstaller>();
         var runSurfaceMask = new LayerMask { value = Physics.DefaultRaycastLayers };
         runSurfaceInstaller.SetReferencesForTests(runBodyContactCollider, supportProbeDistance: 0.08f, runSurfaceMask);
-        var currencyDefinition = CreateCurrencyDefinition("Coins", "currency-coins");
+        var currencyDefinition = CreateCurrencyDefinition(definitionName: "Coins", saveId: "currency-coins");
         var upgradeCatalog = Track(ScriptableObject.CreateInstance<UpgradeCatalog>());
         upgradeCatalog.SetValuesForTests(currencyDefinition, Array.Empty<UpgradeDefinition>());
-        var pickupDefinition = CreatePickupDefinition(currencyDefinition, 1);
-        var levelPickup = CreatePickup("Level Pickup", pickupDefinition);
+        var pickupDefinition = CreatePickupDefinition(currencyDefinition, amount: 1);
+        var levelPickup = CreatePickup(objectName: "Level Pickup", pickupDefinition);
         var levelPickups = new[] { levelPickup };
         var pickupSensorSource = CreatePickupSensorSource();
-        var pickupsInstaller = CreateGameObject("Pickups Installer").AddComponent<GameplayPickupsSceneCompositionMonoInstaller>();
-        pickupsInstaller.SetReferencesForTests(levelPickups, pickupSensorSource, "Pickup", "PlayerBodyPart");
+        var pickupsInstaller = CreateGameObject(objectName: "Pickups Installer").AddComponent<GameplayPickupsSceneCompositionMonoInstaller>();
 
-        scope.SetReferencesForTests(gameplayStateConfig, runPreparation, preLaunch, running, runEnded, upgradeCatalog, slingshotLaunchPowerStatId,
-            playerMaxSpeedStatId, playerSteeringResponsivenessStatId, currencyDefinition, coinPickupMultiplierStatId, slingshotConfig,
-            gameplaySlingshotLaunchConfig, runBodyMovementConfig, runCameraConfig, runEndConfig, runBodyMovementTarget, runCameraSource,
-            runProgressFrameSource, sceneCompositionInstallers: new BaseSceneCompositionMonoInstaller[] { runSurfaceInstaller, pickupsInstaller },
-            contactNotifier, runCameraAnchor, runCameraRig, camera, slingshotRig, preLaunchSlingshotRigPose, preLaunchLaunchTargetPose,
-            slingshotView, pullHintView, runSteeringAffordanceView, runPreparationView, runEndedView, launchTarget, characterPresentationView,
-            animatedContactSensorPoseSyncView, finishPresentationView);
+        pickupsInstaller.SetReferencesForTests(
+            levelPickups,
+            pickupSensorSource,
+            pickupLayerName: "Pickup",
+            playerBodyPartLayerName: "PlayerBodyPart");
+
+        runMovementInstaller.SetReferencesForTests(
+            runBodyMovementConfig,
+            runBodyMovementTarget,
+            runCameraSource,
+            runProgressFrameSource,
+            contactNotifier);
+
+        characterPresentationInstaller.SetReferencesForTests(
+            characterPresentationView,
+            launchTarget.transform,
+            animatedContactSensorPoseSyncView);
+
+        scope.SetReferencesForTests(
+            gameplayStateConfig,
+            runPreparation,
+            preLaunch,
+            running,
+            runEnded,
+            upgradeCatalog,
+            slingshotLaunchPowerStatId,
+            playerMaxSpeedStatId,
+            playerSteeringResponsivenessStatId,
+            currencyDefinition,
+            coinPickupMultiplierStatId,
+            slingshotConfig,
+            gameplaySlingshotLaunchConfig,
+            runCameraConfig,
+            runEndConfig,
+            new BaseSceneCompositionMonoInstaller[]
+            {
+                runSurfaceInstaller,
+                runMovementInstaller,
+                characterPresentationInstaller,
+                pickupsInstaller
+            },
+            runCameraAnchor,
+            runCameraRig,
+            camera,
+            slingshotRig,
+            preLaunchSlingshotRigPose,
+            preLaunchLaunchTargetPose,
+            slingshotView,
+            pullHintView,
+            runSteeringAffordanceView,
+            runPreparationView,
+            runEndedView,
+            launchTarget,
+            finishPresentationView);
 
         return new ValidScopeFixture
         {
             Scope = scope,
+            CharacterPresentationSceneCompositionInstaller = characterPresentationInstaller,
+            RunMovementSceneCompositionInstaller = runMovementInstaller,
             RunPreparationStateId = runPreparation,
             PreLaunchStateId = preLaunch,
             RunningStateId = running,
@@ -764,67 +836,87 @@ public sealed class GameplayLifetimeScopeTests
 
     private SlingshotView CreateSlingshotView(SlingshotConfig config)
     {
-        var view = CreateGameObject("Slingshot View").AddComponent<SlingshotView>();
-        var leftAnchor = CreateGameObject("Left Anchor").transform;
-        var rightAnchor = CreateGameObject("Right Anchor").transform;
-        var restPoint = CreateGameObject("Rest Point").transform;
-        var launchFrame = CreateGameObject("Launch Frame").transform;
-        var bandLineRenderer = CreateGameObject("Band").AddComponent<LineRenderer>();
-        var touchIndicatorObject = CreateGameObject("Touch Indicator");
+        var view = CreateGameObject(objectName: "Slingshot View").AddComponent<SlingshotView>();
+        var leftAnchor = CreateGameObject(objectName: "Left Anchor").transform;
+        var rightAnchor = CreateGameObject(objectName: "Right Anchor").transform;
+        var restPoint = CreateGameObject(objectName: "Rest Point").transform;
+        var launchFrame = CreateGameObject(objectName: "Launch Frame").transform;
+        var bandLineRenderer = CreateGameObject(objectName: "Band").AddComponent<LineRenderer>();
+        var touchIndicatorObject = CreateGameObject(objectName: "Touch Indicator");
 
-        leftAnchor.position = new Vector3(-1f, 1f, 0f);
-        rightAnchor.position = new Vector3(1f, 1f, 0f);
-        restPoint.position = new Vector3(0f, 1f, 0f);
+        leftAnchor.position = new Vector3(x: -1f, y: 1f, z: 0f);
+        rightAnchor.position = new Vector3(x: 1f, y: 1f, z: 0f);
+        restPoint.position = new Vector3(x: 0f, y: 1f, z: 0f);
         launchFrame.position = restPoint.position;
         launchFrame.rotation = Quaternion.identity;
 
-        view.SetReferencesForTests(leftAnchor, rightAnchor, restPoint, launchFrame, bandLineRenderer, touchIndicatorObject, config);
+        view.SetReferencesForTests(
+            leftAnchor,
+            rightAnchor,
+            restPoint,
+            launchFrame,
+            bandLineRenderer,
+            touchIndicatorObject,
+            config);
+
         return view;
     }
 
     private RunSteeringAffordanceView CreateRunSteeringAffordanceView()
     {
-        var canvasObject = Track(new GameObject("Run Steering Affordance Canvas", typeof(RectTransform), typeof(Canvas)));
+        var canvasObject = Track(new GameObject(name: "Run Steering Affordance Canvas", typeof(RectTransform), typeof(Canvas)));
         canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        var rootObject = Track(new GameObject("Run Steering Affordance", typeof(RectTransform)));
-        rootObject.SetActive(false);
-        rootObject.transform.SetParent(canvasObject.transform, false);
+        var rootObject = Track(new GameObject(name: "Run Steering Affordance", typeof(RectTransform)));
+        rootObject.SetActive(value: false);
+        rootObject.transform.SetParent(canvasObject.transform, worldPositionStays: false);
         var root = rootObject.GetComponent<RectTransform>();
         var canvasGroup = rootObject.AddComponent<CanvasGroup>();
-        var deadzoneRoot = CreateChildImage(root, "Deadzone Hint");
-        var leftRangeEndRoot = CreateChildImage(root, "Left Range End Hint");
-        var rightRangeEndRoot = CreateChildImage(root, "Right Range End Hint");
-        var knobRoot = CreateChildImage(root, "Knob");
+        var deadzoneRoot = CreateChildImage(root, objectName: "Deadzone Hint");
+        var leftRangeEndRoot = CreateChildImage(root, objectName: "Left Range End Hint");
+        var rightRangeEndRoot = CreateChildImage(root, objectName: "Right Range End Hint");
+        var knobRoot = CreateChildImage(root, objectName: "Knob");
         var view = rootObject.AddComponent<RunSteeringAffordanceView>();
 
-        view.SetReferencesForTests(root, canvasGroup, knobRoot.rectTransform, knobImage: knobRoot, leftRangeEndRoot.rectTransform,
-            leftRangeEndRoot, rightRangeEndRoot.rectTransform, rightRangeEndRoot, deadzoneRoot.rectTransform, deadzoneImage: deadzoneRoot);
+        view.SetReferencesForTests(
+            root,
+            canvasGroup,
+            knobRoot.rectTransform,
+            knobRoot,
+            leftRangeEndRoot.rectTransform,
+            leftRangeEndRoot,
+            rightRangeEndRoot.rectTransform,
+            rightRangeEndRoot,
+            deadzoneRoot.rectTransform,
+            deadzoneRoot);
 
-        rootObject.SetActive(true);
+        rootObject.SetActive(value: true);
         return view;
     }
 
     private AnimatedContactSensorPoseSyncView CreateAnimatedContactSensorPoseSyncView(Transform sourceTransform)
     {
-        var rootRigidbody = CreateGameObject("Animated Contact Sensor Physics Root").AddComponent<Rigidbody>();
+        var rootRigidbody = CreateGameObject(objectName: "Animated Contact Sensor Physics Root").AddComponent<Rigidbody>();
         rootRigidbody.isKinematic = true;
         rootRigidbody.useGravity = false;
 
-        var target = CreateGameObject("Body Sensor").transform;
-        target.SetParent(rootRigidbody.transform, false);
+        var target = CreateGameObject(objectName: "Body Sensor").transform;
+        target.SetParent(rootRigidbody.transform, worldPositionStays: false);
 
         var view = rootRigidbody.gameObject.AddComponent<AnimatedContactSensorPoseSyncView>();
-        view.SetReferencesForTests(rootRigidbody, new[] { new AnimatedContactSensorPoseBinding(sourceTransform, target) });
+
+        view.SetReferencesForTests(
+            rootRigidbody,
+            new[] { new AnimatedContactSensorPoseBinding(sourceTransform, target) });
 
         return view;
     }
 
     private PickupSensorSource CreatePickupSensorSource()
     {
-        var source = CreateGameObject("Pickup Sensor Source").AddComponent<PickupSensorSource>();
-        var sensorObject = CreateGameObject("Body Sensor");
-        sensorObject.transform.SetParent(source.transform, false);
-        sensorObject.layer = GetRequiredLayer("PlayerBodyPart");
+        var source = CreateGameObject(objectName: "Pickup Sensor Source").AddComponent<PickupSensorSource>();
+        var sensorObject = CreateGameObject(objectName: "Body Sensor");
+        sensorObject.transform.SetParent(source.transform, worldPositionStays: false);
+        sensorObject.layer = GetRequiredLayer(layerName: "PlayerBodyPart");
         var sensorCollider = sensorObject.AddComponent<SphereCollider>();
         sensorCollider.isTrigger = true;
         var sensor = sensorObject.AddComponent<TriggerNotifier>();
@@ -833,92 +925,95 @@ public sealed class GameplayLifetimeScopeTests
         return source;
     }
 
-    private static int GetFixedTickableIndex(IReadOnlyList<IFixedTickable> fixedTickables, Predicate<IFixedTickable> predicate)
-    {
-        for (var fixedTickableIndex = 0; fixedTickableIndex < fixedTickables.Count; fixedTickableIndex += 1)
-        {
-            if (predicate(fixedTickables[fixedTickableIndex]))
-                return fixedTickableIndex;
-        }
-
-        return -1;
-    }
-
-    private static int GetLateTickableIndex(IReadOnlyList<ILateTickable> lateTickables, Predicate<ILateTickable> predicate)
-    {
-        for (var lateTickableIndex = 0; lateTickableIndex < lateTickables.Count; lateTickableIndex += 1)
-        {
-            if (predicate(lateTickables[lateTickableIndex]))
-                return lateTickableIndex;
-        }
-
-        return -1;
-    }
-
     private RunPreparationUIView CreateRunPreparationView()
     {
-        var viewObject = CreateGameObject("Run Preparation View");
-        viewObject.SetActive(false);
+        var viewObject = CreateGameObject(objectName: "Run Preparation View");
+        viewObject.SetActive(value: false);
         var view = viewObject.AddComponent<RunPreparationUIView>();
-        var coinBalanceIcon = CreateChildImage(viewObject.transform, "Coin Balance Icon");
-        var coinBalanceText = CreateChildText(viewObject.transform, "Coin Balance Label");
-        var continueTouchAreaButton = CreateChildButton(viewObject.transform, "Run Preparation Continue Touch Area");
+        var coinBalanceIcon = CreateChildImage(viewObject.transform, objectName: "Coin Balance Icon");
+        var coinBalanceText = CreateChildText(viewObject.transform, objectName: "Coin Balance Label");
+        var continueTouchAreaButton = CreateChildButton(viewObject.transform, objectName: "Run Preparation Continue Touch Area");
         var upgradeCard = CreateRunPreparationUpgradeCard(viewObject.transform);
-        view.SetReferencesForTests(viewObject, coinBalanceIcon, coinBalanceText, continueTouchAreaButton, new[] { upgradeCard });
-        viewObject.SetActive(true);
+
+        view.SetReferencesForTests(
+            viewObject,
+            coinBalanceIcon,
+            coinBalanceText,
+            continueTouchAreaButton,
+            new[] { upgradeCard });
+
+        viewObject.SetActive(value: true);
         return view;
     }
 
     private RunEndedUIView CreateRunEndedView()
     {
-        var viewObject = CreateGameObject("Run Ended View");
-        viewObject.SetActive(false);
+        var viewObject = CreateGameObject(objectName: "Run Ended View");
+        viewObject.SetActive(value: false);
         var view = viewObject.AddComponent<RunEndedUIView>();
-        var titleText = CreateChildText(viewObject.transform, "Run Ended Title");
-        var earnedCoinsIcon = CreateChildImage(viewObject.transform, "Icon");
-        var earnedCoinsText = CreateChildText(viewObject.transform, "RunTotalLabel");
-        var reachedDistanceText = CreateChildText(viewObject.transform, "ReachedDistanceLabel");
-        var rewardSourceRowsRoot = CreateChildGameObject(viewObject.transform, "RewardSourceContainer");
+        var titleText = CreateChildText(viewObject.transform, objectName: "Run Ended Title");
+        var earnedCoinsIcon = CreateChildImage(viewObject.transform, objectName: "Icon");
+        var earnedCoinsText = CreateChildText(viewObject.transform, objectName: "RunTotalLabel");
+        var reachedDistanceText = CreateChildText(viewObject.transform, objectName: "ReachedDistanceLabel");
+        var rewardSourceRowsRoot = CreateChildGameObject(viewObject.transform, objectName: "RewardSourceContainer");
         var rewardSourceRowPrefab = CreateRunEndedRewardSourceRowTemplate(rewardSourceRowsRoot.transform);
-        var bestImprovementRoot = CreateChildGameObject(viewObject.transform, "Run Ended Best Improvement");
-        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, "BestImprovementLabel");
-        var tapToContinueRoot = CreateChildGameObject(viewObject.transform, "Run Ended Continue Label");
-        var acknowledgeTouchAreaButton = CreateChildButton(viewObject.transform, "Run Ended Continue Touch Area");
+        var bestImprovementRoot = CreateChildGameObject(viewObject.transform, objectName: "Run Ended Best Improvement");
+        var bestImprovementText = CreateChildText(bestImprovementRoot.transform, objectName: "BestImprovementLabel");
+        var tapToContinueRoot = CreateChildGameObject(viewObject.transform, objectName: "Run Ended Continue Label");
+        var acknowledgeTouchAreaButton = CreateChildButton(viewObject.transform, objectName: "Run Ended Continue Touch Area");
 
-        view.SetReferencesForTests(root: viewObject, titleText, earnedCoinsText,
-            earnedCoinsRevealGraphics: new Graphic[] { earnedCoinsIcon, earnedCoinsText }, reachedDistanceText, rewardSourceRowsRoot.transform,
-            rewardSourceRowPrefab, bestImprovementRoot, bestImprovementText, tapToContinueRoot, acknowledgeTouchAreaButton);
-        viewObject.SetActive(true);
+        view.SetReferencesForTests(
+            viewObject,
+            titleText,
+            earnedCoinsText,
+            new Graphic[] { earnedCoinsIcon, earnedCoinsText },
+            reachedDistanceText,
+            rewardSourceRowsRoot.transform,
+            rewardSourceRowPrefab,
+            bestImprovementRoot,
+            bestImprovementText,
+            tapToContinueRoot,
+            acknowledgeTouchAreaButton);
+
+        viewObject.SetActive(value: true);
         return view;
     }
 
     private RunEndedRewardSourceRowUIView CreateRunEndedRewardSourceRowTemplate(Transform parent)
     {
-        var rowObject = CreateChildGameObject(parent, "RowTemplate");
+        var rowObject = CreateChildGameObject(parent, objectName: "RowTemplate");
         var row = rowObject.AddComponent<RunEndedRewardSourceRowUIView>();
-        var labelText = CreateChildText(rowObject.transform, "Label");
-        var currencyIcon = CreateChildImage(rowObject.transform, "CurrencyIcon");
-        var amountText = CreateChildText(rowObject.transform, "Amount");
+        var labelText = CreateChildText(rowObject.transform, objectName: "Label");
+        var currencyIcon = CreateChildImage(rowObject.transform, objectName: "CurrencyIcon");
+        var amountText = CreateChildText(rowObject.transform, objectName: "Amount");
         amountText.color = Color.white;
         row.SetReferencesForTests(labelText, amountText, labelText, currencyIcon, amountText);
-        rowObject.SetActive(false);
+        rowObject.SetActive(value: false);
         return row;
     }
 
     private RunPreparationUpgradeCardView CreateRunPreparationUpgradeCard(Transform parent)
     {
-        var cardObject = CreateChildGameObject(parent, "Run Preparation Upgrade Card");
+        var cardObject = CreateChildGameObject(parent, objectName: "Run Preparation Upgrade Card");
         var card = cardObject.AddComponent<RunPreparationUpgradeCardView>();
-        var icon = CreateChildImage(cardObject.transform, "Upgrade Icon");
-        var nameText = CreateChildText(cardObject.transform, "Upgrade Name Label");
-        var levelText = CreateChildText(cardObject.transform, "Upgrade Level Label");
-        var effectText = CreateChildText(cardObject.transform, "Upgrade Effect Label");
-        var buyButton = CreateChildButton(cardObject.transform, "Buy Button");
-        var buyButtonActionLabel = CreateChildText(buyButton.transform, "Upgrade Button Action Label");
-        var buyButtonCostIcon = CreateChildImage(buyButton.transform, "Upgrade Button Cost Currency Icon");
-        var buyButtonCostText = CreateChildText(buyButton.transform, "Upgrade Button Cost Label");
+        var icon = CreateChildImage(cardObject.transform, objectName: "Upgrade Icon");
+        var nameText = CreateChildText(cardObject.transform, objectName: "Upgrade Name Label");
+        var levelText = CreateChildText(cardObject.transform, objectName: "Upgrade Level Label");
+        var effectText = CreateChildText(cardObject.transform, objectName: "Upgrade Effect Label");
+        var buyButton = CreateChildButton(cardObject.transform, objectName: "Buy Button");
+        var buyButtonActionLabel = CreateChildText(buyButton.transform, objectName: "Upgrade Button Action Label");
+        var buyButtonCostIcon = CreateChildImage(buyButton.transform, objectName: "Upgrade Button Cost Currency Icon");
+        var buyButtonCostText = CreateChildText(buyButton.transform, objectName: "Upgrade Button Cost Label");
 
-        card.SetReferencesForTests(cardObject, icon, nameText, levelText, effectText, buyButton, buyButtonActionLabel, buyButtonCostIcon,
+        card.SetReferencesForTests(
+            cardObject,
+            icon,
+            nameText,
+            levelText,
+            effectText,
+            buyButton,
+            buyButtonActionLabel,
+            buyButtonCostIcon,
             buyButtonCostText);
 
         return card;
@@ -934,11 +1029,11 @@ public sealed class GameplayLifetimeScopeTests
     private Pickup CreatePickup(string objectName, PickupDefinition definition)
     {
         var pickup = CreateGameObject(objectName).AddComponent<Pickup>();
-        pickup.gameObject.layer = GetRequiredLayer("Pickup");
+        pickup.gameObject.layer = GetRequiredLayer(layerName: "Pickup");
         pickup.SetDefinitionForTests(definition);
         var triggerObject = CreateGameObject($"{objectName} Trigger");
-        triggerObject.transform.SetParent(pickup.transform, false);
-        triggerObject.layer = GetRequiredLayer("Pickup");
+        triggerObject.transform.SetParent(pickup.transform, worldPositionStays: false);
+        triggerObject.layer = GetRequiredLayer(layerName: "Pickup");
         var notifier = triggerObject.AddComponent<TriggerNotifier>();
         var collider = triggerObject.AddComponent<SphereCollider>();
         collider.isTrigger = true;
@@ -956,14 +1051,14 @@ public sealed class GameplayLifetimeScopeTests
 
     private CurrencyDefinition CreateCurrencyDefinitionAsset(string definitionName, string saveId)
     {
-        var assetDirectory = "Assets/__GameplayLifetimeScopeCurrencyTests_" + Guid.NewGuid().ToString("N");
+        var assetDirectory = "Assets/__GameplayLifetimeScopeCurrencyTests_" + Guid.NewGuid().ToString(format: "N");
         _assetDirectories.Add(assetDirectory);
         Directory.CreateDirectory(assetDirectory);
         AssetDatabase.Refresh();
 
         var definition = ScriptableObject.CreateInstance<CurrencyDefinition>();
         definition.name = definitionName;
-        var assetPath = Path.Combine(assetDirectory, definitionName + ".asset").Replace('\\', '/');
+        var assetPath = Path.Combine(assetDirectory, definitionName + ".asset").Replace(oldChar: '\\', newChar: '/');
         AssetDatabase.CreateAsset(definition, assetPath);
         AssetDatabase.Refresh();
 
@@ -978,10 +1073,10 @@ public sealed class GameplayLifetimeScopeTests
         out RigidbodyRunCameraSource runCameraSource,
         out RigidbodyContactNotifier contactNotifier)
     {
-        var rigidbody = CreateGameObject("Player").AddComponent<Rigidbody>();
+        var rigidbody = CreateGameObject(objectName: "Player").AddComponent<Rigidbody>();
         var collider = rigidbody.gameObject.AddComponent<SphereCollider>();
-        var bandCenter = CreateGameObject("Band Center").transform;
-        bandCenter.SetParent(rigidbody.transform, false);
+        var bandCenter = CreateGameObject(objectName: "Band Center").transform;
+        bandCenter.SetParent(rigidbody.transform, worldPositionStays: false);
         var launchTarget = rigidbody.gameObject.AddComponent<RigidbodyLaunchTarget>();
         launchTarget.SetReferencesForTests(rigidbody, collider, bandCenter);
         runBodyMovementTarget = rigidbody.gameObject.AddComponent<RigidbodyRunBodyMovementTarget>();
@@ -995,7 +1090,7 @@ public sealed class GameplayLifetimeScopeTests
     private int GetRequiredLayer(string layerName)
     {
         var layer = LayerMask.NameToLayer(layerName);
-        Assert.That(layer, Is.GreaterThanOrEqualTo(0), $"Unity layer '{layerName}' must exist for gameplay tests.");
+        Assert.That(layer, Is.GreaterThanOrEqualTo(expected: 0), $"Unity layer '{layerName}' must exist for gameplay tests.");
         return layer;
     }
 
@@ -1037,7 +1132,7 @@ public sealed class GameplayLifetimeScopeTests
     private GameObject CreateChildGameObject(Transform parent, string objectName)
     {
         var gameObject = Track(new GameObject(objectName, typeof(RectTransform)));
-        gameObject.transform.SetParent(parent, false);
+        gameObject.transform.SetParent(parent, worldPositionStays: false);
 
         return gameObject;
     }
@@ -1063,7 +1158,7 @@ public sealed class GameplayLifetimeScopeTests
     }
 
     private T Track<T>(T value)
-        where T : UnityEngine.Object
+        where T : Object
     {
         _objects.Add(value);
         return value;
@@ -1072,50 +1167,52 @@ public sealed class GameplayLifetimeScopeTests
     private void DestroyGeneratedGameObjects<T>()
         where T : Component
     {
-        var components = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var components = Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
         foreach (var component in components)
         {
             if (component != null)
-                UnityEngine.Object.DestroyImmediate(component.gameObject);
+                Object.DestroyImmediate(component.gameObject);
         }
     }
 
     private sealed class ValidScopeFixture
     {
-        public GameplayLifetimeScope Scope { get; set; }
-        public GameplayStateId RunPreparationStateId { get; set; }
-        public GameplayStateId PreLaunchStateId { get; set; }
-        public GameplayStateId RunningStateId { get; set; }
-        public GameplayStateId RunEndedStateId { get; set; }
-        public GameplayStatId SlingshotLaunchPowerStatId { get; set; }
-        public GameplayStatId PlayerMaxSpeedStatId { get; set; }
-        public GameplayStatId PlayerSteeringResponsivenessStatId { get; set; }
+        public AnimatedContactSensorPoseSyncView AnimatedContactSensorPoseSyncView { get; set; }
+        public CharacterPresentationSceneCompositionMonoInstaller CharacterPresentationSceneCompositionInstaller { get; set; }
+        public CharacterPresentationView CharacterPresentationView { get; set; }
         public CurrencyDefinition CoinCurrencyDefinition { get; set; }
         public GameplayStatId CoinPickupMultiplierStatId { get; set; }
-        public UpgradeCatalog UpgradeCatalog { get; set; }
+        public RigidbodyContactNotifier ContactNotifier { get; set; }
+        public FinishPresentationView FinishPresentationView { get; set; }
         public GameplaySlingshotLaunchConfig GameplaySlingshotLaunchConfig { get; set; }
-        public RunBodyMovementConfig RunBodyMovementConfig { get; set; }
+        public Camera InputCamera { get; set; }
         public RigidbodyLaunchTarget LaunchTarget { get; set; }
         public Pickup LevelPickup { get; set; }
         public IReadOnlyList<Pickup> LevelPickups { get; set; }
-        public GameplayPickupsSceneCompositionMonoInstaller PickupsInstaller { get; set; }
         public PickupSensorSource PickupSensorSource { get; set; }
-        public RigidbodyRunBodyMovementTarget RunBodyMovementTarget { get; set; }
-        public RunCameraConfig RunCameraConfig { get; set; }
-        public RunEndConfig RunEndConfig { get; set; }
-        public RigidbodyRunCameraSource RunCameraSource { get; set; }
-        public RunProgressFrameSource RunProgressFrameSource { get; set; }
-        public GameplayPhysicsSceneCompositionMonoInstaller RunSurfaceInstaller { get; set; }
-        public RigidbodyContactNotifier ContactNotifier { get; set; }
-        public TransformRunCameraAnchor RunCameraAnchor { get; set; }
-        public Camera InputCamera { get; set; }
-        public CinemachineRunCameraRig RunCameraRig { get; set; }
+        public GameplayPickupsSceneCompositionMonoInstaller PickupsInstaller { get; set; }
+        public GameplayStatId PlayerMaxSpeedStatId { get; set; }
+        public GameplayStatId PlayerSteeringResponsivenessStatId { get; set; }
+        public GameplayStateId PreLaunchStateId { get; set; }
         public PullHintView PullHintView { get; set; }
-        public RunSteeringAffordanceView RunSteeringAffordanceView { get; set; }
+        public RunBodyMovementConfig RunBodyMovementConfig { get; set; }
+        public RigidbodyRunBodyMovementTarget RunBodyMovementTarget { get; set; }
+        public TransformRunCameraAnchor RunCameraAnchor { get; set; }
+        public RunCameraConfig RunCameraConfig { get; set; }
+        public CinemachineRunCameraRig RunCameraRig { get; set; }
+        public RigidbodyRunCameraSource RunCameraSource { get; set; }
+        public RunEndConfig RunEndConfig { get; set; }
+        public GameplayStateId RunEndedStateId { get; set; }
         public RunEndedUIView RunEndedView { get; set; }
-        public CharacterPresentationView CharacterPresentationView { get; set; }
-        public AnimatedContactSensorPoseSyncView AnimatedContactSensorPoseSyncView { get; set; }
-        public FinishPresentationView FinishPresentationView { get; set; }
+        public RunMovementSceneCompositionMonoInstaller RunMovementSceneCompositionInstaller { get; set; }
+        public GameplayStateId RunningStateId { get; set; }
+        public GameplayStateId RunPreparationStateId { get; set; }
+        public RunProgressFrameSource RunProgressFrameSource { get; set; }
+        public RunSteeringAffordanceView RunSteeringAffordanceView { get; set; }
+        public GameplayPhysicsSceneCompositionMonoInstaller RunSurfaceInstaller { get; set; }
+        public GameplayLifetimeScope Scope { get; set; }
+        public GameplayStatId SlingshotLaunchPowerStatId { get; set; }
+        public UpgradeCatalog UpgradeCatalog { get; set; }
     }
 }

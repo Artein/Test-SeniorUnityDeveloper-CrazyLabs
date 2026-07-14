@@ -46,6 +46,7 @@ public sealed class RunCameraControllerTests
             Position = Vector3.zero,
             Rotation = Quaternion.identity
         };
+
         _rig = new FakeRunCameraRig();
 
         _config = new FakeRunCameraConfig
@@ -61,6 +62,7 @@ public sealed class RunCameraControllerTests
             DeltaTime = 0.1f,
             FixedDeltaTime = 0.02f
         };
+
         _controller = CreateController();
         ((IInitializable)_controller).Initialize();
     }
@@ -99,7 +101,7 @@ public sealed class RunCameraControllerTests
     {
         _stateService.ChangeTo(_preLaunchStateId);
         _stateService.ChangeTo(_runningStateId);
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         Assert.That(_rig.ActiveCamera, Is.EqualTo(FakeRunCameraRig.CameraId.PreLaunch));
     }
@@ -143,7 +145,7 @@ public sealed class RunCameraControllerTests
         ActivateRunCamera();
         _source.Position = new Vector3(20f, 0f, 30f);
         _source.LinearVelocity = Vector3.right * 8f;
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
         AssertForward(_anchor.Rotation, Vector3.right);
 
         _source.Position = new Vector3(-4f, 0.5f, -7f);
@@ -185,7 +187,7 @@ public sealed class RunCameraControllerTests
         ActivateRunCamera();
         _source.Position = new Vector3(12f, 0f, 9f);
         _source.LinearVelocity = Vector3.right * 8f;
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
         AssertForward(_anchor.Rotation, Vector3.right);
 
         _source.Position = new Vector3(-2f, 0.25f, -5f);
@@ -208,7 +210,7 @@ public sealed class RunCameraControllerTests
     {
         ActivateRunCamera();
         _source.LinearVelocity = Vector3.left * 8f;
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
         AssertForward(_anchor.Rotation, Vector3.left);
 
         _stateService.ChangeTo(_runEndedStateId);
@@ -223,7 +225,7 @@ public sealed class RunCameraControllerTests
         AssertPosition(_anchor.Position, _source.Position + _config.AnchorOffset);
         AssertForward(_anchor.Rotation, Vector3.forward);
 
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         AssertForward(_anchor.Rotation, Vector3.right);
     }
@@ -250,7 +252,7 @@ public sealed class RunCameraControllerTests
         var previousPosition = _anchor.Position;
         _source.Position = new Vector3(11f, 0f, 2f);
 
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         var targetPosition = _source.Position + _config.AnchorOffset;
         var expectedPosition = Vector3.Lerp(previousPosition, targetPosition, 0.1f);
@@ -265,7 +267,7 @@ public sealed class RunCameraControllerTests
         ActivateRunCamera();
         _source.LinearVelocity = Vector3.right * 8f;
 
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         AssertForward(_anchor.Rotation, Vector3.right);
     }
@@ -275,11 +277,11 @@ public sealed class RunCameraControllerTests
     {
         ActivateRunCamera();
         _source.LinearVelocity = Vector3.right * 8f;
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
         var yawAfterValidVelocity = _anchor.Rotation;
 
         _source.LinearVelocity = Vector3.zero;
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         AssertForward(yawAfterValidVelocity, _anchor.Rotation * Vector3.forward);
     }
@@ -290,7 +292,7 @@ public sealed class RunCameraControllerTests
         ActivateRunCamera();
         _source.LinearVelocity = new Vector3(float.NaN, 0f, 1f);
 
-        ((ILateTickable)_controller).LateTick();
+        ((IRunCameraLateStep)_controller).UpdateCamera();
 
         Assert.That(float.IsNaN(_anchor.Rotation.x), Is.False);
         Assert.That(float.IsNaN(_anchor.Rotation.y), Is.False);

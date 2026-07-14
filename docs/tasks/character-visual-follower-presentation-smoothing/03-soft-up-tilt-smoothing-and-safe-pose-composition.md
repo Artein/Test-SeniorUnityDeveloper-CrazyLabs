@@ -18,7 +18,7 @@ This is the slice that should directly address the tiny visible character flicke
 - [ ] The smoother composes output rotation from a valid orthonormal basis, not from accumulated skewed vectors.
 - [ ] Invalid target forward/up vectors, near-zero vectors, and nearly parallel forward/up inputs fall back safely without producing NaN or identity-popping artifacts.
 - [ ] Forced lifecycle snaps from earlier slices copy the full target pose exactly, including orientation.
-- [ ] Tilt smoothing is presentation-only; **RunSurfaceContext**, **RunSurfaceSteeringFrameSource**, player steering, camera, progress, and run-end logic still use their existing raw/owned data.
+- [ ] Tilt smoothing is presentation-only; the **Run Surface Frame Pipeline**, player steering, camera, progress, and run-end logic still use their explicitly owned data.
 - [ ] The visible character remains close enough to the **Launch Target** that the player does not perceive body detachment.
 - [ ] No slope classifier, animation mode, physics material, Rigidbody, collider, camera target, or run-end threshold is changed.
 

@@ -2,7 +2,6 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
 using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
@@ -17,12 +16,20 @@ namespace Game.Gameplay
         internal GameplayStateId RunPreparationStateIdForTests => _runPreparationStateId;
         internal GameplayStateId RunningStateIdForTests => _runningStateId;
         internal GameplayStateId RunEndedStateIdForTests => _runEndedStateId;
-        internal RunBodyMovementConfig RunBodyMovementConfigForTests => _runBodyMovementConfig;
+
+        internal RunBodyMovementConfig RunBodyMovementConfigForTests =>
+            GetSceneCompositionInstallers<RunMovementSceneCompositionMonoInstaller>().SingleOrDefault()?.Config;
+
         internal RunCameraConfig RunCameraConfigForTests => _runCameraConfig;
         internal RunEndConfig RunEndConfigForTests => _runEndConfig;
-        internal RunProgressFrameSource RunProgressFrameSourceForTests => _runProgressFrameSource;
+
+        internal RunProgressFrameSource RunProgressFrameSourceForTests =>
+            GetSceneCompositionInstallers<RunMovementSceneCompositionMonoInstaller>().SingleOrDefault()?.ProgressFrameSource;
+
         internal RunSteeringAffordanceView RunSteeringAffordanceViewForTests => _runSteeringAffordanceView;
-        internal IReadOnlyList<string> PickupSetupValidationErrorsForTests => GetPickupSetupValidationErrors().ToArray();
+
+        internal IReadOnlyList<BaseSceneCompositionMonoInstaller> SceneCompositionInstallersForTests =>
+            _sceneCompositionInstallers ?? new BaseSceneCompositionMonoInstaller[0];
 
         internal void SetReferencesForTests(
             GameplayStateConfig gameplayStateConfig,
@@ -38,14 +45,9 @@ namespace Game.Gameplay
             GameplayStatId coinPickupMultiplierStatId,
             SlingshotConfig slingshotConfig,
             GameplaySlingshotLaunchConfig gameplaySlingshotLaunchConfig,
-            RunBodyMovementConfig runBodyMovementConfig,
             RunCameraConfig runCameraConfig,
             RunEndConfig runEndConfig,
-            RigidbodyRunBodyMovementTarget runBodyMovementTarget,
-            RigidbodyRunCameraSource runCameraSource,
-            RunProgressFrameSource runProgressFrameSource,
             BaseSceneCompositionMonoInstaller[] sceneCompositionInstallers,
-            RigidbodyContactNotifier contactNotifier,
             TransformRunCameraAnchor runCameraAnchor,
             CinemachineRunCameraRig runCameraRig,
             Camera inputCamera,
@@ -58,8 +60,6 @@ namespace Game.Gameplay
             RunPreparationUIView runPreparationView,
             RunEndedUIView runEndedView,
             RigidbodyLaunchTarget launchTarget,
-            CharacterPresentationView characterPresentationView,
-            AnimatedContactSensorPoseSyncView animatedContactSensorPoseSyncView,
             FinishPresentationView finishPresentationView)
         {
             _gameplayStateConfig = gameplayStateConfig;
@@ -75,14 +75,9 @@ namespace Game.Gameplay
             _coinPickupMultiplierStatId = coinPickupMultiplierStatId;
             _slingshotConfig = slingshotConfig;
             _gameplaySlingshotLaunchConfig = gameplaySlingshotLaunchConfig;
-            _runBodyMovementConfig = runBodyMovementConfig;
             _runCameraConfig = runCameraConfig;
             _runEndConfig = runEndConfig;
-            _runBodyMovementTarget = runBodyMovementTarget;
-            _runCameraSource = runCameraSource;
-            _runProgressFrameSource = runProgressFrameSource;
             _sceneCompositionInstallers = sceneCompositionInstallers;
-            _contactNotifier = contactNotifier;
             _runCameraAnchor = runCameraAnchor;
             _runCameraRig = runCameraRig;
             _inputCamera = inputCamera;
@@ -95,8 +90,6 @@ namespace Game.Gameplay
             _runPreparationView = runPreparationView;
             _runEndedView = runEndedView;
             _launchTarget = launchTarget;
-            _characterPresentationView = characterPresentationView;
-            _animatedContactSensorPoseSyncView = animatedContactSensorPoseSyncView;
             _finishPresentationView = finishPresentationView;
         }
 

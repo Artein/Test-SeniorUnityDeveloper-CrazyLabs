@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Game.Gameplay.CharacterPresentation;
 using Game.Gameplay.Economy;
 using UnityEngine;
 
@@ -71,38 +70,14 @@ namespace Game.Gameplay
             if (_gameplaySlingshotLaunchConfig == null)
                 yield return "GameplayLifetimeScope requires a Gameplay Slingshot Launch Config reference.";
 
-            if (_runBodyMovementConfig == null)
-            {
-                yield return "GameplayLifetimeScope requires a Run Body Movement Tuning reference.";
-            }
-            else
-            {
-                var validator = new RunBodyMovementConfigValidator();
-
-                foreach (var error in validator.Validate(_runBodyMovementConfig))
-                    yield return $"GameplayLifetimeScope Run Body Movement Tuning is invalid: {error}";
-            }
-
             if (_runCameraConfig == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Config reference.";
 
             if (_runEndConfig == null)
                 yield return "GameplayLifetimeScope requires a Run End Config reference.";
 
-            if (_runBodyMovementTarget == null)
-                yield return "GameplayLifetimeScope requires a Run Body Movement Target reference.";
-
-            if (_runCameraSource == null)
-                yield return "GameplayLifetimeScope requires a Run Camera Source reference.";
-
-            if (_runProgressFrameSource == null)
-                yield return "GameplayLifetimeScope requires a Run Progress Frame Source reference.";
-
             foreach (var error in GetSceneCompositionInstallerValidationErrors())
                 yield return error;
-
-            if (_contactNotifier == null)
-                yield return "GameplayLifetimeScope requires a Rigidbody Contact Notifier reference.";
 
             if (_runCameraAnchor == null)
                 yield return "GameplayLifetimeScope requires a Run Camera Anchor reference.";
@@ -149,44 +124,11 @@ namespace Game.Gameplay
             if (_launchTarget == null)
                 yield return "GameplayLifetimeScope requires a Launch Target reference.";
 
-            if (_characterPresentationView == null)
-                yield return "GameplayLifetimeScope requires a Character Presentation View reference.";
-
-            if (_animatedContactSensorPoseSyncView == null)
-            {
-                yield return "GameplayLifetimeScope requires an Animated Contact Sensor Pose Sync View reference.";
-            }
-            else
-            {
-                var validator = new AnimatedContactSensorPoseSyncReferenceValidator();
-
-                foreach (var error in validator.GetReferenceValidationErrors(
-                             _animatedContactSensorPoseSyncView.RootRigidbody,
-                             _animatedContactSensorPoseSyncView.Bindings))
-                {
-                    yield return error;
-                }
-            }
-
             if (_finishPresentationView == null)
                 yield return "GameplayLifetimeScope requires a Finish Presentation View reference.";
 
-            foreach (var error in GetPickupSetupValidationErrors())
-                yield return error;
-
             foreach (var error in GetCurrencyDefinitionValidationErrors())
                 yield return error;
-        }
-
-        private IEnumerable<string> GetPickupSetupValidationErrors()
-        {
-            var pickupInstallers = GetPickupSceneCompositionInstallers();
-
-            if (pickupInstallers.Count <= 0)
-                yield return "GameplayLifetimeScope requires a Gameplay Pickups Scene Composition Installer reference.";
-
-            if (pickupInstallers.Count > 1)
-                yield return "GameplayLifetimeScope requires exactly one Gameplay Pickups Scene Composition Installer reference.";
         }
 
         private IEnumerable<string> GetSceneCompositionInstallerValidationErrors()
@@ -237,7 +179,8 @@ namespace Game.Gameplay
             if (_upgradeCatalog != null && _upgradeCatalog.PurchaseCurrency != null)
                 yield return _upgradeCatalog.PurchaseCurrency;
 
-            foreach (var pickup in GetPickupSceneCompositionInstallers().SelectMany(installer => installer.LevelPickups))
+            foreach (var pickup in GetSceneCompositionInstallers<GameplayPickupsSceneCompositionMonoInstaller>()
+                         .SelectMany(installer => installer.LevelPickups))
             {
                 if (pickup == null || pickup.Definition == null || pickup.Definition.CurrencyDefinition == null)
                     continue;

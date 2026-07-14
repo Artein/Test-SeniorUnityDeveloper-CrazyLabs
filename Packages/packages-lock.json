@@ -1,14 +1,14 @@
 {
   "dependencies": {
-    "artem-sukhliak.unity.ai-agent-connector": {
-      "version": "git@github.com-Artein:Artein/UnityAIAgentConnector.git?path=unity/Packages/artem-sukhliak.unity.ai-agent-connector",
+    "com.artem-sukhliak.unity-ai-agent-connector": {
+      "version": "git@github.com-Artein:Artein/UnityAIAgentConnector.git?path=unity/Packages/com.artem-sukhliak.unity-ai-agent-connector",
       "depth": 0,
       "source": "git",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.2.1",
         "com.unity.test-framework": "1.6.0"
       },
-      "hash": "7fbf027dafdd0b3b44ce36658e52a7d52b529259"
+      "hash": "c181f630bf20ada292b0ffc54807f7288da29db6"
     },
     "com.eflatun.scenereference": {
       "version": "https://github.com/starikcetin/Eflatun.SceneReference.git#5.0.0",

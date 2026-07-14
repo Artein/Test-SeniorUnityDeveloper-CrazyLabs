@@ -7,7 +7,12 @@ using VContainer.Unity;
 
 namespace Game.Gameplay
 {
-    internal sealed class LostMomentumDetector : IInitializable, IFixedTickable, IDisposable
+    internal interface ILostMomentumFixedStep
+    {
+        void DetectLostMomentum();
+    }
+
+    internal sealed class LostMomentumDetector : ILostMomentumFixedStep, IInitializable, IDisposable
     {
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
@@ -61,7 +66,7 @@ namespace Game.Gameplay
             _isInitialized = true;
         }
 
-        void IFixedTickable.FixedTick()
+        void ILostMomentumFixedStep.DetectLostMomentum()
         {
             if (_isDisposed || !_isActive || _hasSubmittedCandidate)
                 return;

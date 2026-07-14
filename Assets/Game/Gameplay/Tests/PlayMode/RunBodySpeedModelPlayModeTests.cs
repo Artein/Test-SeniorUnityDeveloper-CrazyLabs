@@ -7,6 +7,7 @@ using Game.Gameplay.Upgrades;
 using NUnit.Framework;
 using UnityEngine;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed class RunBodySpeedModelPlayModeTests
@@ -18,21 +19,21 @@ public sealed class RunBodySpeedModelPlayModeTests
         const float initialSpeed = 5f;
 
         var flatVelocity = scenario.Execute(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * initialSpeed);
 
-        var downhillNormal = Quaternion.AngleAxis(30f, Vector3.right) * Vector3.up;
+        var downhillNormal = Quaternion.AngleAxis(angle: 30f, Vector3.right) * Vector3.up;
         var downhillDirection = Vector3.ProjectOnPlane(Vector3.forward, downhillNormal).normalized;
 
         var downhillVelocity = scenario.Execute(
-            new RunSurfaceContext(true, downhillNormal, 30f),
+            new RunSurfaceContext(isGrounded: true, downhillNormal, forwardDownhillDegrees: 30f),
             downhillDirection * initialSpeed);
 
         var flatTangentSpeed = Vector3.ProjectOnPlane(flatVelocity, Vector3.up).magnitude;
         var downhillTangentSpeed = Vector3.ProjectOnPlane(downhillVelocity, downhillNormal).magnitude;
 
-        Assert.That(flatTangentSpeed, Is.EqualTo(initialSpeed).Within(0.0001f));
-        Assert.That(downhillTangentSpeed, Is.EqualTo(6f).Within(0.0001f));
+        Assert.That(flatTangentSpeed, Is.EqualTo(initialSpeed).Within(amount: 0.0001f));
+        Assert.That(downhillTangentSpeed, Is.EqualTo(expected: 6f).Within(amount: 0.0001f));
         Assert.That(downhillTangentSpeed, Is.GreaterThan(flatTangentSpeed));
     }
 
@@ -43,7 +44,7 @@ public sealed class RunBodySpeedModelPlayModeTests
         var launchVelocity = Vector3.forward * 7f + Vector3.up * 2f;
 
         var finalVelocity = scenario.Execute(
-            new RunSurfaceContext(false, Vector3.up, 45f),
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 45f),
             launchVelocity);
 
         AssertVector(finalVelocity, launchVelocity);
@@ -55,10 +56,10 @@ public sealed class RunBodySpeedModelPlayModeTests
         using var scenario = new MovementScenario(surfaceSlowdown: 2f);
 
         var finalVelocity = scenario.Execute(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 5f);
 
-        Assert.That(finalVelocity.magnitude, Is.EqualTo(4.5f).Within(0.0001f));
+        Assert.That(finalVelocity.magnitude, Is.EqualTo(expected: 4.5f).Within(amount: 0.0001f));
         AssertVector(finalVelocity.normalized, Vector3.forward);
     }
 
@@ -67,16 +68,16 @@ public sealed class RunBodySpeedModelPlayModeTests
     {
         using var neutralScenario = new MovementScenario(resolvedSoftMaximumSpeed: 20f);
         using var upgradedScenario = new MovementScenario(resolvedSoftMaximumSpeed: 30f);
-        var downhillNormal = Quaternion.AngleAxis(30f, Vector3.right) * Vector3.up;
+        var downhillNormal = Quaternion.AngleAxis(angle: 30f, Vector3.right) * Vector3.up;
         var downhillDirection = Vector3.ProjectOnPlane(Vector3.forward, downhillNormal).normalized;
-        var surfaceContext = new RunSurfaceContext(true, downhillNormal, 30f);
+        var surfaceContext = new RunSurfaceContext(isGrounded: true, downhillNormal, forwardDownhillDegrees: 30f);
         var initialVelocity = downhillDirection * 19f;
 
-        var neutralVelocity = neutralScenario.ExecuteTicks(surfaceContext, initialVelocity, 8);
-        var upgradedVelocity = upgradedScenario.ExecuteTicks(surfaceContext, initialVelocity, 8);
+        var neutralVelocity = neutralScenario.ExecuteTicks(surfaceContext, initialVelocity, tickCount: 8);
+        var upgradedVelocity = upgradedScenario.ExecuteTicks(surfaceContext, initialVelocity, tickCount: 8);
 
-        Assert.That(neutralVelocity.magnitude, Is.EqualTo(20f).Within(0.0001f));
-        Assert.That(upgradedVelocity.magnitude, Is.EqualTo(27f).Within(0.0001f));
+        Assert.That(neutralVelocity.magnitude, Is.EqualTo(expected: 20f).Within(amount: 0.0001f));
+        Assert.That(upgradedVelocity.magnitude, Is.EqualTo(expected: 27f).Within(amount: 0.0001f));
         Assert.That(upgradedVelocity.magnitude, Is.GreaterThan(neutralVelocity.magnitude));
     }
 
@@ -88,12 +89,12 @@ public sealed class RunBodySpeedModelPlayModeTests
             aboveMaximumSpeedResistance: 12f);
 
         var finalVelocity = scenario.Execute(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 30f);
 
-        Assert.That(finalVelocity.magnitude, Is.EqualTo(28.5f).Within(0.0001f));
-        Assert.That(finalVelocity.magnitude, Is.GreaterThan(20f));
-        Assert.That(finalVelocity.magnitude, Is.LessThan(30f));
+        Assert.That(finalVelocity.magnitude, Is.EqualTo(expected: 28.5f).Within(amount: 0.0001f));
+        Assert.That(finalVelocity.magnitude, Is.GreaterThan(expected: 20f));
+        Assert.That(finalVelocity.magnitude, Is.LessThan(expected: 30f));
     }
 
     [Test]
@@ -102,10 +103,11 @@ public sealed class RunBodySpeedModelPlayModeTests
         using var scenario = new MovementScenario(
             resolvedSoftMaximumSpeed: 20f,
             aboveMaximumSpeedResistance: 12f);
+
         var initialVelocity = Vector3.forward * 30f + Vector3.up * 2f;
 
         var finalVelocity = scenario.Execute(
-            new RunSurfaceContext(false, Vector3.up, 30f),
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 30f),
             initialVelocity);
 
         AssertVector(finalVelocity, initialVelocity);
@@ -119,11 +121,11 @@ public sealed class RunBodySpeedModelPlayModeTests
             lowSpeedAssistAcceleration: 4f);
 
         var finalVelocity = scenario.ExecuteTicks(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f,
-            4);
+            tickCount: 4);
 
-        Assert.That(finalVelocity.magnitude, Is.EqualTo(5f).Within(0.0001f));
+        Assert.That(finalVelocity.magnitude, Is.EqualTo(expected: 5f).Within(amount: 0.0001f));
         AssertVector(finalVelocity.normalized, Vector3.forward);
     }
 
@@ -135,9 +137,9 @@ public sealed class RunBodySpeedModelPlayModeTests
             lowSpeedAssistAcceleration: 4f);
 
         var writtenSpeeds = scenario.ExecuteTicksWithCancelledVelocity(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f,
-            4);
+            tickCount: 4);
 
         Assert.That(writtenSpeeds, Is.EqualTo(new[] { 3f, 3f, 3f, 2f }));
     }
@@ -150,20 +152,20 @@ public sealed class RunBodySpeedModelPlayModeTests
             lowSpeedAssistAcceleration: 4f);
 
         var firstSupportedVelocity = scenario.Execute(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f);
 
         var unsupportedVelocity = scenario.Execute(
-            new RunSurfaceContext(false, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f);
 
         var resumedWrittenSpeeds = scenario.ExecuteTicksWithCancelledVelocity(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f,
-            3);
+            tickCount: 3);
 
-        Assert.That(firstSupportedVelocity.magnitude, Is.EqualTo(3f));
-        Assert.That(unsupportedVelocity.magnitude, Is.EqualTo(2f));
+        Assert.That(firstSupportedVelocity.magnitude, Is.EqualTo(expected: 3f));
+        Assert.That(unsupportedVelocity.magnitude, Is.EqualTo(expected: 2f));
         Assert.That(resumedWrittenSpeeds, Is.EqualTo(new[] { 3f, 3f, 2f }));
     }
 
@@ -174,11 +176,12 @@ public sealed class RunBodySpeedModelPlayModeTests
             resolvedSoftMaximumSpeed: 20f,
             surfaceSlowdown: 2f,
             aboveMaximumSpeedResistance: 12f);
-        var downhillNormal = Quaternion.AngleAxis(30f, Vector3.right) * Vector3.up;
+
+        var downhillNormal = Quaternion.AngleAxis(angle: 30f, Vector3.right) * Vector3.up;
         var downhillDirection = Vector3.ProjectOnPlane(Vector3.forward, downhillNormal).normalized;
 
         scenario.Execute(
-            new RunSurfaceContext(true, downhillNormal, 30f),
+            new RunSurfaceContext(isGrounded: true, downhillNormal, forwardDownhillDegrees: 30f),
             downhillDirection * 30f);
 
         var snapshot = scenario.CurrentSpeedDiagnostics;
@@ -190,10 +193,10 @@ public sealed class RunBodySpeedModelPlayModeTests
         Assert.That(snapshot.IsRunSurfaceGrounded, Is.True);
         Assert.That(snapshot.HasValidGroundedRunSurface, Is.True);
         Assert.That(snapshot.HasUsableTangentDirection, Is.True);
-        Assert.That(snapshot.SampledTangentSpeed, Is.EqualTo(30f).Within(0.0001f));
-        Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(20f));
-        Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(30f));
-        Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(1f).Within(0.0001f));
+        Assert.That(snapshot.SampledTangentSpeed, Is.EqualTo(expected: 30f).Within(amount: 0.0001f));
+        Assert.That(snapshot.EffectiveSoftMaximumSpeed, Is.EqualTo(expected: 20f));
+        Assert.That(snapshot.ForwardDownhillDegrees, Is.EqualTo(expected: 30f));
+        Assert.That(snapshot.CourseForwardAlignment, Is.EqualTo(expected: 1f).Within(amount: 0.0001f));
         Assert.That(snapshot.PolicyContributors, Is.EqualTo(expectedContributors));
         Assert.That(snapshot.RequestedContributors, Is.EqualTo(expectedContributors));
 
@@ -210,7 +213,7 @@ public sealed class RunBodySpeedModelPlayModeTests
             lowSpeedAssistAcceleration: 4f);
 
         scenario.Execute(
-            new RunSurfaceContext(true, Vector3.up, 0f),
+            new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f),
             Vector3.forward * 2f);
 
         var snapshot = scenario.CurrentSpeedDiagnostics;
@@ -222,14 +225,15 @@ public sealed class RunBodySpeedModelPlayModeTests
         Assert.That(
             snapshot.RequestedContributors,
             Is.EqualTo(RunBodySpeedDecisionContributors.LowSpeedAssist));
-        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(1f));
-        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(5f));
+
+        Assert.That(snapshot.RequestedLowSpeedAssistVelocityDelta, Is.EqualTo(expected: 1f));
+        Assert.That(snapshot.EffectiveLowSpeedAssistTargetSpeed, Is.EqualTo(expected: 5f));
         Assert.That(snapshot.LowSpeedAssistAttemptState, Is.EqualTo(RunBodyLowSpeedAssistAttemptState.Active));
         Assert.That(snapshot.MeetsLowSpeedAssistPolicyConditions, Is.True);
 
         Assert.That(
             snapshot.RemainingRequestedLowSpeedAssistVelocityBudget,
-            Is.EqualTo(2f).Within(0.0001f));
+            Is.EqualTo(expected: 2f).Within(amount: 0.0001f));
     }
 
     [Test]
@@ -244,7 +248,8 @@ public sealed class RunBodySpeedModelPlayModeTests
             surfaceSlowdown: 2f,
             lowSpeedAssistTargetSpeed: 5f,
             lowSpeedAssistAcceleration: 4f);
-        var surfaceContext = new RunSurfaceContext(true, Vector3.up, 0f);
+
+        var surfaceContext = new RunSurfaceContext(isGrounded: true, Vector3.up, forwardDownhillDegrees: 0f);
         var initialVelocity = Vector3.forward * 2f;
 
         var observedVelocity = observedScenario.Execute(surfaceContext, initialVelocity);
@@ -256,21 +261,23 @@ public sealed class RunBodySpeedModelPlayModeTests
 
     private void AssertVector(Vector3 actual, Vector3 expected)
     {
-        Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.0001f));
-        Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.0001f));
-        Assert.That(actual.z, Is.EqualTo(expected.z).Within(0.0001f));
+        Assert.That(actual.x, Is.EqualTo(expected.x).Within(amount: 0.0001f));
+        Assert.That(actual.y, Is.EqualTo(expected.y).Within(amount: 0.0001f));
+        Assert.That(actual.z, Is.EqualTo(expected.z).Within(amount: 0.0001f));
     }
 
     private sealed class MovementScenario : IDisposable
     {
-        private readonly GameObject _gameObject;
         private readonly Rigidbody _body;
-        private readonly GameplayStateId _runningStateId;
-        private readonly GameplayStatId _playerMaxSpeedStatId;
         private readonly RunBodyMovementController _controller;
-        private readonly FakeSurfaceContextSource _surfaceContextSource;
+        private readonly GameObject _gameObject;
+        private readonly GameplayStatId _playerMaxSpeedStatId;
+        private readonly GameplayStateId _runningStateId;
         private readonly RunBodySpeedDiagnostics _speedDiagnostics;
+        private readonly FakeSurfaceContextSource _surfaceContextSource;
         private bool _isDisposed;
+
+        public RunBodySpeedDiagnosticsSnapshot CurrentSpeedDiagnostics => _speedDiagnostics.Current;
 
         public MovementScenario(
             float surfaceSlowdown = 0f,
@@ -279,7 +286,7 @@ public sealed class RunBodySpeedModelPlayModeTests
             float lowSpeedAssistTargetSpeed = 0f,
             float lowSpeedAssistAcceleration = 0f)
         {
-            _gameObject = new GameObject("Run Body Speed Model PlayMode Test");
+            _gameObject = new GameObject(name: "Run Body Speed Model PlayMode Test");
             _body = _gameObject.AddComponent<Rigidbody>();
             _body.useGravity = false;
 
@@ -299,6 +306,7 @@ public sealed class RunBodySpeedModelPlayModeTests
                 aboveMaximumSpeedResistance,
                 lowSpeedAssistTargetSpeed,
                 lowSpeedAssistAcceleration);
+
             var steeringFrame = new FakeSteeringFrame();
             var progressService = new FakeRunProgressService();
             progressService.SetFrame(Vector3.forward, Vector3.up);
@@ -331,12 +339,22 @@ public sealed class RunBodySpeedModelPlayModeTests
             launchNotifier.Apply(CreateLaunchAppliedEvent());
         }
 
-        public Vector3 Execute(RunSurfaceContext surfaceContext, Vector3 initialVelocity)
+        public void Dispose()
         {
-            return ExecuteTicks(surfaceContext, initialVelocity, 1);
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+            ((IDisposable)_controller).Dispose();
+            Object.DestroyImmediate(_playerMaxSpeedStatId);
+            Object.DestroyImmediate(_runningStateId);
+            Object.DestroyImmediate(_gameObject);
         }
 
-        public RunBodySpeedDiagnosticsSnapshot CurrentSpeedDiagnostics => _speedDiagnostics.Current;
+        public Vector3 Execute(RunSurfaceContext surfaceContext, Vector3 initialVelocity)
+        {
+            return ExecuteTicks(surfaceContext, initialVelocity, tickCount: 1);
+        }
 
         public Vector3 ExecuteTicks(RunSurfaceContext surfaceContext, Vector3 initialVelocity, int tickCount)
         {
@@ -344,7 +362,9 @@ public sealed class RunBodySpeedModelPlayModeTests
             _body.linearVelocity = initialVelocity;
 
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
-                ((IFixedTickable)_controller).FixedTick();
+            {
+                ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
+            }
 
             return _body.linearVelocity;
         }
@@ -360,32 +380,20 @@ public sealed class RunBodySpeedModelPlayModeTests
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
             {
                 _body.linearVelocity = cancelledVelocity;
-                ((IFixedTickable)_controller).FixedTick();
+                ((IRunBodyMovementFixedStep)_controller).UpdateMovement();
                 writtenSpeeds[tickIndex] = _body.linearVelocity.magnitude;
             }
 
             return writtenSpeeds;
         }
 
-        public void Dispose()
-        {
-            if (_isDisposed)
-                return;
-
-            _isDisposed = true;
-            ((IDisposable)_controller).Dispose();
-            UnityEngine.Object.DestroyImmediate(_playerMaxSpeedStatId);
-            UnityEngine.Object.DestroyImmediate(_runningStateId);
-            UnityEngine.Object.DestroyImmediate(_gameObject);
-        }
-
         private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
         {
             var request = new SlingshotLaunchRequest(
-                1f,
-                1f,
-                0f,
-                0f,
+                pullStrength: 1f,
+                pullDistance: 1f,
+                pullOffset: 0f,
+                normalizedLateralPull: 0f,
                 Vector3.zero,
                 Vector3.forward,
                 Vector3.up);
@@ -401,9 +409,9 @@ public sealed class RunBodySpeedModelPlayModeTests
     private sealed class FakeGameplayStateService : IGameplayStateService
     {
         public GameplayStateId CurrentStateId { get; private set; }
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public FakeGameplayStateService(GameplayStateId initialStateId)
         {
@@ -476,11 +484,6 @@ public sealed class RunBodySpeedModelPlayModeTests
 
     private sealed class FakeSteeringFrame : IRunSteeringFrameSource, IRunSteeringFrameResetter
     {
-        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
-        {
-            return fallbackUpDirection;
-        }
-
         public void Reset(Vector3 launchUpDirection)
         {
         }
@@ -488,21 +491,35 @@ public sealed class RunBodySpeedModelPlayModeTests
         public void Clear()
         {
         }
+
+        public Vector3 GetUpDirection(Vector3 fallbackUpDirection)
+        {
+            return fallbackUpDirection;
+        }
     }
 
-    private sealed class FakeSurfaceContextSource : IRunSurfaceContextSource
+    private sealed class FakeSurfaceContextSource : IRunSurfaceFrameSource
     {
-        public RunSurfaceContext Current { get; set; } = new(false, Vector3.up, 0f);
+        public RunSurfaceContext Current { get; set; } = new(isGrounded: false, Vector3.up, forwardDownhillDegrees: 0f);
+
+        RunSurfaceFrameSnapshot IRunSurfaceFrameSource.Current =>
+            new(
+                observedSupport: default,
+                Current,
+                RunSurfaceTransition.None,
+                isMissingSupportHeld: false,
+                isConfirmingDiscontinuity: false,
+                steeringFrame: default);
     }
 
     private sealed class FakeRunProgressService : IRunProgressService
     {
-        public bool HasValidSnapshot { get; private set; }
-        public string SnapshotError => string.Empty;
-        public RunProgressFrameSnapshot Snapshot { get; private set; }
         public float CurrentForwardProgress => 0f;
-        public float MaximumForwardProgress => 0f;
         public RunProgressSample CurrentSample => default;
+        public bool HasValidSnapshot { get; private set; }
+        public float MaximumForwardProgress => 0f;
+        public RunProgressFrameSnapshot Snapshot { get; private set; }
+        public string SnapshotError => string.Empty;
 
         public bool TryBeginRun(Vector3 origin, out string error)
         {
@@ -528,16 +545,34 @@ public sealed class RunBodySpeedModelPlayModeTests
                 up,
                 out var snapshot,
                 out _);
+
             Snapshot = snapshot;
         }
     }
 
     private sealed class FakeMovementConfig : IRunBodySpeedConfig, IRunBodyMovementValidityConfig, IRunSteeringConfig
     {
-        private readonly float _surfaceSlowdown;
-        private readonly float _aboveMaximumSpeedResistance;
-        private readonly float _lowSpeedAssistTargetSpeed;
-        private readonly float _lowSpeedAssistAcceleration;
+        public float AboveMaximumSpeedResistance { get; }
+
+        public float BaseSoftMaximumSpeed => 20f;
+
+        public float DownhillAcceleration => 8f;
+        public float FallbackDpi => 100f;
+        public float LowSpeedAssistAcceleration { get; }
+
+        public float LowSpeedAssistTargetSpeed { get; }
+
+        public float MaximumAcceptedDpi => 1000f;
+        public float MaximumSupportedSurfaceNormalLiftSpeed => 0f;
+        public float MaximumTurnDegreesPerSecond => 90f;
+        public float MinimumAcceptedDpi => 1f;
+        public float MinimumSteerSpeed => 0.25f;
+        public float RunAirSteeringMaximumTurnDegreesPerSecond => 30f;
+        public float RunBodySpeedSanityGuardMetersPerSecond => 250f;
+        public float RunSteeringDeadzoneFraction => 0f;
+        public float RunSteeringRangeCentimeters => 2.54f;
+        public float RunSteeringResponsiveness => 100f;
+        public float SurfaceSlowdown { get; }
 
         public FakeMovementConfig(
             float surfaceSlowdown,
@@ -545,29 +580,11 @@ public sealed class RunBodySpeedModelPlayModeTests
             float lowSpeedAssistTargetSpeed,
             float lowSpeedAssistAcceleration)
         {
-            _surfaceSlowdown = surfaceSlowdown;
-            _aboveMaximumSpeedResistance = aboveMaximumSpeedResistance;
-            _lowSpeedAssistTargetSpeed = lowSpeedAssistTargetSpeed;
-            _lowSpeedAssistAcceleration = lowSpeedAssistAcceleration;
+            SurfaceSlowdown = surfaceSlowdown;
+            AboveMaximumSpeedResistance = aboveMaximumSpeedResistance;
+            LowSpeedAssistTargetSpeed = lowSpeedAssistTargetSpeed;
+            LowSpeedAssistAcceleration = lowSpeedAssistAcceleration;
         }
-
-        public float DownhillAcceleration => 8f;
-        public float SurfaceSlowdown => _surfaceSlowdown;
-        public float LowSpeedAssistTargetSpeed => _lowSpeedAssistTargetSpeed;
-        public float LowSpeedAssistAcceleration => _lowSpeedAssistAcceleration;
-        public float BaseSoftMaximumSpeed => 20f;
-        public float AboveMaximumSpeedResistance => _aboveMaximumSpeedResistance;
-        public float MaximumSupportedSurfaceNormalLiftSpeed => 0f;
-        public float RunBodySpeedSanityGuardMetersPerSecond => 250f;
-        public float RunSteeringRangeCentimeters => 2.54f;
-        public float RunSteeringDeadzoneFraction => 0f;
-        public float RunSteeringResponsiveness => 100f;
-        public float FallbackDpi => 100f;
-        public float MinimumAcceptedDpi => 1f;
-        public float MaximumAcceptedDpi => 1000f;
-        public float MaximumTurnDegreesPerSecond => 90f;
-        public float RunAirSteeringMaximumTurnDegreesPerSecond => 30f;
-        public float MinimumSteerSpeed => 0.25f;
     }
 
     private sealed class FakeTime : ITime

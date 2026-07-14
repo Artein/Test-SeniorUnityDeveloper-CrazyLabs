@@ -26,7 +26,7 @@ These local implementation issues are ordered by dependency. They are tracer-bul
 - Keep this presentation-only. No gameplay system should consume the smoothed **Character Visual Anchor** pose.
 - Keep **Launch Target** as the physical truth. The follower samples its render pose and writes only the visual anchor pose.
 - Keep **CharacterPresenter** responsible for animation state and frame application. The visual follower must not set animator parameters.
-- Do not change **PhysicsRunSurfaceContextSource**, **RunSurfaceSteeringFrameSource**, run progress, run end, camera follow targets, Rigidbody settings, colliders, or physics materials in these issues.
+- Do not change the **Run Surface Frame Pipeline**, surface stability or steering policies, run progress, run end, camera follow targets, Rigidbody settings, colliders, or physics materials in these issues.
 - Do not add a new package, CharacterController, hidden containment, public gameplay API, or ScriptableObject config.
 - Run Unity compile before implementation tests in each AFK slice. Prefer EditMode tests for pure smoothing/controller behavior; use PlayMode tests for scene composition and VContainer wiring.
 - The HITL slice is a feel/tuning pass after deterministic behavior slices land.

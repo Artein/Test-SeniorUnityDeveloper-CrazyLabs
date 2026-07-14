@@ -44,34 +44,16 @@ namespace Game.Gameplay
             _maximumAcceptedDpi = maximumAcceptedDpi;
         }
 
-        internal void SetRunSteeringFrameStabilityForTests(
-            float normalSlewDegreesPerSecond,
-            float snapDegrees,
-            float ungroundedGraceSeconds,
-            float suspectNormalConfirmationSeconds)
+        internal void SetRunSupportAttachmentForTests(
+            float maximumAttachedSurfaceNormalLiftSpeed,
+            float sameSurfaceReattachmentSeparationMeters,
+            float minimumReattachmentNormalChangeDegrees,
+            float transitionConfirmationSeconds)
         {
-            _runSteeringFrameNormalSlewDegreesPerSecond = normalSlewDegreesPerSecond;
-            _runSteeringFrameSnapDegrees = snapDegrees;
-            _runSteeringFrameUngroundedGraceSeconds = ungroundedGraceSeconds;
-            _runSteeringFrameSuspectNormalConfirmationSeconds = suspectNormalConfirmationSeconds;
-        }
-
-        internal void SetLaunchLandingStabilizationForTests(
-            float stabilizationSeconds,
-            float maximumLiftSpeed)
-        {
-            _launchLandingStabilizationSeconds = stabilizationSeconds;
-            _launchLandingMaximumLiftSpeed = maximumLiftSpeed;
-        }
-
-        internal void SetRunBodySpeedSanityGuardForTests(float metersPerSecond)
-        {
-            _runBodySpeedSanityGuardMetersPerSecond = metersPerSecond;
-        }
-
-        internal void SetRunAirSteeringMaximumTurnDegreesPerSecondForTests(float degreesPerSecond)
-        {
-            _runAirSteeringMaximumTurnDegreesPerSecond = degreesPerSecond;
+            _runSupportMaximumAttachedSurfaceNormalLiftSpeed = maximumAttachedSurfaceNormalLiftSpeed;
+            _runSupportSameSurfaceReattachmentSeparationMeters = sameSurfaceReattachmentSeparationMeters;
+            _runSupportMinimumReattachmentNormalChangeDegrees = minimumReattachmentNormalChangeDegrees;
+            _runSupportAttachmentTransitionConfirmationSeconds = transitionConfirmationSeconds;
         }
     }
 }

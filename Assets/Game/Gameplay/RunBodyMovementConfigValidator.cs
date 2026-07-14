@@ -16,29 +16,49 @@ namespace Game.Gameplay
             var validityConfig = (IRunBodyMovementValidityConfig)config;
             var landingConfig = (IRunLaunchLandingStabilizationConfig)config;
             var steeringConfig = (IRunSteeringConfig)config;
-            var frameConfig = (IRunSteeringFrameConfig)config;
+            var stabilityConfig = (IRunSurfaceStabilityAuthoringConfig)config;
+            var attachmentConfig = (IRunSupportAttachmentAuthoringConfig)config;
+            var frameConfig = (IRunSteeringFrameAuthoringConfig)config;
 
             foreach (var error in ValidateSpeed(speedConfig))
+            {
                 yield return error;
+            }
 
             foreach (var error in ValidateMovementValidity(validityConfig))
+            {
                 yield return error;
+            }
 
             foreach (var error in ValidateLaunchLanding(landingConfig))
+            {
                 yield return error;
+            }
 
             foreach (var error in ValidateSteering(steeringConfig))
+            {
                 yield return error;
+            }
+
+            foreach (var error in ValidateSurfaceStability(stabilityConfig))
+            {
+                yield return error;
+            }
+
+            foreach (var error in ValidateSupportAttachment(attachmentConfig))
+            {
+                yield return error;
+            }
 
             foreach (var error in ValidateSteeringFrame(frameConfig))
+            {
                 yield return error;
+            }
 
             if (IsFinitePositive(speedConfig.BaseSoftMaximumSpeed)
                 && IsFinitePositive(validityConfig.RunBodySpeedSanityGuardMetersPerSecond)
                 && speedConfig.BaseSoftMaximumSpeed >= validityConfig.RunBodySpeedSanityGuardMetersPerSecond)
-            {
                 yield return "Run Body base soft maximum speed must be below the Run Body Speed Sanity Guard.";
-            }
         }
 
         private IEnumerable<string> ValidateSpeed(IRunBodySpeedConfig config)
@@ -97,7 +117,7 @@ namespace Game.Gameplay
             if (!IsFinitePositive(config.RunSteeringRangeCentimeters))
                 yield return $"{nameof(IRunSteeringConfig.RunSteeringRangeCentimeters)} must be a finite positive value.";
 
-            if (!IsFiniteInRange(config.RunSteeringDeadzoneFraction, 0f, 0.95f))
+            if (!IsFiniteInRange(config.RunSteeringDeadzoneFraction, minimum: 0f, maximum: 0.95f))
             {
                 yield return
                     $"{nameof(IRunSteeringConfig.RunSteeringDeadzoneFraction)} must be finite and between 0 and 0.95.";
@@ -133,43 +153,81 @@ namespace Game.Gameplay
             if (IsFinitePositive(config.MinimumAcceptedDpi)
                 && IsFinitePositive(config.MaximumAcceptedDpi)
                 && config.MinimumAcceptedDpi > config.MaximumAcceptedDpi)
-            {
                 yield return "Run Steering minimum accepted DPI must not exceed maximum accepted DPI.";
-            }
 
             if (IsFinitePositive(config.FallbackDpi)
                 && IsFinitePositive(config.MinimumAcceptedDpi)
                 && IsFinitePositive(config.MaximumAcceptedDpi)
                 && (config.FallbackDpi < config.MinimumAcceptedDpi || config.FallbackDpi > config.MaximumAcceptedDpi))
-            {
                 yield return "Run Steering fallback DPI must be within the accepted DPI range.";
+        }
+
+        private IEnumerable<string> ValidateSurfaceStability(IRunSurfaceStabilityAuthoringConfig config)
+        {
+            if (!IsFiniteNonNegative(config.SupportLossConfirmationSeconds))
+            {
+                yield return
+                    $"{nameof(IRunSurfaceStabilityAuthoringConfig.SupportLossConfirmationSeconds)} must be a finite non-negative value.";
+            }
+
+            if (!IsFiniteInRange(config.DiscontinuousNormalThresholdDegrees, minimum: 0f, maximum: 180f))
+            {
+                yield return
+                    $"{nameof(IRunSurfaceStabilityAuthoringConfig.DiscontinuousNormalThresholdDegrees)} must be finite and between 0 and 180 degrees.";
+            }
+
+            if (!IsFiniteNonNegative(config.DiscontinuousNormalConfirmationSeconds))
+            {
+                yield return
+                    $"{nameof(IRunSurfaceStabilityAuthoringConfig.DiscontinuousNormalConfirmationSeconds)} must be a finite non-negative value.";
+            }
+
+            if (!IsFiniteInRange(config.CandidateCoherenceDegrees, minimum: 0f, maximum: 180f))
+            {
+                yield return
+                    $"{nameof(IRunSurfaceStabilityAuthoringConfig.CandidateCoherenceDegrees)} must be finite and between 0 and 180 degrees.";
             }
         }
 
-        private IEnumerable<string> ValidateSteeringFrame(IRunSteeringFrameConfig config)
+        private IEnumerable<string> ValidateSteeringFrame(IRunSteeringFrameAuthoringConfig config)
         {
-            if (!IsFiniteNonNegative(config.RunSteeringFrameNormalSlewDegreesPerSecond))
+            if (!IsFiniteNonNegative(config.NormalSlewDegreesPerSecond))
             {
                 yield return
-                    $"{nameof(IRunSteeringFrameConfig.RunSteeringFrameNormalSlewDegreesPerSecond)} must be a finite non-negative value.";
+                    $"{nameof(IRunSteeringFrameAuthoringConfig.NormalSlewDegreesPerSecond)} must be a finite non-negative value.";
             }
 
-            if (!IsFiniteInRange(config.RunSteeringFrameSnapDegrees, 0f, 180f))
+            if (!IsFiniteNonNegative(config.AirborneUpRetentionSeconds))
             {
                 yield return
-                    $"{nameof(IRunSteeringFrameConfig.RunSteeringFrameSnapDegrees)} must be finite and between 0 and 180 degrees.";
+                    $"{nameof(IRunSteeringFrameAuthoringConfig.AirborneUpRetentionSeconds)} must be a finite non-negative value.";
+            }
+        }
+
+        private IEnumerable<string> ValidateSupportAttachment(IRunSupportAttachmentAuthoringConfig config)
+        {
+            if (!IsFiniteNonNegative(config.MaximumAttachedSurfaceNormalLiftSpeed))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.MaximumAttachedSurfaceNormalLiftSpeed)} must be a finite non-negative value.";
             }
 
-            if (!IsFiniteNonNegative(config.RunSteeringFrameUngroundedGraceSeconds))
+            if (!IsFiniteNonNegative(config.SameSurfaceReattachmentSeparationMeters))
             {
                 yield return
-                    $"{nameof(IRunSteeringFrameConfig.RunSteeringFrameUngroundedGraceSeconds)} must be a finite non-negative value.";
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.SameSurfaceReattachmentSeparationMeters)} must be a finite non-negative value.";
             }
 
-            if (!IsFiniteNonNegative(config.RunSteeringFrameSuspectNormalConfirmationSeconds))
+            if (!IsFiniteInRange(config.MinimumReattachmentNormalChangeDegrees, minimum: 0f, maximum: 180f))
             {
                 yield return
-                    $"{nameof(IRunSteeringFrameConfig.RunSteeringFrameSuspectNormalConfirmationSeconds)} must be a finite non-negative value.";
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.MinimumReattachmentNormalChangeDegrees)} must be finite and between 0 and 180.";
+            }
+
+            if (!IsFiniteNonNegative(config.TransitionConfirmationSeconds))
+            {
+                yield return
+                    $"{nameof(IRunSupportAttachmentAuthoringConfig.TransitionConfirmationSeconds)} must be a finite non-negative value.";
             }
         }
 

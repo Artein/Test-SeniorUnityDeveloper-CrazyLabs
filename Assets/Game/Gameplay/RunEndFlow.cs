@@ -26,7 +26,12 @@ namespace Game.Gameplay
         bool TryAcknowledge();
     }
 
-    internal sealed class RunEndFlow : IInitializable, IFixedTickable, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier,
+    internal interface IRunEndFixedStep
+    {
+        void ResolveRunEnd();
+    }
+
+    internal sealed class RunEndFlow : IInitializable, IRunEndFixedStep, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier,
         IRunResultAcknowledgeCommand
     {
         private readonly IGameplayStateService _gameplayStateService;
@@ -105,7 +110,7 @@ namespace Game.Gameplay
             _isInitialized = true;
         }
 
-        void IFixedTickable.FixedTick()
+        void IRunEndFixedStep.ResolveRunEnd()
         {
             if (_isDisposed)
                 return;
@@ -288,13 +293,14 @@ namespace Game.Gameplay
         {
             var finalSpeed = finalVelocity.magnitude;
 
-            var rewardBreakdown = _runRewardBreakdownBuilder.Build(new RunRewardContributorContext(
-                candidate.Reason,
-                _elapsedSinceLaunch,
-                distanceTravelled,
-                finalPosition,
-                finalSpeed,
-                _runAirTimeSource.CurrentRunAirTimeSeconds));
+            var rewardBreakdown = _runRewardBreakdownBuilder.Build(
+                new RunRewardContributorContext(
+                    candidate.Reason,
+                    _elapsedSinceLaunch,
+                    distanceTravelled,
+                    finalPosition,
+                    finalSpeed,
+                    _runAirTimeSource.CurrentRunAirTimeSeconds));
 
             return new RunResult(
                 candidate.Reason,
