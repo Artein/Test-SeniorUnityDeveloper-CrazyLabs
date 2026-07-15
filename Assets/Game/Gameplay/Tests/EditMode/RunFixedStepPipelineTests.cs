@@ -26,13 +26,43 @@ public sealed class RunFixedStepPipelineTests
             Is.EqualTo(
                 new[]
                 {
+                    "Run End",
                     "Progress",
                     "Surface",
                     "Movement",
                     "Air Time",
-                    "Run End",
                     "Lost Momentum"
                 }));
+    }
+
+    [Test]
+    public void FixedTick_RunEndBlocks_ExecutesNoRemainingRunSteps()
+    {
+        var steps = new RecordingRunFixedSteps
+        {
+            RunEndResult = RunEndFixedStepResult.BlockRemainingRunSteps
+        };
+
+        var pipeline = new RunFixedStepPipeline(steps, steps, steps, steps, steps, steps);
+
+        ((IFixedTickable)pipeline).FixedTick();
+
+        Assert.That(steps.Calls, Is.EqualTo(new[] { "Run End" }));
+        Assert.That(steps.MovementWriteCount, Is.Zero);
+    }
+
+    [Test]
+    public void FixedTick_ConsecutiveCatchUpTicksBecomeBlocked_PerformsNoSecondMovementWrite()
+    {
+        var steps = new RecordingRunFixedSteps();
+        var pipeline = new RunFixedStepPipeline(steps, steps, steps, steps, steps, steps);
+
+        ((IFixedTickable)pipeline).FixedTick();
+        steps.RunEndResult = RunEndFixedStepResult.BlockRemainingRunSteps;
+        ((IFixedTickable)pipeline).FixedTick();
+
+        Assert.That(steps.MovementWriteCount, Is.EqualTo(expected: 1));
+        Assert.That(steps.Calls[^1], Is.EqualTo(expected: "Run End"));
     }
 
     private sealed class RecordingRunFixedSteps :
@@ -46,35 +76,39 @@ public sealed class RunFixedStepPipelineTests
         private readonly List<string> _calls = new();
 
         public IReadOnlyList<string> Calls => _calls;
+        public int MovementWriteCount { get; private set; }
+        public RunEndFixedStepResult RunEndResult { get; set; }
 
-        public void SampleProgress()
+        public void DetectLostMomentum()
         {
-            _calls.Add("Progress");
-        }
-
-        public void UpdateSurfaceFrame()
-        {
-            _calls.Add("Surface");
-        }
-
-        public void UpdateMovement()
-        {
-            _calls.Add("Movement");
+            _calls.Add(item: "Lost Momentum");
         }
 
         public void UpdateAirTime()
         {
-            _calls.Add("Air Time");
+            _calls.Add(item: "Air Time");
         }
 
-        public void ResolveRunEnd()
+        public void UpdateMovement()
         {
-            _calls.Add("Run End");
+            _calls.Add(item: "Movement");
+            MovementWriteCount += 1;
         }
 
-        public void DetectLostMomentum()
+        public RunEndFixedStepResult ResolveRunEnd()
         {
-            _calls.Add("Lost Momentum");
+            _calls.Add(item: "Run End");
+            return RunEndResult;
+        }
+
+        public void SampleProgress()
+        {
+            _calls.Add(item: "Progress");
+        }
+
+        public void UpdateSurfaceFrame()
+        {
+            _calls.Add(item: "Surface");
         }
     }
 }

@@ -1,7 +1,6 @@
 using System.Collections;
 using Game.Gameplay;
 using NUnit.Framework;
-using UnityEngine;
 using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
@@ -14,7 +13,8 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests : BaseGa
     private readonly float _thinObstacleThickness = 0.01f;
 
     [UnityTest]
-    public IEnumerator given_MaxUpgradedSpeedProductionRunBody_when_CrossingAdversarialThinObstacle_then_ObstacleHitEndsRun()
+    public IEnumerator
+        given_MaxUpgradedSpeedProductionRunBody_when_CrossingObliqueThinObstacle_then_NoMovementWriteAfterContactAndCollisionSpeedEndsRun()
     {
         yield return RunObstacleScenario();
     }

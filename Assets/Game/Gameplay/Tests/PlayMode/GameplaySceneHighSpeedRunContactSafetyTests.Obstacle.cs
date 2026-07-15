@@ -37,6 +37,13 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
                 observation.CollisionRelativeVelocity = notification.RelativeVelocity;
                 observation.CollisionClassified = context.ContactClassifier.TryClassify(notification, out _);
 
+                if (observation.CollisionClassified && !observation.HasClassifiedCollisionSnapshot)
+                {
+                    observation.HasClassifiedCollisionSnapshot = true;
+                    observation.CollisionBodyVelocity = context.Body.linearVelocity;
+                    observation.MovementWriteCountAtClassifiedCollision = context.MovementTarget.SuccessfulTargetWriteCountForTests;
+                }
+
                 for (var contactIndex = 0; contactIndex < notification.ContactCount; contactIndex += 1)
                 {
                     var contact = notification.GetContact(contactIndex);
@@ -74,8 +81,19 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
 
             Assert.That(observation.CollisionNotificationCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
             Assert.That(observation.CollisionContactPointCount, Is.GreaterThanOrEqualTo(expected: 1), diagnostic);
+            Assert.That(observation.HasClassifiedCollisionSnapshot, Is.True, diagnostic);
             Assert.That(observation.Results, Has.Count.EqualTo(expected: 1), diagnostic);
             Assert.That(observation.Results[index: 0].Reason, Is.EqualTo(RunEndReason.ObstacleHit), diagnostic);
+
+            Assert.That(
+                context.MovementTarget.SuccessfulTargetWriteCountForTests,
+                Is.EqualTo(observation.MovementWriteCountAtClassifiedCollision),
+                diagnostic);
+
+            Assert.That(
+                observation.Results[index: 0].FinalSpeed,
+                Is.EqualTo(observation.CollisionBodyVelocity.magnitude).Within(amount: 0.001f),
+                diagnostic);
 
             Assert.That(
                 context.StateService.CurrentStateId,
@@ -110,7 +128,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
             Quaternion.identity);
 
         var obstacle = obstacleObject.AddComponent<BoxCollider>();
-        obstacle.size = new Vector3(x: 4f, y: 4f, _thinObstacleThickness);
+        obstacle.size = new Vector3(x: 0.05f, y: 4f, _thinObstacleThickness);
         obstacle.isTrigger = false;
 
         var contact = obstacleObject.AddComponent<RunContact>();
@@ -129,7 +147,8 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         var speed = _supportedSpeedMetersPerSecond;
         var fixedDeltaTime = Time.fixedDeltaTime;
         var displacement = speed * fixedDeltaTime;
-        var crossingDirection = obstacle.transform.forward.normalized;
+        var obstacleNormal = GetThinnestWorldAxis(obstacle);
+        var crossingDirection = Quaternion.AngleAxis(angle: 20f, Vector3.up) * obstacleNormal;
         var bodyRadius = GetSphereWorldRadius(context.Sphere);
         var obstacleThickness = GetProjectedBoxThickness(obstacle, crossingDirection);
         var overlapSpan = bodyRadius * 2f + obstacleThickness;
@@ -187,10 +206,17 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         Assert.That(obstacle.isTrigger, Is.False);
         Assert.That(obstacle.GetComponent<RunContact>().Category, Is.EqualTo(RunContactCategory.Obstacle));
 
+        var obstacleNormal = GetThinnestWorldAxis(obstacle);
+
+        Assert.That(
+            Vector3.Angle(phase.CrossingDirection, obstacleNormal),
+            Is.EqualTo(expected: 20f).Within(amount: 0.001f),
+            message: "The contact must be oblique so the solver changes body speed before result capture.");
+
         var normalApproachSpeed = Mathf.Abs(
             Vector3.Dot(
                 phase.CrossingDirection * phase.SpeedMetersPerSecond,
-                phase.CrossingDirection));
+                obstacleNormal));
 
         Assert.That(
             normalApproachSpeed,
@@ -224,6 +250,9 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
                + $" | collisionNotifications={observation.CollisionNotificationCount}"
                + $" | contactPoints={observation.CollisionContactPointCount}"
                + $" | relativeVelocity={FormatVector(observation.CollisionRelativeVelocity)}"
+               + $" | collisionBodyVelocity={FormatVector(observation.CollisionBodyVelocity)}"
+               + $" | writesAtCollision={observation.MovementWriteCountAtClassifiedCollision}"
+               + $" | writesAfterObservation={context.MovementTarget.SuccessfulTargetWriteCountForTests}"
                + $" | maxNormalImpactSpeed={observation.MaximumNormalImpactSpeed:F4}m/s"
                + $" | classifierAccepted={observation.CollisionClassified}"
                + $" | obstacleImpactThreshold={context.RunEndConfig.ObstacleImpactSpeedThreshold:F4}m/s"

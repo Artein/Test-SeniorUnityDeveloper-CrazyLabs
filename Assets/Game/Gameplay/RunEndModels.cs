@@ -22,6 +22,38 @@ namespace Game.Gameplay
         }
     }
 
+    internal enum RunEndFixedStepResult
+    {
+        ContinueRunSteps = 0,
+        BlockRemainingRunSteps = 1
+    }
+
+    internal readonly struct RunEndObservation
+    {
+        public RunEndCandidate Candidate { get; }
+        public float ElapsedTime { get; }
+        public Vector3 Position { get; }
+        public Vector3 LinearVelocity { get; }
+        public RunProgressSample ProgressSample { get; }
+        public float AirTimeSeconds { get; }
+
+        public RunEndObservation(
+            RunEndCandidate candidate,
+            float elapsedTime,
+            Vector3 position,
+            Vector3 linearVelocity,
+            RunProgressSample progressSample,
+            float airTimeSeconds)
+        {
+            Candidate = candidate;
+            ElapsedTime = Mathf.Max(a: 0f, elapsedTime);
+            Position = position;
+            LinearVelocity = linearVelocity;
+            ProgressSample = progressSample;
+            AirTimeSeconds = Mathf.Max(a: 0f, airTimeSeconds);
+        }
+    }
+
     public readonly struct RunResult
     {
         public RunEndReason Reason { get; }
@@ -43,10 +75,10 @@ namespace Game.Gameplay
         {
             Reason = reason;
             IsSuccess = reason == RunEndReason.Finished;
-            ElapsedTime = Mathf.Max(0f, elapsedTime);
-            DistanceTravelled = Mathf.Max(0f, distanceTravelled);
+            ElapsedTime = Mathf.Max(a: 0f, elapsedTime);
+            DistanceTravelled = Mathf.Max(a: 0f, distanceTravelled);
             FinalPosition = finalPosition;
-            FinalSpeed = Mathf.Max(0f, finalSpeed);
+            FinalSpeed = Mathf.Max(a: 0f, finalSpeed);
             RewardBreakdown = rewardBreakdown ?? throw new ArgumentNullException(nameof(rewardBreakdown));
         }
 

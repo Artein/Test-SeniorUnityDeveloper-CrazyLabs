@@ -5,12 +5,12 @@ namespace Game.Gameplay
 {
     internal sealed class RunFixedStepPipeline : IFixedTickable
     {
-        private readonly IRunProgressFixedStep _progressStep;
-        private readonly IRunSurfaceFrameFixedStep _surfaceFrameStep;
-        private readonly IRunBodyMovementFixedStep _movementStep;
         private readonly IRunAirTimeFixedStep _airTimeStep;
-        private readonly IRunEndFixedStep _runEndStep;
         private readonly ILostMomentumFixedStep _lostMomentumStep;
+        private readonly IRunBodyMovementFixedStep _movementStep;
+        private readonly IRunProgressFixedStep _progressStep;
+        private readonly IRunEndFixedStep _runEndStep;
+        private readonly IRunSurfaceFrameFixedStep _surfaceFrameStep;
 
         public RunFixedStepPipeline(
             IRunProgressFixedStep progressStep,
@@ -30,11 +30,13 @@ namespace Game.Gameplay
 
         void IFixedTickable.FixedTick()
         {
+            if (_runEndStep.ResolveRunEnd() == RunEndFixedStepResult.BlockRemainingRunSteps)
+                return;
+
             _progressStep.SampleProgress();
             _surfaceFrameStep.UpdateSurfaceFrame();
             _movementStep.UpdateMovement();
             _airTimeStep.UpdateAirTime();
-            _runEndStep.ResolveRunEnd();
             _lostMomentumStep.DetectLostMomentum();
         }
     }
