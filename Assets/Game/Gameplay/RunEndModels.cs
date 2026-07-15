@@ -46,11 +46,11 @@ namespace Game.Gameplay
             float airTimeSeconds)
         {
             Candidate = candidate;
-            ElapsedTime = Mathf.Max(0f, elapsedTime);
+            ElapsedTime = Mathf.Max(a: 0f, elapsedTime);
             Position = position;
             LinearVelocity = linearVelocity;
             ProgressSample = progressSample;
-            AirTimeSeconds = Mathf.Max(0f, airTimeSeconds);
+            AirTimeSeconds = Mathf.Max(a: 0f, airTimeSeconds);
         }
     }
 
@@ -75,10 +75,10 @@ namespace Game.Gameplay
         {
             Reason = reason;
             IsSuccess = reason == RunEndReason.Finished;
-            ElapsedTime = Mathf.Max(0f, elapsedTime);
-            DistanceTravelled = Mathf.Max(0f, distanceTravelled);
+            ElapsedTime = Mathf.Max(a: 0f, elapsedTime);
+            DistanceTravelled = Mathf.Max(a: 0f, distanceTravelled);
             FinalPosition = finalPosition;
-            FinalSpeed = Mathf.Max(0f, finalSpeed);
+            FinalSpeed = Mathf.Max(a: 0f, finalSpeed);
             RewardBreakdown = rewardBreakdown ?? throw new ArgumentNullException(nameof(rewardBreakdown));
         }
 

@@ -148,7 +148,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
         var fixedDeltaTime = Time.fixedDeltaTime;
         var displacement = speed * fixedDeltaTime;
         var obstacleNormal = GetThinnestWorldAxis(obstacle);
-        var crossingDirection = Quaternion.AngleAxis(20f, Vector3.up) * obstacleNormal;
+        var crossingDirection = Quaternion.AngleAxis(angle: 20f, Vector3.up) * obstacleNormal;
         var bodyRadius = GetSphereWorldRadius(context.Sphere);
         var obstacleThickness = GetProjectedBoxThickness(obstacle, crossingDirection);
         var overlapSpan = bodyRadius * 2f + obstacleThickness;
@@ -210,7 +210,7 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
 
         Assert.That(
             Vector3.Angle(phase.CrossingDirection, obstacleNormal),
-            Is.EqualTo(20f).Within(amount: 0.001f),
+            Is.EqualTo(expected: 20f).Within(amount: 0.001f),
             message: "The contact must be oblique so the solver changes body speed before result capture.");
 
         var normalApproachSpeed = Mathf.Abs(

@@ -34,30 +34,30 @@ namespace Game.Gameplay
     internal sealed class RunEndFlow : IInitializable, IRunEndFixedStep, IDisposable, IRunEndCandidateReceiver, IRunResultNotifier,
         IRunResultAcknowledgeCommand
     {
+        private readonly ITime _clock;
+        private readonly IRunEndConfig _config;
+        private readonly IRunContactClassifier _contactClassifier;
+        private readonly IRigidbodyContactNotifier _contactNotifier;
         private readonly IGameplayStateService _gameplayStateService;
         private readonly ISlingshotLaunchAppliedNotifier _launchAppliedNotifier;
-        private readonly IRigidbodyContactNotifier _contactNotifier;
-        private readonly IRunContactClassifier _contactClassifier;
-        private readonly IRunProgressService _progressService;
         private readonly IRunMotionSource _motionSource;
-        private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
-        private readonly RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
-        private readonly IRunAirTimeSource _runAirTimeSource;
-        private readonly IRunEndConfig _config;
-        private readonly ITime _clock;
-        private readonly GameplayStateId _restartStateId;
-        private readonly GameplayStateId _runningStateId;
-        private readonly GameplayStateId _runEndedStateId;
         private readonly List<RunEndObservation> _pendingObservations = new();
+        private readonly IRunProgressService _progressService;
+        private readonly GameplayStateId _restartStateId;
+        private readonly IRunAirTimeSource _runAirTimeSource;
+        private readonly IRunCurrencyAccumulator _runCurrencyAccumulator;
+        private readonly GameplayStateId _runEndedStateId;
+        private readonly GameplayStateId _runningStateId;
+        private readonly RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+        private float _elapsedSinceLaunch;
+        private bool _hasAcceptedResult;
+        private bool _hasLaunchApplied;
+        private bool _isAwaitingAcknowledgement;
+        private bool _isDisposed;
 
         private bool _isInitialized;
-        private bool _isDisposed;
-        private bool _hasLaunchApplied;
-        private bool _hasAcceptedResult;
-        private bool _isAwaitingAcknowledgement;
-        private float _elapsedSinceLaunch;
-        private float _runEndedElapsed;
         private RunResult? _latchedResult;
+        private float _runEndedElapsed;
 
         public event Action<RunResult> RunResultAccepted;
 
@@ -111,35 +111,6 @@ namespace Game.Gameplay
             _isInitialized = true;
         }
 
-        RunEndFixedStepResult IRunEndFixedStep.ResolveRunEnd()
-        {
-            if (_isDisposed)
-                return RunEndFixedStepResult.ContinueRunSteps;
-
-            var fixedDeltaTime = Math.Max(0f, _clock.FixedDeltaTime);
-
-            if (_isAwaitingAcknowledgement)
-            {
-                TickRunEndedAcknowledgementGuard(fixedDeltaTime);
-                return RunEndFixedStepResult.BlockRemainingRunSteps;
-            }
-
-            if (!_hasLaunchApplied || !_gameplayStateService.IsCurrent(_runningStateId))
-            {
-                ClearPendingTerminalState();
-                return RunEndFixedStepResult.ContinueRunSteps;
-            }
-
-            if (_latchedResult.HasValue || _pendingObservations.Count > 0)
-            {
-                ResolvePendingObservations();
-                return RunEndFixedStepResult.BlockRemainingRunSteps;
-            }
-
-            _elapsedSinceLaunch += fixedDeltaTime;
-            return RunEndFixedStepResult.ContinueRunSteps;
-        }
-
         void IDisposable.Dispose()
         {
             if (_isDisposed)
@@ -147,13 +118,10 @@ namespace Game.Gameplay
 
             _isDisposed = true;
 
-            if (_isInitialized)
-            {
-                _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
-                _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
-                _contactNotifier.CollisionEntered -= OnCollisionEntered;
-                _contactNotifier.TriggerEntered -= OnTriggerEntered;
-            }
+            _launchAppliedNotifier.LaunchApplied -= OnSlingshotLaunchApplied;
+            _gameplayStateService.GameplayStateChanged -= OnGameplayStateChanged;
+            _contactNotifier.CollisionEntered -= OnCollisionEntered;
+            _contactNotifier.TriggerEntered -= OnTriggerEntered;
 
             ResetRunEndState();
         }
@@ -177,6 +145,35 @@ namespace Game.Gameplay
                     _motionSource.LinearVelocity,
                     _progressService.CurrentSample,
                     _runAirTimeSource.CurrentRunAirTimeSeconds));
+        }
+
+        RunEndFixedStepResult IRunEndFixedStep.ResolveRunEnd()
+        {
+            if (_isDisposed)
+                return RunEndFixedStepResult.ContinueRunSteps;
+
+            var fixedDeltaTime = Math.Max(val1: 0f, _clock.FixedDeltaTime);
+
+            if (_isAwaitingAcknowledgement)
+            {
+                TickRunEndedAcknowledgementGuard(fixedDeltaTime);
+                return RunEndFixedStepResult.BlockRemainingRunSteps;
+            }
+
+            if (!_hasLaunchApplied || !_gameplayStateService.IsCurrent(_runningStateId))
+            {
+                ClearPendingTerminalState();
+                return RunEndFixedStepResult.ContinueRunSteps;
+            }
+
+            if (_latchedResult.HasValue || _pendingObservations.Count > 0)
+            {
+                ResolvePendingObservations();
+                return RunEndFixedStepResult.BlockRemainingRunSteps;
+            }
+
+            _elapsedSinceLaunch += fixedDeltaTime;
+            return RunEndFixedStepResult.ContinueRunSteps;
         }
 
         bool IRunResultAcknowledgeCommand.TryAcknowledge()
@@ -253,7 +250,7 @@ namespace Game.Gameplay
 
         private RunEndObservation GetHighestPriorityObservation()
         {
-            var bestObservation = _pendingObservations[0];
+            var bestObservation = _pendingObservations[index: 0];
             var bestPriority = GetPriority(bestObservation.Candidate.Reason);
 
             for (var observationIndex = 1; observationIndex < _pendingObservations.Count; observationIndex += 1)

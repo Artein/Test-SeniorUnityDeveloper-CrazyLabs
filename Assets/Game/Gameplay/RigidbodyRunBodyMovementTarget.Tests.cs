@@ -6,9 +6,7 @@ namespace Game.Gameplay
 {
     public sealed partial class RigidbodyRunBodyMovementTarget
     {
-        private int _successfulTargetWriteCountForTests;
-
-        internal int SuccessfulTargetWriteCountForTests => _successfulTargetWriteCountForTests;
+        internal int SuccessfulTargetWriteCountForTests { get; private set; }
 
         internal void SetRigidbodyForTests(Rigidbody body)
         {
@@ -17,7 +15,7 @@ namespace Game.Gameplay
 
         partial void RecordSuccessfulTargetWriteForTests()
         {
-            _successfulTargetWriteCountForTests += 1;
+            SuccessfulTargetWriteCountForTests += 1;
         }
     }
 }

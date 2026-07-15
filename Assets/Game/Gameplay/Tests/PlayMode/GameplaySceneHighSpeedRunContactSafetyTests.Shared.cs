@@ -241,11 +241,11 @@ public sealed partial class GameplaySceneHighSpeedRunContactSafetyTests
 
     private sealed class ScenarioObservation
     {
+        public Vector3 CollisionBodyVelocity { get; set; }
         public bool CollisionClassified { get; set; }
         public int CollisionContactPointCount { get; set; }
         public int CollisionNotificationCount { get; set; }
         public Vector3 CollisionRelativeVelocity { get; set; }
-        public Vector3 CollisionBodyVelocity { get; set; }
         public bool HasClassifiedCollisionSnapshot { get; set; }
         public float MaximumNormalImpactSpeed { get; set; }
         public int MovementWriteCountAtClassifiedCollision { get; set; }

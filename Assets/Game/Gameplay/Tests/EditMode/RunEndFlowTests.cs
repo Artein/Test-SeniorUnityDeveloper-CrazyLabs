@@ -3,43 +3,44 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Game.Foundation.Time;
 using Game.Gameplay;
-using Game.Gameplay.GameplayState;
 using Game.Gameplay.Economy;
+using Game.Gameplay.GameplayState;
 using Game.Gameplay.Slingshot;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer.Unity;
+using Object = UnityEngine.Object;
 
 // ReSharper disable once CheckNamespace
 public sealed partial class RunEndFlowTests
 {
-    private readonly List<UnityEngine.Object> _objects = new();
-    private GameplayStateId _runPreparationStateId;
-    private GameplayStateId _runningStateId;
-    private GameplayStateId _runEndedStateId;
-    private FakeGameplayStateService _stateService;
-    private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
-    private FakeContactNotifier _contactNotifier;
-    private FakeRunContactClassifier _contactClassifier;
-    private FakeRunProgressService _progressService;
-    private FakeRunMotionSource _motionSource;
-    private RunCurrencyAccumulator _runCurrencyAccumulator;
-    private RunRewardSourceCatalog _runRewardSourceCatalog;
-    private RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+    private readonly List<Object> _objects = new();
     private CapturingRunRewardContributor _capturingRewardContributor;
-    private FakeRunAirTimeSource _runAirTimeSource;
-    private FakeRunEndConfig _config;
     private FakeTime _clock;
-    private RunEndFlow _flow;
     private CurrencyDefinition _coins;
+    private FakeRunEndConfig _config;
+    private FakeRunContactClassifier _contactClassifier;
+    private FakeContactNotifier _contactNotifier;
+    private RunEndFlow _flow;
+    private FakeSlingshotLaunchAppliedNotifier _launchAppliedNotifier;
+    private FakeRunMotionSource _motionSource;
+    private FakeRunProgressService _progressService;
+    private FakeRunAirTimeSource _runAirTimeSource;
+    private RunCurrencyAccumulator _runCurrencyAccumulator;
+    private GameplayStateId _runEndedStateId;
+    private GameplayStateId _runningStateId;
+    private GameplayStateId _runPreparationStateId;
+    private RunRewardBreakdownBuilder _runRewardBreakdownBuilder;
+    private RunRewardSourceCatalog _runRewardSourceCatalog;
+    private FakeGameplayStateService _stateService;
 
     [SetUp]
     public void OnSetUp()
     {
-        _runPreparationStateId = CreateStateId("Run Preparation");
-        _runningStateId = CreateStateId("Running");
-        _runEndedStateId = CreateStateId("Run Ended");
+        _runPreparationStateId = CreateStateId(stateName: "Run Preparation");
+        _runningStateId = CreateStateId(stateName: "Running");
+        _runEndedStateId = CreateStateId(stateName: "Run Ended");
         _stateService = new FakeGameplayStateService(_runPreparationStateId);
         _launchAppliedNotifier = new FakeSlingshotLaunchAppliedNotifier();
         _contactNotifier = new FakeContactNotifier();
@@ -55,8 +56,8 @@ public sealed partial class RunEndFlowTests
 
         _motionSource = new FakeRunMotionSource
         {
-            Position = new Vector3(1f, 2f, 3f),
-            LinearVelocity = new Vector3(0f, 0f, 4f)
+            Position = new Vector3(x: 1f, y: 2f, z: 3f),
+            LinearVelocity = new Vector3(x: 0f, y: 0f, z: 4f)
         };
 
         _runCurrencyAccumulator = new RunCurrencyAccumulator();
@@ -73,7 +74,7 @@ public sealed partial class RunEndFlowTests
         _runAirTimeSource = new FakeRunAirTimeSource();
         _config = new FakeRunEndConfig { RunEndedAcknowledgeGuardDuration = 0.2f };
         _clock = new FakeTime { FixedDeltaTime = 0.1f };
-        _coins = CreateCurrencyDefinition("Coins");
+        _coins = CreateCurrencyDefinition(resourceName: "Coins");
         _flow = CreateFlow();
         ((IInitializable)_flow).Initialize();
     }
@@ -85,7 +86,7 @@ public sealed partial class RunEndFlowTests
 
         foreach (var unityObject in _objects)
         {
-            UnityEngine.Object.DestroyImmediate(unityObject);
+            Object.DestroyImmediate(unityObject);
         }
 
         _objects.Clear();
@@ -118,7 +119,7 @@ public sealed partial class RunEndFlowTests
     public void FixedTick_RunEndedGuardElapsedWithoutAcknowledge_StaysRunEnded()
     {
         ActivateRun();
-        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+        LogAssert.Expect(LogType.Log, new Regex(pattern: "Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
         ((IRunEndFixedStep)_flow).ResolveRunEnd();
@@ -134,7 +135,7 @@ public sealed partial class RunEndFlowTests
     public void TryAcknowledge_BeforeGuardElapsed_ReturnsFalseAndStaysRunEnded()
     {
         ActivateRun();
-        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+        LogAssert.Expect(LogType.Log, new Regex(pattern: "Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
         ((IRunEndFixedStep)_flow).ResolveRunEnd();
@@ -150,7 +151,7 @@ public sealed partial class RunEndFlowTests
     public void TryAcknowledge_AfterGuardElapsed_TransitionsBackToRunPreparation()
     {
         ActivateRun();
-        LogAssert.Expect(LogType.Log, new Regex("Run Result: Reason=OutOfBounds"));
+        LogAssert.Expect(LogType.Log, new Regex(pattern: "Run Result: Reason=OutOfBounds"));
 
         ((IRunEndCandidateReceiver)_flow).SubmitCandidate(new RunEndCandidate(RunEndReason.OutOfBounds));
         ((IRunEndFixedStep)_flow).ResolveRunEnd();
@@ -219,10 +220,10 @@ public sealed partial class RunEndFlowTests
     private SlingshotLaunchAppliedEvent CreateLaunchAppliedEvent()
     {
         var request = new SlingshotLaunchRequest(
-            1f,
-            1f,
-            0f,
-            0f,
+            pullStrength: 1f,
+            pullDistance: 1f,
+            pullOffset: 0f,
+            normalizedLateralPull: 0f,
             Vector3.zero,
             Vector3.forward,
             Vector3.up);
@@ -239,9 +240,9 @@ public sealed partial class RunEndFlowTests
         public GameplayStateId CurrentStateId { get; private set; }
         public List<GameplayStateId> RequestedStateIds { get; } = new();
         public bool TryTransitionResult { get; set; } = true;
+        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public event Action<GameplayStateId, GameplayStateId> GameplayStateChanging;
-        public event Action<GameplayStateId, GameplayStateId> GameplayStateChanged;
 
         public FakeGameplayStateService(GameplayStateId currentStateId)
         {
@@ -314,11 +315,7 @@ public sealed partial class RunEndFlowTests
 
     private sealed class FakeRunProgressService : IRunProgressService
     {
-        public bool HasValidSnapshot { get; set; }
-        public string SnapshotError { get; set; } = string.Empty;
-        public RunProgressFrameSnapshot Snapshot { get; set; }
         public float CurrentForwardProgress { get; set; }
-        public float MaximumForwardProgress { get; set; }
 
         public RunProgressSample CurrentSample => new(
             HasValidSnapshot,
@@ -327,7 +324,12 @@ public sealed partial class RunEndFlowTests
             CurrentForwardProgress,
             MaximumForwardProgress);
 
+        public bool HasValidSnapshot { get; set; }
+        public float MaximumForwardProgress { get; set; }
+
         public int SamplePositionCallCount { get; private set; }
+        public RunProgressFrameSnapshot Snapshot { get; set; }
+        public string SnapshotError { get; set; } = string.Empty;
 
         public bool TryBeginRun(Vector3 origin, out string error)
         {
@@ -352,8 +354,8 @@ public sealed partial class RunEndFlowTests
 
     private sealed class FakeRunMotionSource : IRunMotionSource
     {
-        public Vector3 Position { get; set; }
         public Vector3 LinearVelocity { get; set; }
+        public Vector3 Position { get; set; }
     }
 
     private sealed class FakeRunAirTimeSource : IRunAirTimeSource
@@ -374,11 +376,11 @@ public sealed partial class RunEndFlowTests
 
     private sealed class FakeRunEndConfig : IRunEndConfig
     {
-        public float ObstacleImpactSpeedThreshold { get; set; }
-        public float LostMomentumLaunchGraceDuration { get; set; }
         public float LostMomentumDuration { get; set; }
+        public float LostMomentumLaunchGraceDuration { get; set; }
         public float LostMomentumPlanarSpeedThreshold { get; set; }
         public float LostMomentumProgressThreshold { get; set; }
+        public float ObstacleImpactSpeedThreshold { get; set; }
         public float RunEndedAcknowledgeGuardDuration { get; set; }
     }
 

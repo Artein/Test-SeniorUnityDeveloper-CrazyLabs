@@ -61,8 +61,8 @@ public sealed class RunFixedStepPipelineTests
         steps.RunEndResult = RunEndFixedStepResult.BlockRemainingRunSteps;
         ((IFixedTickable)pipeline).FixedTick();
 
-        Assert.That(steps.MovementWriteCount, Is.EqualTo(1));
-        Assert.That(steps.Calls[^1], Is.EqualTo("Run End"));
+        Assert.That(steps.MovementWriteCount, Is.EqualTo(expected: 1));
+        Assert.That(steps.Calls[^1], Is.EqualTo(expected: "Run End"));
     }
 
     private sealed class RecordingRunFixedSteps :
@@ -79,36 +79,36 @@ public sealed class RunFixedStepPipelineTests
         public int MovementWriteCount { get; private set; }
         public RunEndFixedStepResult RunEndResult { get; set; }
 
-        public void SampleProgress()
+        public void DetectLostMomentum()
         {
-            _calls.Add("Progress");
-        }
-
-        public void UpdateSurfaceFrame()
-        {
-            _calls.Add("Surface");
-        }
-
-        public void UpdateMovement()
-        {
-            _calls.Add("Movement");
-            MovementWriteCount += 1;
+            _calls.Add(item: "Lost Momentum");
         }
 
         public void UpdateAirTime()
         {
-            _calls.Add("Air Time");
+            _calls.Add(item: "Air Time");
+        }
+
+        public void UpdateMovement()
+        {
+            _calls.Add(item: "Movement");
+            MovementWriteCount += 1;
         }
 
         public RunEndFixedStepResult ResolveRunEnd()
         {
-            _calls.Add("Run End");
+            _calls.Add(item: "Run End");
             return RunEndResult;
         }
 
-        public void DetectLostMomentum()
+        public void SampleProgress()
         {
-            _calls.Add("Lost Momentum");
+            _calls.Add(item: "Progress");
+        }
+
+        public void UpdateSurfaceFrame()
+        {
+            _calls.Add(item: "Surface");
         }
     }
 }

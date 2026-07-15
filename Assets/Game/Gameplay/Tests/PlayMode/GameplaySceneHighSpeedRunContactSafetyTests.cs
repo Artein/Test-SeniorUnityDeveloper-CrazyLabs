@@ -1,7 +1,6 @@
 using System.Collections;
 using Game.Gameplay;
 using NUnit.Framework;
-using UnityEngine;
 using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
